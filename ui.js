@@ -479,6 +479,22 @@ document.addEventListener('visibilitychange', () => {
 });
 
 /* ---------- Oppstart ---------- */
+/* iOS 26 gir Hjem-skjerm-apper et for kort vindu (innerHeight mindre enn skjermen). Mål avviket og legg det i --fix.
+   Når Apple retter feilen, blir avviket 0 og ingenting endres. */
+function fixViewport() {
+  let g = 0;
+  try {
+    const sa = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+    if (sa && /iPhone|iPod/.test(navigator.userAgent) && matchMedia('(orientation: portrait)').matches) {
+      g = Math.round(screen.height - window.innerHeight);
+      if (!(g > 0 && g <= 100)) g = 0;
+    }
+  } catch (_) { g = 0; }
+  document.documentElement.style.setProperty('--fix', g + 'px');
+}
+fixViewport();
+window.addEventListener('resize', fixViewport);
+window.addEventListener('orientationchange', () => setTimeout(fixViewport, 300));
 load(); ghLoad();
 saveHook = ghSoon;
 ghHook = adopted => { const s = $('#gh-s'); if (s) s.textContent = ghState === 'ok' ? 'Sync is on.' : ghState; if (adopted && !S.timer && ($('#ov').hidden || $('#nav').hidden)) { closeOv(); render(); toast('Loaded a newer save from another device.'); } };
