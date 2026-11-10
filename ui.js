@@ -29,12 +29,16 @@ const short = n => n.length > 5 ? n.slice(0, 4) : n;
 const coinEl = n => `<span class="coin tn"><i></i>${nb(n)}</span>`;
 
 /* ---------- Lyd: små egne pip, ingen spillmusikk ---------- */
+/* Lyden blandes med musikk du har på, og følger lydløs-bryteren på iPhone (Safari 16.4+). */
+try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch (_) {}
 let AC = null;
+function ac() {
+  try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); return AC; } catch (_) { return null; }
+}
 function tone(f, at, d, v = 0.05, type = 'square') {
   if (!S.sound) return;
   try {
-    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
-    if (AC.state === 'suspended') AC.resume();
+    ac();
     const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime + at;
     o.type = type; o.frequency.value = f;
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
@@ -54,6 +58,33 @@ const sfx = {
   coin: () => { tone(988, 0, 0.06); tone(1319, 0.06, 0.12); },
   evo: () => [392, 494, 587, 784, 988, 1175].forEach((f, i) => tone(f, i * 0.11, 0.2, 0.06, 'triangle'))
 };
+/* Pokémon-skrik: lydfilene fra Black/White-tiden i PokeAPI sitt åpne lydarkiv (nyere skrik som reserve). Hentes første gang og mellomlagres. */
+const CRY = new Map();
+function cryBuf(id) {
+  if (CRY.has(id)) return CRY.get(id);
+  const get = kind => fetch(`https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/${kind}/${id}.ogg`).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+    .then(b => new Promise((res, rej) => ac().decodeAudioData(b, res, rej)));
+  const p = get('legacy').catch(() => get('latest'));
+  p.catch(() => CRY.delete(id));
+  CRY.set(id, p);
+  if (CRY.size > 80) CRY.delete(CRY.keys().next().value);
+  return p;
+}
+window.cryCount = 0;
+function cry(id, delay = 0, vol = 0.45) {
+  if (!S.sound || !S.cries || !id || !ac()) return;
+  const t0 = performance.now();
+  cryBuf(id).then(buf => {
+    const a = ac(), src = a.createBufferSource(), g = a.createGain();
+    src.buffer = buf; g.gain.value = vol; src.connect(g); g.connect(a.destination);
+    src.start(a.currentTime + Math.max(0, delay - (performance.now() - t0)) / 1000);
+    window.cryCount++;
+  }).catch(() => {});
+}
+/* Et lite klikk på hvert trykk. Handlinger med egen lyd får ikke klikket i tillegg. */
+const OWN = new Set(['start', 'throw', 'buy', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon']);
+const CHIP = new Set(['fag', 'min', 'reg', 'sort', 'lagv', 'filt', 'dexr', 'ball', 'sety', 'seadd', 'sedel']);
+function click(a) { if (OWN.has(a)) return; if (a === 'tab') { tone(587, 0, 0.04, 0.035); tone(784, 0.045, 0.05, 0.035); } else if (CHIP.has(a)) tone(698, 0, 0.04, 0.035); else tone(520, 0, 0.05, 0.04); }
 const buzz = p => { try { if (navigator.vibrate) navigator.vibrate(p); } catch (_) {} };
 
 let toastT = 0;
@@ -208,7 +239,7 @@ VIEW.profil = () => {
     <h2 class="h">Settings</h2>
     <div class="card stack">
       <label class="field">Daily cap before your team gets tired<select data-c="cap">${[240, 300, 360, 420, 480].map(c => `<option value="${c}"${S.cap === c ? ' selected' : ''}>${c / 60} hours</option>`).join('')}</select></label>
-      <button type="button" class="btn wide" data-a="sound">Sound: ${S.sound ? 'on' : 'off'}</button>
+      <div class="row"><button type="button" class="btn sp" data-a="sound">Sound: ${S.sound ? 'on' : 'off'}</button><button type="button" class="btn sp" data-a="cries"${S.sound ? '' : ' disabled'}>Pokémon cries: ${S.cries ? 'on' : 'off'}</button></div>
       <button type="button" class="btn wide" data-a="plan">Edit subjects</button>
       <button type="button" class="btn wide" data-a="sync">Sync between devices${GH ? ' · ' + (ghState === 'ok' ? 'on' : ghState || 'connecting') : ''}</button>
       <button type="button" class="btn wide" data-a="backup">Backup</button>
@@ -347,7 +378,7 @@ function hunt() {
   if (!(S.items[E.ball] > 0)) E.ball = bestBall();
   S.seen[E.e.id] = 1;
   drawEnc(true);
-  sfx.appear();
+  sfx.appear(); cry(E.e.id, 650);
   setTimeout(() => { E.busy = false; aim(); }, 1150);
 }
 function drawEnc(reveal) {
@@ -390,7 +421,7 @@ function doThrow() {
       st.className = 'stage held'; sfx.got(); buzz([60, 40, 60, 40, 140]);
       $('#e-stars').innerHTML = Array.from({ length: 10 }, (_, k) => { const a = k / 10 * 6.283, d = 70 + Math.random() * 50; return `<i style="--dx:${Math.round(Math.cos(a) * d)}px;--dy:${Math.round(Math.sin(a) * d)}px;animation-delay:${k * 0.02}s"></i>`; }).join('');
       msg.innerHTML = `<b style="color:var(--sage)">Caught.</b> ${r.isNew ? 'New to your collection.' : 'A duplicate you can sell or keep.'}`;
-      E.done = 'got'; $('#e-left').textContent = S.pend.length ? `${S.pend.length} ${S.pend.length === 1 ? 'encounter' : 'encounters'} left` : 'Last encounter';
+      cry(e.id, 650); E.done = 'got'; $('#e-left').textContent = S.pend.length ? `${S.pend.length} ${S.pend.length === 1 ? 'encounter' : 'encounters'} left` : 'Last encounter';
     } else {
       st.className = 'stage out'; sfx.fail();
       if (r.fled) { setTimeout(() => { st.className = 'stage fled'; }, 380); msg.textContent = 'It ran away.'; E.done = 'fled'; }
@@ -408,7 +439,7 @@ function evoShow(m, from) {
   closeSheet();
   ov(`<div class="mid r${tierOf(m.id)}"><div class="stage rev">${spr(m.id, { ani: 1, sh: m.sh })}</div><div><p class="mut">${esc(D(from)[0])} evolved into</p><div class="ename">${esc(D(m.id)[0])}</div><div class="row" style="justify-content:center;margin-top:8px;gap:6px">${types(m.id)}</div></div></div>
     <div class="acts"><button type="button" class="btn pri" data-a="home">Continue</button></div>`, 'tint', `var(--t${D(m.id)[1]})`);
-  sfx.evo(); buzz([80, 50, 80, 50, 200]);
+  sfx.evo(); cry(m.id, 750); buzz([80, 50, 80, 50, 200]);
 }
 
 /* ---------- Handlinger ---------- */
@@ -429,7 +460,7 @@ const A = {
   toshop: () => { closeOv(); U.tab = 'butikk'; render(); },
   ball: el => { if (E.busy) return; E.ball = el.dataset.k; drawEnc(false); aim(); },
   throw: () => doThrow(),
-  mon: el => { const m = monBy(+el.dataset.u); if (m) monSheet(m); },
+  mon: el => { const m = monBy(+el.dataset.u); if (m) { cry(m.id, 0, 0.35); monSheet(m); } },
   spec: el => specSheet(+el.dataset.k),
   close: () => closeSheet(),
   sort: el => { U.sort = el.dataset.k; render(); },
@@ -444,6 +475,7 @@ const A = {
   buy: el => { if (buy(el.dataset.k)) { sfx.coin(); render(); toast(`${SHOP[el.dataset.k].n} bought.`); } },
   buyreg: el => { const r = +el.dataset.k; if (buyRegion(r)) { sfx.evo(); render(); toast(`${REG[r].n} is unlocked. You are there now.`); } },
   sound: () => { S.sound = S.sound ? 0 : 1; save(); sfx.tap(); render(); },
+  cries: () => { S.cries = S.cries ? 0 : 1; save(); if (S.cries) { const p = partner(); if (p) cry(p.id); } render(); },
   plan: () => subjSheet(),
   seadd: () => { if (U.sd.length < 4) { U.sd.push({ k: '', n: '', ty: [], t: '', h: '', d: '' }); seRedraw(); const f = document.querySelectorAll('#se .sein'); if (f.length) f[f.length - 1].focus(); } },
   sedel: el => { U.sd.splice(+el.dataset.i, 1); seRedraw(); },
@@ -460,11 +492,11 @@ const A = {
   bkcopy: () => { const txt = b64e(JSON.stringify(S)); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Copied.'), () => { $('#bk-in').value = txt; toast('Copy the text in the field.'); }); },
   bkload: () => { try { const o = JSON.parse(b64d($('#bk-in').value.trim())); if (!o || o.v !== 1 || !Array.isArray(o.mons)) throw 0; adopt(o); save(); closeSheet(); render(); toast('Game restored.'); } catch (_) { toast('That was not a valid copy.'); } },
   reset: el => { if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = 'Tap again: everything is deleted'; return; } S = fresh(); save(); pick = 0; U.step = 1; U.sd = null; closeSheet(); render(); },
-  pick: el => { pick = +el.dataset.k; sfx.tap(); intro(); },
+  pick: el => { pick = +el.dataset.k; cry(pick, 0, 0.4); intro(); },
 };
 document.addEventListener('click', ev => {
   const el = ev.target.closest('[data-a]');
-  if (el && !el.disabled && A[el.dataset.a]) { A[el.dataset.a](el); return; }
+  if (el && !el.disabled && A[el.dataset.a]) { click(el.dataset.a); A[el.dataset.a](el); return; }
   if (ev.target.id === 'sheet') closeSheet();
 });
 document.addEventListener('input', ev => { const t = ev.target; if (t.dataset && t.dataset.f && U.sd && U.sd[+t.dataset.i]) { U.sd[+t.dataset.i][t.dataset.f] = t.value; const e = $('#se-err'); if (e) e.textContent = ''; } });
