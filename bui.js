@@ -56,7 +56,15 @@ function music(k) {
 }
 /* Hvilken musikk som hører til kampen. Her kobles egne lydfiler per trener inn senere. */
 const musicKey = B => ({ reg: 'battle', boss: 'boss', top: 'top', ultra: 'top' })[TIER(B.tr.kind)];
-document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible') music(''); else if (BT.B && !BT.B.over && $('#arena')) music(musicKey(BT.B)); });
+/* Kampmusikken: trenerens egen låt fra ressurspakken hvis den finnes, ellers den innebygde. */
+async function battleMusic(B) {
+  const tk = PACK.trackFor(B);
+  if (tk && await PACK.music(tk)) return music('');
+  if (BT.B !== B || B.over) return;
+  PACK.music(''); music(musicKey(B));
+}
+const stopMusic = () => { PACK.music(''); music(''); };
+document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible') stopMusic(); else if (BT.B && !BT.B.over && $('#arena')) battleMusic(BT.B); });
 
 /* ---------- Forsiden ---------- */
 const leagueTag = () => { const L = S.lad, ri = rungInfo(L.n); return `${L.lap ? 'Lap ' + (L.lap + 1) + ' · ' : ''}${ri.st.n}${ri.st.c > 1 ? ' ' + (ri.k + 1) + '/' + ri.st.c : ''}`; };
@@ -132,13 +140,13 @@ function fitArena() { const a = $('#arena'); if (a) a.style.setProperty('--z', (
 window.addEventListener('resize', fitArena);
 function battleTag(B) { return B.mode === 'fac' ? `Factory · Round ${B.round} · ${B.w + 1}/7` : `${B.lap ? 'Lap ' + (B.lap + 1) + ' · ' : ''}${B.st.n}${B.st.c > 1 ? ' ' + (B.rk + 1) + '/' + B.st.c : ''}`; }
 function drawBattle() {
-  const B = BT.B, tr = B.tr, tier = TIER(tr.kind);
+  const B = BT.B, tr = B.tr, tier = TIER(tr.kind), scene = PACK.now(PACK.sceneFor(B));
   ov(`<div class="btop k-${tier}"><span class="pill tn">${esc(battleTag(B))}</span><span class="btn-n"><b class="${tr.boss ? 'bossn' : ''}">${esc(tr.title ? tr.title + ' ' : '')}${esc(tr.n)}</b></span></div>
-    <div class="bscreen t-${tier}"><div class="arena a-${tr.arena} v${tr.v} t-${tier}" id="arena" style="--ac:var(--t${tr.ty})">
-      <div class="abg"></div><div class="plat pf"></div><div class="plat pm"></div>
+    <div class="bscreen t-${tier}"><div class="arena a-${tr.arena} v${tr.v} t-${tier}${scene ? ' has-scene' : ''}" id="arena" style="--ac:var(--t${tr.ty})">
+      ${scene ? `<img class="scene" alt="" src="${scene}">` : ''}<div class="abg"></div><div class="plat pf"></div><div class="plat pm"></div>
       <div class="trn" id="trn">${tsprite(tr.img)}</div>
       <div class="bs foe gone" id="s-foe"></div><div class="bs me gone" id="s-me"></div>
-      <canvas class="fxc" id="fxc" width="256" height="192"></canvas><div class="fx" id="fx"></div>
+      <canvas class="fxc" id="fxc" width="256" height="192"></canvas><canvas class="fxc" id="axc" width="512" height="384"></canvas><div class="fx" id="fx"></div>
       <div class="hpb foe" id="b-foe" hidden></div><div class="hpb me" id="b-me" hidden></div>
     </div><button type="button" class="btext" id="btext" data-a="btap" aria-live="polite"><span id="btx"></span><i></i></button></div>
     <div id="bmenu" class="bmenu"></div>`, 'battle k-' + tier, `var(--t${tr.ty})`);
@@ -186,10 +194,27 @@ function drawMenu() {
 /* Ballen kastes inn mot plattformen. Bosser bruker finere baller. */
 function tossBall(side) {
   const fx = $('#fx'); if (!fx) return Promise.resolve();
-  const tier = TIER(BT.B.tr.kind), ms = 520 / spdF(), el = document.createElement('i');
-  el.className = 'pball ' + side; el.style.setProperty('--d', ms + 'ms'); el.innerHTML = ballEl(side === 'me' || tier === 'reg' ? 'poke' : tier === 'boss' ? 'great' : 'ultra');
+  const tier = TIER(BT.B.tr.kind), ms = 520 / spdF(), el = document.createElement('i'), kind = side === 'me' || tier === 'reg' ? 'poke' : tier === 'boss' ? 'great' : 'ultra', pk = PACK.now(`ui/ball_${kind}ball.png`);
+  el.className = 'pball ' + side; el.style.setProperty('--d', ms + 'ms'); el.innerHTML = pk ? `<b class="ball pk" style="background-image:url(${pk})"></b>` : ballEl(kind);
   fx.append(el); sfx.thr();
   return new Promise(r => setTimeout(() => { el.remove(); r(); }, ms));
+}
+/* Krokene ark-animasjonene bruker for å flytte Pokémonene, blinke skjermen og skjule målet. */
+function animHooks(side, self) {
+  const ar = $('#arena'), k = ar ? ar.clientWidth / 512 : 1, el = { u: $('#s-' + side), t: $('#s-' + (self ? side : opp(side))) };
+  const tmp = (e, prop, val, ms) => { if (!e) return; e.style[prop] = val; setTimeout(() => { e.style[prop] = ''; }, ms); };
+  return {
+    sprite: (who, dx, dy, vis) => { const e = el[who]; if (!e || (self && who === 't')) return; e.style.translate = dx || dy ? `${(dx * k).toFixed(1)}px ${(dy * k).toFixed(1)}px` : ''; e.style.visibility = vis ? '' : 'hidden'; },
+    flash: (css, ms) => { const fx = $('#fx'); if (!fx) return; const d = document.createElement('i'); d.className = 'flashov'; d.style.background = css; d.style.animationDuration = Math.max(120, ms) + 'ms'; fx.append(d); setTimeout(() => d.remove(), Math.max(120, ms) + 40); },
+    tflash: (css, ms) => tmp(el.t, 'filter', 'brightness(2.4)', Math.max(100, ms)),
+    thide: ms => tmp(el.t, 'visibility', 'hidden', Math.max(100, ms))
+  };
+}
+/* Felles animasjoner (status, stat opp/ned, helbredelse) fra pakken. Gir false hvis pakken ikke har den. */
+async function common(k, side) {
+  const n = k && PACK.common(k), cv = $('#axc'); if (!n || !cv) return false;
+  const p = fxPos(side), q = { x: p.x * 2, y: p.y * 2 };
+  return PACK.play(n, cv, q, q, false, spdF(), null);
 }
 const wob = (side, ms) => { const sp = $('#s-' + side); if (sp) { sp.classList.add('wob'); setTimeout(() => sp.classList.remove('wob'), ms / spdF()); } };
 /* Spiller av én hendelse fra motoren. */
@@ -199,32 +224,38 @@ async function playOne(B, e) {
   if (e.t === 'anim') {
     const m = e.mi >= 0 ? MOVES[e.mi] : STRUGGLE, a = fxPos(side), b = e.self ? a : fxPos(opp(side)), lunge = m[4] === 1 && FX.contact(m);
     BT.ty = m[1];
-    if (lunge) { BSFX.swing(); sp.classList.add('lunge'); await bwait(130); } else if (m[4] === 2) BSFX.beam(); else if (m[4] === 0) BSFX.aura(); else BSFX.swing();
+    const an = PACK.animFor(m), snd = PACK.sfx(m[0]);
+    if (an && await PACK.play(an, $('#axc'), { x: a.x * 2, y: a.y * 2 }, { x: b.x * 2, y: b.y * 2 }, side === 'foe', spdF(), animHooks(side, e.self))) return;
+    if (lunge) { if (!snd) BSFX.swing(); sp.classList.add('lunge'); await bwait(130); } else if (!snd) { if (m[4] === 2) BSFX.beam(); else if (m[4] === 0) BSFX.aura(); else BSFX.swing(); }
     await FX.move(m, a, b, { roll: e.roll, self: BOOM.has(m[0]), wobble: ms => wob(opp(side), ms) });
     sp.classList.remove('lunge');
   }
   else if (e.t === 'hit') {
     if (!e.quiet) {
-      if (e.e > 1) BSFX.hitS(); else if (e.e < 1) BSFX.hitW(); else BSFX.hit();
+      if (!PACK.sfx(e.e > 1 ? 'Hit Super Effective' : e.e < 1 ? 'Hit Weak Not Very Effective' : 'Hit Normal Damage', 1)) { if (e.e > 1) BSFX.hitS(); else if (e.e < 1) BSFX.hitW(); else BSFX.hit(); }
       FX.hit(fxPos(side), BT.ty, e.e, e.crit); buzz(e.e > 1 ? [40, 30, 60] : 25);
       sp.classList.add('hurt'); if (e.e > 1 || e.crit) FX.hooks.shake(280);
     }
     if (e.sub) await bwait(320); else await Promise.all([hpTo(side, e.hp), bwait(e.quiet ? 250 : 440)]);
     sp.classList.remove('hurt');
   }
-  else if (e.t === 'heal') { BSFX.heal(); if (!e.q) FX.heal(fxPos(side)); await Promise.all([hpTo(side, e.hp), bwait(400)]); }
-  else if (e.t === 'status') { v.st = e.st; const hp = v.hp; paintBox(side); v.hp = hp; if (e.fx) { BSFX.ail(); FX.status(e.fx, fxPos(side)); await bwait(520); } }
-  else if (e.t === 'stat') { (e.up ? BSFX.up : BSFX.down)(); FX.stat(fxPos(side), e.up); sp.classList.add(e.up ? 'sup' : 'sdn'); await bwait(520); sp.classList.remove('sup', 'sdn'); }
-  else if (e.t === 'faint') { BSFX.faint(); cry(teamOf(side)[v.i].id, 0, 0.3); sp.classList.remove('ace'); sp.classList.add('faint'); await bwait(850); paintBox(side); $('#b-' + side).hidden = true; }
-  else if (e.t === 'recall') { if (e.txt) await typeOut(e.txt); BSFX.recall(); sp.classList.remove('ace', 'subd', 'away'); sp.classList.add('recall'); $('#b-' + side).hidden = true; await bwait(420); sp.classList.add('gone'); }
+  else if (e.t === 'heal') { if (!PACK.sfx('In-Battle Heal HP Restore')) BSFX.heal(); if (!e.q && !(await common('HealthUp', side))) FX.heal(fxPos(side)); await Promise.all([hpTo(side, e.hp), bwait(400)]); }
+  else if (e.t === 'status') {
+    v.st = e.st; paintBox(side);
+    if (e.fx) { if (!PACK.sfx({ brn: 'Status Burned', psn: 'Status Poisoned', par: 'Status Paralyzed', frz: 'Status Frozen' }[e.fx])) BSFX.ail(); if (!(await common({ slp: 'Sleep', psn: 'Poison', brn: 'Burn', par: 'Paralysis', frz: 'Frozen', conf: 'Confusion', seed: 'LeechSeed' }[e.fx], side))) { FX.status(e.fx, fxPos(side)); await bwait(520); } }
+  }
+  else if (e.t === 'stat') { if (!PACK.sfx(e.up ? 'Stat Rise Up' : 'Stat Fall')) (e.up ? BSFX.up : BSFX.down)(); sp.classList.add(e.up ? 'sup' : 'sdn'); if (!(await common(e.up ? 'StatUp' : 'StatDown', side))) { FX.stat(fxPos(side), e.up); await bwait(520); } sp.classList.remove('sup', 'sdn'); }
+  else if (e.t === 'faint') { if (!PACK.sfx('In-Battle Faint No Health')) BSFX.faint(); cry(teamOf(side)[v.i].id, 0, 0.3); sp.classList.remove('ace'); sp.classList.add('faint'); await bwait(850); paintBox(side); $('#b-' + side).hidden = true; }
+  else if (e.t === 'recall') { if (e.txt) await typeOut(e.txt); if (!PACK.sfx('In-Battle Recall Switch Pokeball')) BSFX.recall(); sp.classList.remove('ace', 'subd', 'away'); sp.classList.add('recall'); $('#b-' + side).hidden = true; await bwait(420); sp.classList.add('gone'); }
   else if (e.t === 'send') {
     const team = teamOf(side), b = team[e.i], ace = side === 'foe' && B.tr.boss && team.length > 1 && e.i === team.length - 1, big = ace && SUPER.has(B.tr.kind);
     BT.v[side] = { i: e.i, hp: e.hp, st: e.st };
     if (big) { music(''); await say(`${B.tr.n} is down to the last Pokémon…`); }
+    if (BT.B !== B || !sp.isConnected) return;
     await typeOut(e.txt);
     sp.className = 'bs ' + side + ' gone'; $('#b-' + side).hidden = true;
     await tossBall(side);
-    if (big) { BSFX.ace(); buzz([80, 40, 80, 40, 240]); await FX.ace(side === 'foe' ? { x: 189, y: 74 } : { x: 62, y: 150 }, B.tr.ty, B.tr.kind === 'legend'); music(musicKey(B)); }
+    if (big) { BSFX.ace(); buzz([80, 40, 80, 40, 240]); await FX.ace(side === 'foe' ? { x: 189, y: 74 } : { x: 62, y: 150 }, B.tr.ty, B.tr.kind === 'legend'); if (!PACK.playing()) music(musicKey(B)); }
     paintSprite(side, 'in' + (ace ? ' ace' : '')); BSFX.ball(); FX.open(side === 'foe' ? { x: 189, y: 72 } : { x: 62, y: 150 }, big ? '#ffe9a8' : '');
     cry(b.id, 200, big ? 0.5 : 0.35); if (big) FX.hooks.shake(500);
     await bwait(380); paintBox(side);
@@ -254,10 +285,10 @@ async function vsIntro(B) {
     <div class="vs-b">${spr(lead.id, { ani: 1, sh: lead.sh, back: 1, s: '130px' })}<div class="vs-n"><span>${esc(battleTag(B))}</span><b>You</b></div></div></div>`, 'battle vsov');
   /* Vanlig kampmusikk først, og så slår den over til bossmusikken idet «VS» smeller inn. */
   const slam = tier === 'ultra' ? 1700 : 550;
-  music('battle');
+  if (!PACK.trackFor(B)) music('battle');
   await new Promise(r => setTimeout(r, slam));
   if (BT.B !== B) return;
-  music(musicKey(B)); BSFX.vs(); buzz([60, 40, 60, 40, 200]);
+  battleMusic(B); BSFX.vs(); buzz([60, 40, 60, 40, 200]);
   await new Promise(r => setTimeout(r, tier === 'ultra' ? 2300 : tier === 'top' ? 2100 : 1700));
 }
 async function wipeIntro() {
@@ -270,7 +301,9 @@ async function startBattle(B) {
   if (BT.busy && BT.B && !BT.B.over) return;
   BT.B = B; BT.menu = 'main'; BT.res = null; BT.ty = 0; BT.busy = true;
   BT.v = { me: { i: 0, hp: B.me[0].hp, st: '' }, foe: { i: 0, hp: B.foe[0].hp, st: '' } };
-  if (B.tr.boss) await vsIntro(B); else { await wipeIntro(); music('battle'); }
+  const prep = PACK.prep(B).catch(() => {});
+  if (B.tr.boss) await vsIntro(B); else { await wipeIntro(); battleMusic(B); }
+  await prep;
   if (BT.B !== B) return;
   drawBattle(); drawMenu();
   await bwait(350);
@@ -284,7 +317,7 @@ async function startBattle(B) {
   BT.busy = false; setText(`What will ${B.me[0].name} do?`); drawMenu();
 }
 function endBattle() {
-  const B = BT.B; music(''); BT.busy = false;
+  const B = BT.B; stopMusic(); BT.busy = false;
   const res = BT.res = B.mode === 'fac' ? finishFactory(B) : finishLeague(B);
   if (res.win) BSFX.win(); else BSFX.lose();
   BT.tp = null; BT.fs = null;
@@ -382,17 +415,18 @@ const BA = {
   bpre: () => { if (!ladderOpen()) { closeOv(); return render(); } BT.B = null; BT.busy = false; preBattle(); },
   blead: el => { BT.lead = +el.dataset.u; preBattle(); },
   bteam: () => { closeOv(); U.tab = 'lag'; U.lag = 'lag'; render(); },
-  bgo: () => { if (!ladderOpen()) { closeOv(); return render(); } if (!S.party.map(monBy).filter(Boolean).length) return toast('You need a Pokémon in your team.'); sfx.start(); BT.busy = false; startBattle(newBattle(BT.lead)); },
+  bgo: () => { if (!ladderOpen()) { closeOv(); return render(); } if (!S.party.map(monBy).filter(Boolean).length) return toast('You need a Pokémon in your team.'); PACK.unlock(); sfx.start(); BT.busy = false; startBattle(newBattle(BT.lead)); },
   btap: () => { if (BT.tap) BT.tap(); },
   bfightm: () => { BT.menu = 'moves'; drawMenu(); },
   bswitch: () => { BT.menu = 'team'; drawMenu(); },
   bpause: () => { BT.menu = 'pause'; drawMenu(); },
   bback: () => { BT.menu = 'main'; drawMenu(); },
   bfast: () => { S.bfast = S.bfast ? 0 : 1; save(true); FX.speed = spdF(); drawMenu(); },
-  bmusic: () => { S.music = S.music === 0 ? 1 : 0; save(true); music(S.music === 0 ? '' : musicKey(BT.B)); drawMenu(); },
+  bmusic: () => { S.music = S.music === 0 ? 1 : 0; save(true); if (S.music === 0) stopMusic(); else battleMusic(BT.B); drawMenu(); },
   bmove: el => { if (BT.busy || BT.B.over) return; BT.menu = 'main'; playEv(runTurn(BT.B, { t: 'move', k: +el.dataset.k })); },
   bsw: el => { if (BT.busy) return; const B = BT.B, i = +el.dataset.k; BT.menu = 'main'; playEv(B.need ? sendIn(B, i) : runTurn(B, { t: 'switch', i })); },
   bforfeit: el => { if (BT.busy) return; if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = 'TAP AGAIN TO GIVE UP'; return; } BT.B.over = 'loss'; endBattle(); },
+  packre: async () => { toast('Looking for your pack…'); const ok = await PACK.init(true); toast(ok ? `Pack found: ${Object.keys(PACK.man.scenes || {}).length} arenas, ${(PACK.man.music || []).length} tracks.` : 'No pack found in your sync repo.'); },
   blearn: el => { const m = monBy(+el.dataset.u); if (m) learnSheet(m, 'ov'); },
   lforget: el => { const L = U.learn, m = monBy(L.u); if (!m) return closeSheet(); const x = m.nm[0], old = +el.dataset.k; resolveMove(m, x, old); sfx.lvl(); toast(`${D(m.id)[0]} forgot ${MOVES[old][0]} and learned ${MOVES[x][0]}.`); learnSheet(m, L.back); },
   lskip: () => { const L = U.learn, m = monBy(L.u); if (!m) return closeSheet(); const x = m.nm[0]; resolveMove(m, x, null); toast(`${D(m.id)[0]} did not learn ${MOVES[x][0]}.`); learnSheet(m, L.back); },
@@ -404,7 +438,7 @@ const BA = {
   fsel: el => { const i = +el.dataset.k, s = BT.fsel, k = s.indexOf(i); if (k >= 0) s.splice(k, 1); else if (s.length < 4) s.push(i); facScreen(); },
   fpick: () => { if (BT.fsel.length !== 4) return; facPick(BT.fsel.slice()); BT.fsel = []; sfx.ok(); facScreen(); },
   flead: el => { const R = S.fac.run, i = +el.dataset.k; if (i > 0) { R.team.unshift(R.team.splice(i, 1)[0]); save(); } facScreen(); },
-  fgo: () => { if (!facOpen() || !S.fac.run || !S.fac.run.team) return; sfx.start(); BT.busy = false; startBattle(facBattle()); },
+  fgo: () => { if (!facOpen() || !S.fac.run || !S.fac.run.team) return; PACK.unlock(); sfx.start(); BT.busy = false; startBattle(facBattle()); },
   fswp: el => { BT.fs = +el.dataset.k; overview(); },
   fswb: () => { BT.fs = null; overview(); },
   fswm: el => { const res = BT.res, x = res.swap[BT.fs]; if (!x) return; const old = S.fac.run.team[+el.dataset.k]; facSwap(+el.dataset.k, x); res.swap = null; BT.fs = null; sfx.ok(); toast(`${D(x.id)[0]} joined your rentals in place of ${D(old.id)[0]}.`); overview(); }

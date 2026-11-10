@@ -361,7 +361,8 @@ function syncSheet() {
     <label class="field">Key (fine-grained token with Contents: read and write)<input id="gh-t" type="password" autocomplete="off" value="${esc(GH ? GH.t : '')}"></label>
     ${lb && lb.t && lb.repo ? '<button type="button" class="btn wide" data-a="synclb">Use the key from Live-blekker</button>' : ''}
     <p class="sm" id="gh-s">${GH && GH.ok ? (ghState === 'ok' ? 'Sync is on.' : esc(ghState)) : 'Sync is off.'}</p>
-    <div class="row"><button type="button" class="btn pri sp" data-a="syncsave">Connect</button>${GH && GH.ok ? '<button type="button" class="btn sp danger" data-a="syncoff">Turn off</button>' : ''}</div>`);
+    <div class="row"><button type="button" class="btn pri sp" data-a="syncsave">Connect</button>${GH && GH.ok ? '<button type="button" class="btn sp danger" data-a="syncoff">Turn off</button>' : ''}</div>
+    ${GH && GH.ok ? `<p class="sm" style="margin-top:6px">Your own graphics, sound and music pack: put it in a folder called <b>pack</b> in the same repo. ${PACK.ok ? `Found: ${Object.keys(PACK.man.scenes || {}).length} arenas, ${(PACK.man.music || []).length} tracks, ${Object.keys(PACK.man.sfx || {}).length} sounds.` : 'None found yet.'}</p><button type="button" class="btn wide" data-a="packre">Check for the pack again</button>` : ''}`);
 }
 function backupSheet() {
   openSheet(`<h2 class="h">Backup</h2><p class="sm">Copy the text to keep your game safe, or paste a copy to restore it.</p>
@@ -649,4 +650,5 @@ ghHook = adopted => { const s = $('#gh-s'); if (s) s.textContent = ghState === '
 render();
 if (S.started && S.timer) showTimer();
 ghPull();
+setTimeout(() => PACK.init(), 2500);
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});

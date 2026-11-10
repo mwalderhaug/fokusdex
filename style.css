@@ -404,6 +404,17 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 /* Esset til en boss lyser i trenerens farge så lenge det står inne. */
 @keyframes aceGlow{50%{filter:drop-shadow(0 0 9px var(--ac)) drop-shadow(0 0 3px #fff)}}
 .bs.ace .spr{animation:aceGlow 1.6s ease-in-out infinite;filter:drop-shadow(0 0 4px var(--ac))}
+/* Bane fra ressurspakken: ett bilde med bakgrunn og begge plattformene, som i Black 2 og White 2. */
+.arena .scene{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;image-rendering:pixelated;z-index:-2}
+.arena.has-scene .abg,.arena.has-scene .plat{display:none}
+.arena.has-scene .bs.foe{top:54%}
+.arena.has-scene .trn{top:11%}
+@keyframes flashA{from{opacity:.85}to{opacity:0}}
+.flashov{position:absolute;inset:0;animation:flashA .25s ease-out forwards}
+@keyframes pkSpin{to{background-position-x:114.2857%}}
+.pball .ball.pk{border-radius:0;box-shadow:none;background-color:transparent;background-repeat:no-repeat;background-size:800% 200%;background-position:0 0;image-rendering:pixelated}
+.pball .ball.pk{animation:pbYf var(--d,.5s) cubic-bezier(.3,0,.7,1) forwards,pkSpin .32s steps(8) infinite}
+.pball.me .ball.pk{animation-name:pbYm,pkSpin}
 /* Effektene tegnes i spillskjermens oppløsning og forstørres med harde piksler. */
 .fxc{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;pointer-events:none}
 .fx{position:absolute;inset:0;pointer-events:none}
