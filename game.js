@@ -201,7 +201,9 @@ function grant(fag, min, full, planned) {
   let n = Math.floor(okMin / 20) + (full && planned >= 25 && okMin >= planned ? 1 : 0), luck = Math.min(1.5, planned / 60);
   if (S.incOn && okMin > 0) { n++; luck += 0.5; S.incOn = 0; }
   n = Math.min(n, 6);
-  for (let i = 0; i < n; i++) encs.push(genEnc({ fag, luck }));
+  /* Hvert vanlig møte kan en sjelden gang være legendarisk: 0,5 % i en kort økt, opp mot 1 % i en lang, litt mer med dager på rad. */
+  const legP = 0.005 * (1 + luck * 0.5) + Math.min(streak(), 10) * 0.0003;
+  for (let i = 0; i < n; i++) encs.push(Math.random() < legP ? genEnc({ leg: 1 }) : genEnc({ fag, luck }));
   if (full && planned >= 45 && okMin >= planned && Math.random() < Math.min(0.04, 0.01 + 0.005 * streak())) { encs.push(genEnc({ leg: 1 })); R.gifts.push('Noe legendarisk rører seg i gresset.'); }
   const fg = S.fag[fag];
   if (fg) {
