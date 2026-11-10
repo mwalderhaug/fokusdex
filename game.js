@@ -60,11 +60,74 @@ DEX.forEach((d, i) => { if (d[4]) (EVO[d[4]] = EVO[d[4]] || []).push(i + 1); });
 const lvOf = xp => Math.max(1, Math.min(100, Math.floor(Math.sqrt(xp / 12))));
 const xpAt = l => 12 * l * l;
 
+/* ---------- Stats, natur, IV/EV og angrep ----------
+   Hver Pokémon har iv (0–31 per stat, trukket ved fangst), ev (trenes av fokusminutter), nat (natur 0–24) og mv (opptil fire angrep).
+   Statrekkefølge: HP, Attack, Defense, Sp. Atk, Sp. Def, Speed. */
+const SN = ['HP', 'Attack', 'Defense', 'Sp. Atk', 'Sp. Def', 'Speed'];
+const NAT = ['Hardy', 'Lonely', 'Brave', 'Adamant', 'Naughty', 'Bold', 'Docile', 'Relaxed', 'Impish', 'Lax', 'Timid', 'Hasty', 'Serious', 'Jolly', 'Naive', 'Modest', 'Mild', 'Quiet', 'Bashful', 'Rash', 'Calm', 'Gentle', 'Sassy', 'Careful', 'Quirky'];
+const NST = [1, 2, 5, 3, 4];
+const natUp = n => NST[Math.floor(n / 5)], natDn = n => NST[n % 5];
+function statsOf(m) {
+  const b = BST[m.id - 1], up = natUp(m.nat), dn = natDn(m.nat);
+  return b.map((B, i) => {
+    const core = Math.floor((2 * B + m.iv[i] + Math.floor(m.ev[i] / 4)) * m.lv / 100);
+    if (i === 0) return m.id === 292 ? 1 : core + m.lv + 10;
+    const v = core + 5;
+    return up === dn ? v : i === up ? Math.floor(v * 1.1) : i === dn ? Math.floor(v * 0.9) : v;
+  });
+}
+/* Angrepene arten kan på dette nivået, i den rekkefølgen de læres. */
+function movesAt(id, lv) { const l = LEARN[id - 1], out = []; for (let i = 0; i < l.length; i += 2) if (l[i] <= lv && !out.includes(l[i + 1])) out.push(l[i + 1]); return out; }
+/* De fire nyeste, men alltid minst ett som gjør skade hvis arten har det. */
+function defaultMoves(id, lv) {
+  const all = movesAt(id, lv), mv = all.slice(-4);
+  if (!mv.some(x => MOVES[x][2] > 0)) { const d = all.filter(x => MOVES[x][2] > 0).pop(); if (d != null) mv[0] = d; }
+  return mv;
+}
+function nextMove(m) { const l = LEARN[m.id - 1]; for (let i = 0; i < l.length; i += 2) if (l[i] > m.lv && !m.mv.includes(l[i + 1])) return { lv: l[i], mv: l[i + 1] }; return null; }
+function judge(m) {
+  const s = m.iv.reduce((a, b) => a + b, 0), best = m.iv.indexOf(Math.max(...m.iv));
+  return { t: s >= 151 ? 'Outstanding' : s >= 121 ? 'Great' : s >= 91 ? 'Above average' : 'Decent', best, sum: s };
+}
+const rollIv = egg => Array.from({ length: 6 }, () => egg ? Math.max(rnd(32), rnd(32)) : rnd(32));
+function ensure(m) {
+  if (!m.iv) m.iv = rollIv(); if (!m.ev) m.ev = [0, 0, 0, 0, 0, 0]; if (m.nat == null) m.nat = rnd(25);
+  if (!m.mv || !m.mv.length) m.mv = defaultMoves(m.id, m.lv);
+  return m;
+}
+/* EV-er legges i artens beste stat først (maks 252 per stat, 510 totalt). */
+function addEv(m, n) {
+  const order = BST[m.id - 1].map((b, i) => [b, i]).sort((a, b) => b[0] - a[0]).map(x => x[1]);
+  let tot = m.ev.reduce((a, b) => a + b, 0);
+  for (const i of order) { const add = Math.min(n, 252 - m.ev[i], 510 - tot); if (add > 0) { m.ev[i] += add; tot += add; n -= add; } if (n <= 0) break; }
+}
+/* Etter nivåøkning: nye angrep læres rett inn hvis det er ledig plass, ellers blir de tilgjengelige på kortet. */
+function learnUp(m, l0) {
+  const l = LEARN[m.id - 1], out = { learned: [], avail: [] };
+  for (let i = 0; i < l.length; i += 2) if (l[i] > l0 && l[i] <= m.lv && !m.mv.includes(l[i + 1])) {
+    if (m.mv.length < 4) { m.mv.push(l[i + 1]); out.learned.push(MOVES[l[i + 1]][0]); } else out.avail.push(MOVES[l[i + 1]][0]);
+  }
+  return out;
+}
+/* Nivåer for ville Pokémon følger laget: vanlige ligger rundt ditt nivå, sjeldne lavere. Utviklede former dukker først opp når du er høyt nok. */
+const refLv = () => { const p = S.party.map(monBy).filter(Boolean); return p.length ? Math.max(...p.map(m => m.lv)) : 5; };
+function reqLv(id) {
+  const st = stageOf(id); if (!st) return 1;
+  const d = D(id);
+  if (st === 1 && D(d[4])[6] & 4) return 1;
+  const own = d[5] || [0, 18, 34][st];
+  return st === 2 ? Math.max(own, reqLv(d[4]) + 1) : own;
+}
+function wildLv(id, t) {
+  const P = refLv(), base = [P - rnd(3), P - 1 - rnd(3), Math.round(P * 0.75) - rnd(2), Math.round(P * 0.65) - rnd(2), Math.round(P * 0.6)][t];
+  return Math.max(2, Math.min(P, Math.max(base, reqLv(id))));
+}
+
 /* ---------- Tilstand ---------- */
 const KEY = 'fokusdex.v1';
 function fresh() {
   return {
-    v: 1, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
+    v: 1, mig: 2, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
     items: { poke: 15, great: 0, ultra: 0, candy: 0, stone: 0, incense: 0 },
     mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, eggs: [], pend: [], incOn: 0,
     log: {}, fm: {},
@@ -80,7 +143,17 @@ function adopt(o) {
   let legacy = false;
   for (const k in S.fag) if (!S.fag[k].n) { Object.assign(S.fag[k], LEGACY[k] || { n: k.toUpperCase(), c: PAL[0], ty: [] }); legacy = true; }
   if (legacy && !o.extra) S.extra = ['sok', 'annet'];
+  if (!o.mig || o.mig < 2) migrate2();
+  S.mons.forEach(ensure);
   buildFags();
+}
+/* Versjon 2 (stats og angrep): ingen eid Pokémon er høyere enn nivået starteren ville hatt med all XP-en din, og ventende møter får nye nivåer. */
+function migrate2() {
+  const first = S.mons.slice().sort((a, b) => a.u - b.u)[0];
+  const cap = Math.max(5, first ? first.lv : 5, lvOf(xpAt(5) + S.xp));
+  for (const m of S.mons) { if (m.lv > cap) { m.lv = cap; m.xp = xpAt(cap); } delete m.mv; ensure(m); }
+  for (const e of S.pend) e.lv = wildLv(e.id, e.t);
+  S.mig = 2;
 }
 function load() {
   try { const o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (o && o.v === 1) adopt(o); } catch (_) {}
@@ -117,8 +190,8 @@ function streak() {
 }
 const shinyOdds = () => (1 / 150) * (1 + Math.min(streak(), 10) * 0.15);
 
-function addMon(id, lv, sh) {
-  const m = { u: S.uid++, id, lv, xp: xpAt(lv), sh: sh ? 1 : 0, fav: 0, at: Date.now() };
+function addMon(id, lv, sh, egg) {
+  const m = { u: S.uid++, id, lv, xp: xpAt(lv), sh: sh ? 1 : 0, fav: 0, at: Date.now(), iv: rollIv(egg), ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: defaultMoves(id, lv) };
   S.mons.push(m);
   S.seen[id] = 1; S.caught[id] = 1;
   if (S.party.length < 6) S.party.push(m.u);
@@ -128,7 +201,7 @@ function addMon(id, lv, sh) {
 /* ---------- Møter ---------- */
 /* o: fag (typebias), luck 0–2 (lengre økt og lokkeduft gir mer sjeldent), min (laveste sjeldenhet), leg (legendarisk), egg. */
 function genEnc(o = {}) {
-  const bias = F(o.fag).ty || [], L = o.luck || 0, pool = [];
+  const bias = F(o.fag).ty || [], L = o.luck || 0, pool = [], P = refLv();
   let tot = 0;
   const push = (id, w) => { pool.push([id, w]); tot += w; };
   if (o.egg) {
@@ -140,19 +213,17 @@ function genEnc(o = {}) {
     for (let id = reg.a; id <= reg.b; id++) {
       if (isLeg(id)) continue;
       const d = D(id), t = tierOf(id);
-      if (t < (o.min || 0)) continue;
+      if (t < (o.min || 0) || reqLv(id) > P) continue;
       let w = wOf(id) * [1, 1 + 0.3 * L, 1 + 1.2 * L, 1 + 3 * L][t];
       if (d[6] & 4) w *= 0.5;
       if (bias.includes(d[1]) || bias.includes(d[2])) w *= 2.5;
       push(id, w);
     }
   }
+  if (!pool.length) return genEnc(Object.assign({}, o, { min: Math.max(0, (o.min || 0) - 1) }));
   let x = Math.random() * tot, id = pool[pool.length - 1][0];
   for (const [i, w] of pool) { x -= w; if (x <= 0) { id = i; break; } }
-  const st = stageOf(id), d = D(id);
-  let lv = o.egg ? 1 : 2 + rnd(Math.min(40, 4 + tlv() * 2));
-  if (st) lv = Math.max(lv, d[5] || [0, 18, 34][st]);
-  if (isLeg(id)) lv = 50;
+  const lv = o.egg ? 1 : wildLv(id, tierOf(id));
   return { id, lv, sh: Math.random() < shinyOdds() * (o.egg ? 4 : 1) ? 1 : 0, t: tierOf(id), tr: isLeg(id) ? 4 : 3 };
 }
 /* Sjansen for fangst. zone: 0 = bom, 1 = grønn sone, 2 = gull. */
@@ -189,14 +260,15 @@ function grant(fag, min, full, planned) {
   const rested = day.s === 0, okMin = Math.max(0, Math.min(min, S.cap - day.m)), tired = okMin < min, mult = rested ? 1.5 : 1;
   const R = { fag, min, full, rested, tired, ups: [], gifts: [], hatch: [], tl0: tlv(), enc: 0 };
   R.xp = Math.round((okMin * 10 + (min - okMin) * 5) * mult);
-  R.coins = Math.round((okMin * 2 + (min - okMin)) * mult) + (full ? 20 : 0);
+  R.coins = Math.round((okMin * 3 + (min - okMin) * 1.5) * mult) + (full ? 30 : 0);
   S.xp += R.xp; S.coins += R.coins;
   day.m += min; day.s++; day.f[fag] = (day.f[fag] || 0) + min;
   S.fm[fag] = (S.fm[fag] || 0) + min;
   S.party.forEach((u, i) => {
     const m = monBy(u); if (!m) return;
     const l0 = m.lv; m.xp += Math.round(min * 10 * (i ? 0.3 : 1)); m.lv = lvOf(m.xp);
-    if (m.lv > l0) R.ups.push({ u, l0, l1: m.lv, evo: evoOpts(m).some(x => x.ok) });
+    if (!i) addEv(m, Math.floor(min / 2));
+    if (m.lv > l0) R.ups.push(Object.assign({ u, l0, l1: m.lv, evo: evoOpts(m).some(x => x.ok) }, learnUp(m, l0)));
   });
   for (const q of QUESTS) if (day.m - min < q.m && day.m >= q.m) { q.give(); R.gifts.push(`Daily goal, ${q.n}: ${q.r}`); }
   R.tl1 = tlv();
@@ -208,7 +280,7 @@ function grant(fag, min, full, planned) {
   }
   if (S.eggs.length) {
     const e = S.eggs[0]; e.got += min;
-    if (e.got >= e.need) { S.eggs.shift(); const en = genEnc({ egg: 1 }); const isNew = !S.caught[en.id]; const m = addMon(en.id, 1, en.sh); R.hatch.push({ u: m.u, isNew }); }
+    if (e.got >= e.need) { S.eggs.shift(); const en = genEnc({ egg: 1 }); const isNew = !S.caught[en.id]; const m = addMon(en.id, 1, en.sh, 1); R.hatch.push({ u: m.u, isNew }); }
   }
   const encs = [];
   let n = Math.floor(okMin / 20) + (full && planned >= 25 && okMin >= planned ? 1 : 0), luck = Math.min(1.5, planned / 60);
@@ -238,9 +310,9 @@ function grant(fag, min, full, planned) {
 function evoOpts(m) {
   return (EVO[m.id] || []).map(to => {
     const lv = D(to)[5];
-    if (lv) return { to, ok: m.lv >= lv, why: `at level ${lv}` };
-    if (D(m.id)[6] & 4) return { to, ok: m.lv >= 10, why: 'at level 10' };
-    return { to, ok: S.items.stone > 0 && m.lv >= 15, why: 'with an Evolution Stone at level 15', stone: 1 };
+    if (lv) return { to, ok: m.lv >= lv, why: `at level ${lv}`, s: `Lv ${lv}` };
+    if (D(m.id)[6] & 4) return { to, ok: m.lv >= 10, why: 'at level 10', s: 'Lv 10' };
+    return { to, ok: S.items.stone > 0 && m.lv >= 15, why: 'with an Evolution Stone at level 15', s: 'Stone · Lv 15', stone: 1 };
   });
 }
 function evolve(m, to) {
@@ -270,7 +342,7 @@ function toggleParty(m) {
   else if (S.party.length < 6) S.party.push(m.u);
   save();
 }
-function useCandy(m) { if (!(S.items.candy > 0) || m.lv >= 100) return false; S.items.candy--; m.lv++; m.xp = Math.max(m.xp, xpAt(m.lv)); save(); return true; }
+function useCandy(m) { if (!(S.items.candy > 0) || m.lv >= 100) return false; S.items.candy--; m.lv++; m.xp = Math.max(m.xp, xpAt(m.lv)); learnUp(m, m.lv - 1); save(); return true; }
 function buy(k) {
   const it = SHOP[k];
   if (!it || S.coins < it.p || (it.lv && tlv() < it.lv)) return false;
@@ -310,15 +382,35 @@ let GH = null, ghSha = '', ghBusy = false, ghT = 0, ghState = '', ghHook = null;
 const b64e = s => { const b = new TextEncoder().encode(s); let r = ''; for (let i = 0; i < b.length; i += 0x8000) r += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(r); };
 const b64d = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, '')), c => c.charCodeAt(0)));
 function ghLoad() { try { GH = JSON.parse(localStorage.getItem(GHK) || 'null'); } catch (_) { GH = null; } if (GH && !(GH.t && GH.repo)) GH = null; }
-function ghSet(t, repo) { GH = t && repo ? { t, repo } : null; ghSha = ''; ghState = ''; try { if (GH) localStorage.setItem(GHK, JSON.stringify(GH)); else localStorage.removeItem(GHK); } catch (_) {} }
+function ghStore() { try { if (GH) localStorage.setItem(GHK, JSON.stringify(GH)); else localStorage.removeItem(GHK); } catch (_) {} }
+/* ok = 1 først når brukeren har valgt hvilken lagring som gjelder (ghLink). Før det synkes ingenting. */
+function ghSet(t, repo) { GH = t && repo ? { t, repo, ok: 0 } : null; ghSha = ''; ghState = ''; ghStore(); }
 function ghReq(method, body) {
   const h = { Authorization: 'Bearer ' + GH.t, Accept: 'application/vnd.github+json' };
   if (body) h['Content-Type'] = 'application/json';
   return fetch(`https://api.github.com/repos/${GH.repo}/contents/fokusdex/save.json`, { method, headers: h, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' });
 }
 const ghErr = st => st === 401 ? 'The key does not work' : st === 403 ? 'The key lacks permission (Contents)' : st === 404 ? 'Repo not found' : 'Sync failed (' + st + ')';
+/* Første tilkobling: ser om repoet alt har en lagring. Gir { st: 'none' | 'remote' | 'err', o }. */
+async function ghProbe() {
+  try {
+    const r = await ghReq('GET');
+    if (r.status === 404) { ghSha = ''; return { st: 'none' }; }
+    if (!r.ok) { ghState = ghErr(r.status); return { st: 'err' }; }
+    const j = await r.json(); ghSha = j.sha;
+    const o = JSON.parse(b64d(j.content));
+    return o && o.v === 1 && Array.isArray(o.mons) ? { st: 'remote', o } : { st: 'none' };
+  } catch (_) { ghState = 'Offline'; return { st: 'err' }; }
+}
+/* use = 'remote': denne enheten tar over lagringen fra GitHub. use = 'local': denne enheten laster opp sin og erstatter den. */
+async function ghLink(use, o) {
+  if (use === 'remote' && o) { adopt(o); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (_) {} }
+  else if (o) S.rev = Math.max(S.rev, o.rev || 0) + 1;
+  GH.ok = 1; ghStore(); ghState = 'ok';
+  if (use !== 'remote') await ghPush();
+}
 async function ghPull() {
-  if (!GH || ghBusy || S.timer) return;
+  if (!GH || !GH.ok || ghBusy || S.timer) return;
   ghBusy = true;
   let push = false, adopted = false;
   try {
@@ -338,7 +430,7 @@ async function ghPull() {
   if (ghHook) ghHook(adopted);
 }
 async function ghPush() {
-  if (!GH || ghBusy) return;
+  if (!GH || !GH.ok || ghBusy) return;
   ghBusy = true;
   let again = false;
   try {
@@ -353,4 +445,4 @@ async function ghPush() {
   if (again) { ghSha = ''; await ghPull(); }
   else if (ghHook) ghHook(false);
 }
-function ghSoon() { if (!GH) return; clearTimeout(ghT); ghT = setTimeout(ghPush, 5000); }
+function ghSoon() { if (!GH || !GH.ok) return; clearTimeout(ghT); ghT = setTimeout(ghPush, 5000); }

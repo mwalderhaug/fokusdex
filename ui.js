@@ -112,7 +112,7 @@ function cry(id, delay = 0, vol = 0.45) {
   }).catch(() => {});
 }
 /* Lyd per type trykk. Handlinger med egen lyd (kast, kjøp, utvikling osv.) får ikke en ekstra. */
-const OWN = new Set(['start', 'throw', 'buy', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell']);
+const OWN = new Set(['mvtog', 'start', 'throw', 'buy', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell']);
 const SND = {
   tab: 'tab', lagv: 'tab', dexr: 'tab',
   fag: 'chip', min: 'chip', reg: 'chip', sort: 'chip', filt: 'chip', sety: 'chip',
@@ -194,7 +194,7 @@ VIEW.lag = () => {
       const a = xpAt(m.lv), b = xpAt(m.lv + 1), rdy = evoOpts(m).some(x => x.ok);
       return `<button type="button" class="tcard${i ? '' : ' lead'}" data-a="mon" data-u="${m.u}" style="--tc:var(--t${D(m.id)[1]})">${spr(m.id, { ani: !i, sh: m.sh, s: i ? '60px' : '84px' })}
         <span class="sp"><span class="row" style="gap:6px"><b class="tn-n">${esc(D(m.id)[0])}</b>${i ? '' : '<span class="pill" style="background:var(--sage);color:#152013">Partner</span>'}${rdy ? '<span class="pill" style="color:var(--gold)">Can evolve</span>' : ''}</span>
-        <span class="row sm tn" style="justify-content:space-between;margin-top:5px"><span>Level ${m.lv}</span><span>${i ? '30% XP' : 'all XP'}</span></span>
+        <span class="row sm tn" style="justify-content:space-between;margin-top:5px"><span>Level ${m.lv} · ${i ? '30% XP' : 'all XP'}</span><span>${rdy ? '' : (evoOpts(m)[0] || {}).s ? 'evolves ' + evoOpts(m).map(x => x.s).filter((x, k, a) => a.indexOf(x) === k).join(' / ') : 'fully evolved'}</span></span>
         <span class="bar" style="margin-top:5px"><i style="width:${Math.round((m.xp - a) / (b - a) * 100)}%;background:var(--tc)"></i></span></span></button>`;
     }).join('');
     return `${head}<div class="stack">${rows}</div><p class="sm">Your partner sits in the timer and gets all XP from sessions. Tap a Pokémon to switch partner, evolve it or remove it.</p>`;
@@ -207,16 +207,52 @@ VIEW.lag = () => {
     <div class="grid box">${list.map(m => { const t = tierOf(m.id); return `<button type="button" class="cell nm r${t}${t >= 2 ? ' rr' : ''}${S.party.includes(m.u) ? ' inp' : ''}" data-a="mon" data-u="${m.u}" aria-label="${esc(D(m.id)[0])}, level ${m.lv}">${spr(m.id, { sh: m.sh, lazy: 1 })}<span class="nx">${esc(D(m.id)[0])}</span><span class="l tn">${m.lv}</span>${m.fav ? '<span class="c">★</span>' : ''}</button>`; }).join('')}</div>
     <p class="sm">Green dot = in team. Colored frame = rare or better.</p>`;
 };
+/* Sekskanten: hver akse viser staten målt mot en sterk art (base 130) på samme nivå. */
+function hexEl(m) {
+  const st = statsOf(m), up = natUp(m.nat), dn = natDn(m.nat), cx = 130, cy = 104, R = 64;
+  const ref = i => i === 0 ? Math.floor(291 * m.lv / 100) + m.lv + 10 : Math.floor(291 * m.lv / 100) + 5;
+  const pt = (i, f) => { const a = (-90 + i * 60) * Math.PI / 180; return [Math.round((cx + Math.cos(a) * R * f) * 10) / 10, Math.round((cy + Math.sin(a) * R * f) * 10) / 10]; };
+  const order = [0, 1, 2, 5, 4, 3], ring = f => order.map((_, k) => pt(k, f).join(',')).join(' ');
+  const shape = order.map((s, k) => pt(k, Math.max(0.14, Math.min(1, st[s] / ref(s)))).join(',')).join(' ');
+  const lab = order.map((s, k) => { const [x, y] = pt(k, 1.36), col = up !== dn && s === up ? 'var(--sage)' : up !== dn && s === dn ? 'var(--red)' : 'var(--ink2)';
+    return `<text x="${x}" y="${y - 3}" text-anchor="middle" font-size="10.5" font-weight="650" fill="${col}">${SN[s]}</text><text x="${x}" y="${y + 11}" text-anchor="middle" font-size="13" font-weight="800" fill="var(--ink)">${st[s]}</text>`; }).join('');
+  return `<svg class="hex" viewBox="0 0 260 208" role="img" aria-label="${order.map(s => SN[s] + ' ' + st[s]).join(', ')}"><polygon points="${ring(1)}" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.14)"/><polygon points="${ring(0.5)}" fill="none" stroke="rgba(255,255,255,.08)"/>${order.map((_, k) => `<line x1="${cx}" y1="${cy}" x2="${pt(k, 1)[0]}" y2="${pt(k, 1)[1]}" stroke="rgba(255,255,255,.06)"/>`).join('')}<polygon points="${shape}" fill="var(--tc)" fill-opacity=".38" stroke="var(--tc)" stroke-width="2" stroke-linejoin="round"/>${lab}</svg>`;
+}
+const CLS = ['Status', 'Physical', 'Special'];
+const moveEl = (x, o = {}) => { const mv = MOVES[x]; return `<${o.btn ? `button type="button" data-a="mvtog" data-k="${x}" aria-pressed="${o.on ? 'true' : 'false'}"` : 'div'} class="mvc" style="--c:var(--t${mv[1]})"><b>${esc(mv[0])}</b><span><i></i>${TYN[mv[1]]} · ${CLS[mv[4]]}${mv[2] ? ' · ' + mv[2] : ''}</span></${o.btn ? 'button' : 'div'}>`; };
+/* Utviklingsveien med nivå eller stein mellom hvert ledd. cur = arten som er uthevet. */
+function evoLine(id, cur) {
+  let b = id; while (D(b)[4]) b = D(b)[4];
+  if (!(EVO[b] || []).length) return '';
+  const cell = x => `<span class="evc${x === cur ? ' cur' : ''}">${S.caught[x] || S.seen[x] || x === cur ? spr(x, { sil: !S.caught[x], s: '46px' }) : '<span class="q">?</span>'}</span>`;
+  const how = x => { const d = D(x); return d[5] ? 'Lv ' + d[5] : D(d[4])[6] & 4 ? 'Lv 10' : 'Stone'; };
+  const walk = x => (EVO[x] || []).map(y => `<span class="evs"><span class="evw">${how(y)}</span>${cell(y)}${walk(y)}</span>`).join('');
+  return `<div><div class="lab">Evolution</div><div class="evo">${cell(b)}${walk(b)}</div></div>`;
+}
 function monSheet(m) {
   const d = D(m.id), ev = evoOpts(m), inP = S.party.includes(m.u), lead = S.party[0] === m.u, a = xpAt(m.lv), b = xpAt(m.lv + 1), n = countOf(m.id);
+  const j = judge(m), up = natUp(m.nat), dn = natDn(m.nat), nx = nextMove(m), evt = m.ev.reduce((x, y) => x + y, 0), more = movesAt(m.id, m.lv).length > m.mv.length;
   openSheet(`<div class="shead">${spr(m.id, { ani: 1, sh: m.sh })}<div class="sp"><div class="sm tn">No. ${m.id} · ${REG[regOf(m.id)].n}${m.sh ? ' · <b style="color:var(--gold)">Shiny</b>' : ''}</div><div class="pn">${esc(d[0])}</div><div class="row" style="margin-top:6px;flex-wrap:wrap;gap:6px">${types(m.id)} ${tierEl(m.id)}</div></div></div>
     <div><div class="row sm tn" style="justify-content:space-between"><span>Level ${m.lv}</span><span>${n > 1 ? 'You have ' + n + ' of these' : 'Your only one'}</span></div><div class="bar" style="margin-top:6px"><i style="width:${Math.round((m.xp - a) / (b - a) * 100)}%"></i></div></div>
+    <div class="card2" style="--tc:var(--t${d[1]})">${hexEl(m)}
+      <div class="row" style="flex-wrap:wrap;gap:6px;justify-content:center"><span class="pill">${NAT[m.nat]}${up !== dn ? ` · +${SN[up]} −${SN[dn]}` : ' · neutral'}</span><span class="pill" style="color:${j.sum >= 121 ? 'var(--gold)' : j.sum >= 91 ? 'var(--sage)' : 'var(--ink2)'}">Judge: ${j.t} · best ${SN[j.best]}</span><span class="pill tn">Trained ${evt} of 510</span></div></div>
+    <div><div class="row" style="justify-content:space-between;margin-bottom:7px"><div class="lab" style="margin:0">Moves</div>${more ? `<button type="button" class="btn sm2" data-a="mvpick" data-u="${m.u}">Change moves</button>` : ''}</div><div class="mvg">${m.mv.map(x => moveEl(x)).join('')}</div>
+      ${nx ? `<p class="sm tn" style="margin-top:7px">Next move: ${esc(MOVES[nx.mv][0])} at level ${nx.lv}</p>` : ''}</div>
+    ${evoLine(m.id, m.id)}
     <div class="stack">
     ${ev.map(o => `<button type="button" class="btn ${o.ok ? 'gold' : ''} wide" data-a="evolve" data-u="${m.u}" data-k="${o.to}"${o.ok ? '' : ' disabled'}>${o.ok ? 'Evolve into ' + esc(D(o.to)[0]) : 'Evolves ' + o.why}</button>`).join('')}
     ${lead ? '' : `<button type="button" class="btn sage wide" data-a="lead" data-u="${m.u}">Make partner</button>`}
     <div class="row"><button type="button" class="btn sp" data-a="party" data-u="${m.u}"${(inP && S.party.length < 2) || (!inP && S.party.length >= 6) ? ' disabled' : ''}>${inP ? 'Remove from team' : 'Add to team'}</button><button type="button" class="btn sp" data-a="fav" data-u="${m.u}">${m.fav ? 'Unfavorite' : 'Favorite'}</button></div>
     <button type="button" class="btn wide" data-a="candy" data-u="${m.u}"${S.items.candy > 0 ? '' : ' disabled'}>Use Rare Candy (${S.items.candy})</button>
     <button type="button" class="btn wide danger" data-a="sell" data-u="${m.u}"${S.mons.length > 1 ? '' : ' disabled'}>Sell for ${coinEl(sellValue(m))}</button></div>`);
+}
+/* Velg hvilke fire angrep den skal ha, blant alle den har lært til nå. */
+function movePick(m) {
+  const sel = U.mvsel;
+  openSheet(`<h2 class="h">Moves for ${esc(D(m.id)[0])}</h2><p class="sm tn">Pick up to four. ${sel.length} of 4 chosen.</p>
+    <div class="mvg">${movesAt(m.id, m.lv).concat(m.mv.filter(x => !movesAt(m.id, m.lv).includes(x))).map(x => moveEl(x, { btn: 1, on: sel.includes(x) })).join('')}</div>
+    <p class="err" id="mv-err" role="alert"></p>
+    <button type="button" class="btn pri wide" data-a="mvsave" data-u="${m.u}">Save moves</button>`);
 }
 
 /* ---------- Dex ---------- */
@@ -235,12 +271,10 @@ VIEW.dex = () => {
     <div class="grid">${cells}</div>`;
 };
 function specSheet(id) {
-  const d = D(id), got = S.caught[id], chain = [];
-  let b = id; while (D(b)[4]) b = D(b)[4];
-  (function walk(x) { chain.push(x); (EVO[x] || []).forEach(walk); })(b);
+  const d = D(id), got = S.caught[id];
   openSheet(`<div class="shead">${spr(id, { ani: got ? 1 : 0, sil: !got })}<div class="sp"><div class="sm tn">No. ${id} · ${REG[regOf(id)].n}</div><div class="pn">${got ? esc(d[0]) : '???'}</div><div class="row" style="margin-top:6px;flex-wrap:wrap;gap:6px">${got ? types(id) : ''} ${tierEl(id)}</div></div></div>
     <p class="sm">${got ? `You have ${countOf(id)}.` : 'Seen, but not caught yet.'}</p>
-    ${chain.length > 1 ? `<div><div class="lab">Evolution line</div><div class="row" style="flex-wrap:wrap;gap:4px">${chain.map(x => `<span class="cell${S.caught[x] ? '' : ' un'}" style="width:64px">${S.caught[x] || S.seen[x] ? spr(x, { sil: !S.caught[x] }) : `<span class="q tn">${x}</span>`}</span>`).join('')}</div></div>` : ''}
+    ${evoLine(id, id)}
     <button type="button" class="btn wide" data-a="close">Close</button>`);
 }
 
@@ -254,7 +288,7 @@ VIEW.butikk = () => {
     <h2 class="h">Routes</h2>
     <div class="card" style="padding-top:6px;padding-bottom:6px">${[1, 2, 3, 4, 5].map(r => { const g = REG[r], has = S.regions.includes(r);
       return `<div class="item"><span class="ic"><span class="map"></span></span><div class="sp"><b>${g.n}</b><div class="sm tn">${g.b - g.a + 1} species · ${dexCount(r)} caught</div></div>${has ? `<button type="button" class="btn sm2" data-a="reg" data-k="${r}"${S.region === r ? ' disabled' : ''}>${S.region === r ? 'Here now' : 'Travel here'}</button>` : `<button type="button" class="btn sm2 ${S.coins >= g.c ? 'pri' : ''}" data-a="buyreg" data-k="${r}"${S.coins < g.c ? ' disabled' : ''}>${nb(g.c)}</button>`}</div>`; }).join('')}</div>
-    <p class="sm">Coins come from focus minutes (2 per minute), completed sessions and selling duplicates.</p>`;
+    <p class="sm">Coins come from focus minutes (3 per minute), completed sessions and selling duplicates.</p>`;
 };
 
 /* ---------- Profil: merker, statistikk, innstillinger ---------- */
@@ -279,7 +313,7 @@ VIEW.profil = () => {
       <div class="row"><button type="button" class="btn sp" data-a="sound">Sound: ${S.sound ? 'on' : 'off'}</button><button type="button" class="btn sp" data-a="cries"${S.sound ? '' : ' disabled'}>Cries: ${S.cries ? 'on' : 'off'}</button></div>
       ${S.sound ? `<div class="volrow"><span>Effects</span><input type="range" min="0" max="100" step="5" value="${S.vol}" data-v="vol" aria-label="Effects volume"><b class="tn" id="vv-vol">${S.vol}%</b></div>${S.cries ? `<div class="volrow"><span>Cries</span><input type="range" min="0" max="100" step="5" value="${S.cvol}" data-v="cvol" aria-label="Cries volume"><b class="tn" id="vv-cvol">${S.cvol}%</b></div>` : ''}` : ''}
       <button type="button" class="btn wide" data-a="plan">Edit subjects</button>
-      <button type="button" class="btn wide" data-a="sync">Sync between devices${GH ? ' · ' + (ghState === 'ok' ? 'on' : ghState || 'connecting') : ''}</button>
+      <button type="button" class="btn wide" data-a="sync">Sync between devices${GH && GH.ok ? ' · ' + (ghState === 'ok' ? 'on' : ghState || 'connecting') : ''}</button>
       <button type="button" class="btn wide" data-a="backup">Backup</button>
     </div>
     <p class="sm">Fokusdex is a private hobby project. Pokémon and the names belong to Nintendo, Game Freak and Creatures. Images are fetched from PokeAPI when the app is used and are not part of the app.</p>`;
@@ -316,12 +350,12 @@ function subjSheet() {
 }
 function syncSheet() {
   let lb = null; try { lb = JSON.parse(localStorage.getItem('lb.gh') || 'null'); } catch (_) {}
-  openSheet(`<h2 class="h">Sync between devices</h2><p class="sm">Your save is stored as one file (fokusdex/save.json) in a private GitHub repo. Use the same key and repo on each device. If two devices disagree, the one that has played the most wins.</p>
+  openSheet(`<h2 class="h">Sync between devices</h2><p class="sm">Your save is stored as one file (fokusdex/save.json) in a private GitHub repo. Use the same key and repo on each device. The first time you connect a device you choose which game to keep.</p>
     <label class="field">Repo (owner/name)<input id="gh-r" autocapitalize="off" autocomplete="off" value="${esc(GH ? GH.repo : '')}" placeholder="mwalderhaug/live-blekker-data"></label>
     <label class="field">Key (fine-grained token with Contents: read and write)<input id="gh-t" type="password" autocomplete="off" value="${esc(GH ? GH.t : '')}"></label>
     ${lb && lb.t && lb.repo ? '<button type="button" class="btn wide" data-a="synclb">Use the key from Live-blekker</button>' : ''}
-    <p class="sm" id="gh-s">${GH ? (ghState === 'ok' ? 'Sync is on.' : esc(ghState)) : 'Sync is off.'}</p>
-    <div class="row"><button type="button" class="btn pri sp" data-a="syncsave">Connect</button>${GH ? '<button type="button" class="btn sp danger" data-a="syncoff">Turn off</button>' : ''}</div>`);
+    <p class="sm" id="gh-s">${GH && GH.ok ? (ghState === 'ok' ? 'Sync is on.' : esc(ghState)) : 'Sync is off.'}</p>
+    <div class="row"><button type="button" class="btn pri sp" data-a="syncsave">Connect</button>${GH && GH.ok ? '<button type="button" class="btn sp danger" data-a="syncoff">Turn off</button>' : ''}</div>`);
 }
 function backupSheet() {
   openSheet(`<h2 class="h">Backup</h2><p class="sm">Copy the text to keep your game safe, or paste a copy to restore it.</p>
@@ -396,7 +430,7 @@ function countUp(el, to) { const t0 = performance.now(); (function f(t) { const 
 function showReward(R) {
   const news = [];
   R.hatch.forEach(x => { const m = monBy(x.u); if (m) news.push(`<div>${spr(m.id, { sh: m.sh })}<span><b>Egg hatched: ${esc(D(m.id)[0])}</b><br><span class="sm">${x.isNew ? 'New to your collection' : 'You already have it'}${m.sh ? ' · shiny' : ''}</span></span></div>`); });
-  R.ups.forEach(x => { const m = monBy(x.u); if (m) news.push(`<div>${spr(m.id, { sh: m.sh })}<span><b>${esc(D(m.id)[0])} level ${x.l0} → ${x.l1}</b>${x.evo ? '<br><span class="sm" style="color:var(--gold)">Ready to evolve</span>' : ''}</span></div>`); });
+  R.ups.forEach(x => { const m = monBy(x.u); if (m) news.push(`<div>${spr(m.id, { sh: m.sh })}<span><b>${esc(D(m.id)[0])} level ${x.l0} → ${x.l1}</b>${x.evo ? '<br><span class="sm" style="color:var(--gold)">Ready to evolve</span>' : ''}${(x.learned || []).length ? `<br><span class="sm">Learned ${esc(x.learned.join(', '))}</span>` : ''}${(x.avail || []).length ? `<br><span class="sm">New move to pick: ${esc(x.avail.join(', '))}</span>` : ''}</span></div>`); });
   R.gifts.forEach(g => news.push(`<div><span class="grass"><i></i><i></i><i></i><i></i></span><span>${esc(g)}</span></div>`));
   const notes = [R.rested ? 'Rested bonus: 1.5× on your first session of the day.' : '', R.tired ? 'Your team is tired: minutes past the daily cap gave half XP and no encounters.' : '', R.full ? '' : 'Ended early: you are rewarded for the minutes you did.'].filter(Boolean);
   ov(`<div class="mid" style="justify-content:flex-start;padding-top:8vh"><div><h1 class="big">${R.full ? 'Session complete.' : 'Nice work.'}</h1><p class="mut tn" style="margin-top:6px">${R.min} min ${esc(F(R.fag).n)}</p></div>
@@ -508,6 +542,9 @@ const A = {
   lead: el => { const m = monBy(+el.dataset.u); setPartner(m); closeSheet(); render(); toast(`${D(m.id)[0]} is now your partner.`); },
   party: el => { const m = monBy(+el.dataset.u); toggleParty(m); render(); monSheet(m); },
   fav: el => { const m = monBy(+el.dataset.u); m.fav = m.fav ? 0 : 1; save(); render(); monSheet(m); },
+  mvpick: el => { const m = monBy(+el.dataset.u); U.mvsel = m.mv.slice(); U.mvu = m.u; movePick(m); },
+  mvtog: el => { const x = +el.dataset.k, s = U.mvsel, i = s.indexOf(x); if (i >= 0) s.splice(i, 1); else if (s.length < 4) s.push(x); else { $('#mv-err').textContent = 'Four is the limit. Tap one to remove it first.'; return; } movePick(monBy(U.mvu)); },
+  mvsave: el => { const m = monBy(+el.dataset.u); if (!U.mvsel.length) { $('#mv-err').textContent = 'Keep at least one move.'; return; } m.mv = U.mvsel.slice(); save(); monSheet(m); toast('Moves saved.'); },
   candy: el => { const m = monBy(+el.dataset.u); if (useCandy(m)) { sfx.coin(); render(); monSheet(m); } },
   evolve: el => { const m = monBy(+el.dataset.u), from = m.id; if (evolve(m, +el.dataset.k)) { render(); evoShow(m, from); } },
   sell: el => { const m = monBy(+el.dataset.u); if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.innerHTML = 'Tap again to sell'; return; } const v = sell(m); save(); sfx.sell(); closeSheet(); render(); toast(`Sold for ${nb(v)} coins.`); },
@@ -526,7 +563,22 @@ const A = {
   sestart: () => { const r = seRead(); if (typeof r === 'string') { $('#se-err').textContent = r; return; } setSubjects(r); const c = begin(pick); sfx.evo(); closeOv(); render(); toast(c ? `${nb(c)} coins for the hours you have already done. Good luck.` : 'Good luck. Your first session gets the rested bonus.'); },
   sync: () => syncSheet(),
   synclb: () => { try { const lb = JSON.parse(localStorage.getItem('lb.gh')); $('#gh-r').value = lb.repo; $('#gh-t').value = lb.t; } catch (_) {} },
-  syncsave: () => { const t = $('#gh-t').value.trim(), r = $('#gh-r').value.trim(); if (!t || !/^[\w.-]+\/[\w.-]+$/.test(r)) { $('#gh-s').textContent = 'Enter the repo as owner/name and paste the key.'; return; } ghSet(t, r); $('#gh-s').textContent = 'Connecting…'; ghPull(); },
+  syncsave: async () => {
+    const t = $('#gh-t').value.trim(), r = $('#gh-r').value.trim();
+    if (!t || !/^[\w.-]+\/[\w.-]+$/.test(r)) { $('#gh-s').textContent = 'Enter the repo as owner/name and paste the key.'; return; }
+    ghSet(t, r); $('#gh-s').textContent = 'Connecting…';
+    const p = await ghProbe();
+    if (p.st === 'err') { const s = $('#gh-s'); if (s) s.textContent = ghState; GH = null; ghStore(); return; }
+    if (p.st === 'none') { await ghLink('local'); closeSheet(); render(); toast(ghState === 'ok' ? 'Sync is on. This game is now saved to GitHub.' : ghState); return; }
+    U.remote = p.o;
+    const sum = o => `Trainer level ${1 + Math.floor(Math.sqrt((o.xp || 0) / 300))} · ${o.mons.length} Pokémon · ${nb(o.coins || 0)} coins`;
+    openSheet(`<h2 class="h">Which game do you want to keep?</h2><p class="sm">There is already a save on GitHub. Choose one. The other is replaced on this device or on GitHub.</p>
+      <button type="button" class="card pick2" data-a="syncuse"><b>Use the save from GitHub</b><span class="sm tn">${sum(p.o)}${p.o.at ? ' · saved ' + new Date(p.o.at).toLocaleDateString('en-GB') : ''}</span></button>
+      <button type="button" class="card pick2" data-a="syncup"><b>Keep the game on this device</b><span class="sm tn">${sum(S)}</span></button>
+      <button type="button" class="btn wide" data-a="syncoff">Cancel</button>`);
+  },
+  syncuse: async () => { await ghLink('remote', U.remote); closeSheet(); render(); toast('Loaded the save from GitHub. Sync is on.'); },
+  syncup: async () => { await ghLink('local', U.remote); closeSheet(); render(); toast(ghState === 'ok' ? 'This game replaced the save on GitHub. Sync is on.' : ghState); },
   syncoff: () => { ghSet('', ''); closeSheet(); render(); toast('Sync turned off.'); },
   backup: () => backupSheet(),
   bkcopy: () => { const txt = b64e(JSON.stringify(S)); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Copied.'), () => { $('#bk-in').value = txt; toast('Copy the text in the field.'); }); },
