@@ -1,8 +1,8 @@
 {
   "name": "Fokusdex",
   "short_name": "Fokusdex",
-  "description": "Fokustimer der hvert minutt du studerer gir XP, møter og fangst.",
-  "lang": "no",
+  "description": "A focus timer where every minute you study earns XP, encounters and catches.",
+  "lang": "en",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

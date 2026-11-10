@@ -1,9 +1,9 @@
 # Fokusdex
 
-Fokustimer som spill: hvert minutt du fokuserer gir XP og mynter, og hver økt lokker fram ville Pokémon (generasjon 1–5) du kan fange, utvikle og samle.
+A focus timer as a game: every minute you focus earns XP and coins, and every session lures out wild Pokémon (generations 1–5) that you can catch, evolve and collect.
 
-- Ren HTML, CSS og JavaScript uten byggesteg. Åpne `index.html`, eller bruk GitHub Pages.
-- Alt lagres i nettleseren. Synk mellom enheter er valgfritt (Profil → Synk) og bruker et privat GitHub-repo.
-- `data.js` er bygget fra de åpne datafilene til [PokeAPI](https://github.com/PokeAPI/pokeapi).
+- Plain HTML, CSS and JavaScript with no build step. Open `index.html`, or use GitHub Pages.
+- Everything is saved in the browser. Sync between devices is optional (Profile → Sync) and uses a private GitHub repo.
+- `data.js` is built from the open data files of [PokeAPI](https://github.com/PokeAPI/pokeapi).
 
-Dette er et privat hobbyprosjekt uten tilknytning til Nintendo, Game Freak eller The Pokémon Company, som eier Pokémon og navnene. Repoet inneholder ingen bilder av Pokémon. Bildene hentes fra [PokeAPI sitt bildearkiv](https://github.com/PokeAPI/sprites) når appen brukes.
+This is a private hobby project with no affiliation with Nintendo, Game Freak or The Pokémon Company, who own Pokémon and the names. The repo contains no Pokémon images. Images are fetched from the [PokeAPI sprite archive](https://github.com/PokeAPI/sprites) when the app is used.

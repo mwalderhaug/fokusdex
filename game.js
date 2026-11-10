@@ -3,8 +3,8 @@
    Sløyfa: fokusminutter → XP og mynter → møter → fangst → lag, samling og butikk.
    Alt lagres i nettleseren (localStorage). Synk til et privat GitHub-repo er valgfritt (Profil → Synk). */
 
-const TYN = ['Normal', 'Kamp', 'Flygende', 'Gift', 'Bakke', 'Stein', 'Insekt', 'Spøkelse', 'Stål', 'Ild', 'Vann', 'Gress', 'Elektrisk', 'Psykisk', 'Is', 'Drage', 'Mørk', 'Fe'];
-const TIERS = ['Vanlig', 'Uvanlig', 'Sjelden', 'Episk', 'Legendarisk'];
+const TYN = ['Normal', 'Fighting', 'Flying', 'Poison', 'Ground', 'Rock', 'Bug', 'Ghost', 'Steel', 'Fire', 'Water', 'Grass', 'Electric', 'Psychic', 'Ice', 'Dragon', 'Dark', 'Fairy'];
+const TIERS = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
 /* Regioner = generasjoner. c er prisen for å låse opp. */
 const REG = [null, { n: 'Kanto', a: 1, b: 151, c: 0 }, { n: 'Johto', a: 152, b: 251, c: 1200 }, { n: 'Hoenn', a: 252, b: 386, c: 2500 }, { n: 'Sinnoh', a: 387, b: 493, c: 4000 }, { n: 'Unova', a: 494, b: 649, c: 6000 }];
 /* Fag styrer hvilke typer som dukker opp oftere. */
@@ -13,26 +13,26 @@ const FAGS = {
   cf: { n: 'CF', c: '#A9C3A2', ty: [0, 1] },
   met: { n: 'MET', c: '#9FBDB8', ty: [13, 7] },
   bsmo: { n: 'Ø&B', c: '#BDBE92', ty: [11, 10, 6] },
-  sok: { n: 'Søknad', c: '#D4BC8E', ty: [2, 9] },
-  annet: { n: 'Annet', c: '#AFA89E', ty: [] }
+  sok: { n: 'Job apps', c: '#D4BC8E', ty: [2, 9] },
+  annet: { n: 'Other', c: '#AFA89E', ty: [] }
 };
 const SHOP = {
-  poke: { n: 'Poké Ball', p: 20, d: 'Vanlig ball', img: 'poke-ball', bc: '#d98f7e' },
-  great: { n: 'Great Ball', p: 60, d: 'Bedre sjanse · trenernivå 3', lv: 3, img: 'great-ball', bc: '#7fa8e6' },
-  ultra: { n: 'Ultra Ball', p: 150, d: 'Best sjanse · trenernivå 7', lv: 7, img: 'ultra-ball', bc: '#e3c577' },
-  incense: { n: 'Lokkeduft', p: 80, d: 'Neste økt: ett ekstra møte og mer sjeldent', ic: 'smoke' },
-  candy: { n: 'Sjeldent godteri', p: 150, d: 'Ett nivå opp til én Pokémon', ic: 'candy' },
-  stone: { n: 'Utviklingsstein', p: 300, d: 'For dem som ikke utvikles av nivå alene', ic: 'gem' },
-  egg: { n: 'Egg', p: 250, d: 'Klekkes etter 120 fokusminutter. Kan være fra alle regioner', ic: 'egg' }
+  poke: { n: 'Poké Ball', p: 20, d: 'Standard ball', img: 'poke-ball', bc: '#d98f7e' },
+  great: { n: 'Great Ball', p: 60, d: 'Better odds · trainer level 3', lv: 3, img: 'great-ball', bc: '#7fa8e6' },
+  ultra: { n: 'Ultra Ball', p: 150, d: 'Best odds · trainer level 7', lv: 7, img: 'ultra-ball', bc: '#e3c577' },
+  incense: { n: 'Incense', p: 80, d: 'Next session: one extra encounter and rarer finds', ic: 'smoke' },
+  candy: { n: 'Rare Candy', p: 150, d: 'One level up for one Pokémon', ic: 'candy' },
+  stone: { n: 'Evolution Stone', p: 300, d: 'For those that do not evolve by level alone', ic: 'gem' },
+  egg: { n: 'Egg', p: 250, d: 'Hatches after 120 focus minutes. Can be from any region', ic: 'egg' }
 };
 const BALLM = { poke: 1, great: 1.5, ultra: 2.2 };
 const SELL = [15, 40, 100, 300, 1500];
 const STMULT = [1, 0.22, 0.07];
 /* Dagens mål: tre små delmål som gir noe med en gang de nås. */
 const QUESTS = [
-  { m: 25, n: 'første økt', r: '3 Poké Balls', give: () => { S.items.poke += 3; } },
-  { m: 180, n: '3 timer', r: '100 mynter', give: () => { S.coins += 100; } },
-  { m: 300, n: '5 timer', r: 'sjeldent godteri', give: () => { S.items.candy += 1; } }
+  { m: 25, n: 'first session', r: '3 Poké Balls', give: () => { S.items.poke += 3; } },
+  { m: 180, n: '3 hours', r: '100 coins', give: () => { S.coins += 100; } },
+  { m: 300, n: '5 hours', r: 'Rare Candy', give: () => { S.items.candy += 1; } }
 ];
 
 /* ---------- Arter ---------- */
@@ -185,13 +185,13 @@ function grant(fag, min, full, planned) {
     const l0 = m.lv; m.xp += Math.round(min * 10 * (i ? 0.3 : 1)); m.lv = lvOf(m.xp);
     if (m.lv > l0) R.ups.push({ u, l0, l1: m.lv, evo: evoOpts(m).some(x => x.ok) });
   });
-  for (const q of QUESTS) if (day.m - min < q.m && day.m >= q.m) { q.give(); R.gifts.push(`Dagens mål, ${q.n}: ${q.r}`); }
+  for (const q of QUESTS) if (day.m - min < q.m && day.m >= q.m) { q.give(); R.gifts.push(`Daily goal, ${q.n}: ${q.r}`); }
   R.tl1 = tlv();
   for (let l = R.tl0 + 1; l <= R.tl1; l++) {
     S.items.poke += 5; let g = '5 Poké Balls';
-    if (l === 3) { S.items.great += 3; g += ' og 3 Great Balls (nå i butikken)'; }
-    if (l === 7) { S.items.ultra += 2; g += ' og 2 Ultra Balls (nå i butikken)'; }
-    R.gifts.push(`Trenernivå ${l}: ${g}`);
+    if (l === 3) { S.items.great += 3; g += ' and 3 Great Balls (now in the shop)'; }
+    if (l === 7) { S.items.ultra += 2; g += ' and 2 Ultra Balls (now in the shop)'; }
+    R.gifts.push(`Trainer level ${l}: ${g}`);
   }
   if (S.eggs.length) {
     const e = S.eggs[0]; e.got += min;
@@ -204,14 +204,14 @@ function grant(fag, min, full, planned) {
   /* Hvert vanlig møte kan en sjelden gang være legendarisk: 0,5 % i en kort økt, opp mot 1 % i en lang, litt mer med dager på rad. */
   const legP = 0.005 * (1 + luck * 0.5) + Math.min(streak(), 10) * 0.0003;
   for (let i = 0; i < n; i++) encs.push(Math.random() < legP ? genEnc({ leg: 1 }) : genEnc({ fag, luck }));
-  if (full && planned >= 45 && okMin >= planned && Math.random() < Math.min(0.04, 0.01 + 0.005 * streak())) { encs.push(genEnc({ leg: 1 })); R.gifts.push('Noe legendarisk rører seg i gresset.'); }
+  if (full && planned >= 45 && okMin >= planned && Math.random() < Math.min(0.04, 0.01 + 0.005 * streak())) { encs.push(genEnc({ leg: 1 })); R.gifts.push('Something legendary is stirring in the grass.'); }
   const fg = S.fag[fag];
   if (fg) {
     const reach = Math.min(4, Math.floor(fagMin(fag) / (fg.t * 60) * 4));
     while (fg.ms < reach) {
       fg.ms++;
-      if (fg.ms < 4) { encs.push(genEnc({ fag, min: 3, luck: 1.5 })); R.gifts.push(`${FAGS[fag].n}: ${fg.ms * 25} % av planen er gjort. Et episk møte venter.`); }
-      else { encs.push(genEnc({ leg: 1 })); R.gifts.push(`${FAGS[fag].n}-merket er ditt. Et legendarisk møte venter.`); }
+      if (fg.ms < 4) { encs.push(genEnc({ fag, min: 3, luck: 1.5 })); R.gifts.push(`${FAGS[fag].n}: ${fg.ms * 25}% of the plan is done. An epic encounter is waiting.`); }
+      else { encs.push(genEnc({ leg: 1 })); R.gifts.push(`The ${FAGS[fag].n} badge is yours. A legendary encounter is waiting.`); }
     }
   }
   R.enc = encs.length;
@@ -225,9 +225,9 @@ function grant(fag, min, full, planned) {
 function evoOpts(m) {
   return (EVO[m.id] || []).map(to => {
     const lv = D(to)[5];
-    if (lv) return { to, ok: m.lv >= lv, why: `nivå ${lv}` };
-    if (D(m.id)[6] & 4) return { to, ok: m.lv >= 10, why: 'nivå 10' };
-    return { to, ok: S.items.stone > 0 && m.lv >= 15, why: 'utviklingsstein og nivå 15', stone: 1 };
+    if (lv) return { to, ok: m.lv >= lv, why: `at level ${lv}` };
+    if (D(m.id)[6] & 4) return { to, ok: m.lv >= 10, why: 'at level 10' };
+    return { to, ok: S.items.stone > 0 && m.lv >= 15, why: 'with an Evolution Stone at level 15', stone: 1 };
   });
 }
 function evolve(m, to) {
@@ -286,7 +286,7 @@ function ghReq(method, body) {
   if (body) h['Content-Type'] = 'application/json';
   return fetch(`https://api.github.com/repos/${GH.repo}/contents/fokusdex/save.json`, { method, headers: h, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' });
 }
-const ghErr = st => st === 401 ? 'Nøkkelen virker ikke' : st === 403 ? 'Nøkkelen mangler tillatelse (Contents)' : st === 404 ? 'Fant ikke repoet' : 'Synk feilet (' + st + ')';
+const ghErr = st => st === 401 ? 'The key does not work' : st === 403 ? 'The key lacks permission (Contents)' : st === 404 ? 'Repo not found' : 'Sync failed (' + st + ')';
 async function ghPull() {
   if (!GH || ghBusy || S.timer) return;
   ghBusy = true;
@@ -302,7 +302,7 @@ async function ghPull() {
       else if (o && S.rev > o.rev) push = true;
       ghState = 'ok';
     }
-  } catch (_) { ghState = 'Uten nett'; }
+  } catch (_) { ghState = 'Offline'; }
   ghBusy = false;
   if (push) await ghPush();
   if (ghHook) ghHook(adopted);
@@ -312,13 +312,13 @@ async function ghPush() {
   ghBusy = true;
   let again = false;
   try {
-    const body = { message: 'Fokusdex: lagring', content: b64e(JSON.stringify(S)) };
+    const body = { message: 'Fokusdex: save', content: b64e(JSON.stringify(S)) };
     if (ghSha) body.sha = ghSha;
     const r = await ghReq('PUT', body);
     if (r.ok) { ghSha = (await r.json()).content.sha; ghState = 'ok'; }
     else if (r.status === 409 || r.status === 422) again = true;
     else ghState = ghErr(r.status === 404 ? 404 : r.status);
-  } catch (_) { ghState = 'Uten nett'; }
+  } catch (_) { ghState = 'Offline'; }
   ghBusy = false;
   if (again) { ghSha = ''; await ghPull(); }
   else if (ghHook) ghHook(false);

@@ -1,6 +1,6 @@
 /* Fokusdex – lagrer appen på enheten så den åpner uten nett. Bildene fra PokeAPI og Showdown mellomlagres første gang de vises.
    Øk versjonsnummeret når fillista endres. */
-const CACHE = 'fokusdex-v2', IMG = 'fokusdex-img-v1';
+const CACHE = 'fokusdex-v3', IMG = 'fokusdex-img-v1';
 const FILES = ['./', './index.html', './style.css', './data.js', './game.js', './ui.js', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => {
