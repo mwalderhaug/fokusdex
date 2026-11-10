@@ -7,6 +7,7 @@ const PACK = (() => {
   const P = { ok: false, man: null, anims: null }, mem = new Map(), pend = new Map(), imgs = new Map(), bufs = new Map(), CN = 'fokusdex-pack';
   const dev = () => { try { return localStorage.getItem('fokusdex.pack') || ''; } catch (_) { return ''; } };
   const key = p => 'https://pack.invalid/' + (P.man ? P.man.v : 0) + '/' + p;
+  const MIME = { png: 'image/png', mp3: 'audio/mpeg', json: 'application/json' };
   /* Henter én fil fra kilden: det private repoet, eller en egen adresse satt for utvikling. */
   async function raw(path) {
     const d = dev();
@@ -20,8 +21,9 @@ const PACK = (() => {
   async function blob(path) {
     let c = null;
     try { c = await caches.open(CN); const hit = await c.match(key(path)); if (hit) return hit.blob(); } catch (_) {}
-    const b = await raw(path);
-    try { if (c) await c.put(key(path), new Response(b)); } catch (_) {}
+    /* GitHub svarer med sin egen innholdstype. Lyd og bilder må merkes riktig, ellers nekter noen nettlesere å spille dem. */
+    const b = new Blob([await raw(path)], { type: MIME[path.split('.').pop()] || 'application/octet-stream' });
+    try { if (c) await c.put(key(path), new Response(b, { headers: { 'Content-Type': b.type } })); } catch (_) {}
     return b;
   }
   /* Adresse til en fil i pakken, til bruk i bilder og lyd. Samme fil hentes bare én gang; '' hvis den ikke finnes. */
