@@ -1,7 +1,7 @@
 'use strict';
 /* Fokusdex – kampmotoren: reglene for en kamp, uten skjerm.
    Motoren endrer kampens tilstand med en gang og gir tilbake en liste hendelser som skjermen (bui.js) spiller av i rekkefølge.
-   Trenere, ligaen og Battle Factory ligger i league.js. XP deles ut etter kampen, ikke underveis. */
+   Trenere, ligaen og Battle Frontier ligger i league.js. XP deles ut etter kampen, ikke underveis. */
 
 /* Typetabellen (med Fairy). For hver angrepstype: supereffektivt mot / lite effektivt mot / ingen effekt på. */
 const TCH = { normal: '/rock steel/ghost', fighting: 'normal rock steel ice dark/flying poison bug psychic fairy/ghost', flying: 'fighting bug grass/rock steel electric/', poison: 'grass fairy/poison ground rock ghost/steel',
@@ -49,7 +49,7 @@ function bmon(src) {
     sg: Z8(), status: '', slp: 0, tox: 0, ty: [D(src.id)[1], D(src.id)[2]], out: 0, v: {} };
 }
 const newSide = () => ({ ref: 0, ls: 0, safe: 0, mist: 0, tail: 0, lucky: 0, spikes: 0, tsp: 0, rock: 0, wish: null });
-/* tr = { n, title, img, ty, kind, skill, boss }. x = ekstra felter for modusen (liga eller Battle Factory). */
+/* tr = { n, title, img, ty, kind, skill, boss }. x = ekstra felter for modusen (liga, Battle Frontier eller demo). */
 function mkBattle(me, foe, tr, x) {
   return Object.assign({ me: me.map(bmon), foe: foe.map(bmon), tr, a: 0, b: 0, turn: 0, over: null, need: 0, kos: [], pay: 0,
     wx: { k: '', n: 0 }, sd: { me: newSide(), foe: newSide() }, lastM: { me: null, foe: null }, troom: 0, mud: 0, wsp: 0, aiSw: -9 }, x);

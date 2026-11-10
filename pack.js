@@ -52,29 +52,43 @@ const PACK = (() => {
   P.animFor = m => P.anims && P.anims.a['Move:' + animId(m)] ? 'Move:' + animId(m) : '';
   P.common = k => P.anims && P.anims.a['Common:' + k] ? 'Common:' + k : '';
   const sheetOf = n => { const a = P.anims && P.anims.a[n]; return a && a.g && P.anims.sheets[a.g] ? 'anim/' + P.anims.sheets[a.g] + '.png' : ''; };
-  /* Hvilken bane en trener møter deg på. */
+  /* Hvilken bane en trener møter deg på: etter klassen for bosser, etter trenertypen ellers. Noen har sin egen sal. */
   const SCENE = { field: ['grass', 'tall_grass', 'puddle_1'], forest: ['pinwheel_road', 'tall_grass'], cave: ['cave', 'mountain'], beach: ['shallow_water', 'water'], dojo: ['building'], lab: ['building'], night: ['mountain', 'snowy_tall_grass'], factory: ['pwt'],
-    gym: ['black_tower_1_2', 'black_tower_3_5', 'black_tower_10'], rival: ['pwt'], e4: ['caitlin', 'grimsley'], evil: ['black_tower_3_5'], champ: ['black_tower_10', 'black_tower_1_2'], legend: ['kyurem_cave'], fachead: ['black_tower_1_2'] };
-  P.sceneFor = B => { if (!P.ok) return ''; const tr = B.tr, l = SCENE[tr.boss ? tr.kind : tr.arena] || SCENE.field, s = l[(tr.v + tr.n.length) % l.length]; return P.man.scenes[s] || ''; };
-  /* Hvilken låt som hører til treneren: etter trenertype, og etter navn og region der det finnes en egen. Samme trener får samme låt hver gang. */
+    gym: ['black_tower_1_2', 'building', 'black_tower_3_5'], evilteam: ['building', 'cave'], eviladmin: ['black_tower_3_5', 'cave'], e4: ['caitlin', 'grimsley'], rival: ['pwt', 'black_tower_3_5'],
+    evilboss: ['kyurem_cave', 'black_tower_10'], champ: ['black_tower_10', 'black_tower_1_2'], supreme: ['kyurem_cave', 'black_tower_10'], brain: ['pwt', 'black_tower_1_2'] };
+  P.sceneFor = B => {
+    if (!P.ok) return '';
+    const tr = B.tr, own = tr.boss && P.man.scenes[tr.n.toLowerCase()]; if (own) return own;
+    const l = SCENE[tr.boss ? tr.kind : tr.fr ? 'factory' : tr.arena] || SCENE.field, s = l[(tr.v + tr.n.length) % l.length]; return P.man.scenes[s] || '';
+  };
+  /* Hvilken låt som hører til treneren. Låtene ligger i én mappe per klasse, og tittelen sier hvem de tilhører: hver boss har et søk (mre)
+     som plukker ut sin egen låt i klassens mappe. Finnes ingen der, lånes lagets låt fra en naboklasse, og til slutt en fra klassen.
+     I Battle Frontier stiger musikken gjennom runden: trenerlåter først, de store kamplåtene før bossen. Samme trener får samme låt hver gang,
+     men har de flere låter (som Ghetsis), byttes det for hver runde i ligaen. */
+  const FALL = { evilteam: ['eviladmin'], eviladmin: ['evilteam', 'evilboss'], evilboss: ['evilteam', 'eviladmin'], champ: ['supreme'], supreme: ['champ'], rival: ['champ'] };
   P.trackFor = B => {
     if (!P.ok || !P.man.music) return '';
     const tr = B.tr, n = tr.n, M = P.man.music, by = (c, re) => M.filter(x => x.c === c && (!re || re.test(x.t)));
-    let l = [];
-    if (tr.kind === 'fachead') l = by('frontier', /Frontier Brain/);
-    else if (tr.kind === 'fac') l = by('frontier').filter(x => !/Frontier Brain/.test(x.t)).concat(by('trainer'));
-    else if (tr.kind === 'legend') l = n === 'Red' ? by('supreme', /Red/) : n === 'Cynthia' ? by('supreme', /Cynthia/) : n === 'N' ? by('evilboss', /N Final/) : by('supreme');
-    else if (tr.kind === 'champ') l = n === 'Lance' ? by('champ', /Lance/) : /Steven|Wallace/.test(n) ? by('champ', /Steven/) : n === 'Alder' ? by('champ', /Alder/) : n === 'Iris' ? by('supreme', /Iris/) : by('champ');
-    else if (tr.kind === 'evil') l = n === 'Ghetsis' ? by('evilboss', /Ghetsis/) : n === 'Cyrus' ? by('evilboss', /Galactic/) : n === 'Colress' ? by('supreme', /Colress/) : /Archie|Maxie/.test(n) ? by('evilboss', /Aqua/) : by('eviladmin').concat(by('evilboss', /Galactic|Aqua/));
-    else if (tr.kind === 'e4') l = /Flint|Lucian/.test(n) ? by('e4', /Diamond/) : /Shauntal|Grimsley|Caitlin|Marshal/.test(n) ? by('e4', /Black/) : by('e4');
-    else if (tr.kind === 'rival') l = n === 'Blue' ? by('rival', /FireRed/) : n === 'Silver' ? by('rival', /HeartGold/) : n === 'Barry' ? by('rival', /Brilliant/) : n === 'Wally' ? by('rival', /Wally/) : by('rival', /B2 W2\)/);
-    else if (tr.kind === 'gym') { const i = POOL.gym.findIndex(x => x[0] === n); l = by('gym', i < 7 ? /Kanto/ : i < 11 ? /Johto/ : i < 15 ? /Hoenn|Omega/ : i < 21 ? /Sinnoh/ : /B2 W2 Gym/); }
-    else if (/Rocket/.test(n)) l = by('evilteam', /Rocket/); else if (/Galactic/.test(n)) l = by('evilteam', /Galactic/); else if (/Plasma/.test(n)) l = by('evilteam', /Plasma/);
+    let re = null, l = [], h = B.lap || 0; try { if (tr.mre) re = new RegExp(tr.mre); } catch (_) {}
+    if (tr.kind === 'brain') { l = by('frontier', re); if (!l.length) l = by('frontier', /Frontier Brain/); }
+    else if (tr.boss) { if (re) { l = by(tr.kind, re); for (const c of FALL[tr.kind] || []) if (!l.length) l = by(c, re); } if (!l.length) l = by(tr.kind); }
+    else if (tr.fr) { l = (B.w || 0) >= 4 ? by('frontier', /Raikou|Giratina|Rayquaza|Reshiram|Mewtwo/) : by('frontier', /Aether|World Champion/).concat(by('trainer')); h = (B.w || 0) + (B.round || 0) * 3; }
     if (!l.length) l = by('trainer');
     if (!l.length) return '';
-    let h = tr.kind === 'fac' ? (B.w || 0) + (B.round || 0) * 3 : 0; for (let i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) >>> 0;
+    for (let i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) >>> 0;
     return l[h % l.length].f;
   };
+  /* HP-boksene (ett ark med boksene, linjene, tallene og bokstavene) og bildene til boss-introen (fargebånd, VS, lyn, stjerner). */
+  P.hud = null; P.vs = null;
+  async function loadHud() { if (P.hud || !P.man.hud) return; const im = await P.img(P.man.hud.f); if (im) P.hud = { im, r: P.man.hud.r }; }
+  async function loadVs() {
+    if (P.vs || !P.man.vs) return; const im = await P.img(P.man.vs.f); if (!im) return;
+    const o = {}, c = document.createElement('canvas'), g = c.getContext('2d');
+    for (const k in P.man.vs.r) { const r = P.man.vs.r[k]; c.width = r[2]; c.height = r[3]; g.clearRect(0, 0, r[2], r[3]); g.drawImage(im, r[0], r[1], r[2], r[3], 0, 0, r[2], r[3]); o[k] = c.toDataURL(); }
+    P.vs = o;
+  }
+  /* Bildene til boss-introen må være klare før introen starter. Venter høyst et par sekunder. */
+  P.introPrep = async () => { if (!(await P.init())) return; await Promise.race([loadVs(), new Promise(r => setTimeout(r, 2500))]); };
   /* Musikken spilles i ett lydelement som låses opp av trykket som starter kampen (ellers nekter mobilen å spille). */
   let au = null, cur = '';
   P.unlock = () => { try { if (!au) { au = new Audio(); au.loop = true; au.preload = 'auto'; } if (!cur) { au.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='; au.play().catch(() => {}); } } catch (_) {} };
@@ -105,6 +119,7 @@ const PACK = (() => {
     const jobs = [];
     if (!P.anims && P.man.anims) jobs.push(blob(P.man.anims).then(b => b.text()).then(t => { P.anims = JSON.parse(t); }).catch(() => {}));
     const sc = P.sceneFor(B); if (sc) jobs.push(P.url(sc));
+    jobs.push(loadHud()); if (B.tr.boss) jobs.push(loadVs());
     for (const b of ['pokeball', 'greatball', 'ultraball']) { jobs.push(P.url(`ui/ball_${b}.png`)); jobs.push(P.url(`ui/ball_${b}_open.png`)); }
     const tk = P.trackFor(B); if (tk) P.url(tk);
     ['Hit Super Effective', 'Hit Normal Damage', 'Hit Weak Not Very Effective', 'Stat Rise Up', 'Stat Fall', 'In-Battle Faint No Health', 'In-Battle Heal HP Restore', 'In-Battle Recall Switch Pokeball', 'Status Burned', 'Status Poisoned', 'Status Paralyzed', 'Status Frozen'].forEach(P.warm);

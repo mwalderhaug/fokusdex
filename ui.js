@@ -315,11 +315,12 @@ VIEW.profil = () => {
     <div class="card stack">
       <label class="field">Daily cap before your team gets tired<select data-c="cap">${[240, 300, 360, 420, 480].map(c => `<option value="${c}"${S.cap === c ? ' selected' : ''}>${c / 60} hours</option>`).join('')}</select></label>
       <div class="row"><button type="button" class="btn sp" data-a="sound">Sound: ${S.sound ? 'on' : 'off'}</button><button type="button" class="btn sp" data-a="cries"${S.sound ? '' : ' disabled'}>Cries: ${S.cries ? 'on' : 'off'}</button></div>
-      <button type="button" class="btn wide" data-a="music"${S.sound ? '' : ' disabled'}>Battle music (beta): ${S.music === 0 ? 'off' : 'on'}</button>
+      <button type="button" class="btn wide" data-a="music"${S.sound ? '' : ' disabled'}>Battle music: ${S.music === 0 ? 'off' : 'on'}</button>
       ${S.sound ? `<div class="volrow"><span>Effects</span><input type="range" min="0" max="100" step="5" value="${S.vol}" data-v="vol" aria-label="Effects volume"><b class="tn" id="vv-vol">${S.vol}%</b></div>${S.cries ? `<div class="volrow"><span>Cries</span><input type="range" min="0" max="100" step="5" value="${S.cvol}" data-v="cvol" aria-label="Cries volume"><b class="tn" id="vv-cvol">${S.cvol}%</b></div>` : ''}` : ''}
       <button type="button" class="btn wide" data-a="plan">Edit subjects</button>
       <button type="button" class="btn wide" data-a="sync">Sync between devices${GH && GH.ok ? ' · ' + (ghState === 'ok' ? 'on' : ghState || 'connecting') : ''}</button>
       <button type="button" class="btn wide" data-a="backup">Backup</button>
+      <button type="button" class="btn wide" data-a="lab">Demo battle · try any class</button>
     </div>
     <p class="sm">Battle speed, music and forfeit are in the Pause menu during a battle.</p>
     <p class="sm">Fokusdex is a private hobby project. Pokémon and the names belong to Nintendo, Game Freak and Creatures. Images are fetched from PokeAPI when the app is used and are not part of the app.</p>`;
@@ -651,4 +652,6 @@ render();
 if (S.started && S.timer) showTimer();
 ghPull();
 setTimeout(() => PACK.init(), 2500);
+/* Adressen …/#lab åpner demoen direkte. */
+if (location.hash === '#lab' && S.started && !S.timer) setTimeout(() => BA.lab(), 400);
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});

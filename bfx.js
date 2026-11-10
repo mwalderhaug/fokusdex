@@ -136,7 +136,7 @@ const FX = (() => {
   F.kindOf = kindOf; F.contact = m => m[4] === 1 && CONTACT.has(kindOf(m));
   /* Spiller et angrep fra a til b. Gir et løfte som holder til animasjonen er ferdig. */
   F.move = (m, a, b, o = {}) => { if (!g) return wait(300); const k = kindOf(m), ms = PROG[k](a, b, PAL[m[1]] || PAL[0], Object.assign({ ty: m[1], pow: m[2] || 0, name: m[0] }, o)); return wait(ms); };
-  F.hit = (b, ty, e, crit) => { if (!g) return; const P = PAL[ty] || PAL[0]; if (e > 1) { impact(b, P, true); flash('#fff', 0.1, 0.4); } else if (e < 1) burst(b.x, b.y, [P[2], '#888'], 4, 40, 'sq', 3, 0.3); else burst(b.x, b.y, P, 6, 70, 'sp', 4, 0.3); if (crit) ring(b.x, b.y, '#ffe14a', 6, 60, 0.3, 3); };
+  F.hit = (b, ty, e, crit) => { if (!g) return; const P = PAL[ty] || PAL[0]; if (F.intensity >= 4 && e >= 1) burst(b.x, b.y, [P[0], '#fff'], F.intensity, 110, 'sp', 4, 0.35, 0); if (e > 1) { impact(b, P, true); flash('#fff', 0.1, 0.4); } else if (e < 1) burst(b.x, b.y, [P[2], '#888'], 4, 40, 'sq', 3, 0.3); else burst(b.x, b.y, P, 6, 70, 'sp', 4, 0.3); if (crit) ring(b.x, b.y, '#ffe14a', 6, 60, 0.3, 3); };
   F.status = (k, b) => {
     if (!g) return;
     if (k === 'slp') for (let i = 0; i < 3; i++) at(i * 160, () => add({ x: b.x + 8 + i * 5, y: b.y - 14, vx: 10, vy: -26, life: 0.7, s: 8 + i * 2, c: '#e8ecff', k: 'tx', txt: 'Z' }));
@@ -161,6 +161,40 @@ const FX = (() => {
     if (gold) for (let i = 0; i < 4; i++) at(300 + i * 140, () => PROG.bolt(b, { x: b.x + (R() - 0.5) * 70, y: b.y + 16 }, P, { pow: 0 }));
     at(900, () => { flash('#fff', 0.2, 0.7); ring(b.x, b.y, '#fff', 10, 200, 0.45, 4); });
     return wait(1250);
+  };
+  /* Bakgrunnsshowet: jo høyere klasse motstanderen har, jo mer skjer bak Pokémonene. Det tegnes på et eget lerret bak spritene (256 × 192), rundt 30 ganger i sekundet.
+     Nivå 1: lysbånd · 2: svevende gnister · 4: puls bak motstanderen · 6: fartsstriper og mørke kanter som puster · 7: lyn · 8: nordlys. gold = gullpalett (de aller største). */
+  let showId = 0;
+  F.intensity = 0;
+  F.show = (c, lvl, ty, gold) => {
+    cancelAnimationFrame(showId); showId = 0; F.intensity = lvl || 0;
+    if (!c || !lvl) return;
+    const x = c.getContext('2d'), P = gold ? ['#fff7cf', '#ffd45a', '#c98a12'] : PAL[ty] || PAL[0];
+    const motes = Array.from({ length: lvl >= 2 ? Math.min(46, 6 + lvl * 5) : 0 }, () => ({ x: R() * 256, y: R() * 192, v: (6 + R() * 14) * (1 + lvl / 4), s: R() < 0.3 ? 2 : 1, p: R() * TAU }));
+    const lines = Array.from({ length: lvl >= 6 ? 6 + (lvl - 6) * 4 : 0 }, () => ({ x: R() * 256, y: R() < 0.5 ? R() * 34 : 158 + R() * 34, v: 160 + R() * 220, w: 14 + R() * 30 }));
+    let t0 = 0, bolt = null, nextBolt = 1.2;
+    const step = ts => {
+      if (!c.isConnected) { showId = 0; return; }
+      showId = requestAnimationFrame(step);
+      if (ts - t0 < 32) return;
+      const dt = Math.min(0.1, (ts - t0) / 1000), T = ts / 1000; t0 = ts;
+      x.clearRect(0, 0, 256, 192); x.globalCompositeOperation = 'lighter';
+      const bands = 2 + Math.floor(lvl / 3);
+      for (let i = 0; i < bands; i++) { const bx = ((T * (10 + lvl * 3) + i * 320 / bands) % 320) - 32; x.globalAlpha = 0.04 + 0.007 * lvl; x.fillStyle = P[i % 2]; x.beginPath(); x.moveTo(bx, 0); x.lineTo(bx + 12, 0); x.lineTo(bx - 36, 192); x.lineTo(bx - 48, 192); x.fill(); }
+      if (lvl >= 4) { const k = 0.5 + 0.5 * Math.sin(T * (2 + lvl * 0.35)), r = 34 + lvl * 3 + k * 10, gr = x.createRadialGradient(189, 74, 4, 189, 74, r); gr.addColorStop(0, P[1]); gr.addColorStop(1, 'rgba(0,0,0,0)'); x.globalAlpha = 0.14 + 0.03 * lvl + 0.1 * k; x.fillStyle = gr; x.fillRect(189 - r, 74 - r, r * 2, r * 2); }
+      if (lvl >= 8) for (let j = 0; j < 3; j++) { x.globalAlpha = 0.1; x.fillStyle = [P[0], P[1], '#fff'][j]; x.beginPath(); x.moveTo(0, 0); for (let i = 0; i <= 256; i += 16) x.lineTo(i, 24 + j * 9 + Math.sin(i / 40 + T * (0.8 + j * 0.3) + j) * 10); x.lineTo(256, 0); x.fill(); }
+      x.globalAlpha = 0.35; x.fillStyle = P[0];
+      for (const l of lines) { l.x -= l.v * dt; if (l.x < -l.w) { l.x = 256 + R() * 60; l.y = R() < 0.5 ? R() * 34 : 158 + R() * 34; } x.fillRect(px(l.x), px(l.y), px(l.w), 1); }
+      for (const m of motes) { m.y -= m.v * dt; m.x += Math.sin(T * 1.3 + m.p) * 6 * dt; if (m.y < -2) { m.y = 194; m.x = R() * 256; } x.globalAlpha = 0.35 + 0.3 * Math.sin(T * 3 + m.p); x.fillStyle = m.s > 1 ? P[0] : P[1]; x.fillRect(px(m.x), px(m.y), m.s, m.s); }
+      if (lvl >= 7) {
+        nextBolt -= dt;
+        if (nextBolt <= 0) { nextBolt = (lvl >= 8 ? 1.1 : 2.2) + R() * 2; let bx = 20 + R() * 216, by = 0; const pts = [[bx, by]], end = 60 + R() * 60; while (by < end) { bx += (R() - 0.5) * 26; by += 8 + R() * 12; pts.push([bx, by]); } bolt = { pts, t: 0.22 }; }
+        if (bolt) { bolt.t -= dt; x.globalAlpha = Math.max(0, bolt.t / 0.22) * 0.8; x.strokeStyle = P[0]; x.lineWidth = 2; x.beginPath(); bolt.pts.forEach((q, i) => i ? x.lineTo(px(q[0]), px(q[1])) : x.moveTo(px(q[0]), px(q[1]))); x.stroke(); x.strokeStyle = '#fff'; x.lineWidth = 1; x.stroke(); if (bolt.t <= 0) bolt = null; }
+      }
+      x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
+      if (lvl >= 6) { const k = 0.5 + 0.5 * Math.sin(T * 1.7), gr = x.createRadialGradient(128, 100, 60, 128, 100, 170); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, `rgba(0,0,0,${(0.28 + 0.12 * k).toFixed(2)})`); x.fillStyle = gr; x.fillRect(0, 0, 256, 192); }
+    };
+    showId = requestAnimationFrame(step);
   };
   return F;
 })();

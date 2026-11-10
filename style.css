@@ -303,7 +303,7 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .tsb.big{width:150px;height:150px;border-radius:0;background:none}
 .bossn{font-weight:800}
 .k-top .bossn{color:var(--violet)}
-.k-ultra .bossn,.vs-ultra .vs-a .vs-n b{display:inline-block;color:var(--gold);border:3px solid var(--gold);border-radius:10px;padding:1px 10px;box-shadow:0 0 14px color-mix(in srgb,var(--gold) 45%,transparent)}
+.k-ultra .bossn{display:inline-block;color:var(--gold);border:3px solid var(--gold);border-radius:10px;padding:1px 10px;box-shadow:0 0 14px color-mix(in srgb,var(--gold) 45%,transparent)}
 .k-ultra .tsb{box-shadow:0 0 0 3px var(--gold)}
 .go.gold{background:var(--gold);color:#2a2109}
 
@@ -439,6 +439,17 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .hpb.me{right:0;bottom:8%;width:55%;padding:7px 10px 7px 28px;clip-path:polygon(20px 0,100% 0,100% 100%,20px 100%,0 50%)}
 .hpb.foe[hidden],.hpb.me[hidden]{display:block!important;transform:translateX(-105%)}
 .hpb.me[hidden]{transform:translateX(105%)}
+/* Boksene fra ressurspakken: ett lerret per boks i spillets egne piksler, forstørret like mye som resten av arenaen. */
+.hpb.pk{background:none;padding:0;clip-path:none;width:auto;filter:none;text-shadow:none}
+.hpb.pk canvas{display:block;image-rendering:pixelated;width:calc(var(--u,1.5px)*119);height:auto}
+.hpb.pk.foe canvas{width:calc(var(--u,1.5px)*110)}
+.hpb.pk.foe{left:calc(var(--u,1.5px)*-3);top:7%}
+.hpb.pk.me{right:calc(var(--u,1.5px)*-3);bottom:1.5%}
+/* Gullramma til toppbossene: selve ramma tegnes i lerretet, her legges gløden rundt. */
+@keyframes goldGlow{0%,100%{filter:drop-shadow(0 0 2px rgba(248,200,48,.55))}50%{filter:drop-shadow(0 0 7px rgba(255,236,150,.95))}}
+.hpb.gold{animation:goldGlow 1.5s ease-in-out infinite}
+.hpb.gold:not(.pk){background:linear-gradient(#5a4a1c,#3a2e10 55%,#2a2109);box-shadow:inset 0 0 0 2px #f8c830}
+.fxc.bgc{z-index:-1}
 .hpn{display:flex;align-items:baseline;gap:6px;min-width:0}
 .hpn b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13.5px;letter-spacing:.02em}
 .hpn i{font-style:normal;font-size:9px;border-radius:3px;padding:2px 4px;color:#17130f;text-shadow:none}
@@ -508,6 +519,16 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .lgp{display:flex;gap:3px;margin-top:2px}
 .lgp i{flex:1;height:6px;border-radius:3px;background:var(--soft)}
 .lgp i.on{background:var(--sage)}.lgp i.cur{background:var(--gold)}.lgp i.gap{margin-left:4px}
+.lgp i.bo{flex:1.5;height:8px;margin-top:-1px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--violet) 70%,transparent)}.lgp i.ul{box-shadow:inset 0 0 0 1.5px var(--gold)}
+/* Demoen: de ni klassene som en liste */
+.lablist{display:flex;flex-direction:column;gap:8px}
+.lablist button{display:flex;align-items:center;gap:12px;text-align:left;border-radius:16px;background:var(--card);padding:12px 14px;box-shadow:0 0 0 1px var(--line)}
+.lablist button:active{transform:scale(.98)}
+.lablist .cno{flex:none;width:34px;height:34px;border-radius:11px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px}
+.lablist .k-boss .cno{background:color-mix(in srgb,var(--sage) 40%,var(--soft))}.lablist .k-top .cno{background:color-mix(in srgb,var(--violet) 45%,var(--soft))}.lablist .k-ultra .cno{background:var(--gold);color:#2a2109}
+.lablist .pill{background:var(--gold);color:#2a2109}
+.labm{gap:8px}
+.labm .btn[aria-pressed=true]{background:var(--gold);color:#2a2109}
 .modec{display:flex;align-items:center;gap:12px;min-width:0}
 .modec .ficon{flex:none;width:56px;height:56px;border-radius:16px;background:repeating-linear-gradient(45deg,#3a404b 0 6px,#2c313a 6px 12px);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;color:var(--gold)}
 .bonus{display:inline-block;font-size:11px;font-weight:800;color:#2a2109;background:var(--gold);border-radius:8px;padding:2px 7px}
@@ -523,36 +544,93 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .cell .bang,.tcard .bang.abs{position:absolute;right:6px;top:6px}
 .hofr.lvup b.lvt{color:var(--gold)}
 
-/* VS-introen til bossene */
-.ov.vsov{padding:0;overflow:hidden;background:#0c0a0d}
+/* Boss-introen (som i Black og White). Scenen er spillskjermen (256 × 192) forstørret med harde piksler, og --u er én spillpiksel.
+   Stegene slås på som klasser: s0 blink · c1–c4 klippet til toppbossene · s1 motstanderens bånd · s2 ditt bånd · s3 VS og lyn · s4 klassen · s5 hvitt ut. */
+.ov.vsov{padding:0;overflow:hidden;background:#000}
 .ov.vsov .ovin{max-width:none;gap:0}
-.vs{position:relative;flex:1;display:flex;flex-direction:column;overflow:hidden;--ac:var(--sage)}
-@keyframes vsR{from{transform:translateX(105%) skewX(-8deg)}to{transform:none}}
-@keyframes vsL{from{transform:translateX(-105%) skewX(-8deg)}to{transform:none}}
-.vs-a,.vs-b{position:relative;flex:1;display:flex;align-items:center;justify-content:center;gap:18px;overflow:hidden;padding:0 20px}
-.vs-a{background:linear-gradient(100deg,color-mix(in srgb,var(--ac) 80%,#000),color-mix(in srgb,var(--ac) 45%,#000));clip-path:polygon(0 0,100% 0,100% 82%,0 100%);animation:vsR .5s cubic-bezier(.2,.9,.3,1) both}
-.vs-b{background:linear-gradient(100deg,#23303f,#3b566e);clip-path:polygon(0 18%,100% 0,100% 100%,0 100%);margin-top:-9vh;animation:vsL .5s cubic-bezier(.2,.9,.3,1) .15s both}
-.vs-rays{position:absolute;inset:0;background:repeating-linear-gradient(100deg,transparent 0 40px,rgba(255,255,255,.1) 40px 44px,transparent 44px 110px);background-size:600px 100%;animation:streak .7s linear infinite}
-.vs-n{position:relative;display:flex;flex-direction:column;gap:4px;text-shadow:0 2px 0 rgba(0,0,0,.35)}
-.vs-n span{font-size:13px;font-weight:750;letter-spacing:.08em;text-transform:uppercase;opacity:.85}
-.vs-n b{font-size:clamp(28px,7vw,48px);font-weight:900;letter-spacing:-.02em;line-height:1}
-.vs-b .sprb{--s:130px}
-@keyframes vsSlam{0%{transform:translate(-50%,-50%) scale(5);opacity:0}60%{transform:translate(-50%,-50%) scale(.9);opacity:1}100%{transform:translate(-50%,-50%) scale(1);opacity:1}}
-.vs-mid{position:absolute;left:50%;top:50%;z-index:2;display:flex;flex-direction:column;align-items:center;gap:6px;transform:translate(-50%,-50%);animation:vsSlam .4s cubic-bezier(.2,.9,.3,1.3) .55s both}
-.vs-mid b{font-size:64px;font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:3px #17130f;paint-order:stroke fill;text-shadow:0 5px 0 #17130f}
-.vs-mid span{font-size:12.5px;font-weight:850;letter-spacing:.14em;text-transform:uppercase;background:#17130f;color:#fff;border-radius:999px;padding:5px 14px}
-.vs-top{animation:shakeA .34s linear .6s}
-.vs-top .vs-a{background:linear-gradient(100deg,#150f1c,color-mix(in srgb,var(--ac) 70%,#000))}
-.vs-top .vs-mid span{background:var(--violet);color:#17130f}
-.vs-ultra .vs-a{background:linear-gradient(100deg,#0d0a06,#4a3a12);animation-delay:1.15s}
-.vs-ultra .vs-b{animation-delay:1.3s}
-.vs-ultra .vs-mid{animation-delay:1.7s}
-.vs-ultra .vs-mid b{color:var(--gold)}
-.vs-ultra .vs-mid span{background:var(--gold);color:#2a2109}
-.vs-ultra .vs-rays{background:repeating-conic-gradient(from 0deg at 30% 50%,color-mix(in srgb,var(--gold) 40%,transparent) 0 5deg,transparent 5deg 16deg);animation:none}
-@keyframes vsPre{0%{opacity:0;letter-spacing:.05em}25%,75%{opacity:1}100%{opacity:0;letter-spacing:.5em}}
-.vs-pre{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 24px;background:#0c0a0d;color:var(--gold);font-size:15px;font-weight:850;text-transform:uppercase;letter-spacing:.3em;animation:vsPre 1.2s ease-in-out forwards;pointer-events:none}
-.vs-pre::after{content:"";position:absolute;left:0;right:0;top:50%;height:2px;margin-top:22px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.bwi{flex:1;display:flex;align-items:center;justify-content:center;background:#000;--ac:var(--sage)}
+.bwi-s{position:relative;width:min(100%,133.33vh);aspect-ratio:4/3;overflow:hidden;background:#000;--u:1.5px;font-family:var(--pix);font-weight:800;color:#fff;image-rendering:pixelated}
+.bwi-bg{position:absolute;inset:0;opacity:0;transition:opacity .35s;background:radial-gradient(1.5px 1.5px at 18% 22%,#fff,transparent),radial-gradient(1.5px 1.5px at 72% 14%,#cfd8ff,transparent),radial-gradient(1px 1px at 44% 70%,#fff,transparent),radial-gradient(1.5px 1.5px at 86% 62%,#cfd8ff,transparent),radial-gradient(1px 1px at 30% 88%,#fff,transparent),radial-gradient(70% 60% at 50% 50%,color-mix(in srgb,var(--ac) 30%,#000),#04040a)}
+.bwi.pk .bwi-bg{background:var(--stars) 0 0/calc(var(--u)*128) calc(var(--u)*128);animation:bwiScroll 7s linear infinite}
+@keyframes bwiScroll{to{background-position:calc(var(--u)*-128) calc(var(--u)*128)}}
+.bwi.s1 .bwi-bg,.bwi.c2 .bwi-bg{opacity:.85}
+.bwi-em{position:absolute;left:50%;top:50%;width:calc(var(--u)*105);height:calc(var(--u)*126);transform:translate(-50%,-50%);background:var(--em) center/contain no-repeat;opacity:0;transition:opacity .5s}
+.bwi.c2 .bwi-em,.bwi.s1 .bwi-em{opacity:.3}
+.bwi-bar{position:absolute;left:0;width:100%;height:calc(var(--u)*64);transition:transform .28s cubic-bezier(.2,.9,.3,1)}
+.bwi-bar.foe{top:calc(var(--u)*18);transform:translateX(105%)}
+.bwi-bar.me{top:calc(var(--u)*110);transform:translateX(-105%)}
+.bwi.s1 .bwi-bar.foe,.bwi.s2 .bwi-bar.me{transform:none}
+.bwi-bb{position:absolute;inset:0;overflow:hidden;background:linear-gradient(color-mix(in srgb,var(--ac) 40%,#000),var(--ac) 48%,color-mix(in srgb,var(--ac) 40%,#000));box-shadow:inset 0 calc(var(--u)*1) 0 #fff,inset 0 calc(var(--u)*-1) 0 #fff}
+.bwi-bar.me .bwi-bb{background:linear-gradient(#7a1a12,#e8402c 48%,#7a1a12)}
+.bwi-bb::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 30px,rgba(255,255,255,.22) 30px 64px,transparent 64px 150px);background-size:300px 100%;-webkit-mask:linear-gradient(transparent 22%,#000 26% 30%,transparent 34% 62%,#000 66% 70%,transparent 74%);mask:linear-gradient(transparent 22%,#000 26% 30%,transparent 34% 62%,#000 66% 70%,transparent 74%);animation:bwiStreak .45s linear infinite}
+@keyframes bwiStreak{to{background-position-x:-300px}}
+.bwi-bar.me .bwi-bb::after{animation-direction:reverse}
+.bwi.pk .bwi-bb{background:var(--bar) 0 0/calc(var(--u)*128) 100% repeat-x;box-shadow:none;animation:bwiBar .42s linear infinite}
+.bwi.pk .bwi-bar.me .bwi-bb{background-image:var(--barme);animation-direction:reverse}
+.bwi.pk .bwi-bb::after{display:none}
+@keyframes bwiBar{to{background-position-x:calc(var(--u)*-128)}}
+.bwi-bar .tsb{position:absolute;right:calc(var(--u)*16);bottom:calc(var(--u)*1);width:calc(var(--u)*80);height:calc(var(--u)*80);background:none;border-radius:0;overflow:visible;transform:translateX(70%);transition:transform .36s cubic-bezier(.2,.9,.3,1.15) .08s}
+.bwi.s1 .bwi-bar.foe .tsb{transform:none}
+.bwi-bar.me .sprb{position:absolute;left:calc(var(--u)*20);bottom:calc(var(--u)*2);--s:calc(var(--u)*68)}
+.bwi-bar.me .spr{image-rendering:pixelated}
+.bwi-n{position:absolute;bottom:calc(var(--u)*7);display:flex;flex-direction:column;gap:calc(var(--u)*2);text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 #000,0 0 calc(var(--u)*4) rgba(0,0,0,.6);max-width:60%}
+.bwi-bar.foe .bwi-n{left:calc(var(--u)*10)}
+.bwi-bar.me .bwi-n{right:calc(var(--u)*10);text-align:right;align-items:flex-end}
+.bwi-n span{font-size:calc(var(--u)*7);letter-spacing:.06em;text-transform:uppercase}
+.bwi-n b{font-size:calc(var(--u)*15);line-height:1}
+.bwi-vs{position:absolute;left:50%;top:50%;width:calc(var(--u)*61);height:calc(var(--u)*54);margin:calc(var(--u)*-29) 0 0 calc(var(--u)*-30.5);opacity:0;transform:scale(4);display:flex;align-items:center;justify-content:center}
+.bwi-vs b{font-size:calc(var(--u)*38);font-style:italic;font-weight:900;color:#ffb030;-webkit-text-stroke:calc(var(--u)*2) #17130f;paint-order:stroke fill;text-shadow:0 calc(var(--u)*2) 0 #17130f}
+.bwi.pk .bwi-vs{background:var(--vsi) center/contain no-repeat}
+.bwi.pk .bwi-vs b{display:none}
+.bwi.s3 .bwi-vs{opacity:1;transform:none;transition:transform .22s cubic-bezier(.3,1.7,.5,1),opacity .08s}
+.bwi.s3 .bwi-s{animation:shakeA .3s linear 1}
+.bwi-bolt{position:absolute;left:0;top:calc(var(--u)*64);width:100%;height:calc(var(--u)*64);opacity:0;background:var(--bolt) 0 0/calc(var(--u)*128) 100% repeat-x}
+.bwi:not(.pk) .bwi-bolt{background:linear-gradient(transparent 46%,#bff 48%,#fff 50%,#bff 52%,transparent 54%)}
+@keyframes bwiBolt{0%,40%,80%{opacity:1}20%,60%,100%{opacity:0}}
+.bwi.s3 .bwi-bolt{animation:bwiBolt .4s steps(1) 1}
+.bwi.i5.s3 .bwi-bolt,.bwi.i6.s3 .bwi-bolt{animation-iteration-count:2}
+.bwi.i7.s3 .bwi-bolt,.bwi.i8.s3 .bwi-bolt{animation-iteration-count:4}
+.bwi-cls{position:absolute;left:0;right:0;bottom:calc(var(--u)*5);text-align:center;font-size:calc(var(--u)*9);letter-spacing:.22em;text-transform:uppercase;opacity:0;transform:translateY(60%);transition:opacity .2s,transform .25s cubic-bezier(.2,.9,.3,1.3);text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 #000}
+.bwi.s4 .bwi-cls{opacity:1;transform:none}
+.bwi-top .bwi-cls{color:var(--violet)}
+.bwi-ultra .bwi-cls,.bwi-pre b,.bwi-sil .nm b{background:linear-gradient(100deg,#b8780c 0,#f8c830 30%,#fffbe0 45%,#f8c830 60%,#b8780c 100%) 0 0/250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;animation:goldSweep 1.4s linear infinite}
+@keyframes goldSweep{from{background-position-x:125%}to{background-position-x:-125%}}
+.bwi-fl{position:absolute;inset:0;z-index:5;background:#fff;opacity:0;pointer-events:none}
+@keyframes bwiBlink{0%,66%{opacity:1}33%,100%{opacity:0}}
+@keyframes bwiFlash{from{opacity:1}to{opacity:0}}
+@keyframes bwiFlash2{from{opacity:1}to{opacity:0}}
+.bwi.s0 .bwi-fl{animation:bwiBlink .2s steps(1) 2}
+.bwi.c3 .bwi-fl{animation:bwiFlash .5s ease-out}
+.bwi.s3 .bwi-fl{animation:bwiFlash2 .3s ease-out}
+.bwi.s5 .bwi-fl{opacity:1;transition:opacity .25s}
+/* Klippet til toppbossene: klassen i gull, silhuetten mellom lynene, og avsløringen. */
+.bwi-pre{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--u)*7);background:#000;opacity:0}
+.bwi.c1 .bwi-pre{opacity:1}
+.bwi.c2 .bwi-pre{opacity:0;transition:opacity .35s}
+.bwi-pre span{font-size:calc(var(--u)*8);letter-spacing:.36em;text-transform:uppercase;color:#f8c830;animation:bwiPre 1.4s ease-out both}
+@keyframes bwiPre{from{letter-spacing:.05em;opacity:0}40%{opacity:1}to{letter-spacing:.36em}}
+.bwi-pre b{font-size:calc(var(--u)*18);letter-spacing:.06em;text-transform:uppercase;line-height:1.1}
+.bwi-pre::after{content:"";width:70%;height:calc(var(--u)*1);background:linear-gradient(90deg,transparent,#f8c830,transparent)}
+.bwi-sil{position:absolute;inset:0;z-index:2;opacity:0}
+.bwi.c2 .bwi-sil{opacity:1}
+.bwi.c4 .bwi-sil,.bwi.s1 .bwi-sil{opacity:0;transition:opacity .2s}
+.bwi-sil .tsb{position:absolute;left:50%;top:50%;width:calc(var(--u)*80);height:calc(var(--u)*80);margin:calc(var(--u)*-52) 0 0 calc(var(--u)*-40);background:none;border-radius:0;overflow:visible;transform:scale(1.25);filter:brightness(0) drop-shadow(0 0 calc(var(--u)*1.5) #8fd8ff) drop-shadow(0 0 calc(var(--u)*5) #3a78ff);transition:transform 1.7s ease-out}
+.bwi.c2 .bwi-sil .tsb{transform:scale(1.7)}
+.bwi.c3 .bwi-sil .tsb{filter:drop-shadow(0 0 calc(var(--u)*3) rgba(255,236,150,.8));transform:scale(1.8);transition:filter .1s,transform .3s}
+.bwi .tsb::before,.bwi .tsb::after{display:none}
+.bwi-sil .vb{position:absolute;top:0;width:calc(var(--u)*32);height:calc(var(--u)*128);background:var(--vbolt) center/100% 100% no-repeat;opacity:0}
+.bwi:not(.pk) .bwi-sil .vb{background:linear-gradient(90deg,transparent 40%,#bff 46%,#fff 50%,#bff 54%,transparent 60%)}
+.bwi-sil .vb.a{left:12%}.bwi-sil .vb.b{right:12%;transform:scaleX(-1)}
+.bwi.c2 .bwi-sil .vb{animation:bwiBolt .5s steps(1) 3}
+.bwi.c2 .bwi-sil .vb.b{animation-delay:.27s}
+.bwi-sil .orb{position:absolute;left:50%;top:50%;width:calc(var(--u)*64);height:calc(var(--u)*64);margin:calc(var(--u)*-44) 0 0 calc(var(--u)*-32);background:var(--orb) center/contain no-repeat;opacity:0}
+@keyframes bwiOrb{0%{opacity:1;transform:scale(.4)}100%{opacity:0;transform:scale(5)}}
+.bwi.c3 .bwi-sil .orb{animation:bwiOrb .55s ease-out}
+.bwi-sil .nm{position:absolute;left:0;right:0;bottom:calc(var(--u)*10);display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*3);opacity:0;transform:translateY(30%)}
+.bwi.c3 .bwi-sil .nm{opacity:1;transform:none;transition:opacity .2s .15s,transform .3s .15s}
+.bwi-sil .nm span{font-size:calc(var(--u)*8);letter-spacing:.12em;text-transform:uppercase;text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 #000}
+.bwi-sil .nm b{font-size:calc(var(--u)*20);line-height:1}
+@media (prefers-reduced-motion:reduce){.bwi-bb,.bwi-bb::after,.bwi-bg{animation:none!important}}
 
 /* Etter kampen */
 .stealg{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:10px;width:100%}
@@ -571,7 +649,7 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .hof-t{position:relative;margin-top:8px;font-size:14px;font-weight:650;text-align:center}
 .hofr{display:flex;align-items:center;gap:12px;min-width:0}
 .hofr+.hofr{border-top:1px solid var(--line);padding-top:8px}
-@media (prefers-reduced-motion:reduce){.t-top .abg::before,.t-ultra .abg::before,.vs-rays{animation:none}}
+@media (prefers-reduced-motion:reduce){.t-top .abg::before,.t-ultra .abg::before{animation:none}}
 
 .tcard{position:relative}
 .card.pick2{display:flex;flex-direction:column;gap:4px;text-align:left;width:100%}

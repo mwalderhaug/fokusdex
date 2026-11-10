@@ -1,12 +1,17 @@
 'use strict';
-/* Fokusdex – kampskjermene: kortene på forsiden, oppstilling før kampen, selve kampen, oppgjøret etterpå og Battle Factory.
+/* Fokusdex – kampskjermene: kortene på forsiden, oppstilling før kampen, selve kampen, oppgjøret etterpå, Battle Frontier og demoen.
    Reglene ligger i battle.js og league.js, effektene i bfx.js. */
 
 const BT = { B: null, busy: false, v: null, menu: 'main', res: null, ty: 0, tap: null, lead: 0, fsel: [], tp: null, fs: null };
 const spdF = () => S.bfast ? 2.1 : 1;
 const bwait = ms => new Promise(r => setTimeout(r, ms / spdF()));
-const TIER = k => k === 'legend' ? 'ultra' : SUPER.has(k) ? 'top' : k === 'gym' || k === 'rival' || k === 'fachead' ? 'boss' : 'reg';
-const KIND = { boss: 'Boss', top: 'Top boss', ultra: 'Legendary trainer' };
+/* Hvor mye pynt en klasse får i kort og lister: vanlig trener, boss, toppboss, eller de sjeldne (klasse 7 til 9). */
+const TIER = k => ULTRA.has(k) ? 'ultra' : k === 'trainer' ? 'reg' : k === 'gym' || k === 'evilteam' || k === 'brain' ? 'boss' : 'top';
+/* Hva hver klasse gir (vises før kampen) og hva den er (vises i demoen). */
+const REW = { trainer: 'coins, sometimes Poké Balls', gym: 'Rare Candy and an encounter of their type', evilteam: 'Great Balls and stolen coins', eviladmin: 'Ultra Balls, maybe an evolution stone', e4: 'Rare Candy, an Ultra Ball and a rare encounter',
+  rival: '2 Rare Candy, an Egg, and often a trade', evilboss: 'Rare Candy, Ultra Balls, a stone and a coin boost', champ: '3 Rare Candy, a stone, two encounters and a coin boost', supreme: '5 Rare Candy, 2 stones and a legendary encounter' };
+const LABD = { trainer: 'Regular trainers', gym: 'Gym bosses', evilteam: 'Grunts and members', eviladmin: 'Second in command of the evil teams', e4: 'The Pokémon League', rival: 'Rivals', evilboss: 'Leaders of the evil teams', champ: 'Regional champions', supreme: 'Iconic, extreme boss battles' };
+const who = tr => (tr.title ? tr.title + ' ' : '') + tr.n;
 /* Trenerbildene hentes fra Showdown når appen brukes. Finnes ikke bildet, prøves neste navn, og til slutt vises en silhuett. */
 const TSP = 'https://play.pokemonshowdown.com/sprites/trainers/';
 const tsprite = (img, cls) => { const l = img.split('|'); return `<span class="tsb ${cls || ''}"><img alt="" src="${TSP}${l[0]}.png" data-f="${l.slice(1).join('|')}" onload="this.parentNode.classList.add('ok')" onerror="tsErr(this)"></span>`; };
@@ -67,29 +72,30 @@ const stopMusic = () => { PACK.music(''); music(''); };
 document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible') stopMusic(); else if (BT.B && !BT.B.over && $('#arena')) battleMusic(BT.B); });
 
 /* ---------- Forsiden ---------- */
-const leagueTag = () => { const L = S.lad, ri = rungInfo(L.n); return `${L.lap ? 'Lap ' + (L.lap + 1) + ' · ' : ''}${ri.st.n}${ri.st.c > 1 ? ' ' + (ri.k + 1) + '/' + ri.st.c : ''}`; };
+const leagueTag = () => { const L = S.lad; return `${L.lap ? 'Lap ' + (L.lap + 1) + ' · ' : ''}Battle ${L.n + 1}/${LAPN}`; };
 function ladderCard() {
   const L = S.lad, t = nextTrainer(), tr = trainerInfo(t), sm = studyMult(), bo = dayBoost(), tier = TIER(tr.kind), R = S.fac.run;
-  const prog = `<div class="lgp" aria-hidden="true">${STAGES.slice(0, 7).map((st, si) => Array.from({ length: st.c }, (_, k) => { const n = STAGES.slice(0, si).reduce((a, x) => a + x.c, 0) + k; return `<i class="${n < L.n ? 'on' : n === L.n ? 'cur' : ''}${k === 0 && si ? ' gap' : ''}"></i>`; }).join('')).join('')}</div>`;
-  const who = `<div class="lrow k-${tier}">${tsprite(tr.img, 'sm')}<div class="sp"><div class="sm tn">${esc(leagueTag())}${tier !== 'reg' ? ' · ' + KIND[tier] : ''}</div><b class="${tr.boss ? 'bossn' : ''}">${esc(tr.title ? tr.title + ' ' : '')}${esc(tr.n)}</b></div></div>`;
-  const fac = `<div class="modec"><span class="ficon">F</span><div class="sp"><b>Battle Factory</b><div class="sm tn">${R ? `Round ${R.round} · ${R.w}/7 wins · streak ${R.streak}` : `Rent 4 of 7 random Pokémon${S.fac.best ? ' · best streak ' + S.fac.best : ''}`}</div></div></div>`;
+  /* En runde: seks grupper på to trenere og en boss. Den siste bossen er en toppboss. */
+  const prog = `<div class="lgp" aria-hidden="true">${Array.from({ length: LAPN }, (_, n) => `<i class="${n < L.n ? 'on' : n === L.n ? 'cur' : ''}${n % 3 === 0 && n ? ' gap' : ''}${n % 3 === 2 ? ' bo' : ''}${n === LAPN - 1 ? ' ul' : ''}"></i>`).join('')}</div>`;
+  const row = `<div class="lrow k-${tier}">${tsprite(tr.img, 'sm')}<div class="sp"><div class="sm tn">${esc(leagueTag())}${tr.boss ? ` · class ${tr.ci} of 9${tr.ultra ? ' · ultra rare' : ''}` : ''}</div><b class="${tr.boss ? 'bossn' : ''}">${esc(who(tr))}</b></div></div>`;
+  const fac = `<div class="modec"><span class="ficon">F</span><div class="sp"><b>Battle Frontier</b><div class="sm tn">${R ? `Round ${R.round} · ${R.w}/${FACN} wins · streak ${R.streak}` : `Rent 4 of 7 random Pokémon · everything is Lv ${FACLV}${S.fac.best ? ' · best streak ' + S.fac.best : ''}`}</div></div></div>`;
   const tag = m => bo.mode === m ? `<span class="bonus">Today's bonus</span>` : '';
-  if (!L.day) return `<div class="card stack"><div class="row" style="justify-content:space-between"><b>Battles</b><span class="pill tn">Lap ${L.lap + 1}</span></div>${who}${prog}
-    <p class="sm">Two ways to battle once you are done studying: the League (your own team, XP and Rare Candy) and the Battle Factory (rental Pokémon, items and encounters). Today's bonus is on the ${bo.mode === 'league' ? 'League' : 'Battle Factory'}.</p>
-    <button type="button" class="btn wide" data-a="bdone">Done for today · open battles</button></div>`;
+  const lab = '<button type="button" class="btn wide nf" data-a="lab">Demo battle · try any class</button>';
+  if (!L.day) return `<div class="card stack"><div class="row" style="justify-content:space-between"><b>Battles</b><span class="pill tn">Lap ${L.lap + 1}</span></div>${row}${prog}
+    <p class="sm">Two ways to battle once you are done studying: the League (your own team, XP and Rare Candy) and the Battle Frontier (rental Pokémon at Lv ${FACLV}, items and encounters). Today's bonus is on the ${bo.mode === 'league' ? 'League' : 'Battle Frontier'}.</p>
+    <button type="button" class="btn wide" data-a="bdone">Done for today · open battles</button>${lab}</div>`;
   const mult = `<p class="sm tn">Rewards ×${sm} from ${hrs(ladMin())} h of focus${L.day !== dayKey() ? ' that day' : ' today'}. Five hours gives ×2.</p>`;
-  return `<div class="card stack"><div class="row" style="justify-content:space-between"><b>Trainer League</b>${tag('league')}</div>${who}${prog}
-      ${ladLost() ? '<p class="sm">You lost this one. The League opens again after your next day of focus, and you keep your place and the XP.</p>' : `<p class="sm">${bo.mode === 'league' ? '+30% XP and better odds for Rare Candy today. ' : ''}XP for the whole team after each battle. A loss closes the League for the day.</p><button type="button" class="go${tr.boss ? ' gold' : ''}" data-a="bpre">Battle</button>`}</div>
-    <div class="card stack"><div class="row" style="justify-content:space-between"><b>Battle Factory</b>${tag('factory')}</div>${fac}
-      ${facLost() ? '<p class="sm">Your run ended. The Factory opens again after your next day of focus.</p>' : `<p class="sm">${bo.mode === 'factory' ? '1.5× luck on items and encounters today. ' : ''}No XP here: you win items and encounters. A loss ends the run.</p><button type="button" class="btn wide gold" data-a="fenter">${R ? 'Continue the run' : 'Enter the Factory'}</button>`}</div>${mult}`;
+  return `<div class="card stack"><div class="row" style="justify-content:space-between"><b>Trainer League</b>${tag('league')}</div>${row}${prog}
+      ${ladLost() ? '<p class="sm">Two losses today. The League opens again after your next day of focus, and you keep your place and the XP.</p>' : `<p class="sm">${bo.mode === 'league' ? '+30% XP and better odds for Rare Candy today. ' : ''}Two trainers, then a boss, through the nine classes. XP for the whole team after each battle. ${ladFails() ? 'You have used your rematch: one more loss closes the League for the day.' : 'You get one rematch a day: the second loss closes the League.'}</p><button type="button" class="go${tr.boss ? ' gold' : ''}" data-a="bpre">Battle</button>`}</div>
+    <div class="card stack"><div class="row" style="justify-content:space-between"><b>Battle Frontier</b>${tag('factory')}</div>${fac}
+      ${facLost() ? '<p class="sm">Your run ended. The Frontier opens again after your next day of focus.</p>' : `<p class="sm">${bo.mode === 'factory' ? '1.5× luck on items, encounters and ultra rare bosses today. ' : ''}Six trainers, then a boss. No XP here: you win items and encounters. A loss ends the run.</p><button type="button" class="btn wide gold" data-a="fenter">${R ? 'Continue the run' : 'Enter the Frontier'}</button>`}</div>${mult}${lab}`;
 }
-/* Oppstilling før en ligakamp: hvem du møter, og hvem av dine som går ut først. */
+/* Oppstilling før en ligakamp: hvem du møter, hva de gir, og hvem av dine som går ut først. */
 function preBattle() {
-  const t = nextTrainer(), tr = trainerInfo(t), ri = rungInfo(t.n), st = ri.st, tier = TIER(tr.kind), team = S.party.map(monBy).filter(Boolean);
-  const n = Math.round(st.mons[0] + (st.mons[1] - st.mons[0]) * ri.f), lv = rungLv(ri, S.lad.lap);
+  const t = nextTrainer(), tr = trainerInfo(t), p = leaguePlan(t), tier = TIER(tr.kind), team = S.party.map(monBy).filter(Boolean);
   if (!S.party.includes(BT.lead)) BT.lead = S.party[0];
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">${esc(leagueTag())}</span></div>
-    <div class="card k-${tier}"><div class="pre-foe">${tsprite(tr.img)}<div class="sp"><div class="sm">${tier !== 'reg' ? KIND[tier] + ' · ' : ''}${esc(st.n)}</div><b class="${tr.boss ? 'bossn' : ''}" style="font-size:19px">${esc(tr.title ? tr.title + ' ' : '')}${esc(tr.n)}</b><div class="sm tn" style="margin-top:4px">${n} Pokémon · around Lv ${lv}</div></div></div></div>
+    <div class="card k-${tier}"><div class="pre-foe">${tsprite(tr.img)}<div class="sp"><div class="sm">${tr.boss ? `Class ${tr.ci} of 9 · ${esc(tr.cn)}${tr.ultra ? ' · ultra rare' : ''}${t.sup ? ' · surprise' : ''}` : 'Trainer'}</div><b class="${tr.boss ? 'bossn' : ''}" style="font-size:19px">${esc(who(tr))}</b><div class="sm tn" style="margin-top:4px">${p.n} Pokémon · around Lv ${p.lv}</div><div class="sm" style="margin-top:4px">Gives ${REW[t.k]}.</div></div></div></div>
     <div><div class="lab">Your team · tap the one that leads</div><div class="lineup">${team.map(m => `<button type="button" data-a="blead" data-u="${m.u}" class="${m.u === BT.lead ? 'lead' : ''}">${spr(m.id, { sh: m.sh })}<span class="sp"><b>${esc(D(m.id)[0])}</b><br><span class="sm tn">Lv ${m.lv} · ${m.mv.map(x => esc(MOVES[x][0])).join(', ')}</span></span>${hasNews(m) ? '<span class="bang">!</span>' : ''}${m.u === BT.lead ? '<span class="pill">Leads</span>' : ''}</button>`).join('')}</div></div>
     <div class="acts"><button type="button" class="btn gold" data-a="bgo">Start battle</button><button type="button" class="btn nf" data-a="bteam">Edit team</button></div>`, 'tint', `var(--t${tr.ty})`);
 }
@@ -109,22 +115,80 @@ function boxEl(side) {
     <div class="hpf"><span class="dots">${team.map((x, i) => `<i class="${x.out && !(i === v.i && v.hp > 0) ? 'out' : ''}"></i>`).join('')}</span>${side === 'me' ? `<span class="hpnum tn">${v.hp}/${b.max}</span>` : ''}</div>
     ${side === 'me' && B.mode === 'league' ? `<div class="xpr"><em>EXP</em><div class="xpbar"><i style="width:${Math.round(xf * 100)}%"></i></div></div>` : ''}`;
 }
-function paintBox(side) { const el = $('#b-' + side); if (el) { el.innerHTML = boxEl(side); el.hidden = false; } }
+/* Med ressurspakken tegnes HP-boksene piksel for piksel fra arket, slik de ser ut i Black 2 og White 2: navn, nivå, HP-linje, tall og EXP.
+   Uten pakke brukes de innebygde boksene over. Toppbossene i ligaen (klasse 7 til 9) får en glinsende gullramme rundt boksen sin. */
+const HUDM = 3;
+const hudGold = side => side === 'foe' && BT.B.tr.ultra && BT.B.mode !== 'fac';
+let goldRing = null;
+/* Omrisset av motstanderens boks, to piksler bredt: boksen stemplet rundt seg selv, med selve boksen skåret ut. */
+function ringFor(H) {
+  if (goldRing && goldRing.im === H.im) return goldRing.cv;
+  const r = H.r.foe, c = document.createElement('canvas'), x = c.getContext('2d'); c.width = r[2] + 2 * HUDM; c.height = r[3] + 2 * HUDM;
+  for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) if (Math.abs(dx) + Math.abs(dy) <= 3) x.drawImage(H.im, r[0], r[1], r[2], r[3], HUDM + dx, HUDM + dy, r[2], r[3]);
+  x.globalCompositeOperation = 'destination-out'; x.drawImage(H.im, r[0], r[1], r[2], r[3], HUDM, HUDM, r[2], r[3]);
+  goldRing = { im: H.im, cv: c }; return c;
+}
+function hudDraw(side) {
+  const H = PACK.hud, cv = document.querySelector('#b-' + side + ' canvas'); if (!H || !cv) return false;
+  const B = BT.B, v = BT.v[side], team = teamOf(side), b = team[v.i], me = side === 'me', g = cv.getContext('2d'), R = H.r, M = HUDM, py = 9 + M, hp = v.sh != null ? v.sh : v.hp, bw = me ? 113 : 104, bh = me ? 18 : 12;
+  const put = (n, x, y) => { const r = R[n]; if (!r) return 0; g.drawImage(H.im, r[0], r[1], r[2], r[3], x + M, y, r[2], r[3]); return r[4] || r[2]; };
+  g.imageSmoothingEnabled = false; g.clearRect(0, 0, cv.width, cv.height);
+  if (hudGold(side)) {
+    const ring = ringFor(H), T = performance.now() / 1000, t = BT.tmp || (BT.tmp = document.createElement('canvas')), tx = t.getContext('2d');
+    t.width = ring.width; t.height = ring.height; tx.drawImage(ring, 0, 0); tx.globalCompositeOperation = 'source-in';
+    const gr = tx.createLinearGradient(0, 0, 0, t.height); gr.addColorStop(0, '#fff3b0'); gr.addColorStop(0.45, '#f8c830'); gr.addColorStop(1, '#b8780c'); tx.fillStyle = gr; tx.fillRect(0, 0, t.width, t.height);
+    /* Glansen som sveiper over ramma, og små stjerner som blinker langs kanten. */
+    tx.globalCompositeOperation = 'source-atop'; const sx = ((T * 80) % (t.width + 70)) - 30, g2 = tx.createLinearGradient(sx - 12, 0, sx + 12, 0); g2.addColorStop(0, 'rgba(255,255,255,0)'); g2.addColorStop(0.5, 'rgba(255,255,255,.95)'); g2.addColorStop(1, 'rgba(255,255,255,0)'); tx.fillStyle = g2; tx.fillRect(sx - 12, 0, 24, t.height);
+    g.drawImage(t, 0, py - M);
+    for (let i = 0; i < 4; i++) { const q = T * 1.5 + i * 0.25, ph = q % 1, k = Math.floor(q) * 7 + i * 13, x = M + 4 + (k * 37) % (bw - 12), y = (k % 2) ? py - 2 : py + bh + 1; g.globalAlpha = Math.sin(ph * Math.PI); g.fillStyle = '#fff'; g.fillRect(x - 1, y, 3, 1); g.fillRect(x, y - 1, 1, 3); }
+    g.globalAlpha = 1;
+  }
+  put(side, 0, py);
+  /* HP-linja: tom stripe, og den fylte delen i grønt, gult eller rødt. */
+  const bx = (me ? 50 : 38) + M, f = Math.max(0, Math.min(1, hp / b.max)), w = hp > 0 ? Math.max(1, Math.round(48 * f)) : 0;
+  let r = R.hp_empty; g.drawImage(H.im, r[0] + 1, r[1] + 1, 48, 3, bx, py + 2, 48, 3);
+  r = R[f > 0.5 ? 'hp_green' : f > 0.2 ? 'hp_yellow' : 'hp_red']; if (w) g.drawImage(H.im, r[0] + 1, r[1] + 1, w, 3, bx, py + 2, w, 3);
+  /* Navnet med spillets bokstaver. Er det for langt, står bokstavene én piksel tettere. */
+  const gl = [...b.name].map(ch => ch === ' ' ? 4 : R['n' + ch] ? 'n' + ch : 2), wid = gl.reduce((a, q) => a + (q > 0 ? q : R[q][4]), 0), tight = wid > 62 ? 1 : 0;
+  let x = me ? 10 : 14; for (const q of gl) x += q > 0 ? q : put(q, x, py - 9) - tight;
+  put('lv', me ? 74 : 78, py - 7); x = me ? 82 : 86; for (const ch of String(b.lv)) x += put('l' + ch, x, py - 9);
+  if (v.st && R['st_' + v.st]) put('st_' + v.st, me ? 15 : 4, py + 3);
+  if (me) {
+    const s = String(Math.max(0, Math.round(hp))); x = 74 - 8 * s.length; for (const ch of s) { put('h' + ch, x, py + 5); x += 8; }
+    x = 82; for (const ch of String(b.max)) { put('h' + ch, x, py + 5); x += 8; }
+    r = R.xp_empty; g.drawImage(H.im, r[0], r[1], r[2], r[3], 25 + M, py + 14, r[2], r[3]);
+    const xa = xpAt(b.lv), xb = xpAt(b.lv + 1), xw = b.src.u && b.src.xp != null && B.mode === 'league' ? Math.round(80 * Math.max(0, Math.min(1, (b.src.xp - xa) / (xb - xa)))) : 0;
+    r = R.xp; if (xw) g.drawImage(H.im, r[0], r[1], 1 + xw, 4, 25 + M, py + 14, 1 + xw, 4);
+  }
+  /* Små kuler under boksen viser hvor mange som er igjen på laget. */
+  const n = team.length, y0 = py + bh + (me ? 2 : 3); let x0 = me ? M + bw - 8 - n * 5 : M + 8;
+  team.forEach((q, i) => { const out = q.out && !(i === v.i && hp > 0); g.fillStyle = '#101014'; g.fillRect(x0, y0, 4, 4); g.fillStyle = out ? '#5a5a66' : '#f05a4e'; g.fillRect(x0 + 1, y0 + 1, 2, 1); g.fillStyle = out ? '#3c3c46' : '#fff'; g.fillRect(x0 + 1, y0 + 2, 2, 1); x0 += 5; });
+  return true;
+}
+function paintBox(side) {
+  const el = $('#b-' + side); if (!el) return;
+  const gold = hudGold(side) ? ' gold' : '';
+  if (PACK.hud) {
+    if (!el.firstElementChild || el.firstElementChild.tagName !== 'CANVAS') { el.className = 'hpb pk ' + side + gold; el.innerHTML = `<canvas width="${(side === 'me' ? 113 : 104) + 2 * HUDM}" height="${(side === 'me' ? 33 : 28) + 2 * HUDM}"></canvas>`; }
+    hudDraw(side);
+  } else { el.className = 'hpb ' + side + gold; el.innerHTML = boxEl(side); }
+  el.hidden = false;
+}
 function paintSprite(side, cls) {
   const b = teamOf(side)[BT.v[side].i], el = $('#s-' + side);
   if (el) { el.className = 'bs ' + side + ' ' + (cls || ''); el.innerHTML = spr(b.id, { ani: 1, sh: b.sh, back: side === 'me' }); }
 }
 /* HP-linja glir gradvis mot det nye tallet, og tallet teller med. Lengre fall tar lengre tid. */
 function hpTo(side, hp) {
-  const B = BT.B, v = BT.v[side], b = teamOf(side)[v.i], from = v.hp, bar = $('#b-' + side + ' .hpbar i'), num = $('#b-' + side + ' .hpnum');
+  const B = BT.B, v = BT.v[side], b = teamOf(side)[v.i], from = v.hp, el = $('#b-' + side), pk = !!(PACK.hud && el && el.querySelector('canvas')), bar = pk ? el : $('#b-' + side + ' .hpbar i'), num = $('#b-' + side + ' .hpnum');
   const dur = Math.max(320, Math.min(1400, Math.abs(from - hp) / b.max * 1700)) / spdF(), t0 = performance.now();
   v.hp = hp;
   if (from === hp || !bar) return Promise.resolve();
   return new Promise(res => (function f(t) {
     const k = Math.min(1, (t - t0) / dur), x = from + (hp - from) * k;
     if (BT.B !== B || !bar.isConnected) return res();
-    bar.style.width = (x / b.max * 100).toFixed(1) + '%'; bar.style.background = hpCol(x / b.max);
-    if (num) num.textContent = Math.round(x) + '/' + b.max;
+    if (pk) { v.sh = k < 1 ? x : null; hudDraw(side); }
+    else { bar.style.width = (x / b.max * 100).toFixed(1) + '%'; bar.style.background = hpCol(x / b.max); if (num) num.textContent = Math.round(x) + '/' + b.max; }
     if (k < 1) requestAnimationFrame(f); else res();
   })(t0));
 }
@@ -136,14 +200,15 @@ function fxPos(side) {
   return r.width ? { x: (r.left + r.width / 2 - A.left) * k, y: Math.min(184, (r.top + r.height * 0.55 - A.top) * k) } : def;
 }
 /* Spritene forstørres etter bredden på arenaen (spillskjermen er 256 piksler bred). */
-function fitArena() { const a = $('#arena'); if (a) a.style.setProperty('--z', (a.clientWidth / 256 * 0.8).toFixed(2)); }
+function fitArena() { const a = $('#arena'); if (a) { a.style.setProperty('--z', (a.clientWidth / 256 * 0.8).toFixed(2)); a.style.setProperty('--u', (a.clientWidth / 256).toFixed(3) + 'px'); } }
 window.addEventListener('resize', fitArena);
-function battleTag(B) { return B.mode === 'fac' ? `Factory · Round ${B.round} · ${B.w + 1}/7` : `${B.lap ? 'Lap ' + (B.lap + 1) + ' · ' : ''}${B.st.n}${B.st.c > 1 ? ' ' + (B.rk + 1) + '/' + B.st.c : ''}`; }
+function battleTag(B) { return B.mode === 'fac' ? `Frontier · Round ${B.round} · ${B.w + 1}/${FACN}` : B.mode === 'lab' ? `Demo · ${B.tr.cn}` : `${B.lap ? 'Lap ' + (B.lap + 1) + ' · ' : ''}${B.n + 1}/${LAPN} · ${B.tr.cn}`; }
+const calm = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; } };
 function drawBattle() {
   const B = BT.B, tr = B.tr, tier = TIER(tr.kind), scene = PACK.now(PACK.sceneFor(B));
-  ov(`<div class="btop k-${tier}"><span class="pill tn">${esc(battleTag(B))}</span><span class="btn-n"><b class="${tr.boss ? 'bossn' : ''}">${esc(tr.title ? tr.title + ' ' : '')}${esc(tr.n)}</b></span></div>
-    <div class="bscreen t-${tier}"><div class="arena a-${tr.arena} v${tr.v} t-${tier}${scene ? ' has-scene' : ''}" id="arena" style="--ac:var(--t${tr.ty})">
-      ${scene ? `<img class="scene" alt="" src="${scene}">` : ''}<div class="abg"></div><div class="plat pf"></div><div class="plat pm"></div>
+  ov(`<div class="btop k-${tier}"><span class="pill tn">${esc(battleTag(B))}</span><span class="btn-n"><b class="${tr.boss ? 'bossn' : ''}">${esc(who(tr))}</b></span></div>
+    <div class="bscreen t-${tier}"><div class="arena a-${tr.arena} v${tr.v} t-${tier} i${tr.int}${scene ? ' has-scene' : ''}" id="arena" style="--ac:var(--t${tr.ty})">
+      ${scene ? `<img class="scene" alt="" src="${scene}">` : ''}<div class="abg"></div><canvas class="fxc bgc" id="bgc" width="256" height="192"></canvas><div class="plat pf"></div><div class="plat pm"></div>
       <div class="trn" id="trn">${tsprite(tr.img)}</div>
       <div class="bs foe gone" id="s-foe"></div><div class="bs me gone" id="s-me"></div>
       <canvas class="fxc" id="fxc" width="256" height="192"></canvas><canvas class="fxc" id="axc" width="512" height="384"></canvas><div class="fx" id="fx"></div>
@@ -152,6 +217,10 @@ function drawBattle() {
     <div id="bmenu" class="bmenu"></div>`, 'battle k-' + tier, `var(--t${tr.ty})`);
   FX.attach($('#fxc')); FX.speed = spdF();
   FX.hooks.shake = ms => { const a = $('#arena'); if (!a) return; a.classList.add('shake'); clearTimeout(BT.shT); BT.shT = setTimeout(() => a.classList.remove('shake'), ms); };
+  /* Bakgrunnsshowet følger klassen. Gullramma rundt toppbossens boks tegnes på nytt mange ganger i sekundet, så glansen beveger seg. */
+  FX.show($('#bgc'), calm() ? 0 : tr.int, tr.ty, tr.kind === 'supreme');
+  clearInterval(BT.goldT);
+  if (hudGold('foe')) BT.goldT = setInterval(() => { const el = $('#b-foe'); if (!$('#arena') || BT.B !== B) return clearInterval(BT.goldT); if (el && !el.hidden && PACK.hud) hudDraw('foe'); }, 66);
   fitArena();
 }
 /* Teksten skrives fram bokstav for bokstav. Trykk på boksen for å hoppe fram. */
@@ -234,7 +303,7 @@ async function playOne(B, e) {
     if (!e.quiet) {
       if (!PACK.sfx(e.e > 1 ? 'Hit Super Effective' : e.e < 1 ? 'Hit Weak Not Very Effective' : 'Hit Normal Damage', 1)) { if (e.e > 1) BSFX.hitS(); else if (e.e < 1) BSFX.hitW(); else BSFX.hit(); }
       FX.hit(fxPos(side), BT.ty, e.e, e.crit); buzz(e.e > 1 ? [40, 30, 60] : 25);
-      sp.classList.add('hurt'); if (e.e > 1 || e.crit) FX.hooks.shake(280);
+      sp.classList.add('hurt'); if (e.e > 1 || e.crit) FX.hooks.shake(280 + 25 * B.tr.int); else if (B.tr.int >= 6 && e.e === 1) FX.hooks.shake(140);
     }
     if (e.sub) await bwait(320); else await Promise.all([hpTo(side, e.hp), bwait(e.quiet ? 250 : 440)]);
     sp.classList.remove('hurt');
@@ -248,18 +317,18 @@ async function playOne(B, e) {
   else if (e.t === 'faint') { if (!PACK.sfx('In-Battle Faint No Health')) BSFX.faint(); cry(teamOf(side)[v.i].id, 0, 0.3); sp.classList.remove('ace'); sp.classList.add('faint'); await bwait(850); paintBox(side); $('#b-' + side).hidden = true; }
   else if (e.t === 'recall') { if (e.txt) await typeOut(e.txt); if (!PACK.sfx('In-Battle Recall Switch Pokeball')) BSFX.recall(); sp.classList.remove('ace', 'subd', 'away'); sp.classList.add('recall'); $('#b-' + side).hidden = true; await bwait(420); sp.classList.add('gone'); }
   else if (e.t === 'send') {
-    const team = teamOf(side), b = team[e.i], ace = side === 'foe' && B.tr.boss && team.length > 1 && e.i === team.length - 1, big = ace && SUPER.has(B.tr.kind);
+    const team = teamOf(side), b = team[e.i], ace = side === 'foe' && B.tr.boss && team.length > 1 && e.i === team.length - 1, big = ace && B.tr.int >= 4;
     BT.v[side] = { i: e.i, hp: e.hp, st: e.st };
     if (big) { music(''); await say(`${B.tr.n} is down to the last Pokémon…`); }
     if (BT.B !== B || !sp.isConnected) return;
     await typeOut(e.txt);
     sp.className = 'bs ' + side + ' gone'; $('#b-' + side).hidden = true;
     await tossBall(side);
-    if (big) { BSFX.ace(); buzz([80, 40, 80, 40, 240]); await FX.ace(side === 'foe' ? { x: 189, y: 74 } : { x: 62, y: 150 }, B.tr.ty, B.tr.kind === 'legend'); if (!PACK.playing()) music(musicKey(B)); }
+    if (big) { BSFX.ace(); buzz([80, 40, 80, 40, 240]); await FX.ace(side === 'foe' ? { x: 189, y: 74 } : { x: 62, y: 150 }, B.tr.ty, B.tr.ultra); if (!PACK.playing()) music(musicKey(B)); }
     paintSprite(side, 'in' + (ace ? ' ace' : '')); BSFX.ball(); FX.open(side === 'foe' ? { x: 189, y: 72 } : { x: 62, y: 150 }, big ? '#ffe9a8' : '');
     cry(b.id, 200, big ? 0.5 : 0.35); if (big) FX.hooks.shake(500);
     await bwait(380); paintBox(side);
-    S.seen[b.id] = 1;
+    if (B.mode !== 'lab') S.seen[b.id] = 1;
     await bwait(big ? 1100 : 620);
     sp.classList.remove('in');
   }
@@ -278,18 +347,37 @@ async function playEv(ev) {
   setText(B.need ? 'Choose your next Pokémon.' : `What will ${B.me[B.a].name} do?`);
   BT.menu = 'main'; drawMenu();
 }
-async function vsIntro(B) {
-  const tr = B.tr, lead = B.me[0], tier = TIER(tr.kind);
-  ov(`<div class="vs vs-${tier}" style="--ac:var(--t${tr.ty})">${tier === 'ultra' ? '<div class="vs-pre">A legendary trainer appears</div>' : ''}<div class="vs-a"><div class="vs-rays"></div>${tsprite(tr.img, 'big')}<div class="vs-n"><span>${esc(tr.title)}</span><b>${esc(tr.n)}</b></div></div>
-    <div class="vs-mid"><b>VS</b>${tier !== 'boss' ? `<span>${KIND[tier]}</span>` : ''}</div>
-    <div class="vs-b">${spr(lead.id, { ani: 1, sh: lead.sh, back: 1, s: '130px' })}<div class="vs-n"><span>${esc(battleTag(B))}</span><b>You</b></div></div></div>`, 'battle vsov');
-  /* Vanlig kampmusikk først, og så slår den over til bossmusikken idet «VS» smeller inn. */
-  const slam = tier === 'ultra' ? 1700 : 550;
+/* Boss-introen, som i Black og White: fargebånd som feier inn fra hver side med treneren og din første Pokémon, lyn, og «VS» som smeller inn.
+   Toppbossene i ligaen (klasse 7 til 9) får et eget klipp først: skjermen blinker, klassen deres står i gull, silhuetten vokser fram mellom lynene,
+   og så avsløres de i et lysglimt. Bildene (bånd, VS, lyn, stjerner) kommer fra ressurspakken. Uten den tegnes det samme med farger og tekst. */
+const BARC = ['grey', 'brown', 'cyan', 'purple', 'brown', 'brown', 'lime', 'purple', 'steel', 'orange', 'blue', 'green', 'yellow', 'purple', 'cyan', 'blue', 'grey', 'purple'];
+async function bossIntro(B) {
+  const tr = B.tr, lead = B.me[0], tier = TIER(tr.kind), V = PACK.vs, clip = tr.ultra && B.mode !== 'fac', sp = S.bfast ? 0.6 : 1, T = ms => new Promise(r => setTimeout(r, ms * sp));
+  const im = k => V && V[k] ? `url(${V[k]})` : 'none', plasma = /Plasma/.test(tr.title) || tr.n === 'Ghetsis';
+  ov(`<div class="bwi bwi-${tier} i${tr.int}${V ? ' pk' : ''}" id="bwi" style="--ac:var(--t${tr.ty});--bar:${im('bar_' + BARC[tr.ty])};--barme:${im('bar_me')};--vsi:${im(tr.int >= 6 ? 'vs2' : 'vs')};--bolt:${im('bolt')};--vbolt:${im('vbolt')};--stars:${im(tr.kind === 'evilboss' ? 'cloud' : 'stars')};--orb:${im('flash')};--em:${plasma ? im('plasma') : 'none'}">
+    <div class="bwi-s"><div class="bwi-bg"></div><div class="bwi-em"></div>
+      ${clip ? `<div class="bwi-pre"><span>Ultra rare boss</span><b>${esc(tr.cn)}</b></div><div class="bwi-sil">${tsprite(tr.img, 'big')}<i class="vb a"></i><i class="vb b"></i><i class="orb"></i><div class="nm"><span>${esc(tr.title)}</span><b>${esc(tr.n)}</b></div></div>` : ''}
+      <div class="bwi-bar foe"><div class="bwi-bb"></div>${tsprite(tr.img, 'big')}<div class="bwi-n"><span>${esc(tr.title)}</span><b>${esc(tr.n)}</b></div></div>
+      <div class="bwi-bar me"><div class="bwi-bb"></div>${spr(lead.id, { ani: 1, sh: lead.sh, back: 1 })}<div class="bwi-n"><span>${esc(battleTag(B))}</span><b>You</b></div></div>
+      <div class="bwi-bolt"></div><div class="bwi-vs"><b>VS</b></div><div class="bwi-cls">${esc(tr.cn)}</div><div class="bwi-fl"></div>
+    </div></div>`, 'battle vsov');
+  const root = $('#bwi'), st = root.querySelector('.bwi-s'), on = c => { if (root.isConnected) root.classList.add(c); }, gone = () => BT.B !== B || !root.isConnected;
+  st.style.setProperty('--u', (st.clientWidth / 256).toFixed(3) + 'px');
+  /* Vanlig kampmusikk først hvis treneren ikke har egen låt, og så slår den over til bossmusikken når de viser seg. */
   if (!PACK.trackFor(B)) music('battle');
-  await new Promise(r => setTimeout(r, slam));
-  if (BT.B !== B) return;
-  battleMusic(B); BSFX.vs(); buzz([60, 40, 60, 40, 200]);
-  await new Promise(r => setTimeout(r, tier === 'ultra' ? 2300 : tier === 'top' ? 2100 : 1700));
+  sfx.appear(); buzz([40, 40, 40]); on('s0');
+  await T(440); if (gone()) return;
+  if (clip) {
+    on('c1'); BSFX.vs(); await T(1500); if (gone()) return;
+    on('c2'); battleMusic(B); buzz([30, 30, 30, 30, 120]); await T(1700); if (gone()) return;
+    on('c3'); BSFX.ace(); buzz([80, 40, 240]); await T(1300); if (gone()) return;
+    on('c4'); await T(240); if (gone()) return;
+  }
+  on('s1'); await T(330); on('s2'); await T(380); if (gone()) return;
+  on('s3'); if (!clip) battleMusic(B); BSFX.vs(); buzz([60, 40, 60, 40, 200]);
+  await T(520); on('s4');
+  await T(tier === 'ultra' ? 1700 : tier === 'top' ? 1400 : 1150); if (gone()) return;
+  on('s5'); await T(300);
 }
 async function wipeIntro() {
   const o = $('#ov'), w = document.createElement('div');
@@ -302,12 +390,12 @@ async function startBattle(B) {
   BT.B = B; BT.menu = 'main'; BT.res = null; BT.ty = 0; BT.busy = true;
   BT.v = { me: { i: 0, hp: B.me[0].hp, st: '' }, foe: { i: 0, hp: B.foe[0].hp, st: '' } };
   const prep = PACK.prep(B).catch(() => {});
-  if (B.tr.boss) await vsIntro(B); else { await wipeIntro(); battleMusic(B); }
+  if (B.tr.boss) { await PACK.introPrep(); if (BT.B !== B) return; await bossIntro(B); } else { await wipeIntro(); battleMusic(B); }
   await prep;
   if (BT.B !== B) return;
   drawBattle(); drawMenu();
   await bwait(350);
-  await say(`${B.tr.title ? B.tr.title + ' ' : ''}${B.tr.n} wants to battle!`);
+  await say(`${who(B.tr)} wants to battle!`);
   if (BT.B !== B || !$('#arena')) return;
   $('#trn').classList.add('out');
   await playOne(B, { t: 'send', side: 'foe', i: 0, hp: B.foe[0].hp, st: '', txt: `${B.tr.n} sent out ${B.foe[0].name}!` });
@@ -318,7 +406,8 @@ async function startBattle(B) {
 }
 function endBattle() {
   const B = BT.B; stopMusic(); BT.busy = false;
-  const res = BT.res = B.mode === 'fac' ? finishFactory(B) : finishLeague(B);
+  clearInterval(BT.goldT); FX.show(null);
+  const res = BT.res = B.mode === 'fac' ? finishFactory(B) : B.mode === 'lab' ? finishLab(B) : finishLeague(B);
   if (res.win) BSFX.win(); else BSFX.lose();
   BT.tp = null; BT.fs = null;
   overview();
@@ -328,20 +417,19 @@ function endBattle() {
 const encLine = res => res.encs.length ? `<div class="row" style="justify-content:space-between"><span>Encounters</span><b>${res.encs.length} waiting in the grass${res.encs.some(e => e.t >= 4) ? ' · legendary' : res.encs.some(e => e.t >= 3) ? ' · epic' : ''}</b></div>` : '';
 const monCard = (x, a, k, on) => `<button type="button" data-a="${a}" data-k="${k}" aria-pressed="${!!on}" style="--tc:var(--t${D(x.id)[1]})">${spr(x.id, { ani: 1 })}<b>${esc(D(x.id)[0])}</b><span class="sm tn">Lv ${x.lv}${x.iv ? ' · ' + judge(x).t : ''}</span><span class="row" style="gap:4px;justify-content:center;flex-wrap:wrap">${types(x.id)}</span>${x.mv ? `<span class="mvl">${x.mv.map(i => esc(MOVES[i][0])).join(' · ')}</span>` : ''}</button>`;
 function overview() {
-  const B = BT.B, res = BT.res, tr = B.tr, fac = res.mode === 'fac', first = !res.shown;
-  const who = esc((tr.title ? tr.title + ' ' : '') + tr.n);
+  const B = BT.B, res = BT.res, tr = B.tr, fac = res.mode === 'fac', lab = res.mode === 'lab', first = !res.shown, nm = esc(who(tr));
   /* Laget: XP-linja fylles opp etter kampen, og nye nivåer og angrep vises her. */
-  const team = fac ? '' : `<div class="card stack">${B.me.map(b => {
+  const team = fac || lab ? '' : `<div class="card stack">${B.me.map(b => {
     const m = b.src, u = res.ups.find(x => x.u === m.u), l = first && u ? u.l0 : m.lv, x = first && u ? u.x0 : m.xp, f = Math.max(0, Math.min(1, (x - xpAt(l)) / (xpAt(l + 1) - xpAt(l))));
     return `<div class="hofr${u && u.l1 > u.l0 && !first ? ' lvup' : ''}" data-row="${m.u}">${spr(b.id, { sh: b.sh, s: '48px' })}<div class="sp"><div class="row" style="justify-content:space-between"><b>${esc(b.name)}</b><b class="sm tn lvt">${u && u.l1 > u.l0 && !first ? `Lv ${u.l0} → ${u.l1}` : 'Lv ' + l}</b></div>
       <div class="xpbar" style="margin-top:6px;height:6px"><i style="width:${Math.round(f * 100)}%"></i></div>
       <div class="sm tn" style="margin-top:4px">${u ? '+' + nb(u.xp) + ' XP' : 'No XP this time'}${b.hp <= 0 ? ' · fainted' : ''}${u && (u.learned || []).length ? ' · learned ' + esc(u.learned.join(', ')) : ''}</div>
       ${(m.nm || []).length ? `<button type="button" class="newmv" data-a="blearn" data-u="${m.u}" style="margin-top:6px;width:100%;text-align:left"><span class="bang">!</span><span class="sm" style="color:var(--ink)">Wants to learn <b>${esc(MOVES[m.nm[0]][0])}</b>${m.nm.length > 1 ? ' +' + (m.nm.length - 1) : ''}</span></button>` : ''}</div></div>`; }).join('')}</div>`;
-  const rew = res.win ? `<div class="card stack"><div class="row" style="justify-content:space-between"><b>Rewards</b><span class="pill tn">×${B.sm} study bonus${B.boost.mode === (fac ? 'factory' : 'league') ? ' · today\'s bonus' : ''}</span></div>
+  const rew = res.win && !lab ? `<div class="card stack"><div class="row" style="justify-content:space-between"><b>Rewards${tr.boss ? ' · ' + esc(tr.cn) : ''}</b><span class="pill tn">×${B.sm} study bonus${B.boost.mode === (fac ? 'factory' : 'league') ? ' · today\'s bonus' : ''}</span></div>
       <div class="row" style="justify-content:space-between"><span>Coins</span>${coinEl(res.coins)}</div>
       ${res.items.map(x => `<div class="row" style="justify-content:space-between"><span>Item</span><b>${esc(x)}</b></div>`).join('')}${encLine(res)}
-      ${res.got ? `<div class="row" style="justify-content:space-between"><span>Traded for</span><b>${esc(res.got)}</b></div>` : ''}${res.perk ? `<p class="sm" style="color:var(--gold)">${res.perk}</p>` : ''}</div>` : '';
-  /* Byttetilbud (ligaen) og bytte av leie-Pokémon (fabrikken). */
+      ${res.got ? `<div class="row" style="justify-content:space-between"><span>Traded for</span><b>${esc(res.got)}</b></div>` : ''}${res.note ? `<p class="sm">${esc(res.note)}</p>` : ''}${res.perk ? `<p class="sm" style="color:var(--gold)">${res.perk}</p>` : ''}</div>` : '';
+  /* Byttetilbud (ligaen) og bytte av leie-Pokémon (Frontier). */
   let extra = '';
   if (res.trade) {
     const tp = BT.tp;
@@ -355,16 +443,17 @@ function overview() {
       ${fs == null ? '' : '<button type="button" class="btn wide" data-a="fswb">Back</button>'}</div>`;
   }
   const L = S.lad, R = S.fac.run;
-  const next = fac ? (res.win ? (res.roundDone ? `Round ${res.round} cleared. Round ${res.round + 1} has stronger rentals.` : `Next: battle ${R.w + 1} of 7${R.w === 6 ? ' · the Factory Head' : ''}`) : `The run ends at a streak of ${res.streak}.`)
-    : res.win ? (res.legend ? 'Someone is waiting beyond the Champion…' : res.lapDone ? `League cleared. Lap ${L.lap + 1} begins, with stronger trainers and better rewards.` : 'Next: ' + esc(leagueTag())) : `${esc(tr.n)} waits for you. The League opens again after your next day of focus.`;
-  const open = fac ? facOpen() && !!R : ladderOpen();
+  const next = lab ? 'Demo battle: no XP or rewards, and your League and Frontier progress are untouched.'
+    : fac ? (res.win ? (res.roundDone ? `Round ${res.round} cleared. Round ${res.round + 1} has stronger rentals and opponents.` : `Next: battle ${R.w + 1} of ${FACN}${R.w === FACN - 1 ? ' · the boss' : ''}`) : `The run ends at a streak of ${res.streak}.`)
+    : res.win ? (res.lapDone ? `Lap cleared. Lap ${L.lap + 1} begins, with stronger trainers, bigger teams and better rewards.` : 'Next: ' + esc(leagueTag()) + (L.n % 3 === 2 ? ' · a boss' : '')) : `${res.gone ? esc(tr.n) + ' moves on: ultra rare bosses give you one chance.' : esc(tr.n) + ' waits for you.'} ${res.left ? 'You have one rematch left today.' : 'The League opens again after your next day of focus.'}`;
+  const open = lab ? true : fac ? facOpen() && !!R : ladderOpen();
   ov(`<div class="hof"><div class="hof-h"><span>${res.win ? 'VICTORY' : 'DEFEAT'}</span><span class="tn">${esc(battleTag(B))}</span></div>
       <div class="hof-stage">${B.me.map((b, i) => `<span style="--i:${i};--n:${B.me.length}" class="${b.hp <= 0 ? 'ko' : ''}">${spr(b.id, { ani: 1, sh: b.sh })}</span>`).join('')}</div>
-      <p class="hof-t">${res.win ? `You beat ${who}.` : fac ? `${who} stopped your run.` : `${who} won this time. You keep your place and the XP.`}</p></div>
+      <p class="hof-t">${res.win ? `You beat ${nm}.` : lab ? `${nm} won this time.` : fac ? `${nm} stopped your run.` : `${nm} won this time. You keep your place and the XP.`}</p></div>
     ${team}${rew}${extra}
     <div class="card"><span class="sm" style="color:var(--ink)">${next}</span></div>
-    <div class="acts">${res.win && open ? `<button type="button" class="btn gold" data-a="${fac ? 'fenter' : 'bpre'}">${fac && res.roundDone ? 'Pick new rentals' : 'Next battle'}</button><button type="button" class="btn nf" data-a="home">Done</button>` : '<button type="button" class="btn pri" data-a="home">Done</button>'}</div>`, 'tint ovtop', res.win ? 'var(--gold)' : 'var(--red)');
-  if (first && !fac) setTimeout(animXp, 500);
+    <div class="acts">${lab ? '<button type="button" class="btn gold" data-a="lab">Another demo</button><button type="button" class="btn nf" data-a="home">Done</button>' : (res.win || res.left) && open ? `<button type="button" class="btn gold" data-a="${fac ? 'fenter' : 'bpre'}">${!res.win ? (res.gone ? 'Next battle' : 'Rematch') : fac && res.roundDone ? 'Pick new rentals' : 'Next battle'}</button><button type="button" class="btn nf" data-a="home">Done</button>` : '<button type="button" class="btn pri" data-a="home">Done</button>'}</div>`, 'tint ovtop', res.win ? 'var(--gold)' : 'var(--red)');
+  if (first && !fac && !lab) setTimeout(animXp, 500);
   res.shown = 1;
 }
 /* XP-linjene fylles, og de som går opp i nivå får ny linje og gullfarget nivå. */
@@ -392,25 +481,38 @@ function learnSheet(m, back) {
     <button type="button" class="btn wide" data-a="lskip">Don't learn ${esc(mv[0])}</button>`);
 }
 
-/* ---------- Battle Factory ---------- */
+/* ---------- Battle Frontier ---------- */
 function facScreen() {
   const R = S.fac.run; if (!R) return;
   if (R.offer) {
     const sel = BT.fsel;
-    return ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Battle Factory · Round ${R.round}</span></div>
-      <div><h1 class="big">Pick 4 of 7.</h1><p class="mut" style="margin-top:6px">Rental Pokémon at Lv ${FACLV(R.round)}. The first one you pick leads. Win seven battles in a row to clear the round, and swap in one Pokémon from each trainer you beat.</p></div>
+    return ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Battle Frontier · Round ${R.round}</span></div>
+      <div><h1 class="big">Pick 4 of 7.</h1><p class="mut" style="margin-top:6px">Rental Pokémon, all at Lv ${FACLV} like everyone you meet. The first one you pick leads. A round is six trainers and then a boss, and you can swap in one Pokémon from each trainer you beat.</p></div>
       <div class="rent">${R.offer.map((m, i) => monCard(m, 'fsel', i, sel.includes(i)).replace('<b>', sel.includes(i) ? `<span class="ord">${sel.indexOf(i) + 1}</span><b>` : '<b>')).join('')}</div>
       <div class="acts"><button type="button" class="btn gold" data-a="fpick"${sel.length === 4 ? '' : ' disabled'}>${sel.length === 4 ? 'Take these four' : `Pick ${4 - sel.length} more`}</button></div>`, 'tint', 'var(--t8)');
   }
-  const f = facFoe(), tr = facInfo(f);
-  ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Round ${R.round} · battle ${R.w + 1} of 7</span></div>
-    <div class="card k-${f.head ? 'boss' : 'reg'}"><div class="pre-foe">${tsprite(tr.img)}<div class="sp"><div class="sm">${f.head ? 'Boss · last battle of the round' : 'Battle Factory'}</div><b class="${f.head ? 'bossn' : ''}" style="font-size:19px">${esc(tr.title ? tr.title + ' ' : '')}${esc(tr.n)}</b><div class="sm tn" style="margin-top:4px">4 Pokémon at Lv ${FACLV(R.round)} · favours ${TYN[f.hint]} types</div></div></div></div>
+  const f = facFoe(), tr = facInfo(f), tier = TIER(tr.kind);
+  ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Round ${R.round} · battle ${R.w + 1} of ${FACN}</span></div>
+    <div class="card k-${tier}"><div class="pre-foe">${tsprite(tr.img)}<div class="sp"><div class="sm">${f.boss ? (tr.ultra ? `Ultra rare boss · ${esc(tr.cn)} · extra rewards` : `Boss · ${esc(tr.cn)} · last battle of the round`) : 'Battle Frontier'}</div><b class="${f.boss ? 'bossn' : ''}" style="font-size:19px">${esc(who(tr))}</b><div class="sm tn" style="margin-top:4px">4 Pokémon at Lv ${FACLV} · favours ${TYN[f.hint]} types</div></div></div></div>
     <div><div class="lab">Your rentals · tap the one that leads</div><div class="lineup">${R.team.map((m, i) => `<button type="button" data-a="flead" data-k="${i}" class="${i ? '' : 'lead'}">${spr(m.id)}<span class="sp"><b>${esc(D(m.id)[0])}</b><br><span class="sm tn">${m.mv.map(x => esc(MOVES[x][0])).join(', ')}</span></span>${i ? '' : '<span class="pill">Leads</span>'}</button>`).join('')}</div></div>
     <div class="acts"><button type="button" class="btn gold" data-a="fgo">Start battle</button></div>`, 'tint', 'var(--t8)');
 }
 
+/* ---------- Demo ---------- */
+/* Prøv en kamp mot hvilken som helst av de ni klassene, når som helst. Gir ingenting og rører ikke framgangen. */
+function labScreen() {
+  const rent = !!BT.labRent;
+  ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Demo</span></div>
+    <div><h1 class="big">Try a battle.</h1><p class="mut" style="margin-top:6px">Pick a class and fight right away. Demo battles give no XP or rewards and do not touch your League or Frontier progress.</p></div>
+    <div class="row labm"><button type="button" class="btn sp${rent ? ' nf' : ''}" data-a="labmode" data-k="0" aria-pressed="${!rent}">My team</button><button type="button" class="btn sp${rent ? '' : ' nf'}" data-a="labmode" data-k="1" aria-pressed="${rent}">Rentals · Lv ${FACLV}</button></div>
+    <div class="lablist">${ORDER.map(k => { const c = TCL[k]; return `<button type="button" data-a="labgo" data-k="${k}" class="k-${TIER(k)}"><span class="cno">${c.i}</span><span class="sp"><b>${c.n}</b><br><span class="sm">${LABD[k]}</span></span>${ULTRA.has(k) ? '<span class="pill">Ultra rare</span>' : ''}</button>`; }).join('')}</div>`, 'tint', 'var(--gold)');
+}
+
 /* Handlingene (kobles inn i klikk-håndteringen i ui.js). */
 const BA = {
+  lab: () => { BT.B = null; BT.busy = false; stopMusic(); labScreen(); },
+  labmode: el => { BT.labRent = el.dataset.k === '1'; labScreen(); },
+  labgo: el => { if (!BT.labRent && !S.party.map(monBy).filter(Boolean).length) return toast('You need a Pokémon in your team, or pick Rentals.'); PACK.unlock(); sfx.start(); BT.busy = false; startBattle(labBattle(el.dataset.k, !!BT.labRent)); },
   bdone: () => { S.lad.day = dayKey(); save(); sfx.ok(); render(); toast('Battles are open. Fight now or later tonight.'); },
   bpre: () => { if (!ladderOpen()) { closeOv(); return render(); } BT.B = null; BT.busy = false; preBattle(); },
   blead: el => { BT.lead = +el.dataset.u; preBattle(); },

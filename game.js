@@ -137,7 +137,7 @@ function wildLv(id, t) {
 const KEY = 'fokusdex.v1';
 function fresh() {
   return {
-    v: 1, mig: 3, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
+    v: 1, mig: 4, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
     items: { poke: 15, great: 0, ultra: 0, candy: 0, stone: 0, incense: 0 },
     mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, routes: [1], eggs: [], pend: [], incOn: 0,
     log: {}, fm: {},
@@ -157,6 +157,7 @@ function adopt(o) {
   if (legacy && !o.extra) S.extra = ['sok', 'annet'];
   if (!o.mig || o.mig < 2) migrate2();
   if (!o.mig || o.mig < 3) migrate3();
+  if (!o.mig || o.mig < 4) migrate4();
   S.routes = (S.routes || []).filter(r => S.regions.includes(r)); if (!S.routes.length) S.routes = [S.regions.includes(S.region) ? S.region : S.regions[0]];
   S.mons.forEach(ensure);
   buildFags();
@@ -173,6 +174,13 @@ function migrate2() {
 function migrate3() {
   S.lad = Object.assign(fresh().lad, { old: (S.lad && S.lad.best) || 0, day: (S.lad && S.lad.day) || '' });
   S.fac = fresh().fac; S.routes = [S.region]; S.bfast = 0; S.mig = 3;
+}
+/* Versjon 4 (de ni klassene): ligaen er lagt om til runder på 18 kamper, og alt i Battle Frontier er på nivå 50.
+   Du beholder runden og omtrent samme sted i den. En påbegynt Frontier-runde starter på nytt, rekorden står. */
+function migrate4() {
+  const L = S.lad; L.n = Math.max(0, Math.min(17, L.n || 0)); L.next = null; L.seen = [];
+  if (S.fac) S.fac.run = null;
+  S.mig = 4;
 }
 function load() {
   try { const o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (o && o.v === 1) adopt(o); } catch (_) {}
