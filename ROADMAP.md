@@ -24,6 +24,17 @@ wild levels that follow the team, 3 coins per minute, and a choice of which save
 Still open from step 2: double battles, using items in battle (comes with step 3), two-turn moves (Fly, Dig, Solar Beam run as
 one turn for now), and "Choose your own music" with local mp3 files stored on the device only (never in the repo).
 
+## Step 2b – League and Battle Factory (done)
+
+- The ladder is now a League with fixed stages that keep getting harder: Trainers, Ace Trainers, Gym Leaders, Rivals, Elite Four, Team Bosses, Champion, and sometimes a Legendary Trainer. Laps repeat with stronger trainers and better rewards.
+- Trainers have at least three Pokémon, varied types, smarter movesets, and skilled trainers switch out. Levels follow your team but have a floor per stage.
+- XP is handed out after the battle to the whole team, more to lower-level Pokémon. Coins are lower and follow the stage. Bosses give Rare Candy and encounters, and sometimes offer a trade.
+- Battle Factory: 4 of 7 rental Pokémon, seven battles per round, swap after each win, rewards in items and encounters.
+- Engine: Leech Seed, Rollout, two-turn moves, weather, screens, hazards, substitutes, trapping, Encore, Taunt, Disable and most other unique status moves.
+- Screen: one connected arena, Gen 5-style HP boxes with HP that drains gradually, typed text, a colourful FIGHT menu, ball throws, an entrance for the top bosses' ace, and move animations per type and kind of move.
+- New moves: a "wants to learn" choice like in the games, and a ! on the team until you have looked.
+- Several routes can be on at the same time.
+
 ## Step 3 – items
 - Random item finds during sessions, and wild Pokémon that sometimes hold an item.
 - Held items with a unique use: Lucky Egg, Amulet Coin, Leftovers, type boosters, Exp. Share.

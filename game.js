@@ -81,7 +81,7 @@ function statsOf(m) {
 function movesAt(id, lv) { const l = LEARN[id - 1], out = []; for (let i = 0; i < l.length; i += 2) if (l[i] <= lv && !out.includes(l[i + 1])) out.push(l[i + 1]); return out; }
 /* De fire nyeste, men alltid minst ett som gjør skade hvis arten har det. */
 function defaultMoves(id, lv) {
-  const all = movesAt(id, lv), mv = all.slice(-4);
+  const known = movesAt(id, lv), live = known.filter(x => !(window.DEADMV && DEADMV.has(x))), all = live.length ? live : known, mv = all.slice(-4);
   if (!mv.some(x => MOVES[x][2] > 0)) { const d = all.filter(x => MOVES[x][2] > 0).pop(); if (d != null) mv[0] = d; }
   return mv;
 }
@@ -92,7 +92,7 @@ function judge(m) {
 }
 const rollIv = egg => Array.from({ length: 6 }, () => egg ? Math.max(rnd(32), rnd(32)) : rnd(32));
 function ensure(m) {
-  if (!m.iv) m.iv = rollIv(); if (!m.ev) m.ev = [0, 0, 0, 0, 0, 0]; if (m.nat == null) m.nat = rnd(25);
+  if (!m.iv) m.iv = rollIv(); if (!m.ev) m.ev = [0, 0, 0, 0, 0, 0]; if (m.nat == null) m.nat = rnd(25); if (!m.nm) m.nm = [];
   if (!m.mv || !m.mv.length) m.mv = defaultMoves(m.id, m.lv);
   return m;
 }
@@ -102,13 +102,22 @@ function addEv(m, n) {
   let tot = m.ev.reduce((a, b) => a + b, 0);
   for (const i of order) { const add = Math.min(n, 252 - m.ev[i], 510 - tot); if (add > 0) { m.ev[i] += add; tot += add; n -= add; } if (n <= 0) break; }
 }
-/* Etter nivåøkning: nye angrep læres rett inn hvis det er ledig plass, ellers blir de tilgjengelige på kortet. */
+/* Etter nivåøkning: nye angrep læres rett inn hvis det er ledig plass. Er alle fire plassene brukt, venter angrepet i m.nm til du har valgt
+   om det skal læres (som i spillene). m.nw = 1 gir utropstegnet i lagoversikten til kortet er åpnet. */
 function learnUp(m, l0) {
   const l = LEARN[m.id - 1], out = { learned: [], avail: [] };
-  for (let i = 0; i < l.length; i += 2) if (l[i] > l0 && l[i] <= m.lv && !m.mv.includes(l[i + 1])) {
-    if (m.mv.length < 4) { m.mv.push(l[i + 1]); out.learned.push(MOVES[l[i + 1]][0]); } else out.avail.push(MOVES[l[i + 1]][0]);
+  if (!m.nm) m.nm = [];
+  for (let i = 0; i < l.length; i += 2) if (l[i] > l0 && l[i] <= m.lv && !m.mv.includes(l[i + 1]) && !m.nm.includes(l[i + 1])) {
+    if (m.mv.length < 4) { m.mv.push(l[i + 1]); out.learned.push(MOVES[l[i + 1]][0]); m.nw = 1; } else { m.nm.push(l[i + 1]); out.avail.push(MOVES[l[i + 1]][0]); }
   }
   return out;
+}
+const hasNews = m => !!(m.nw || (m.nm && m.nm.length));
+/* Svar på «vil lære»: forget = angrepet som byttes ut, eller null for å la være. */
+function resolveMove(m, mv, forget) {
+  m.nm = (m.nm || []).filter(x => x !== mv);
+  if (forget != null) { const i = m.mv.indexOf(forget); if (i >= 0) m.mv[i] = mv; }
+  save();
 }
 /* Nivåer for ville Pokémon følger laget: vanlige ligger rundt ditt nivå, sjeldne lavere. Utviklede former dukker først opp når du er høyt nok. */
 const refLv = () => { const p = S.party.map(monBy).filter(Boolean); return p.length ? Math.max(...p.map(m => m.lv)) : 5; };
@@ -128,25 +137,27 @@ function wildLv(id, t) {
 const KEY = 'fokusdex.v1';
 function fresh() {
   return {
-    v: 1, mig: 2, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
+    v: 1, mig: 3, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
     items: { poke: 15, great: 0, ultra: 0, candy: 0, stone: 0, incense: 0 },
-    mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, eggs: [], pend: [], incOn: 0,
+    mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, routes: [1], eggs: [], pend: [], incOn: 0,
     log: {}, fm: {},
     fag: {}, extra: ['annet'],
     last: { fag: 'annet', min: 60 }, cap: 360, sound: 0, cries: 1, vol: 70, cvol: 80, timer: null,
-    lad: { n: 0, best: 0, day: '', lost: '', next: null }, boost: null, bfast: 0, music: 1
+    lad: { n: 0, lap: 0, best: 0, day: '', lost: '', next: null, seen: [] }, fac: { run: null, best: 0, lost: '' }, boost: null, bfast: 0, music: 1
   };
 }
 let S = fresh();
 /* Tar i bruk en lagring (fra enheten, synk eller sikkerhetskopi) og oppgraderer gamle lagringer der fagene var faste. */
 function adopt(o) {
   S = Object.assign(fresh(), o);
-  S.lad = Object.assign(fresh().lad, o.lad || {});
+  S.lad = Object.assign(fresh().lad, o.lad || {}); S.fac = Object.assign(fresh().fac, o.fac || {});
   for (const k in fresh().items) if (S.items[k] == null) S.items[k] = 0;
   let legacy = false;
   for (const k in S.fag) if (!S.fag[k].n) { Object.assign(S.fag[k], LEGACY[k] || { n: k.toUpperCase(), c: PAL[0], ty: [] }); legacy = true; }
   if (legacy && !o.extra) S.extra = ['sok', 'annet'];
   if (!o.mig || o.mig < 2) migrate2();
+  if (!o.mig || o.mig < 3) migrate3();
+  S.routes = (S.routes || []).filter(r => S.regions.includes(r)); if (!S.routes.length) S.routes = [S.regions.includes(S.region) ? S.region : S.regions[0]];
   S.mons.forEach(ensure);
   buildFags();
 }
@@ -157,6 +168,11 @@ function migrate2() {
   for (const m of S.mons) { if (m.lv > cap) { m.lv = cap; m.xp = xpAt(cap); } delete m.mv; ensure(m); }
   for (const e of S.pend) e.lv = wildLv(e.id, e.t);
   S.mig = 2;
+}
+/* Versjon 3 (ligaen): den gamle stigen byttes ut med ligaen, som starter fra første trener. Den gamle rekorden tas vare på som et tall. */
+function migrate3() {
+  S.lad = Object.assign(fresh().lad, { old: (S.lad && S.lad.best) || 0, day: (S.lad && S.lad.day) || '' });
+  S.fac = fresh().fac; S.routes = [S.region]; S.bfast = 0; S.mig = 3;
 }
 function load() {
   try { const o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (o && o.v === 1) adopt(o); } catch (_) {}
@@ -204,7 +220,7 @@ function addMon(id, lv, sh, egg) {
 /* ---------- Møter ---------- */
 /* o: fag (typebias), luck 0–2 (lengre økt og lokkeduft gir mer sjeldent), min (laveste sjeldenhet), leg (legendarisk), egg. */
 function genEnc(o = {}) {
-  const bias = F(o.fag).ty || [], L = o.luck || 0, pool = [], P = refLv();
+  const bias = o.ty || F(o.fag).ty || [], L = o.luck || 0, pool = [], P = refLv();
   let tot = 0;
   const push = (id, w) => { pool.push([id, w]); tot += w; };
   if (o.egg) {
@@ -212,8 +228,8 @@ function genEnc(o = {}) {
   } else if (o.leg) {
     for (const r of S.regions) for (let id = REG[r].a; id <= REG[r].b; id++) if (isLeg(id)) push(id, D(id)[6] & 2 ? 0.5 : 1);
   } else {
-    const reg = REG[S.region];
-    for (let id = reg.a; id <= reg.b; id++) {
+    /* Alle rutene som er slått på, er med i trekningen. */
+    for (const r of S.routes && S.routes.length ? S.routes : [S.region]) for (let id = REG[r].a; id <= REG[r].b; id++) {
       if (isLeg(id)) continue;
       const d = D(id), t = tierOf(id);
       if (t < (o.min || 0) || reqLv(id) > P) continue;
@@ -356,7 +372,14 @@ function buy(k) {
   else S.items[k]++;
   S.coins -= it.p; save(); return true;
 }
-function buyRegion(r) { const g = REG[r]; if (!g || S.regions.includes(r) || S.coins < g.c) return false; S.coins -= g.c; S.regions.push(r); S.regions.sort(); S.region = r; save(); return true; }
+function buyRegion(r) { const g = REG[r]; if (!g || S.regions.includes(r) || S.coins < g.c) return false; S.coins -= g.c; S.regions.push(r); S.regions.sort(); S.region = r; S.routes.push(r); S.routes.sort(); save(); return true; }
+/* Slår en rute av eller på. Minst én må stå på. */
+function toggleRoute(r) {
+  if (!S.regions.includes(r)) return;
+  if (S.routes.includes(r)) { if (S.routes.length > 1) S.routes = S.routes.filter(x => x !== r); } else { S.routes.push(r); S.routes.sort(); S.region = r; }
+  if (!S.routes.includes(S.region)) S.region = S.routes[0];
+  save();
+}
 function dexCount(r) { const g = REG[r]; let c = 0; for (let id = g.a; id <= g.b; id++) if (S.caught[id]) c++; return c; }
 /* Første start: timer som alt er gjort i fagene gir 60 mynter per time og et forsprang på merkene. */
 function begin(id) {
@@ -407,9 +430,10 @@ async function ghProbe() {
     return o && o.v === 1 && Array.isArray(o.mons) ? { st: 'remote', o } : { st: 'none' };
   } catch (_) { ghState = 'Offline'; return { st: 'err' }; }
 }
-/* use = 'remote': denne enheten tar over lagringen fra GitHub. use = 'local': denne enheten laster opp sin og erstatter den. */
+/* use = 'remote': denne enheten tar over lagringen fra GitHub (den lokale legges til side som sikkerhetskopi). use = 'local': denne enheten laster opp sin og erstatter den. */
+const saveScore = o => (o.mons || []).reduce((a, m) => a + m.lv, 0) + (o.xp || 0) / 50 + Object.values(o.log || {}).reduce((a, d) => a + (d.m || 0), 0);
 async function ghLink(use, o) {
-  if (use === 'remote' && o) { adopt(o); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (_) {} }
+  if (use === 'remote' && o) { try { localStorage.setItem(KEY + '.bak', JSON.stringify(S)); } catch (_) {} adopt(o); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (_) {} }
   else if (o) S.rev = Math.max(S.rev, o.rev || 0) + 1;
   GH.ok = 1; ghStore(); ghState = 'ok';
   if (use !== 'remote') await ghPush();
