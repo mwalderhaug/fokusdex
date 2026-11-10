@@ -132,6 +132,18 @@ button:disabled{opacity:.4;cursor:default}
 .slots .cell .sprb{--s:44px}
 .slots .cell.lead{box-shadow:0 0 0 2px var(--sage)}
 
+/* Fagredigering */
+.secard{display:flex;flex-direction:column;gap:12px}
+.sein{flex:1;min-width:0;height:46px;border-radius:14px;border:1px solid rgba(255,255,255,.13);background:var(--bg);padding:0 14px;font-size:17px;font-weight:750;color:var(--ink)}
+.sein:focus,.field input:focus{outline:none;border-color:var(--sage)}
+.segrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.segrid .full{grid-column:1/-1}
+.tychips{display:flex;flex-wrap:wrap;gap:5px}
+.tyc{min-height:32px;padding:0 11px;border-radius:16px;font-size:12px;font-weight:700;background:var(--soft);color:var(--ink2);transition:transform .12s ease}
+.tyc:active{transform:scale(.94)}
+.tyc[aria-pressed="true"]{background:var(--c);color:#17130f}
+.err{font-size:13px;color:var(--red);font-weight:650}
+.err:empty{display:none}
 /* Butikk og lister */
 .item{display:flex;align-items:center;gap:12px;padding:12px 0}
 .item+.item{border-top:1px solid var(--line)}

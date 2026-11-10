@@ -7,15 +7,20 @@ const TYN = ['Normal', 'Fighting', 'Flying', 'Poison', 'Ground', 'Rock', 'Bug', 
 const TIERS = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
 /* Regioner = generasjoner. c er prisen for å låse opp. */
 const REG = [null, { n: 'Kanto', a: 1, b: 151, c: 0 }, { n: 'Johto', a: 152, b: 251, c: 1200 }, { n: 'Hoenn', a: 252, b: 386, c: 2500 }, { n: 'Sinnoh', a: 387, b: 493, c: 4000 }, { n: 'Unova', a: 494, b: 649, c: 6000 }];
-/* Fag styrer hvilke typer som dukker opp oftere. */
-const FAGS = {
-  bban: { n: 'BBAN', c: '#B9AFC9', ty: [12, 8] },
-  cf: { n: 'CF', c: '#A9C3A2', ty: [0, 1] },
-  met: { n: 'MET', c: '#9FBDB8', ty: [13, 7] },
-  bsmo: { n: 'Ø&B', c: '#BDBE92', ty: [11, 10, 6] },
-  sok: { n: 'Job apps', c: '#D4BC8E', ty: [2, 9] },
-  annet: { n: 'Other', c: '#AFA89E', ty: [] }
-};
+/* Fagene ligger i lagringen (S.fag), så hver spiller har sine egne: n = navn, c = farge, ty = typer som dukker opp oftere,
+   t = planlagte timer, b = minutter gjort før appen, d = eksamensdato, ms = milepæler hentet. Økter kan også føres på faste ekstra-valg (EXTRA). */
+const EXTRA = { sok: { n: 'Job apps', c: '#D4BC8E', ty: [2, 9] }, annet: { n: 'Other', c: '#AFA89E', ty: [] } };
+/* Jazz sine fag fra før fagene kunne velges. Brukes bare for å oppgradere gamle lagringer. */
+const LEGACY = { bban: { n: 'BBAN', c: '#B9AFC9', ty: [12, 8] }, cf: { n: 'CF', c: '#A9C3A2', ty: [0, 1] }, met: { n: 'MET', c: '#9FBDB8', ty: [13, 7] }, bsmo: { n: 'Ø&B', c: '#BDBE92', ty: [11, 10, 6] } };
+const PAL = ['#B9AFC9', '#A9C3A2', '#9FBDB8', '#BDBE92'];
+let FAGS = {};
+function buildFags() {
+  FAGS = {};
+  for (const k in S.fag) { const f = S.fag[k]; FAGS[k] = { n: f.n, c: f.c, ty: f.ty || [] }; }
+  for (const k of S.extra || ['annet']) if (EXTRA[k]) FAGS[k] = EXTRA[k];
+}
+const F = k => FAGS[k] || EXTRA.annet;
+const curFag = () => FAGS[S.last.fag] ? S.last.fag : Object.keys(FAGS)[0];
 const SHOP = {
   poke: { n: 'Poké Ball', p: 20, d: 'Standard ball', img: 'poke-ball', bc: '#d98f7e' },
   great: { n: 'Great Ball', p: 60, d: 'Better odds · trainer level 3', lv: 3, img: 'great-ball', bc: '#7fa8e6' },
@@ -63,15 +68,23 @@ function fresh() {
     items: { poke: 15, great: 0, ultra: 0, candy: 0, stone: 0, incense: 0 },
     mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, eggs: [], pend: [], incOn: 0,
     log: {}, fm: {},
-    /* Eksamensplanen H26: t = planlagte timer, b = minutter gjort før appen (fra hubben 9.11), d = eksamensdato, ms = milepæler hentet. */
-    fag: { bban: { t: 63.5, b: 590, d: '2026-11-30', ms: 0 }, cf: { t: 55.75, b: 20, d: '2026-12-10', ms: 0 }, met: { t: 39.75, b: 60, d: '2026-12-17', ms: 0 }, bsmo: { t: 19, b: 0, d: '2026-12-22', ms: 0 } },
-    last: { fag: 'bban', min: 60 }, cap: 360, sound: 0, timer: null
+    fag: {}, extra: ['annet'],
+    last: { fag: 'annet', min: 60 }, cap: 360, sound: 0, timer: null
   };
 }
 let S = fresh();
-function load() {
-  try { const o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (o && o.v === 1) S = Object.assign(fresh(), o); } catch (_) {}
+/* Tar i bruk en lagring (fra enheten, synk eller sikkerhetskopi) og oppgraderer gamle lagringer der fagene var faste. */
+function adopt(o) {
+  S = Object.assign(fresh(), o);
   for (const k in fresh().items) if (S.items[k] == null) S.items[k] = 0;
+  let legacy = false;
+  for (const k in S.fag) if (!S.fag[k].n) { Object.assign(S.fag[k], LEGACY[k] || { n: k.toUpperCase(), c: PAL[0], ty: [] }); legacy = true; }
+  if (legacy && !o.extra) S.extra = ['sok', 'annet'];
+  buildFags();
+}
+function load() {
+  try { const o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (o && o.v === 1) adopt(o); } catch (_) {}
+  buildFags();
 }
 let saveHook = null;
 function save(quiet) {
@@ -115,7 +128,7 @@ function addMon(id, lv, sh) {
 /* ---------- Møter ---------- */
 /* o: fag (typebias), luck 0–2 (lengre økt og lokkeduft gir mer sjeldent), min (laveste sjeldenhet), leg (legendarisk), egg. */
 function genEnc(o = {}) {
-  const bias = (FAGS[o.fag] || {}).ty || [], L = o.luck || 0, pool = [];
+  const bias = F(o.fag).ty || [], L = o.luck || 0, pool = [];
   let tot = 0;
   const push = (id, w) => { pool.push([id, w]); tot += w; };
   if (o.egg) {
@@ -210,8 +223,8 @@ function grant(fag, min, full, planned) {
     const reach = Math.min(4, Math.floor(fagMin(fag) / (fg.t * 60) * 4));
     while (fg.ms < reach) {
       fg.ms++;
-      if (fg.ms < 4) { encs.push(genEnc({ fag, min: 3, luck: 1.5 })); R.gifts.push(`${FAGS[fag].n}: ${fg.ms * 25}% of the plan is done. An epic encounter is waiting.`); }
-      else { encs.push(genEnc({ leg: 1 })); R.gifts.push(`The ${FAGS[fag].n} badge is yours. A legendary encounter is waiting.`); }
+      if (fg.ms < 4) { encs.push(genEnc({ fag, min: 3, luck: 1.5 })); R.gifts.push(`${F(fag).n}: ${fg.ms * 25}% of the plan is done. An epic encounter is waiting.`); }
+      else { encs.push(genEnc({ leg: 1 })); R.gifts.push(`The ${F(fag).n} badge is yours. A legendary encounter is waiting.`); }
     }
   }
   R.enc = encs.length;
@@ -268,10 +281,27 @@ function buy(k) {
 }
 function buyRegion(r) { const g = REG[r]; if (!g || S.regions.includes(r) || S.coins < g.c) return false; S.coins -= g.c; S.regions.push(r); S.regions.sort(); S.region = r; save(); return true; }
 function dexCount(r) { const g = REG[r]; let c = 0; for (let id = g.a; id <= g.b; id++) if (S.caught[id]) c++; return c; }
+/* Første start: timer som alt er gjort i fagene gir 60 mynter per time og et forsprang på merkene. */
 function begin(id) {
-  S.started = 1; S.coins += 660;
-  for (const f in S.fag) S.fag[f].ms = Math.min(3, Math.floor(S.fag[f].b / (S.fag[f].t * 60) * 4));
+  S.started = 1;
+  let head = 0;
+  for (const f in S.fag) { const g = S.fag[f]; head += g.b; g.ms = Math.min(3, Math.floor(g.b / (g.t * 60) * 4)); }
+  const coins = Math.round(head / 60 * 60);
+  S.coins += coins; S.last.fag = Object.keys(S.fag)[0] || 'annet';
   addMon(id, 5, 0); save();
+  return coins;
+}
+/* Lagrer fagene fra redigeringen. Eksisterende fag beholder nøkkel, minutter og milepæler. */
+function setSubjects(list) {
+  const old = S.fag, out = {};
+  list.forEach((s, i) => {
+    const k = s.k && old[s.k] ? s.k : 's' + Date.now().toString(36) + i;
+    const o = old[k] || { ms: 0, c: PAL[Object.keys(out).length % PAL.length] };
+    out[k] = Object.assign({}, o, { n: s.n, ty: s.ty.slice(0, 2), t: s.t, b: s.b, d: s.d });
+    out[k].ms = Math.max(o.ms || 0, Math.min(3, Math.floor(s.b / (s.t * 60) * 4)));
+  });
+  S.fag = out; buildFags();
+  if (!FAGS[S.last.fag]) S.last.fag = curFag();
 }
 
 /* ---------- Synk (valgfri): hele lagringen som én fil i et privat GitHub-repo. Høyeste rev vinner. ---------- */
@@ -298,7 +328,7 @@ async function ghPull() {
     else {
       const j = await r.json(); ghSha = j.sha;
       const o = JSON.parse(b64d(j.content));
-      if (o && o.v === 1 && o.rev > S.rev) { S = Object.assign(fresh(), o); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (_) {} adopted = true; }
+      if (o && o.v === 1 && o.rev > S.rev) { adopt(o); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (_) {} adopted = true; }
       else if (o && S.rev > o.rev) push = true;
       ghState = 'ok';
     }

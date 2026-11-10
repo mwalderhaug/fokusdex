@@ -25,6 +25,7 @@ window.sprErr = img => {
 const ballEl = (k, s) => `<img class="ball im" style="--bc:${SHOP[k].bc}${s ? ';--s:' + s : ''}" alt="" src="${SPR}items/${SHOP[k].img}.png" onerror="this.classList.remove('im');this.removeAttribute('src')">`;
 const types = id => { const d = D(id); return [d[1], d[2]].filter(t => t >= 0).map(t => `<span class="ty" style="background:var(--t${t})">${TYN[t]}</span>`).join(' '); };
 const tierEl = id => { const t = tierOf(id); return `<span class="tier r${t}">${TIERS[t]}</span>`; };
+const short = n => n.length > 5 ? n.slice(0, 4) : n;
 const coinEl = n => `<span class="coin tn"><i></i>${nb(n)}</span>`;
 
 /* ---------- Lyd: små egne pip, ingen spillmusikk ---------- */
@@ -59,7 +60,7 @@ let toastT = 0;
 function toast(t) { const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, 2600); }
 
 /* ---------- Faner ---------- */
-const U = { tab: 'fokus', lag: 'lag', fag: null, min: null, sort: 'ny', dex: null, R: null, enc: null, quit: 0 };
+const U = { step: 1, sd: null, tab: 'fokus', lag: 'lag', fag: null, min: null, sort: 'ny', dex: null, R: null, enc: null, quit: 0 };
 const NAV = [
   ['fokus', 'Focus', '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9.5 2.5h5"/>'],
   ['lag', 'Team', '<circle cx="7" cy="9" r="2"/><circle cx="12" cy="6.5" r="2"/><circle cx="17" cy="9" r="2"/><path d="M12 12c-3 0-5.5 2.6-5.5 5.2 0 1.6 1.4 2.3 3 2.3 1 0 1.6-.5 2.5-.5s1.5.5 2.5.5c1.6 0 3-.7 3-2.3C17.500 14.6 15 12 12 12z"/>'],
@@ -71,6 +72,7 @@ function renderNav() {
   $('#nav').innerHTML = NAV.map(([k, n, p]) => `<button type="button" data-a="tab" data-k="${k}"${U.tab === k ? ' aria-current="page"' : ''}><svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg><span>${n}</span>${k === 'fokus' && S.pend.length ? '<i class="dot"></i>' : ''}</button>`).join('');
 }
 function render() {
+  buildFags();
   if (!S.started) { $('#nav').hidden = true; $('#main').innerHTML = ''; return intro(); }
   $('#nav').hidden = false;
   renderNav();
@@ -89,7 +91,7 @@ function topBar() {
 }
 
 VIEW.fokus = () => {
-  const p = partner(), fag = U.fag || S.last.fag, min = U.min || S.last.min, td = todayMin(), left = Math.max(0, S.cap - td);
+  const p = partner(), fag = FAGS[U.fag] ? U.fag : curFag(), min = U.min || S.last.min, td = todayMin(), left = Math.max(0, S.cap - td);
   const n = Math.floor(Math.min(min, left) / 20) + (min >= 25 && left >= min ? 1 : 0) + (S.incOn ? 1 : 0);
   const rested = !(S.log[dayKey()] || {}).s;
   let h = topBar();
@@ -102,11 +104,11 @@ VIEW.fokus = () => {
   }
   if (S.party.length > 1 || S.mons.length > 1) h += `<button type="button" class="card teamrow" data-a="tab" data-k="lag" aria-label="Open team"><span class="sm">Team</span><span class="tr-s">${S.party.slice(1).map(u => { const m = monBy(u); return m ? spr(m.id, { sh: m.sh, s: '38px' }) : ''; }).join('')}${Array.from({ length: 6 - S.party.length }, () => '<i></i>').join('')}</span><span class="sm tn">${S.mons.length} in box ›</span></button>`;
   if (S.pend.length) h += `<button type="button" class="card pendb" data-a="hunt" style="text-align:left;width:100%"><span class="grass live"><i></i><i></i><i></i><i></i></span><span class="sp"><b>${S.pend.length} ${S.pend.length === 1 ? 'encounter waiting' : 'encounters waiting'}</b><br><span class="sm">Something is rustling in the grass. Tap to step in.</span></span></button>`;
-  h += `<div class="card"><div class="lab">Subject</div><div class="chips">${Object.keys(FAGS).map(k => `<button type="button" class="chip" data-a="fag" data-k="${k}" aria-pressed="${fag === k}">${FAGS[k].n}</button>`).join('')}</div>
+  h += `<div class="card"><div class="lab">Subject</div><div class="chips">${Object.keys(FAGS).map(k => `<button type="button" class="chip" data-a="fag" data-k="${k}" aria-pressed="${fag === k}">${esc(F(k).n)}</button>`).join('')}</div>
     <div class="lab" style="margin-top:14px">Length</div><div class="chips">${[25, 45, 60, 75, 90].map(m => `<button type="button" class="chip tn" data-a="min" data-k="${m}" aria-pressed="${min === m}">${m} min</button>`).join('')}</div>
     ${S.regions.length > 1 ? `<div class="lab" style="margin-top:14px">Route</div><div class="chips">${S.regions.map(r => `<button type="button" class="chip" data-a="reg" data-k="${r}" aria-pressed="${S.region === r}">${REG[r].n}</button>`).join('')}</div>` : ''}
     <button type="button" class="go" data-a="start" style="margin-top:16px">Start ${min} min</button>
-    <p class="sm" style="margin-top:10px;text-align:center">${left <= 0 ? 'Your team is tired today: half XP and no encounters. Rest gives a bonus tomorrow.' : `${n} ${n === 1 ? 'encounter' : 'encounters'} · ${nb(Math.min(min, left) * 10 * (rested ? 1.5 : 1))} XP${rested ? ' with rested bonus' : ''}${FAGS[fag].ty.length ? ' · more ' + FAGS[fag].ty.map(t => TYN[t].toLowerCase()).join(' and ') : ''}`}</p></div>`;
+    <p class="sm" style="margin-top:10px;text-align:center">${left <= 0 ? 'Your team is tired today: half XP and no encounters. Rest gives a bonus tomorrow.' : `${n} ${n === 1 ? 'encounter' : 'encounters'} · ${nb(Math.min(min, left) * 10 * (rested ? 1.5 : 1))} XP${rested ? ' with rested bonus' : ''}${F(fag).ty.length ? ' · more ' + F(fag).ty.map(t => TYN[t].toLowerCase()).join(' and ') : ''}`}</p></div>`;
   h += `<div class="card"><div class="row" style="justify-content:space-between"><b>Today</b><span class="sm tn">${hrs(td)} of ${hrs(S.cap)} h</span></div><div class="bar" style="margin-top:8px"><i style="width:${Math.min(100, Math.round(td / S.cap * 100))}%"></i></div>
     <div class="quests">${QUESTS.map(q => `<span class="${td >= q.m ? 'on' : ''}"><b>${td >= q.m ? '✓ ' : ''}${q.n}</b>${q.r}</span>`).join('')}</div>
     ${S.eggs.length ? `<div class="row" style="margin-top:14px"><span class="egg"></span><div class="sp"><div class="row sm tn" style="justify-content:space-between"><span>Egg${S.eggs.length > 1 ? ' (' + S.eggs.length + ')' : ''}</span><span>${S.eggs[0].need - S.eggs[0].got} min left</span></div><div class="bar gold" style="margin-top:5px"><i style="width:${Math.round(S.eggs[0].got / S.eggs[0].need * 100)}%"></i></div></div></div>` : ''}
@@ -190,9 +192,9 @@ VIEW.butikk = () => {
 /* ---------- Profil: merker, statistikk, innstillinger ---------- */
 VIEW.profil = () => {
   const t0 = new Date(), tot = totalMin(), ses = Object.values(S.log).reduce((s, d) => s + d.s, 0);
-  const badges = Object.keys(S.fag).map(f => { const g = S.fag[f], m = fagMin(f), pct = Math.min(1, m / (g.t * 60)), dd = Math.round((new Date(g.d + 'T00:00') - new Date(t0.getFullYear(), t0.getMonth(), t0.getDate())) / 864e5);
-    return `<div class="item" style="--tc:${FAGS[f].c}"><span class="badge${pct >= 1 ? ' on' : ''}">${FAGS[f].n}</span><div class="sp"><div class="row" style="justify-content:space-between"><b>${FAGS[f].n} badge</b><span class="sm tn">${dd > 0 ? 'exam in ' + dd + ' d' : dd === 0 ? 'exam today' : 'done'}</span></div>
-      <div class="bar" style="margin-top:6px"><i style="width:${Math.round(pct * 100)}%;background:${FAGS[f].c}"></i></div><div class="sm tn" style="margin-top:4px">${hrs(m)} of ${hrs(g.t * 60)} h · next reward at ${Math.min(100, (g.ms + 1) * 25)}%</div></div></div>`; }).join('');
+  const badges = Object.keys(S.fag).map(f => { const g = S.fag[f], m = fagMin(f), pct = Math.min(1, m / (g.t * 60)), dd = g.d ? Math.round((new Date(g.d + 'T00:00') - new Date(t0.getFullYear(), t0.getMonth(), t0.getDate())) / 864e5) : null;
+    return `<div class="item" style="--tc:${F(f).c}"><span class="badge${pct >= 1 ? ' on' : ''}">${esc(short(F(f).n))}</span><div class="sp"><div class="row" style="justify-content:space-between"><b>${esc(F(f).n)} badge</b><span class="sm tn">${dd == null ? '' : dd > 0 ? 'exam in ' + dd + ' d' : dd === 0 ? 'exam today' : 'done'}</span></div>
+      <div class="bar" style="margin-top:6px"><i style="width:${Math.round(pct * 100)}%;background:${F(f).c}"></i></div><div class="sm tn" style="margin-top:4px">${hrs(m)} of ${hrs(g.t * 60)} h · next reward at ${Math.min(100, (g.ms + 1) * 25)}%</div></div></div>`; }).join('');
   let hm = '';
   const mon = addDays(t0, -((t0.getDay() + 6) % 7) - 63);
   for (let i = 0; i < 70; i++) { const d = addDays(mon, i), k = dayKey(d), m = (S.log[k] || { m: 0 }).m; hm += `<i class="${m ? (m < 90 ? 'l1' : m < 180 ? 'l2' : m < 270 ? 'l3' : 'l4') : ''}${k === dayKey() ? ' td' : ''}" title="${d.getDate()}.${d.getMonth() + 1}: ${m} min"></i>`; }
@@ -207,15 +209,41 @@ VIEW.profil = () => {
     <div class="card stack">
       <label class="field">Daily cap before your team gets tired<select data-c="cap">${[240, 300, 360, 420, 480].map(c => `<option value="${c}"${S.cap === c ? ' selected' : ''}>${c / 60} hours</option>`).join('')}</select></label>
       <button type="button" class="btn wide" data-a="sound">Sound: ${S.sound ? 'on' : 'off'}</button>
-      <button type="button" class="btn wide" data-a="plan">Edit hours and exam dates</button>
+      <button type="button" class="btn wide" data-a="plan">Edit subjects</button>
       <button type="button" class="btn wide" data-a="sync">Sync between devices${GH ? ' · ' + (ghState === 'ok' ? 'on' : ghState || 'connecting') : ''}</button>
       <button type="button" class="btn wide" data-a="backup">Backup</button>
     </div>
     <p class="sm">Fokusdex is a private hobby project. Pokémon and the names belong to Nintendo, Game Freak and Creatures. Images are fetched from PokeAPI when the app is used and are not part of the app.</p>`;
 };
-function planSheet() {
-  openSheet(`<h2 class="h">Plan per subject</h2>${Object.keys(S.fag).map(f => `<div class="row"><b style="width:52px">${FAGS[f].n}</b><label class="field sp">Hours<input inputmode="decimal" id="pt-${f}" value="${String(S.fag[f].t).replace('.', ',')}"></label><label class="field sp">Exam<input type="date" id="pd-${f}" value="${S.fag[f].d}"></label></div>`).join('')}
-    <button type="button" class="btn pri wide" data-a="plansave">Save</button>`);
+/* ---------- Fag: brukes både ved første start og fra Profil ---------- */
+const subjDraft = () => Object.keys(S.fag).map(k => { const f = S.fag[k]; return { k, n: f.n, ty: (f.ty || []).slice(0, 2), t: String(f.t), h: f.b ? String(Math.round(f.b / 6) / 10) : '', d: f.d || '' }; });
+function seCards() {
+  const sd = U.sd;
+  return sd.map((s, i) => `<div class="card secard"><div class="row"><input class="sein" data-f="n" data-i="${i}" maxlength="14" placeholder="Subject name" autocomplete="off" value="${esc(s.n)}" aria-label="Subject name"><button type="button" class="btn sm2" data-a="sedel" data-i="${i}" aria-label="Remove ${esc(s.n) || 'subject'}">Remove</button></div>
+    <div class="segrid"><label class="field">Planned hours<input inputmode="decimal" data-f="t" data-i="${i}" value="${esc(s.t)}" placeholder="40"></label><label class="field">Already done (h)<input inputmode="decimal" data-f="h" data-i="${i}" value="${esc(s.h)}" placeholder="0"></label><label class="field full">Exam date (optional)<input type="date" data-f="d" data-i="${i}" value="${esc(s.d)}"></label></div>
+    <div><div class="lab">Types that show up more often · pick up to 2</div><div class="tychips">${TYN.map((n, t) => `<button type="button" class="tyc" data-a="sety" data-i="${i}" data-k="${t}" aria-pressed="${s.ty.includes(t)}" style="--c:var(--t${t})">${n}</button>`).join('')}</div></div></div>`).join('') +
+    (sd.length < 4 ? '<button type="button" class="pfree" data-a="seadd">+ Add subject</button>' : '');
+}
+function seRedraw() { const el = $('#se'); if (el) el.innerHTML = seCards(); }
+/* Sjekker utkastet. Gir en feilmelding, eller lista som skal lagres. */
+function seRead() {
+  const num = v => Number(String(v).replace(',', '.').trim());
+  const out = [];
+  for (const s of U.sd) {
+    const n = s.n.trim(), t = num(s.t), h = String(s.h).trim() ? num(s.h) : 0;
+    if (!n) return 'Give every subject a name, or remove the empty one.';
+    if (!(t > 0 && t <= 1000)) return `Enter planned hours for ${n}.`;
+    if (!(h >= 0 && h <= t)) return `Hours already done for ${n} must be between 0 and the planned hours.`;
+    if (s.d && !/^\d{4}-\d{2}-\d{2}$/.test(s.d)) return `Check the exam date for ${n}.`;
+    out.push({ k: s.k, n, ty: s.ty, t, b: Math.round(h * 60), d: s.d });
+  }
+  return out;
+}
+function subjSheet() {
+  U.sd = subjDraft();
+  openSheet(`<h2 class="h">Your subjects</h2><p class="sm">Up to four. Each one gets a badge that fills as you focus, and its types show up more often in its sessions. Other is always there too.</p>
+    <div id="se" class="stack">${seCards()}</div><p class="err" id="se-err" role="alert"></p>
+    <button type="button" class="btn pri wide" data-a="sesave">Save</button>`);
 }
 function syncSheet() {
   let lb = null; try { lb = JSON.parse(localStorage.getItem('lb.gh') || 'null'); } catch (_) {}
@@ -242,10 +270,17 @@ function closeOv() { const o = $('#ov'); o.hidden = true; o.innerHTML = ''; }
 /* ---------- Start: velg partner ---------- */
 let pick = 0;
 function intro() {
-  ov(`<div class="mid"><h1 class="big">Fokusdex</h1><p class="mut" style="max-width:30ch">Every minute you focus earns XP and coins. Every session lures out wild Pokémon you can catch, evolve and collect.</p>
+  if (U.step === 2) {
+    ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="sback">Back</button><span class="pill">Step 2 of 2</span></div>
+      <div><h1 class="big">Your subjects</h1><p class="mut" style="margin-top:6px">Add up to four subjects you are studying for. Each gets a badge that fills as you focus, and the types you pick show up more often in its sessions. You can change this later in Profile.</p></div>
+      <div id="se" class="stack">${seCards()}</div><p class="err" id="se-err" role="alert"></p>
+      <div class="acts"><button type="button" class="btn pri" data-a="sestart">Start with ${esc(D(pick)[0])}</button></div>`);
+    return;
+  }
+  ov(`<div class="row" style="justify-content:flex-end"><span class="pill">Step 1 of 2</span></div><div class="mid"><h1 class="big">Fokusdex</h1><p class="mut" style="max-width:30ch">Every minute you focus earns XP and coins. Every session lures out wild Pokémon you can catch, evolve and collect.</p>
     <div class="starters">${[1, 4, 7].map(id => `<button type="button" data-a="pick" data-k="${id}" aria-pressed="${pick === id}" style="--tc:var(--t${D(id)[1]})">${spr(id, { ani: 1 })}<span>${D(id)[0]}</span>${types(id)}</button>`).join('')}</div>
-    <p class="sm" style="max-width:32ch">You start with 15 balls and 660 coins for the 11 hours you have already put in.</p></div>
-    <div class="acts"><button type="button" class="btn pri" data-a="begin"${pick ? '' : ' disabled'}>${pick ? 'Choose ' + D(pick)[0] : 'Choose a partner'}</button></div>`);
+    <p class="sm" style="max-width:32ch">Pick your partner. You start with 15 Poké Balls, and next you add your subjects.</p></div>
+    <div class="acts"><button type="button" class="btn pri" data-a="snext"${pick ? '' : ' disabled'}>${pick ? 'Next' : 'Choose a partner'}</button></div>`);
 }
 
 /* ---------- Fokusklokka ---------- */
@@ -256,11 +291,11 @@ function dropAwake() { try { if (wake) wake.release(); } catch (_) {} wake = nul
 function showTimer() {
   const t = S.timer, p = partner(), n = Math.floor(t.min / 20) + (t.min >= 25 ? 1 : 0);
   U.quit = 0;
-  ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="quit" id="t-quit">Cancel</button><span class="pill" style="background:${FAGS[t.fag].c};color:#17130f">${FAGS[t.fag].n} · ${t.min} min</span></div>
+  ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="quit" id="t-quit">Cancel</button><span class="pill" style="background:${F(t.fag).c};color:#17130f">${esc(F(t.fag).n)} · ${t.min} min</span></div>
     <div class="mid"><div class="ring"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="a0" cx="50" cy="50" r="46"/><circle class="a1" id="t-arc" cx="50" cy="50" r="46" stroke-dasharray="${CIRC}" stroke-dashoffset="0"/></svg>
       <div class="in">${p ? spr(p.id, { ani: 1, sh: p.sh }) : ''}<div class="clock" id="t-clock" role="timer"></div><div class="sm" id="t-sub"></div></div></div>
       <div><div class="found" id="t-found" aria-label="Encounters found">${Array.from({ length: n }, () => '<i></i>').join('')}</div><p class="sm" style="margin-top:8px" id="t-hint">A new encounter every 20 minutes.</p></div></div>
-    <div class="acts"><button type="button" class="btn nf" data-a="pause" id="t-pause">Pause</button><button type="button" class="btn pri" data-a="early">Finish now</button></div>`, 'tint', FAGS[t.fag].c);
+    <div class="acts"><button type="button" class="btn nf" data-a="pause" id="t-pause">Pause</button><button type="button" class="btn pri" data-a="early">Finish now</button></div>`, 'tint', F(t.fag).c);
   keepAwake();
   clearInterval(tick); tick = setInterval(paintTimer, 500);
   paintTimer();
@@ -295,11 +330,11 @@ function showReward(R) {
   R.ups.forEach(x => { const m = monBy(x.u); if (m) news.push(`<div>${spr(m.id, { sh: m.sh })}<span><b>${esc(D(m.id)[0])} level ${x.l0} → ${x.l1}</b>${x.evo ? '<br><span class="sm" style="color:var(--gold)">Ready to evolve</span>' : ''}</span></div>`); });
   R.gifts.forEach(g => news.push(`<div><span class="grass"><i></i><i></i><i></i><i></i></span><span>${esc(g)}</span></div>`));
   const notes = [R.rested ? 'Rested bonus: 1.5× on your first session of the day.' : '', R.tired ? 'Your team is tired: minutes past the daily cap gave half XP and no encounters.' : '', R.full ? '' : 'Ended early: you are rewarded for the minutes you did.'].filter(Boolean);
-  ov(`<div class="mid" style="justify-content:flex-start;padding-top:8vh"><div><h1 class="big">${R.full ? 'Session complete.' : 'Nice work.'}</h1><p class="mut tn" style="margin-top:6px">${R.min} min ${FAGS[R.fag].n}</p></div>
+  ov(`<div class="mid" style="justify-content:flex-start;padding-top:8vh"><div><h1 class="big">${R.full ? 'Session complete.' : 'Nice work.'}</h1><p class="mut tn" style="margin-top:6px">${R.min} min ${esc(F(R.fag).n)}</p></div>
     <div class="gain"><div><span class="sm">XP</span><b class="tn" id="r-xp">+0</b></div><div><span class="sm">Coins</span><b class="tn" id="r-co">+0</b></div></div>
     ${notes.length ? `<p class="sm">${notes.join(' ')}</p>` : ''}
     <div class="news">${news.map((n, i) => n.replace('<div>', `<div style="animation-delay:${0.3 + i * 0.15}s">`)).join('')}</div></div>
-    <div class="acts">${S.pend.length ? `<button type="button" class="btn gold" data-a="hunt">Into the grass · ${S.pend.length} ${S.pend.length === 1 ? 'encounter' : 'encounters'}</button><button type="button" class="btn nf" data-a="home">Later</button>` : '<button type="button" class="btn pri" data-a="home">Done</button>'}</div>`, 'tint', FAGS[R.fag].c);
+    <div class="acts">${S.pend.length ? `<button type="button" class="btn gold" data-a="hunt">Into the grass · ${S.pend.length} ${S.pend.length === 1 ? 'encounter' : 'encounters'}</button><button type="button" class="btn nf" data-a="home">Later</button>` : '<button type="button" class="btn pri" data-a="home">Done</button>'}</div>`, 'tint', F(R.fag).c);
   countUp($('#r-xp'), R.xp); countUp($('#r-co'), R.coins);
 }
 
@@ -383,7 +418,7 @@ const A = {
   fag: el => { U.fag = el.dataset.k; render(); },
   min: el => { U.min = +el.dataset.k; render(); },
   reg: el => { S.region = +el.dataset.k; save(); render(); },
-  start: () => { startTimer(U.fag || S.last.fag, U.min || S.last.min); sfx.start(); showTimer(); },
+  start: () => { startTimer(FAGS[U.fag] ? U.fag : curFag(), U.min || S.last.min); sfx.start(); showTimer(); },
   pause: () => { togglePause(); paintTimer(); },
   early: () => endTimer(),
   quit: () => { if (!U.quit) { U.quit = 1; $('#t-quit').textContent = 'Tap again to cancel'; setTimeout(() => { U.quit = 0; const b = $('#t-quit'); if (b) b.textContent = 'Cancel'; }, 3000); return; } clearInterval(tick); dropAwake(); S.timer = null; save(true); document.title = 'Fokusdex'; closeOv(); render(); },
@@ -409,24 +444,30 @@ const A = {
   buy: el => { if (buy(el.dataset.k)) { sfx.coin(); render(); toast(`${SHOP[el.dataset.k].n} bought.`); } },
   buyreg: el => { const r = +el.dataset.k; if (buyRegion(r)) { sfx.evo(); render(); toast(`${REG[r].n} is unlocked. You are there now.`); } },
   sound: () => { S.sound = S.sound ? 0 : 1; save(); sfx.tap(); render(); },
-  plan: () => planSheet(),
-  plansave: () => { for (const f in S.fag) { const t = Number(String($('#pt-' + f).value).replace(',', '.')), d = $('#pd-' + f).value; if (t > 0 && t < 500) S.fag[f].t = t; if (/^\d{4}-\d{2}-\d{2}$/.test(d)) S.fag[f].d = d; } save(); closeSheet(); render(); toast('Plan saved.'); },
+  plan: () => subjSheet(),
+  seadd: () => { if (U.sd.length < 4) { U.sd.push({ k: '', n: '', ty: [], t: '', h: '', d: '' }); seRedraw(); const f = document.querySelectorAll('#se .sein'); if (f.length) f[f.length - 1].focus(); } },
+  sedel: el => { U.sd.splice(+el.dataset.i, 1); seRedraw(); },
+  sety: el => { const s = U.sd[+el.dataset.i], t = +el.dataset.k; if (s.ty.includes(t)) s.ty = s.ty.filter(x => x !== t); else { s.ty.push(t); if (s.ty.length > 2) s.ty.shift(); } seRedraw(); },
+  sesave: () => { const r = seRead(); if (typeof r === 'string') { $('#se-err').textContent = r; return; } setSubjects(r); save(); closeSheet(); render(); toast('Subjects saved.'); },
+  snext: () => { if (!pick) return; U.step = 2; if (!U.sd) U.sd = [{ k: '', n: '', ty: [], t: '', h: '', d: '' }]; intro(); $('#ov').scrollTop = 0; },
+  sback: () => { U.step = 1; intro(); },
+  sestart: () => { const r = seRead(); if (typeof r === 'string') { $('#se-err').textContent = r; return; } setSubjects(r); const c = begin(pick); sfx.evo(); closeOv(); render(); toast(c ? `${nb(c)} coins for the hours you have already done. Good luck.` : 'Good luck. Your first session gets the rested bonus.'); },
   sync: () => syncSheet(),
   synclb: () => { try { const lb = JSON.parse(localStorage.getItem('lb.gh')); $('#gh-r').value = lb.repo; $('#gh-t').value = lb.t; } catch (_) {} },
   syncsave: () => { const t = $('#gh-t').value.trim(), r = $('#gh-r').value.trim(); if (!t || !/^[\w.-]+\/[\w.-]+$/.test(r)) { $('#gh-s').textContent = 'Enter the repo as owner/name and paste the key.'; return; } ghSet(t, r); $('#gh-s').textContent = 'Connecting…'; ghPull(); },
   syncoff: () => { ghSet('', ''); closeSheet(); render(); toast('Sync turned off.'); },
   backup: () => backupSheet(),
   bkcopy: () => { const txt = b64e(JSON.stringify(S)); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Copied.'), () => { $('#bk-in').value = txt; toast('Copy the text in the field.'); }); },
-  bkload: () => { try { const o = JSON.parse(b64d($('#bk-in').value.trim())); if (!o || o.v !== 1 || !Array.isArray(o.mons)) throw 0; S = Object.assign(fresh(), o); save(); closeSheet(); render(); toast('Game restored.'); } catch (_) { toast('That was not a valid copy.'); } },
-  reset: el => { if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = 'Tap again: everything is deleted'; return; } S = fresh(); save(); pick = 0; closeSheet(); render(); },
+  bkload: () => { try { const o = JSON.parse(b64d($('#bk-in').value.trim())); if (!o || o.v !== 1 || !Array.isArray(o.mons)) throw 0; adopt(o); save(); closeSheet(); render(); toast('Game restored.'); } catch (_) { toast('That was not a valid copy.'); } },
+  reset: el => { if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = 'Tap again: everything is deleted'; return; } S = fresh(); save(); pick = 0; U.step = 1; U.sd = null; closeSheet(); render(); },
   pick: el => { pick = +el.dataset.k; sfx.tap(); intro(); },
-  begin: () => { if (!pick) return; begin(pick); sfx.evo(); closeOv(); render(); toast('Good luck. Your first session gets the rested bonus.'); }
 };
 document.addEventListener('click', ev => {
   const el = ev.target.closest('[data-a]');
   if (el && !el.disabled && A[el.dataset.a]) { A[el.dataset.a](el); return; }
   if (ev.target.id === 'sheet') closeSheet();
 });
+document.addEventListener('input', ev => { const t = ev.target; if (t.dataset && t.dataset.f && U.sd && U.sd[+t.dataset.i]) { U.sd[+t.dataset.i][t.dataset.f] = t.value; const e = $('#se-err'); if (e) e.textContent = ''; } });
 document.addEventListener('change', ev => { if (ev.target.dataset && ev.target.dataset.c === 'cap') { S.cap = +ev.target.value; save(); render(); } });
 document.addEventListener('keydown', ev => {
   if (ev.key === 'Escape' && !$('#sheet').hidden) return closeSheet();
