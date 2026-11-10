@@ -31,7 +31,8 @@ const SHOP = {
   egg: { n: 'Egg', p: 250, d: 'Hatches after 120 focus minutes. Can be from any region', ic: 'egg' }
 };
 const BALLM = { poke: 1, great: 1.5, ultra: 2.2 };
-const SELL = [15, 40, 100, 300, 1500];
+/* Salgsverdi: sjeldenhet teller mest, nivå løfter prisen (nivå 20 dobler den). */
+const SELL = [10, 30, 120, 450, 3000];
 const STMULT = [1, 0.22, 0.07];
 /* Dagens mål: tre små delmål som gir noe med en gang de nås. */
 const QUESTS = [
@@ -132,13 +133,15 @@ function fresh() {
     mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, eggs: [], pend: [], incOn: 0,
     log: {}, fm: {},
     fag: {}, extra: ['annet'],
-    last: { fag: 'annet', min: 60 }, cap: 360, sound: 0, cries: 1, vol: 70, cvol: 80, timer: null
+    last: { fag: 'annet', min: 60 }, cap: 360, sound: 0, cries: 1, vol: 70, cvol: 80, timer: null,
+    lad: { n: 0, best: 0, day: '', lost: '', next: null }, boost: null, bfast: 0, music: 1
   };
 }
 let S = fresh();
 /* Tar i bruk en lagring (fra enheten, synk eller sikkerhetskopi) og oppgraderer gamle lagringer der fagene var faste. */
 function adopt(o) {
   S = Object.assign(fresh(), o);
+  S.lad = Object.assign(fresh().lad, o.lad || {});
   for (const k in fresh().items) if (S.items[k] == null) S.items[k] = 0;
   let legacy = false;
   for (const k in S.fag) if (!S.fag[k].n) { Object.assign(S.fag[k], LEGACY[k] || { n: k.toUpperCase(), c: PAL[0], ty: [] }); legacy = true; }
@@ -245,7 +248,7 @@ function dropPend(e) { const i = S.pend.indexOf(e); if (i >= 0) S.pend.splice(i,
 
 /* ---------- Fokusøkt ---------- */
 const elapsedMs = t => (t.pausedAt || Date.now()) - t.start - (t.paused || 0);
-function startTimer(fag, min) { S.timer = { fag, min, start: Date.now(), paused: 0, pausedAt: 0, seen: 0 }; S.last = { fag, min }; save(true); }
+function startTimer(fag, min) { S.lad.day = ''; S.timer = { fag, min, start: Date.now(), paused: 0, pausedAt: 0, seen: 0 }; S.last = { fag, min }; save(true); }
 function togglePause() { const t = S.timer; if (!t) return; if (t.pausedAt) { t.paused += Date.now() - t.pausedAt; t.pausedAt = 0; } else t.pausedAt = Date.now(); save(true); }
 function finishTimer() {
   const t = S.timer; if (!t) return null;
@@ -261,6 +264,8 @@ function grant(fag, min, full, planned) {
   const R = { fag, min, full, rested, tired, ups: [], gifts: [], hatch: [], tl0: tlv(), enc: 0 };
   R.xp = Math.round((okMin * 10 + (min - okMin) * 5) * mult);
   R.coins = Math.round((okMin * 3 + (min - okMin) * 1.5) * mult) + (full ? 30 : 0);
+  /* Fordel fra toppbosser: flere mynter i de neste øktene. */
+  if (S.boost && S.boost.n > 0) { R.coins = Math.round(R.coins * S.boost.m); S.boost.n--; R.gifts.push(`Boss perk: ${S.boost.m}× coins${S.boost.n ? ` · ${S.boost.n} more session${S.boost.n > 1 ? 's' : ''}` : ''}`); if (!S.boost.n) S.boost = null; }
   S.xp += R.xp; S.coins += R.coins;
   day.m += min; day.s++; day.f[fag] = (day.f[fag] || 0) + min;
   S.fm[fag] = (S.fm[fag] || 0) + min;
@@ -322,7 +327,7 @@ function evolve(m, to) {
   m.id = to; S.seen[to] = 1; S.caught[to] = 1;
   save(); return true;
 }
-const sellValue = m => Math.round(SELL[tierOf(m.id)] * (1 + m.lv / 50) * (m.sh ? 5 : 1));
+const sellValue = m => Math.round(SELL[tierOf(m.id)] * (1 + m.lv / 20) * (m.sh ? 5 : 1));
 function sell(m) {
   if (S.mons.length <= 1) return 0;
   const v = sellValue(m);
