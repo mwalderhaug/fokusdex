@@ -69,7 +69,7 @@ function fresh() {
     mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, eggs: [], pend: [], incOn: 0,
     log: {}, fm: {},
     fag: {}, extra: ['annet'],
-    last: { fag: 'annet', min: 60 }, cap: 360, sound: 0, cries: 1, timer: null
+    last: { fag: 'annet', min: 60 }, cap: 360, sound: 0, cries: 1, vol: 70, cvol: 80, timer: null
   };
 }
 let S = fresh();

@@ -135,6 +135,11 @@ button:disabled{opacity:.4;cursor:default}
 .slots .cell .sprb{--s:44px}
 .slots .cell.lead{box-shadow:0 0 0 2px var(--sage)}
 
+/* Volum */
+.volrow{display:flex;align-items:center;gap:12px;min-height:40px}
+.volrow span{width:58px;font-size:13.5px;font-weight:650;color:var(--ink2);flex:none}
+.volrow input{flex:1;min-width:0;accent-color:var(--sage);height:28px}
+.volrow b{width:44px;text-align:right;font-size:13.5px;flex:none}
 /* Fagredigering */
 .secard{display:flex;flex-direction:column;gap:12px}
 .sein{flex:1;min-width:0;height:46px;border-radius:14px;border:1px solid rgba(255,255,255,.13);background:var(--bg);padding:0 14px;font-size:17px;font-weight:750;color:var(--ink)}

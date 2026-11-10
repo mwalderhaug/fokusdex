@@ -35,27 +35,57 @@ let AC = null;
 function ac() {
   try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); return AC; } catch (_) { return null; }
 }
-function tone(f, at, d, v = 0.05, type = 'square') {
+/* Effektene går gjennom én hovedvolumknapp (S.vol). Skrikene har sin egen (S.cvol). */
+let MG = null, NB = null;
+function out() { const a = ac(); if (!a) return null; if (!MG) { MG = a.createGain(); MG.connect(a.destination); } MG.gain.value = Math.pow((S.vol == null ? 70 : S.vol) / 100, 1.6) * 1.6; return MG; }
+/* f2: tonen glir mot f2 i løpet av d sekunder. */
+function tone(f, at, d, v = 0.05, type = 'square', f2 = 0) {
   if (!S.sound) return;
   try {
-    ac();
+    const m = out(); if (!m) return;
     const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime + at;
-    o.type = type; o.frequency.value = f;
+    o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-    o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + d + 0.02);
+    o.connect(g); g.connect(m); o.start(t); o.stop(t + d + 0.02);
   } catch (_) {}
 }
+/* Støy gjennom et båndpassfilter som glir fra f1 til f2: kast, sus og smell. */
+function noise(at, d, v = 0.05, f1 = 2400, f2 = 500) {
+  if (!S.sound) return;
+  try {
+    const m = out(); if (!m) return;
+    if (!NB) { NB = AC.createBuffer(1, AC.sampleRate * 0.6, AC.sampleRate); const ch = NB.getChannelData(0); for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1; }
+    const s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain(), t = AC.currentTime + at;
+    s.buffer = NB; f.type = 'bandpass'; f.Q.value = 1.2; f.frequency.setValueAtTime(f1, t); f.frequency.exponentialRampToValueAtTime(f2, t + d);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    s.connect(f); f.connect(g); g.connect(m); s.start(t); s.stop(t + d + 0.05);
+  } catch (_) {}
+}
+const seq = (notes, step, d, v, type) => notes.forEach((f, i) => tone(f, i * step, d, v, type));
+/* Egne lyder i Gen 5-stil: korte pulsbølger, raske arpeggioer og litt støy. Hver type trykk har sin egen lyd. */
 const sfx = {
   tap: () => tone(520, 0, 0.05, 0.03),
+  tab: () => { tone(1047, 0, 0.035, 0.03); tone(1568, 0.035, 0.05, 0.025); },
+  chip: () => { tone(880, 0, 0.03, 0.03); tone(1320, 0.02, 0.02, 0.015, 'triangle'); },
+  open: () => { tone(660, 0, 0.04, 0.03); tone(990, 0.04, 0.06, 0.03); },
+  close: () => { tone(784, 0, 0.04, 0.03); tone(523, 0.04, 0.06, 0.03); },
+  ok: () => seq([1047, 1319, 1568], 0.05, 0.06, 0.035),
+  warn: () => { tone(330, 0, 0.08, 0.04); tone(330, 0.11, 0.08, 0.04); },
+  fav: () => seq([1568, 2093, 2637], 0.04, 0.05, 0.02, 'triangle'),
+  ball: () => { tone(1400, 0, 0.015, 0.025); tone(700, 0.02, 0.04, 0.025, 'triangle'); },
   start: () => [392, 523, 659].forEach((f, i) => tone(f, i * 0.09, 0.12)),
   done: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, 0.2, 0.06, 'triangle')),
   found: () => { tone(880, 0, 0.07); tone(1175, 0.08, 0.09); },
-  appear: () => [330, 392, 494, 659].forEach((f, i) => tone(f, i * 0.07, 0.1)),
-  thr: () => { tone(300, 0, 0.08, 0.04, 'sawtooth'); tone(180, 0.08, 0.1, 0.04, 'sawtooth'); },
-  wob: () => tone(220, 0, 0.06, 0.05),
-  got: () => [659, 784, 988, 1319].forEach((f, i) => tone(f, i * 0.1, 0.22, 0.06, 'triangle')),
-  fail: () => { tone(260, 0, 0.12, 0.05, 'sawtooth'); tone(196, 0.12, 0.2, 0.05, 'sawtooth'); },
+  appear: () => { for (let i = 0; i < 10; i++) tone(i % 2 ? 330 + i * 40 : 1320 - i * 60, i * 0.035, 0.04, 0.03); noise(0.35, 0.3, 0.025, 600, 3000); },
+  thr: () => { noise(0, 0.28, 0.05, 3500, 500); tone(600, 0.05, 0.22, 0.02, 'triangle', 220); },
+  wob: n => { tone(170 + (n || 0) * 25, 0, 0.07, 0.06, 'triangle'); tone(2400, 0, 0.012, 0.02); },
+  got: () => { tone(1800, 0, 0.02, 0.04); seq([659, 784, 988, 1319], 0.1, 0.22, 0.06, 'triangle'); },
+  fail: () => { noise(0, 0.12, 0.06, 1800, 3500); tone(500, 0.02, 0.14, 0.04, 'square', 1200); },
+  flee: () => { noise(0, 0.35, 0.04, 2500, 400); tone(700, 0, 0.35, 0.03, 'triangle', 140); },
   coin: () => { tone(988, 0, 0.06); tone(1319, 0.06, 0.12); },
+  sell: () => { tone(1319, 0, 0.05); tone(988, 0.05, 0.05); tone(1568, 0.11, 0.14, 0.04, 'triangle'); },
+  lvl: () => seq([784, 988, 1175, 1568], 0.08, 0.12, 0.045, 'triangle'),
+  hatch: () => { noise(0, 0.15, 0.05, 900, 2500); seq([1047, 1319, 1568, 2093], 0.07, 0.1, 0.04, 'triangle'); },
   evo: () => [392, 494, 587, 784, 988, 1175].forEach((f, i) => tone(f, i * 0.11, 0.2, 0.06, 'triangle'))
 };
 /* Pokémon-skrik: lydfilene fra Black/White-tiden i PokeAPI sitt åpne lydarkiv (nyere skrik som reserve). Hentes første gang og mellomlagres. */
@@ -76,15 +106,22 @@ function cry(id, delay = 0, vol = 0.45) {
   const t0 = performance.now();
   cryBuf(id).then(buf => {
     const a = ac(), src = a.createBufferSource(), g = a.createGain();
-    src.buffer = buf; g.gain.value = vol; src.connect(g); g.connect(a.destination);
+    src.buffer = buf; g.gain.value = vol * Math.pow((S.cvol == null ? 80 : S.cvol) / 100, 1.6) * 1.4; src.connect(g); g.connect(a.destination);
     src.start(a.currentTime + Math.max(0, delay - (performance.now() - t0)) / 1000);
     window.cryCount++;
   }).catch(() => {});
 }
-/* Et lite klikk på hvert trykk. Handlinger med egen lyd får ikke klikket i tillegg. */
-const OWN = new Set(['start', 'throw', 'buy', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon']);
-const CHIP = new Set(['fag', 'min', 'reg', 'sort', 'lagv', 'filt', 'dexr', 'ball', 'sety', 'seadd', 'sedel']);
-function click(a) { if (OWN.has(a)) return; if (a === 'tab') { tone(587, 0, 0.04, 0.035); tone(784, 0.045, 0.05, 0.035); } else if (CHIP.has(a)) tone(698, 0, 0.04, 0.035); else tone(520, 0, 0.05, 0.04); }
+/* Lyd per type trykk. Handlinger med egen lyd (kast, kjøp, utvikling osv.) får ikke en ekstra. */
+const OWN = new Set(['start', 'throw', 'buy', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell']);
+const SND = {
+  tab: 'tab', lagv: 'tab', dexr: 'tab',
+  fag: 'chip', min: 'chip', reg: 'chip', sort: 'chip', filt: 'chip', sety: 'chip',
+  ball: 'ball', spec: 'open', plan: 'open', sync: 'open', backup: 'open', snext: 'ok', seadd: 'open',
+  close: 'close', home: 'close', later: 'close', sback: 'close', sedel: 'close', skip: 'close', syncoff: 'close', toshop: 'open',
+  lead: 'ok', sesave: 'ok', syncsave: 'ok', bkcopy: 'ok', bkload: 'ok', party: 'ok', fav: 'fav',
+  quit: 'warn', reset: 'warn', early: 'ok', pause: 'chip'
+};
+function click(a) { if (OWN.has(a)) return; (sfx[SND[a]] || sfx.tap)(); }
 const buzz = p => { try { if (navigator.vibrate) navigator.vibrate(p); } catch (_) {} };
 
 let toastT = 0;
@@ -239,7 +276,8 @@ VIEW.profil = () => {
     <h2 class="h">Settings</h2>
     <div class="card stack">
       <label class="field">Daily cap before your team gets tired<select data-c="cap">${[240, 300, 360, 420, 480].map(c => `<option value="${c}"${S.cap === c ? ' selected' : ''}>${c / 60} hours</option>`).join('')}</select></label>
-      <div class="row"><button type="button" class="btn sp" data-a="sound">Sound: ${S.sound ? 'on' : 'off'}</button><button type="button" class="btn sp" data-a="cries"${S.sound ? '' : ' disabled'}>Pokémon cries: ${S.cries ? 'on' : 'off'}</button></div>
+      <div class="row"><button type="button" class="btn sp" data-a="sound">Sound: ${S.sound ? 'on' : 'off'}</button><button type="button" class="btn sp" data-a="cries"${S.sound ? '' : ' disabled'}>Cries: ${S.cries ? 'on' : 'off'}</button></div>
+      ${S.sound ? `<div class="volrow"><span>Effects</span><input type="range" min="0" max="100" step="5" value="${S.vol}" data-v="vol" aria-label="Effects volume"><b class="tn" id="vv-vol">${S.vol}%</b></div>${S.cries ? `<div class="volrow"><span>Cries</span><input type="range" min="0" max="100" step="5" value="${S.cvol}" data-v="cvol" aria-label="Cries volume"><b class="tn" id="vv-cvol">${S.cvol}%</b></div>` : ''}` : ''}
       <button type="button" class="btn wide" data-a="plan">Edit subjects</button>
       <button type="button" class="btn wide" data-a="sync">Sync between devices${GH ? ' · ' + (ghState === 'ok' ? 'on' : ghState || 'connecting') : ''}</button>
       <button type="button" class="btn wide" data-a="backup">Backup</button>
@@ -367,6 +405,8 @@ function showReward(R) {
     <div class="news">${news.map((n, i) => n.replace('<div>', `<div style="animation-delay:${0.3 + i * 0.15}s">`)).join('')}</div></div>
     <div class="acts">${S.pend.length ? `<button type="button" class="btn gold" data-a="hunt">Into the grass · ${S.pend.length} ${S.pend.length === 1 ? 'encounter' : 'encounters'}</button><button type="button" class="btn nf" data-a="home">Later</button>` : '<button type="button" class="btn pri" data-a="home">Done</button>'}</div>`, 'tint', F(R.fag).c);
   countUp($('#r-xp'), R.xp); countUp($('#r-co'), R.coins);
+  if (R.hatch.length) setTimeout(() => { sfx.hatch(); const m = monBy(R.hatch[0].u); if (m) cry(m.id, 500); }, 900);
+  else if (R.ups.length) setTimeout(sfx.lvl, 900);
 }
 
 /* ---------- Møte og fangst ---------- */
@@ -416,14 +456,14 @@ function doThrow() {
   const wobs = r.ok ? 3 : 1 + (Math.random() < r.p ? 1 : 0);
   let i = 0;
   const step = () => {
-    if (i < wobs) { st.className = 'stage held'; void st.offsetWidth; st.className = 'stage held wob'; sfx.wob(); buzz(20); i++; return setTimeout(step, 700); }
+    if (i < wobs) { st.className = 'stage held'; void st.offsetWidth; st.className = 'stage held wob'; sfx.wob(i); buzz(20); i++; return setTimeout(step, 700); }
     if (r.ok) {
       st.className = 'stage held'; sfx.got(); buzz([60, 40, 60, 40, 140]);
       $('#e-stars').innerHTML = Array.from({ length: 10 }, (_, k) => { const a = k / 10 * 6.283, d = 70 + Math.random() * 50; return `<i style="--dx:${Math.round(Math.cos(a) * d)}px;--dy:${Math.round(Math.sin(a) * d)}px;animation-delay:${k * 0.02}s"></i>`; }).join('');
       msg.innerHTML = `<b style="color:var(--sage)">Caught.</b> ${r.isNew ? 'New to your collection.' : 'A duplicate you can sell or keep.'}`;
       cry(e.id, 650); E.done = 'got'; $('#e-left').textContent = S.pend.length ? `${S.pend.length} ${S.pend.length === 1 ? 'encounter' : 'encounters'} left` : 'Last encounter';
     } else {
-      st.className = 'stage out'; sfx.fail();
+      st.className = 'stage out'; if (r.fled) sfx.flee(); else sfx.fail();
       if (r.fled) { setTimeout(() => { st.className = 'stage fled'; }, 380); msg.textContent = 'It ran away.'; E.done = 'fled'; }
       else { msg.textContent = `It broke free. ${e.tr} ${e.tr === 1 ? 'attempt' : 'attempts'} left.`; }
     }
@@ -470,8 +510,8 @@ const A = {
   fav: el => { const m = monBy(+el.dataset.u); m.fav = m.fav ? 0 : 1; save(); render(); monSheet(m); },
   candy: el => { const m = monBy(+el.dataset.u); if (useCandy(m)) { sfx.coin(); render(); monSheet(m); } },
   evolve: el => { const m = monBy(+el.dataset.u), from = m.id; if (evolve(m, +el.dataset.k)) { render(); evoShow(m, from); } },
-  sell: el => { const m = monBy(+el.dataset.u); if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.innerHTML = 'Tap again to sell'; return; } const v = sell(m); save(); sfx.coin(); closeSheet(); render(); toast(`Sold for ${nb(v)} coins.`); },
-  selldupes: el => { const du = dupes(); if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = `Tap again to sell ${du.length}`; return; } let v = 0; du.forEach(m => { v += sell(m); }); save(); sfx.coin(); render(); toast(`${du.length} sold for ${nb(v)} coins.`); },
+  sell: el => { const m = monBy(+el.dataset.u); if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.innerHTML = 'Tap again to sell'; return; } const v = sell(m); save(); sfx.sell(); closeSheet(); render(); toast(`Sold for ${nb(v)} coins.`); },
+  selldupes: el => { const du = dupes(); if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = `Tap again to sell ${du.length}`; return; } let v = 0; du.forEach(m => { v += sell(m); }); save(); sfx.sell(); render(); toast(`${du.length} sold for ${nb(v)} coins.`); },
   buy: el => { if (buy(el.dataset.k)) { sfx.coin(); render(); toast(`${SHOP[el.dataset.k].n} bought.`); } },
   buyreg: el => { const r = +el.dataset.k; if (buyRegion(r)) { sfx.evo(); render(); toast(`${REG[r].n} is unlocked. You are there now.`); } },
   sound: () => { S.sound = S.sound ? 0 : 1; save(); sfx.tap(); render(); },
@@ -499,6 +539,15 @@ document.addEventListener('click', ev => {
   if (el && !el.disabled && A[el.dataset.a]) { click(el.dataset.a); A[el.dataset.a](el); return; }
   if (ev.target.id === 'sheet') closeSheet();
 });
+let volT = 0;
+document.addEventListener('input', ev => {
+  const v = ev.target.dataset && ev.target.dataset.v;
+  if (!v) return;
+  S[v] = +ev.target.value; $('#vv-' + v).textContent = S[v] + '%';
+  const now = performance.now(); if (now - volT < 180) return; volT = now;
+  if (v === 'vol') sfx.chip(); else { const p = partner(); if (p && now - (window.cryT || 0) > 700) { window.cryT = now; cry(p.id, 0, 0.45); } }
+});
+document.addEventListener('change', ev => { if (ev.target.dataset && ev.target.dataset.v) save(); });
 document.addEventListener('input', ev => { const t = ev.target; if (t.dataset && t.dataset.f && U.sd && U.sd[+t.dataset.i]) { U.sd[+t.dataset.i][t.dataset.f] = t.value; const e = $('#se-err'); if (e) e.textContent = ''; } });
 document.addEventListener('change', ev => { if (ev.target.dataset && ev.target.dataset.c === 'cap') { S.cap = +ev.target.value; save(); render(); } });
 document.addEventListener('keydown', ev => {
