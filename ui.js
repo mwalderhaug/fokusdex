@@ -15,7 +15,7 @@ function spr(id, o = {}) {
   const png = `${SPR}pokemon/${o.sh ? 'shiny/' : ''}${id}.png`;
   const gif = `${SPR}pokemon/versions/generation-v/black-white/animated/${o.sh ? 'shiny/' : ''}${id}.gif`;
   const list = o.ani ? [gif, png, sd] : [png, sd];
-  return `<span class="sprb${o.sil ? ' sil' : ''}${o.sh && !o.sil ? ' shiny' : ''}" style="--tc:var(--t${D(id)[1]})${o.s ? ';--s:' + o.s : ''}" data-n="${id}"><img class="spr" alt="${o.sil ? 'Ukjent' : esc(D(id)[0])}" ${o.lazy ? 'loading="lazy" ' : ''}src="${list[0]}" data-f="${list.slice(1).join('|')}" onerror="sprErr(this)"></span>`;
+  return `<span class="sprb${o.sil ? ' sil' : ''}${o.sh && !o.sil ? ' shiny' : ''}" style="--tc:var(--t${D(id)[1]})${o.s ? ';--s:' + o.s : ''}" data-n="${id}"><img class="spr" alt="${o.sil ? 'Ukjent' : esc(D(id)[0])}" ${o.lazy ? 'loading="lazy" ' : ''}src="${list[0]}" data-f="${list.slice(1).join('|')}" onload="this.classList.add('ok')" onerror="sprErr(this)"></span>`;
 }
 window.sprErr = img => {
   const f = (img.dataset.f || '').split('|').filter(Boolean);
@@ -59,7 +59,7 @@ let toastT = 0;
 function toast(t) { const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, 2600); }
 
 /* ---------- Faner ---------- */
-const U = { tab: 'fokus', fag: null, min: null, sort: 'ny', dex: null, R: null, enc: null, quit: 0 };
+const U = { tab: 'fokus', lag: 'lag', fag: null, min: null, sort: 'ny', dex: null, R: null, enc: null, quit: 0 };
 const NAV = [
   ['fokus', 'Fokus', '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9.5 2.5h5"/>'],
   ['lag', 'Laget', '<circle cx="7" cy="9" r="2"/><circle cx="12" cy="6.5" r="2"/><circle cx="17" cy="9" r="2"/><path d="M12 12c-3 0-5.5 2.6-5.5 5.2 0 1.6 1.4 2.3 3 2.3 1 0 1.6-.5 2.5-.5s1.5.5 2.5.5c1.6 0 3-.7 3-2.3C17.500 14.6 15 12 12 12z"/>'],
@@ -77,6 +77,7 @@ function render() {
   $('#main').innerHTML = `<div class="wrap">${VIEW[U.tab]()}</div>`;
 }
 const VIEW = {};
+function enter() { const w = $('#main .wrap'); if (w) w.classList.add('enter'); }
 
 function topBar() {
   const l = tlv(), a = tlvXp(l), b = tlvXp(l + 1), st = streak();
@@ -99,6 +100,7 @@ VIEW.fokus = () => {
       <div class="row sm tn" style="justify-content:space-between;margin-top:6px"><span>Nivå ${p.lv}</span><span>${rdy ? '<b style="color:var(--gold)">Klar til å utvikles</b>' : nx ? 'utvikles: ' + nx.why : ''}</span></div>
       <div class="bar" style="margin-top:5px"><i style="width:${Math.round((p.xp - a) / (b - a) * 100)}%"></i></div></div></button>`;
   }
+  if (S.party.length > 1 || S.mons.length > 1) h += `<button type="button" class="card teamrow" data-a="tab" data-k="lag" aria-label="Åpne laget"><span class="sm">Laget</span><span class="tr-s">${S.party.slice(1).map(u => { const m = monBy(u); return m ? spr(m.id, { sh: m.sh, s: '38px' }) : ''; }).join('')}${Array.from({ length: 6 - S.party.length }, () => '<i></i>').join('')}</span><span class="sm tn">${S.mons.length} i boksen ›</span></button>`;
   if (S.pend.length) h += `<button type="button" class="card pendb" data-a="hunt" style="text-align:left;width:100%"><span class="grass live"><i></i><i></i><i></i><i></i></span><span class="sp"><b>${S.pend.length} ${S.pend.length === 1 ? 'møte venter' : 'møter venter'}</b><br><span class="sm">Noe rasler i gresset. Trykk for å gå inn.</span></span></button>`;
   h += `<div class="card"><div class="lab">Fag</div><div class="chips">${Object.keys(FAGS).map(k => `<button type="button" class="chip" data-a="fag" data-k="${k}" aria-pressed="${fag === k}">${FAGS[k].n}</button>`).join('')}</div>
     <div class="lab" style="margin-top:14px">Lengde</div><div class="chips">${[25, 45, 60, 75, 90].map(m => `<button type="button" class="chip tn" data-a="min" data-k="${m}" aria-pressed="${min === m}">${m} min</button>`).join('')}</div>
@@ -114,16 +116,26 @@ VIEW.fokus = () => {
 
 /* ---------- Laget ---------- */
 VIEW.lag = () => {
-  const slots = Array.from({ length: 6 }, (_, i) => monBy(S.party[i]));
+  const head = `<div class="row" style="justify-content:space-between"><h1 class="big">${U.lag === 'boks' ? 'Boksen' : 'Laget'}</h1>${coinEl(S.coins)}</div>
+    <div class="seg">${[['lag', `Laget · ${S.party.length}`], ['boks', `Boksen · ${S.mons.length}`]].map(([k, n]) => `<button type="button" data-a="lagv" data-k="${k}" aria-pressed="${U.lag === k}">${n}</button>`).join('')}</div>`;
+  if (U.lag !== 'boks') {
+    const rows = Array.from({ length: 6 }, (_, i) => monBy(S.party[i])).map((m, i) => {
+      if (!m) return `<button type="button" class="tcard empty" data-a="lagv" data-k="boks"><span class="plus">+</span><span class="sm">Ledig plass. Velg en fra boksen.</span></button>`;
+      const a = xpAt(m.lv), b = xpAt(m.lv + 1), rdy = evoOpts(m).some(x => x.ok);
+      return `<button type="button" class="tcard${i ? '' : ' lead'}" data-a="mon" data-u="${m.u}" style="--tc:var(--t${D(m.id)[1]})">${spr(m.id, { ani: !i, sh: m.sh, s: i ? '60px' : '84px' })}
+        <span class="sp"><span class="row" style="gap:6px"><b class="tn-n">${esc(D(m.id)[0])}</b>${i ? '' : '<span class="pill" style="background:var(--sage);color:#152013">Partner</span>'}${rdy ? '<span class="pill" style="color:var(--gold)">Kan utvikles</span>' : ''}</span>
+        <span class="row sm tn" style="justify-content:space-between;margin-top:5px"><span>Nivå ${m.lv}</span><span>${i ? '30 % XP' : 'all XP'}</span></span>
+        <span class="bar" style="margin-top:5px"><i style="width:${Math.round((m.xp - a) / (b - a) * 100)}%;background:var(--tc)"></i></span></span></button>`;
+    }).join('');
+    return `${head}<div class="stack">${rows}</div><p class="sm">Partneren står i klokka og får all XP fra øktene. Trykk på en Pokémon for å bytte partner, utvikle eller ta den ut.</p>`;
+  }
   const sorts = { ny: (a, b) => b.at - a.at, niva: (a, b) => b.lv - a.lv, sjelden: (a, b) => tierOf(b.id) - tierOf(a.id) || b.sh - a.sh || a.id - b.id, nr: (a, b) => a.id - b.id || b.lv - a.lv };
   const list = S.mons.slice().sort(sorts[U.sort]), du = dupes(), val = du.reduce((s, m) => s + sellValue(m), 0);
-  return `<div class="row" style="justify-content:space-between"><h1 class="big">Laget</h1>${coinEl(S.coins)}</div>
-    <div class="slots">${slots.map((m, i) => m ? `<button type="button" class="cell${i ? '' : ' lead'}" data-a="mon" data-u="${m.u}" aria-label="${esc(D(m.id)[0])}, nivå ${m.lv}">${spr(m.id, { sh: m.sh })}<span class="l tn">${m.lv}</span></button>` : '<span class="cell un"></span>').join('')}</div>
-    <p class="sm">Partneren (første plass) får all XP fra øktene. Resten av laget får 30 %.</p>
-    <div class="row" style="justify-content:space-between"><h2 class="h">Boksen · ${S.mons.length}</h2></div>
-    <div class="seg">${[['ny', 'Nyeste'], ['niva', 'Nivå'], ['sjelden', 'Sjeldenhet'], ['nr', 'Nummer']].map(([k, n]) => `<button type="button" data-a="sort" data-k="${k}" aria-pressed="${U.sort === k}">${n}</button>`).join('')}</div>
+  return `${head}
+    <div class="chips">${[['ny', 'Nyeste'], ['niva', 'Nivå'], ['sjelden', 'Sjeldenhet'], ['nr', 'Nummer']].map(([k, n]) => `<button type="button" class="chip" data-a="sort" data-k="${k}" aria-pressed="${U.sort === k}">${n}</button>`).join('')}</div>
     ${du.length ? `<button type="button" class="btn wide" data-a="selldupes">Selg ${du.length} ${du.length === 1 ? 'duplikat' : 'duplikater'} for ${coinEl(val)}</button>` : ''}
-    <div class="grid">${list.map(m => { const t = tierOf(m.id); return `<button type="button" class="cell r${t}${t >= 2 ? ' rr' : ''}${S.party.includes(m.u) ? ' inp' : ''}" data-a="mon" data-u="${m.u}" aria-label="${esc(D(m.id)[0])}, nivå ${m.lv}">${spr(m.id, { sh: m.sh, lazy: 1 })}<span class="l tn">${m.lv}</span>${m.fav ? '<span class="c">★</span>' : ''}</button>`; }).join('')}</div>`;
+    <div class="grid box">${list.map(m => { const t = tierOf(m.id); return `<button type="button" class="cell nm r${t}${t >= 2 ? ' rr' : ''}${S.party.includes(m.u) ? ' inp' : ''}" data-a="mon" data-u="${m.u}" aria-label="${esc(D(m.id)[0])}, nivå ${m.lv}">${spr(m.id, { sh: m.sh, lazy: 1 })}<span class="nx">${esc(D(m.id)[0])}</span><span class="l tn">${m.lv}</span>${m.fav ? '<span class="c">★</span>' : ''}</button>`; }).join('')}</div>
+    <p class="sm">Grønn prikk = i laget. Farget ramme = sjelden eller bedre.</p>`;
 };
 function monSheet(m) {
   const d = D(m.id), ev = evoOpts(m), inP = S.party.includes(m.u), lead = S.party[0] === m.u, a = xpAt(m.lv), b = xpAt(m.lv + 1), n = countOf(m.id);
@@ -366,7 +378,8 @@ function evoShow(m, from) {
 
 /* ---------- Handlinger ---------- */
 const A = {
-  tab: el => { U.tab = el.dataset.k; render(); $('#main').scrollTop = 0; },
+  tab: el => { U.tab = el.dataset.k; render(); $('#main').scrollTop = 0; enter(); },
+  lagv: el => { U.lag = el.dataset.k; render(); enter(); },
   fag: el => { U.fag = el.dataset.k; render(); },
   min: el => { U.min = +el.dataset.k; render(); },
   reg: el => { S.region = +el.dataset.k; save(); render(); },
