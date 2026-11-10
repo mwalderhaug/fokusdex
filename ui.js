@@ -479,8 +479,8 @@ document.addEventListener('visibilitychange', () => {
 });
 
 /* ---------- Oppstart ---------- */
-/* iOS 26 gir Hjem-skjerm-apper et for kort vindu (innerHeight mindre enn skjermen). Mål avviket og legg det i --fix.
-   Når Apple retter feilen, blir avviket 0 og ingenting endres. */
+/* iOS 26 gir Hjem-skjerm-apper et for kort vindu (innerHeight mindre enn skjermen). Da får body full skjermhøyde via --appH.
+   Når Apple retter feilen, er avviket 0 og appen bruker vanlig høyde. */
 function fixViewport() {
   let g = 0;
   try {
@@ -490,7 +490,8 @@ function fixViewport() {
       if (!(g > 0 && g <= 100)) g = 0;
     }
   } catch (_) { g = 0; }
-  document.documentElement.style.setProperty('--fix', g + 'px');
+  if (g) document.documentElement.style.setProperty('--appH', (window.innerHeight + g) + 'px');
+  else document.documentElement.style.removeProperty('--appH');
 }
 fixViewport();
 window.addEventListener('resize', fixViewport);
