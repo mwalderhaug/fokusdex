@@ -345,7 +345,7 @@ function fxPos(side) {
   return r.width ? { x: (r.left + r.width / 2 - A.left) * k, y: Math.min(184, (r.top + r.height * 0.55 - A.top) * k) } : def;
 }
 /* Spritene forstørres etter bredden på arenaen (spillskjermen er 256 piksler bred). */
-function fitArena() { const a = $('#arena'), m = $('#bmenu'); if (a) { a.style.setProperty('--z', (a.clientWidth / 256 * 0.8).toFixed(2)); a.style.setProperty('--u', (a.clientWidth / 256).toFixed(3) + 'px'); if (m) m.style.setProperty('--u', (a.clientWidth / 256).toFixed(3) + 'px'); } }
+function fitArena() { const a = $('#arena'), m = $('#bmenu'); if (a) { const u = (a.clientWidth / 256).toFixed(3) + 'px'; a.style.setProperty('--z', (a.clientWidth / 256 * 0.8).toFixed(2)); a.style.setProperty('--u', u); a.parentNode.style.setProperty('--u', u); if (m) m.style.setProperty('--u', u); } }
 window.addEventListener('resize', fitArena);
 function battleTag(B) { return B.mode === 'raid' ? 'Legendary raid' : B.mode === 'fac' ? `Frontier · Round ${B.round} · ${B.w + 1}/${FACN}` : B.mode === 'lab' ? `Demo · ${B.tr.cn}` : `${B.lap ? 'Lap ' + (B.lap + 1) + ' · ' : ''}${B.n + 1}/${LAPN} · ${B.tr.cn}`; }
 const calm = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; } };
@@ -373,11 +373,13 @@ function drawBattle() {
   fitArena();
 }
 /* Teksten skrives fram bokstav for bokstav. Trykk på boksen for å hoppe fram. */
-function setText(s) { const el = $('#btx'); if (el) el.textContent = s; const b = $('#btext'); if (b) b.classList.remove('wait'); }
+function setText(s) { const el = $('#btx'); if (el) el.textContent = s; const b = $('#btext'); if (b) b.classList.remove('wait', 'hid'); }
+/* Tekstboksen viker mens et angrep spilles av (som i spillene), og kommer tilbake med neste melding. */
+const textAway = () => { const b = $('#btext'); if (b) b.classList.add('hid'); };
 async function typeOut(s) {
   const el = $('#btx'), B = BT.B; if (!el) return;
   let i = 0, skip = false; BT.tap = () => { skip = true; };
-  $('#btext').classList.remove('wait');
+  $('#btext').classList.remove('wait', 'hid');
   while (i < s.length && !skip) { i = Math.min(s.length, i + (S.bfast ? 3 : 1)); el.textContent = s.slice(0, i); await new Promise(r => setTimeout(r, 17)); if (BT.B !== B || !el.isConnected) return; }
   el.textContent = s; BT.tap = null;
 }
@@ -393,6 +395,16 @@ async function say(s, hold) {
    Angrepene ligger i fire felt i typens farge, og laget i paneler i to kolonner (blå, rød for besvimt, turkis for den som står inne).
    Bildene kommer fra ressurspakken. Uten den tegnes det samme med farger. Mens noe spilles av, hviler skjermen med ballen alene. */
 const mim = k => PACK.menu && PACK.menu[k] ? `background-image:url(${PACK.menu[k]})` : '';
+/* Menyene med valg er tegnet som i Black 2 og White 2. MFR = rammen rundt ett valg: mørkt felt med nett og skrå ender i valgets farge (--c),
+   og røde hjørnemerker mens det trykkes. MVBG = flaten bak: røde felt øverst og den lyse V-en nederst. */
+const MFR = '<svg class="mfr" viewBox="0 0 124 44" preserveAspectRatio="none" aria-hidden="true"><polygon class="a" points="1,22 13,1 111,1 123,22 111,43 13,43"/><polygon class="b" points="1,22 13,1 20,1 8,22 20,43 13,43"/><polygon class="h" points="6.4,22 18.4,1 20,1 8,22 20,43 18.4,43"/><polygon class="b" points="123,22 111,1 104,1 116,22 104,43 111,43"/><polygon class="h" points="117.6,22 105.6,1 104,1 116,22 104,43 105.6,43"/><path class="l" d="M20,1.4H104M20,42.6H104"/><polygon class="o" points="1,22 13,1 111,1 123,22 111,43 13,43"/><path class="k" d="M-2,9V-3H12M112,-3H126V9M126,35V47H112M12,47H-2V35"/></svg>';
+const MVDEF = '<defs><pattern id="mvmesh" width="2" height="2" patternUnits="userSpaceOnUse"><rect width="2" height="2" fill="#1a1b1f"/><rect width="1" height="1" fill="#2a2b30"/></pattern><pattern id="mvdot" width="4" height="4" patternUnits="userSpaceOnUse"><rect width="1" height="1" fill="#2c2d32"/></pattern></defs><rect width="256" height="192" fill="#37383d"/><rect width="256" height="192" fill="url(#mvdot)"/>';
+const MVRED = '<polygon points="0,3 91,3 83,19 0,13" fill="#b93226"/><polygon points="0,3 91,3 90,5.5 0,5.5" fill="#d9594a"/><path d="M0,14.2L84,20.2L92,3.6" fill="none" stroke="#e8e8ec" stroke-width="1.2"/><polygon points="256,3 165,3 173,19 256,13" fill="#b93226"/><polygon points="256,3 165,3 166,5.5 256,5.5" fill="#d9594a"/><path d="M256,14.2L172,20.2L164,3.6" fill="none" stroke="#e8e8ec" stroke-width="1.2"/>';
+const MVSVG = x => `<svg class="mvbg" viewBox="0 0 256 192" preserveAspectRatio="none" aria-hidden="true">${MVDEF}${x}</svg>`;
+/* Angrepsmenyen har den lyse V-en nederst. Listene (veska og RUN) har en rett fot i stedet, så feltene får plass. */
+const MVBG = MVSVG(MVRED + '<polygon points="0,126 82,133 97,157 128,166 159,157 174,133 256,126 256,192 0,192" fill="#4a4c52"/><path d="M0,126L82,133L97,157L128,166L159,157L174,133L256,126" fill="none" stroke="#e8e8ec" stroke-width="1.4"/><path d="M0,128.4L80.6,135.2L95.4,159L128,168.6L160.6,159L175.4,135.2L256,128.4" fill="none" stroke="#1d1e22" stroke-width="1"/>');
+const MVBG2 = MVSVG('<polygon points="0,0 256,0 256,6 0,6" fill="#b93226"/><path d="M0,6.6H256" stroke="#e8e8ec" stroke-width="1.2"/><polygon points="0,148 256,148 256,192 0,192" fill="#4a4c52"/><path d="M0,148H256" stroke="#e8e8ec" stroke-width="1.4"/><path d="M0,150.2H256" stroke="#1d1e22" stroke-width="1"/>');
+const RET = '<span class="ret"><svg viewBox="0 0 18 12" aria-hidden="true"><path d="M6,0V3H12A4.5,4.5 0 0 1 12,12H3V9H12A1.5,1.5 0 0 0 12,6H6V9L0,4.5Z"/></svg></span>';
 /* Ett panel på lagskjermen. act = handlingen når det trykkes, ok = kan velges, cur = står inne i kampen nå. */
 function partyPanel(b, i, act, ok, cur) {
   const row = b.hp <= 0 ? 1 : cur ? 2 : 0, col = i ? 2 : 0, f = Math.max(0, b.hp / b.max);
@@ -402,7 +414,7 @@ function partyPanel(b, i, act, ok, cur) {
 }
 function drawMenu() {
   const el = $('#bmenu'); if (!el) return;
-  const B = BT.B, pk = PACK.menu ? ' pk' : '', bg = mim('pbg'), cancel = (a, t) => `<button type="button" class="bw-cancel bback" data-a="${a || 'bback'}">${t || 'CANCEL'}</button>`;
+  const B = BT.B, pk = PACK.menu ? ' pk' : '', bg = mim('pbg'), cancel = (a, t) => `<button type="button" class="bw-cancel bback" data-a="${a || 'bback'}" aria-label="${t || 'Back'}" style="--c:#2f84e6">${MFR}${RET}</button>`;
   if (!B || BT.busy || B.over) { el.innerHTML = `<div class="bw bw-main bw-idle${pk}" style="${mim('ball')}"></div>`; return; }
   const me = B.me[B.a];
   if (B.need || BT.menu === 'team') {
@@ -410,20 +422,23 @@ function drawMenu() {
     return;
   }
   if (BT.menu === 'moves') {
-    const any = me.mv.some((x, k) => moveOk(B, k));
-    el.innerHTML = `<div class="bw bw-moves bmv${pk}" style="${bg}">${any ? me.mv.map((x, k) => { const m = mvEff(B, me, MOVES[x.i]); return `<button type="button" class="bw-m" data-a="bmove" data-k="${k}" style="--c:var(--b${m[1]})"${moveOk(B, k) ? '' : ' disabled'}><b>${esc(m[0])}</b><span class="mty">${TYN[m[1]]}</span><span class="pp tn">PP ${x.pp}/${x.max}</span></button>`; }).join('') : '<button type="button" class="bw-m" data-a="bmove" data-k="-1" style="--c:var(--b0)"><b>Struggle</b><span class="mty">Normal</span><span class="pp">No PP left</span></button>'}${cancel()}</div>`;
+    const any = me.mv.some((x, k) => moveOk(B, k)), fv = BT.v.foe;
+    const mvb = (k, m, pp, ok) => `<button type="button" class="bw-m" data-a="bmove" data-k="${k}" style="--c:var(--b${m[1]})"${ok ? '' : ' disabled'}>${MFR}<b>${esc(m[0])}</b><span class="mty">${TYN[m[1]]}</span><span class="pp tn">${pp}</span></button>`;
+    el.innerHTML = `<div class="bw bw-moves bmv">${MVBG}<span class="mv-foe">${B.foe.map((b, i) => `<i class="${b.hp <= 0 ? 'out' : i === fv.i ? 'on' : ''}"></i>`).join('')}</span>
+      ${any ? me.mv.map((x, k) => mvb(k, mvEff(B, me, MOVES[x.i]), `<em>PP</em>${x.pp}/${x.max}`, moveOk(B, k))).join('') : mvb(-1, ['Struggle', 0], '<em>No PP left</em>', true)}
+      <span class="mv-balls">${Array.from({ length: 6 }, (_, i) => { const b = B.me[i]; return `<i class="${!b ? 'no' : b.hp <= 0 ? 'out' : b.status ? 'st' : ''}${i === B.a ? ' cur' : ''}"></i>`; }).join('')}</span>${cancel()}</div>`;
     return;
   }
   if (BT.menu === 'pause') {
-    const tt = PACK.title();
-    el.innerHTML = `<div class="bw bw-list bsw${pk}${PACK.ebx ? ' r4' : ''}" style="${bg}"><button type="button" class="bw-row" data-a="bfast">SPEED<b>${S.bfast ? 'FAST' : 'NORMAL'}</b></button><button type="button" class="bw-row" data-a="bmusic"${S.sound ? '' : ' disabled'}>MUSIC<b>${S.music === 0 ? 'OFF' : 'ON'}</b></button>${PACK.ebx ? `<button type="button" class="bw-row" data-a="bdx">MOVES<b>${S.dx === 0 ? 'CLASSIC' : 'DX'}</b></button>` : ''}<button type="button" class="bw-row red" data-a="bforfeit">FORFEIT<b>give up</b></button>${tt ? `<p class="bw-tip">♪ ${esc(tt)}</p>` : ''}${cancel('bback', 'BACK')}</div>`;
+    const tt = PACK.title(), row = (a, l, v, x) => `<button type="button" class="bw-row${x || ''}" data-a="${a}"${a === 'bmusic' && !S.sound ? ' disabled' : ''}>${MFR}<span>${l}</span><b>${v}</b></button>`;
+    el.innerHTML = `<div class="bw bw-list bsw${PACK.ebx ? ' r4' : ''}">${MVBG2}${row('bfast', 'SPEED', S.bfast ? 'FAST' : 'NORMAL')}${row('bmusic', 'MUSIC', S.music === 0 ? 'OFF' : 'ON')}${PACK.ebx ? row('bdx', 'MOVES', S.dx === 0 ? 'CLASSIC' : 'DX') : ''}${row('bforfeit', 'FORFEIT', 'give up', ' red')}${tt ? `<p class="bw-tip">♪ ${esc(tt)}</p>` : ''}${cancel('bback', 'Back')}</div>`;
     return;
   }
   /* Veska: velg gjenstand, og så hvem den brukes på. Den koster turen din. I demoen er alt gratis, så det kan prøves. */
   const free = B.mode === 'lab', own = k => free ? 1 : S.items[k] || 0;
   if (BT.menu === 'bag') {
     const have = Object.keys(BAG).filter(k => own(k) > 0);
-    el.innerHTML = `<div class="bw bw-bag${pk}" style="${bg}"><p class="bw-tip top">Bag · ${B.bag} use${B.bag === 1 ? '' : 's'} left this battle${free ? ' · free in the demo' : ''}</p><div class="bw-items">${have.length ? have.map(k => `<button type="button" class="bw-m it" data-a="bitem" data-k="${k}" style="--c:var(--b${BAG[k].rev ? 12 : BAG[k].cure ? 11 : 13})"${B.me.some((_, i) => itemOk(B, k, i)) ? '' : ' disabled'}><b>${esc(SHOP[k].n)}</b><span class="mty">${BAG[k].rev ? 'Revive' : BAG[k].cure ? 'Status' : 'Heal'}</span><span class="pp tn">${free ? '∞' : '× ' + own(k)}</span></button>`).join('') : '<p class="bw-tip">Your Bag is empty. Potions and Revives are sold in the Shop.</p>'}</div>${cancel()}</div>`;
+    el.innerHTML = `<div class="bw bw-bag">${MVBG2}<p class="bw-tip">Bag · ${B.bag} use${B.bag === 1 ? '' : 's'} left${free ? ' · free here' : ''}</p><div class="bw-items">${have.length ? have.map(k => `<button type="button" class="bw-m it" data-a="bitem" data-k="${k}" style="--c:var(--b${BAG[k].rev ? 12 : BAG[k].cure ? 11 : 13})"${B.me.some((_, i) => itemOk(B, k, i)) ? '' : ' disabled'}>${MFR}<b>${esc(SHOP[k].n)}</b><span class="mty">${BAG[k].rev ? 'Revive' : BAG[k].cure ? 'Status' : 'Heal'}</span><span class="pp tn">${free ? '∞' : '× ' + own(k)}</span></button>`).join('') : '<p class="bw-tip">Your Bag is empty. Potions and Revives are sold in the Shop.</p>'}</div>${cancel()}</div>`;
     return;
   }
   if (BT.menu === 'bagt') {
@@ -588,6 +603,7 @@ async function ebxPlay(key, side, o, until) {
   if (o.away) sp.classList.remove('away');
   /* De aller lengste animasjonene spilles litt fortere, så ingen angrep tar mye lengre tid enn de andre. */
   const pl = EBXP.play(rec, spdF() * EBXR * Math.min(1.5, Math.max(1, Math.sqrt(rec.busy / 140)))); if (!pl) return null;
+  if (o.sound) textAway();
   if (o.sound && !PACK.sfx(o.sound[0])) BSFX.mv(FX.kindOf(o.sound), mvTier(o.sound), o.sound[1]);
   await pl.at(until === 'hit' ? rec.hit : rec.busy);
   return pl;
@@ -604,7 +620,7 @@ async function playAnim(B, e) {
     if (pl) { K.style = 'own'; K.ebx = 1; K.done = pl.done; return; }
   }
   if (e.away) { sp.classList.remove('away'); await bwait(200); }
-  stageOn(K, a, b); sp.classList.add('cast');
+  textAway(); stageOn(K, a, b); sp.classList.add('cast');
   if (e.charge) { BSFX.charge(2, m[4]); const ms = FX.gather(m[0], a, m[1]); await Promise.all([gatherMot(sp, m[0], d), bwait(ms)]); return; }
   const wms = m[4] === 0 ? 300 : 250 + tier * 110;
   FX.charge(a, m[1], tier, wms, m[4]); if (tier >= 1 || m[4] !== 1) BSFX.charge(tier, m[4]);
@@ -717,8 +733,9 @@ async function playEv(ev) {
    - de aller største (klasse 9): gull, lyn og stjerner
    Bildene (bånd, VS, lyn, stjerner) kommer fra ressurspakken. Uten den tegnes det samme med farger og tekst. */
 const BARC = ['grey', 'brown', 'cyan', 'purple', 'brown', 'brown', 'lime', 'purple', 'steel', 'orange', 'blue', 'green', 'yellow', 'purple', 'cyan', 'blue', 'grey', 'purple'];
-async function bossIntro(B) {
-  const tr = B.tr, lead = B.me[0], tier = TIER(tr.kind), V = PACK.vs, clip = tr.ultra && B.mode !== 'fac', evil = tr.th === 'evil', sp = S.bfast ? 0.6 : 1, T = ms => new Promise(r => setTimeout(r, ms * sp));
+async function bossIntro(B, o = {}) {
+  /* o.quick = vanlig trener: samme oppstilling, men raskere og uten trykk. Den blir stående (båndene går) til kampen er lastet (o.until), så skjermen aldri er svart. */
+  const quick = !!o.quick, tr = B.tr, lead = B.me[0], tier = TIER(tr.kind), V = PACK.vs, clip = tr.ultra && B.mode !== 'fac', evil = tr.th === 'evil', sp = (S.bfast ? 0.6 : 1) * (quick ? 0.7 : 1), T = ms => new Promise(r => setTimeout(r, ms * sp));
   const im = k => V && V[k] ? `url(${V[k]})` : 'none', plasma = /Plasma/.test(tr.title) || tr.n === 'Ghetsis';
   ov(`<div class="bwi bwi-${tier} i${tr.int}${V ? ' pk' : ''}${tr.th ? ' th-' + tr.th : ''}" id="bwi" style="--ac:var(--t${tr.ty});--cc:${tr.cc || (evil ? '#e02020' : 'var(--t' + tr.ty + ')')};--bar:${im(evil ? 'bar_me' : 'bar_' + BARC[tr.ty])};--barme:${im(evil ? 'bar_steel' : 'bar_me')};--vsi:${im(tr.int >= 6 && !evil ? 'vs2' : 'vs')};--bolt:${im('bolt')};--vbolt:${im('vbolt')};--stars:${im(evil ? 'cloud' : 'stars')};--orb:${im('flash')};--em:${plasma ? im('plasma') : 'none'}">
     <div class="bwi-s"><div class="bwi-bg"></div><canvas class="bwi-cv" id="bwicv" width="256" height="192"></canvas><div class="bwi-em"></div>
@@ -750,6 +767,7 @@ async function bossIntro(B) {
   on('s1'); await T(330); on('s2'); await T(380); if (gone()) return;
   on('s3'); if (!clip) battleMusic(B); BSFX.vs(); buzz([60, 40, 60, 40, 200]);
   await T(520); on('s4');
+  if (quick) { await Promise.race([Promise.all([o.until, T(640)]), new Promise(r => setTimeout(r, 12000))]); if (gone()) return; on('s5'); await T(260); return; }
   await T(clip ? 1100 : 800); if (gone()) return PACK.stingOut(0.2);
   /* Introen blir stående til spilleren trykker («Press to enter»), så introlåta får spille så lenge man vil. */
   await enterGate(root, gone);
@@ -766,11 +784,6 @@ function enterGate(root, gone) {
     root.classList.add('go'); root.addEventListener('pointerdown', tap); document.addEventListener('keydown', key);
   });
 }
-async function wipeIntro() {
-  const o = $('#ov'), w = document.createElement('div');
-  w.className = 'wipe'; w.innerHTML = '<i></i><i></i>'; o.append(w); sfx.appear(); buzz([40, 40, 40]);
-  await new Promise(r => setTimeout(r, 820));
-}
 /* Uten ressurspakke brukes det innebygde. Det sies fra de første gangene, så det ikke er tvil om hva som vises. */
 function packHint() {
   if (PACK.ok) return;
@@ -784,7 +797,7 @@ async function startBattle(B) {
   BT.v = { me: { i: 0, hp: B.me[0].hp, st: '' }, foe: { i: 0, hp: B.foe[0].hp, st: '' } };
   const prep = PACK.prep(B).catch(() => {});
   if (B.tr.wild) { await Promise.race([prep, new Promise(r => setTimeout(r, 2500))]); if (BT.B !== B) return; await legendIntro(B); }
-  else if (B.tr.boss) { await PACK.introPrep(B); if (BT.B !== B) return; await bossIntro(B); } else { await wipeIntro(); battleMusic(B); }
+  else { await PACK.introPrep(B); if (BT.B !== B) return; await bossIntro(B, B.tr.boss ? {} : { quick: 1, until: prep }); }
   await prep;
   if (BT.B !== B) return;
   drawBattle(); drawMenu(); packHint();
@@ -923,7 +936,7 @@ function labScreen() {
     ${PACK.ok ? '' : `<div class="card nopack"><b>Built-in graphics and music</b><p class="sm" style="margin-top:4px">${GH && GH.ok ? `Sync is on, but your pack is not loaded${PACK.err ? ' (error ' + esc(PACK.err) + ')' : ' yet'}.` : 'Sync is off on this device, so your own pack is not loaded: music, HP boxes, sounds and move animations are the built-in ones.'}</p><button type="button" class="btn wide" data-a="${GH && GH.ok ? 'packre' : 'sync'}" style="margin-top:8px">${GH && GH.ok ? 'Look for the pack again' : 'Connect Sync'}</button></div>`}
     <div class="row labm"><button type="button" class="btn sp${rent ? ' nf' : ''}" data-a="labmode" data-k="0" aria-pressed="${!rent}">My team</button><button type="button" class="btn sp${rent ? '' : ' nf'}" data-a="labmode" data-k="1" aria-pressed="${rent}">Rentals · Lv ${FACLV}</button></div>
     <div class="lablist">${ORDER.map(k => { const c = TCL[k]; return `<button type="button" data-a="labgo" data-k="${k}" class="k-${TIER(k)}"><span class="cno">${c.i}</span><span class="sp"><b>${c.n}</b><br><span class="sm">${LABD[k]}</span></span>${ULTRA.has(k) ? `<span class="pill">${RARE[k].replace(' boss', '')}</span>` : ''}</button>`; }).join('')}</div>
-    <div><div class="lab">Legendary raids · the film and the fight</div><div class="legl">${Object.keys(LEG).map(Number).filter(id => LEG[id].t === 2 || LEG[id].t === 4).map(id => `<button type="button" data-a="labraid" data-k="${id}" style="--cc:${LEG[id].cc}">${spr(id)}<b>${esc(D(id)[0])}</b></button>`).join('')}<button type="button" data-a="labraid" data-k="0"><b>Any other</b></button></div></div>
+    <div class="stack"><div class="lab">Legendary raids · the film and the fight</div>${[['The greatest', id => LEG[id].t === 4 || LEG[id].t === 2], ['Mythical', id => LEG[id].t === 3], ['Legendary', id => LEG[id].t === 1]].map(([n, f]) => `<div class="sm tn">${n}</div><div class="legl">${Object.keys(LEG).map(Number).filter(f).sort((a, b) => (LEG[b].t === 4) - (LEG[a].t === 4)).map(id => `<button type="button" data-a="labraid" data-k="${id}" style="--cc:${LEG[id].cc}">${spr(id, { lazy: 1 })}<b>${esc(D(id)[0])}</b></button>`).join('')}</div>`).join('')}</div>
     ${PACK.ok ? `<p class="sm tn">Your pack is loaded: ${Object.keys(PACK.man.scenes || {}).length} arenas, ${(PACK.man.music || []).length} tracks and ${Object.keys(PACK.man.sfx || {}).length} sounds.</p>` : ''}`, 'tint', 'var(--gold)');
 }
 
@@ -933,7 +946,7 @@ const BA = {
   raid: () => { BT.B = null; BT.busy = false; stopMusic(); sfx.open(); raidScreen(); },
   rlead: el => { BT.lead = +el.dataset.u; raidScreen(); },
   raidgo: () => { if (!raidOpen() || !S.party.map(monBy).filter(Boolean).length) return; PACK.unlock(); sfx.start(); BT.busy = false; startBattle(raidBattle(BT.lead)); },
-  labraid: el => { if (!S.party.map(monBy).filter(Boolean).length) return toast('You need a Pokémon in your team.'); let id = +el.dataset.k; if (!id) { const c = Object.keys(LEG).map(Number).filter(i => LEG[i].t === 1 || LEG[i].t === 3); id = c[rnd(c.length)]; } PACK.unlock(); sfx.start(); BT.busy = false; startBattle(raidBattle(BT.lead, id)); },
+  labraid: el => { if (!S.party.map(monBy).filter(Boolean).length) return toast('You need a Pokémon in your team.'); const id = +el.dataset.k; if (!LEG[id]) return; PACK.unlock(); sfx.start(); BT.busy = false; startBattle(raidBattle(BT.lead, id)); },
   bbag: () => { if (BT.busy || !BT.B || BT.B.over) return; BT.menu = 'bag'; drawMenu(); },
   bitem: el => { BT.item = el.dataset.k; BT.menu = 'bagt'; drawMenu(); },
   btarget: el => { if (BT.busy) return; const B = BT.B, k = BT.item, i = +el.dataset.k; if (!(B.bag > 0) || !itemOk(B, k, i)) return; if (B.mode !== 'lab') { if (!(S.items[k] > 0)) return; S.items[k]--; save(true); } BT.menu = 'main'; playEv(runTurn(B, { t: 'item', k, i })); },
@@ -955,7 +968,7 @@ const BA = {
   bmusic: () => { S.music = S.music === 0 ? 1 : 0; save(true); if (S.music === 0) stopMusic(); else battleMusic(BT.B); drawMenu(); },
   bmove: el => { if (BT.busy || BT.B.over) return; BT.menu = 'main'; playEv(runTurn(BT.B, { t: 'move', k: +el.dataset.k })); },
   bsw: el => { if (BT.busy) return; const B = BT.B, i = +el.dataset.k; BT.menu = 'main'; playEv(B.need ? sendIn(B, i) : runTurn(B, { t: 'switch', i })); },
-  bforfeit: el => { if (BT.busy) return; if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.innerHTML = 'TAP AGAIN<b>to give up</b>'; return; } BT.B.over = 'loss'; endBattle(); },
+  bforfeit: el => { if (BT.busy) return; if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.innerHTML = MFR + '<span>TAP AGAIN</span><b>to give up</b>'; return; } BT.B.over = 'loss'; endBattle(); },
   packre: async () => { toast('Looking for your pack…'); const ok = await PACK.init(true); toast(ok ? `Pack found: ${Object.keys(PACK.man.scenes || {}).length} arenas, ${(PACK.man.music || []).length} tracks.` : 'No pack found in your sync repo.'); if (BT.B == null && $('.lablist')) labScreen(); },
   blearn: el => { const m = monBy(+el.dataset.u); if (m) learnSheet(m, 'ov'); },
   lforget: el => { const L = U.learn, m = monBy(L.u); if (!m) return closeSheet(); const x = m.nm[0], old = +el.dataset.k; resolveMove(m, x, old); sfx.lvl(); toast(`${D(m.id)[0]} forgot ${MOVES[old][0]} and learned ${MOVES[x][0]}.`); learnSheet(m, L.back); },

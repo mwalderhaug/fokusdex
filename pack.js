@@ -6,8 +6,11 @@
 const PACK = (() => {
   const P = { ok: false, man: null, anims: null, err: '' }, mem = new Map(), pend = new Map(), imgs = new Map(), bufs = new Map(), CN = 'fokusdex-pack';
   const dev = () => { try { return localStorage.getItem('fokusdex.pack') || ''; } catch (_) { return ''; } };
-  const key = p => 'https://pack.invalid/' + (P.man ? P.man.v : 0) + '/' + p;
-  const MIME = { png: 'image/png', mp3: 'audio/mpeg', json: 'application/json' };
+  /* Filene lagres på enheten under en utgave. Hver mappe i pakken har sin egen (manifest.g), så en endring i én mappe ikke gjør at alt det andre
+     (musikken er det store) må hentes på nytt. Mapper uten egen utgave følger pakkens versjon. */
+  const gen = p => { const m = P.man, t = p.split('/')[0]; return m ? (m.g && m.g[t] != null ? m.g[t] : m.v) : 0; };
+  const key = p => 'https://pack.invalid/' + gen(p) + '/' + p;
+  const MIME = { png: 'image/png', mp3: 'audio/mpeg', json: 'application/json', ttf: 'font/ttf', webp: 'image/webp' };
   /* Henter én fil fra kilden: det private repoet, eller en egen adresse satt for utvikling. */
   async function raw(path) {
     const d = dev();
@@ -53,17 +56,28 @@ const PACK = (() => {
     catch (_) { try { m = JSON.parse(localStorage.getItem('fokusdex.packman')); } catch (_) {} }
     if (!m || !m.v) return false;
     P.man = m; P.ok = true; P.err = '';
-    setTimeout(warmUp, 600);
+    setTimeout(warmUp, 600); setTimeout(sweep, 9000);
     return true;
   };
+  /* Når pakken er oppdatert, slettes det som ble lagret fra eldre utgaver, og låter som er tatt ut av pakken, så de ikke blir liggende og ta plass. */
+  async function sweep() {
+    try {
+      const c = await caches.open(CN), mus = new Set((P.man.music || []).map(x => x.f));
+      for (const r of await c.keys()) { const u = decodeURI(r.url), m = /^https:\/\/pack\.invalid\/[^/]+\/(.+)$/.exec(u), path = m ? m[1] : ''; if (!path || u !== key(path) || (path.indexOf('music/') === 0 && !mus.has(path))) await c.delete(r); }
+    } catch (_) {}
+  }
   /* Rett etter at pakken er funnet, hentes det første kampen trenger i bakgrunnen: HP-boksene, introbildene, ballene, animasjonsdataene og trenerlåtene. */
   function warmUp() {
     const m = P.man, list = [m.hud && m.hud.f, m.vs && m.vs.f, 'ui/ball_pokeball.png', 'ui/ball_pokeball_open.png'].filter(Boolean);
-    list.forEach(f => P.url(f)); loadHud(); loadMenu(); loadAnims(); loadEbx();
+    list.forEach(f => P.url(f)); loadHud(); loadMenu(); loadFont(); loadAnims(); loadEbx();
     (m.music || []).filter(x => x.c === 'trainer').forEach(x => P.url(x.f));
     /* Bildet og låta til den som venter i ligaen hentes også, og forsiden tegnes på nytt når bildet er klart (bare hvis den står framme). */
     try { if (S.party.length) { const t = nextTrainer(), tr = trainerInfo(t), f = P.trackFor({ tr, lap: t.lap, rd: Math.floor(t.n / 2), mode: 'league' }), pt = m.trainers && m.trainers[tr.img.split('|')[0]]; if (f) P.url(f); if (pt && !mem.get(pt)) P.url(pt).then(u => { if (u && !S.timer && $('#ov').hidden && U.tab === 'fokus' && $('#sheet').hidden !== false) render(); }); } } catch (_) {}
   }
+  /* DS-skriften til tekstboksen og menyene i kampen. Når den er lastet, slås den på for kampskjermen (klassen dsf på siden). */
+  let fontJob = null;
+  const loadFont = () => fontJob || (!P.man.font || typeof FontFace === 'undefined' ? Promise.resolve() : (fontJob = P.url(P.man.font).then(u => { if (!u) throw new Error('font'); return new FontFace('FdxDS', `url(${u})`).load(); })
+    .then(f => { document.fonts.add(f); document.documentElement.classList.add('dsf'); }).catch(() => { fontJob = null; })));
   let animJob = null;
   const loadAnims = () => P.anims || !P.man.anims ? Promise.resolve() : animJob || (animJob = blob(P.man.anims).then(b => b.text()).then(t => { P.anims = JSON.parse(t); }).catch(() => { animJob = null; }));
   /* Angrepsanimasjonene fra Elite Battle DX: programmene (som data, se ebx.js) og bildene de bruker. Bildene ligger etter hverandre i samlefiler,
@@ -103,17 +117,18 @@ const PACK = (() => {
   };
   /* Hvilken låt som hører til treneren. Låtene ligger i én mappe per klasse, og tittelen sier hvem de tilhører: hver boss har et søk (mre)
      som plukker ut sin egen låt i klassens mappe. Finnes ingen der, lånes lagets låt fra en naboklasse, og til slutt en fra klassen.
-     I Battle Frontier stiger musikken gjennom runden: trenerlåter først, de store kamplåtene før bossen. Samme trener får samme låt hver gang,
+     I Battle Frontier stiger musikken gjennom runden: trenerlåter først, de store kamplåtene (Elite Four og finalelåta) før bossen. Samme trener får samme låt hver gang,
      men har de flere låter (som Ghetsis), byttes det for hver runde i ligaen. */
   const FALL = { evilteam: ['eviladmin'], eviladmin: ['evilteam', 'evilboss'], evilboss: ['evilteam', 'eviladmin'], champ: ['supreme'], supreme: ['champ'], rival: ['champ'] };
   P.trackFor = B => {
     if (!P.ok || !P.man.music) return '';
-    const tr = B.tr, n = tr.n, M = P.man.music, by = (c, re) => M.filter(x => x.c === c && (!re || re.test(x.t)));
+    /* Låtene til de legendariske brukes bare mot legendariske, uansett hvilke mapper filene ellers ligger i. */
+    const tr = B.tr, n = tr.n, leg = tr.kind === 'legend', LF = new Set(P.man.music.filter(x => x.c === 'legend').map(x => x.f)), M = P.man.music.filter(x => leg || !LF.has(x.f)), by = (c, re) => M.filter(x => x.c === c && (!re || re.test(x.t)));
     let re = null, l = [], h = B.lap || 0; try { if (tr.mre) re = new RegExp(tr.mre); } catch (_) {}
     if (tr.kind === 'legend') { l = by('legend', re); if (!l.length) l = by('legend'); }
     else if (tr.kind === 'brain') { l = by('frontier', re); if (!l.length) l = by('frontier', /Frontier Brain/); }
     else if (tr.boss) { if (re) { l = by(tr.kind, re); for (const c of FALL[tr.kind] || []) if (!l.length) l = by(c, re); } if (!l.length) l = by(tr.kind); }
-    else if (tr.fr) { l = (B.w || 0) >= 4 ? by('frontier', /Raikou|Giratina|Rayquaza|Reshiram|Mewtwo/) : by('frontier', /Aether|World Champion/).concat(by('trainer')); h = (B.w || 0) + (B.round || 0) * 3; }
+    else if (tr.fr) { l = (B.w || 0) >= 4 ? by('frontier', /World Champion/).concat(by('e4')) : by('frontier', /Aether/).concat(by('trainer')); h = (B.w || 0) + (B.round || 0) * 3; }
     /* Vanlige trenere bytter mellom trenerlåtene fra kamp til kamp. */
     if (!l.length) { l = by('trainer'); if (l.length) { if (B.pick == null) B.pick = B.mode === 'league' ? (B.rd || 0) + (B.lap || 0) : Math.floor(Math.random() * 97); return l[B.pick % l.length].f; } }
     if (!l.length) return '';
@@ -134,7 +149,7 @@ const PACK = (() => {
     P.vs = o;
   }
   /* Bildene til boss-introen må være klare før introen starter. Venter høyst et par sekunder. */
-  P.introPrep = async B => { if (!(await P.init())) return; const T = P.man.trainers || {}, pt = B && T[B.tr.img.split('|')[0]], av = S.av && T[S.av.split('|')[0]]; await Promise.race([Promise.all([loadVs(), pt ? P.url(pt) : 0, av ? P.url(av) : 0]), new Promise(r => setTimeout(r, 2500))]); };
+  P.introPrep = async B => { if (!(await P.init())) return; const T = P.man.trainers || {}, pt = B && T[B.tr.img.split('|')[0]], av = S.av && T[S.av.split('|')[0]]; await Promise.race([Promise.all([loadVs(), loadFont(), pt ? P.url(pt) : 0, av ? P.url(av) : 0]), new Promise(r => setTimeout(r, 2500))]); };
   /* Musikken dekodes og spilles gjennom samme lydutgang som effektene (WebAudio). Det er den veien som virker sikkert på iPhone, der et lydelement
      verken kan dempes eller tones inn. Går ikke dekodingen, brukes et vanlig lydelement som låses opp av trykket som starter kampen.
      Dekodede låter er store, så høyst to ligger i minnet om gangen. */
@@ -190,12 +205,12 @@ const PACK = (() => {
     try { P.unlock(); au.src = u; au.currentTime = 0; au.volume = mvol(); mode = 'el'; await au.play(); return my === job; } catch (_) { if (my === job) mode = ''; return false; }
   };
   /* Egen intro til en boss (mappa «Intro» blant sangene): spilles mens bossen viser seg, og tones ut når kamplåta glir inn.
-     Introen velges etter navnet på bossen, så etter laget eller spillet (samme søk som kamplåta), og til slutt etter klassen. */
+     En introlåt hører til én bestemt boss og brukes bare hos den: navnet på bossen må stå som eget ord i tittelen («Champion Cynthia Encounter»
+     spilles hos Cynthia og ingen andre). Alle andre får den innebygde introen. */
   P.introFor = B => {
     if (!P.ok || !P.man.music) return '';
-    const tr = B.tr, l = P.man.music.filter(x => x.c === 'intro'); if (!l.length) return '';
-    const by = re => { try { const r = new RegExp(re, 'i'); return l.find(x => r.test(x.t)); } catch (_) { return null; } };
-    const hit = by(tr.n.replace(/[^A-Za-z ]/g, '')) || (tr.mre && by(tr.mre)) || by(tr.kind === 'evilboss' ? 'evil|villain|team' : tr.kind === 'champ' ? 'champion' : 'supreme|legend|final|boss');
+    const n = B.tr.n.replace(/[^A-Za-z ]/g, '').trim(); if (n.length < 2 || B.tr.wild) return '';
+    const re = new RegExp('(^|[^A-Za-z])' + n + '([^A-Za-z]|$)', 'i'), hit = P.man.music.find(x => x.c === 'intro' && re.test(x.t));
     return hit ? hit.f : '';
   };
   P.sting = async (path, loop) => { const my = job, d = await decode(path); if (!d || my !== job) return false; P.stingOut(0.05); sting = startBuf(d, { loop: !!loop }); return !!sting; };
@@ -219,7 +234,7 @@ const PACK = (() => {
     const it = B.tr.ultra && B.mode !== 'fac' ? P.introFor(B) : ''; if (it) P.cue(it);
     const pt = P.man.trainers && P.man.trainers[B.tr.img.split('|')[0]]; if (pt) jobs.push(P.url(pt));
     const sc = P.sceneFor(B); if (sc) jobs.push(P.url(sc));
-    jobs.push(loadHud()); jobs.push(loadMenu()); if (B.tr.boss) jobs.push(loadVs());
+    jobs.push(loadHud()); jobs.push(loadMenu()); jobs.push(loadFont()); jobs.push(loadVs());
     for (const b of ['pokeball', 'greatball', 'ultraball']) { jobs.push(P.url(`ui/ball_${b}.png`)); jobs.push(P.url(`ui/ball_${b}_open.png`)); }
     ['Hit Super Effective', 'Hit Normal Damage', 'Hit Weak Not Very Effective', 'Stat Rise Up', 'Stat Fall', 'In-Battle Faint No Health', 'In-Battle Heal HP Restore', 'In-Battle Recall Switch Pokeball', 'Status Burned', 'Status Poisoned', 'Status Paralyzed', 'Status Frozen'].forEach(P.warm);
     const all = B.me.concat(B.foe);

@@ -325,7 +325,7 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .ov.battle{padding-left:12px;padding-right:12px;--b0:#b9b79a;--b1:#d6553f;--b2:#8aa6ee;--b3:#a95bc2;--b4:#d9b25a;--b5:#b59f55;--b6:#9cba2c;--b7:#6f5fb5;--b8:#9fb0c6;--b9:#f08a3c;--b10:#4f98ee;--b11:#62c356;--b12:#f2cd3a;--b13:#ee5f95;--b14:#6fd2d6;--b15:#6c54ee;--b16:#6b5a50;--b17:#ee92c4;
   --pix:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
 /* Banen og menyen er to skjermer over hverandre (begge 4:3), som på en DS. Bredden holdes igjen så begge får plass i høyden. */
-.ov.battle .ovin{gap:8px;max-width:clamp(280px,calc((var(--appH,100dvh) - 150px)*.66),600px)}
+.ov.battle .ovin{gap:8px;max-width:clamp(280px,calc((var(--appH,100dvh) - 96px)*.66),600px)}
 .btop{display:flex;align-items:center;gap:10px;min-height:34px}
 .btn-n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px;padding:4px 0}
 /* Skjermen: arenaen og tekstboksen henger sammen som én flate. */
@@ -466,7 +466,7 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .hpb{position:absolute;z-index:2;color:#fff;font-family:var(--pix);font-weight:800;font-size:12px;line-height:1;text-shadow:1px 1px 0 #000;
   background:linear-gradient(#4a4a55,#2b2b33 55%,#202027);filter:drop-shadow(0 2px 0 rgba(0,0,0,.45));transition:transform .35s cubic-bezier(.2,.8,.3,1)}
 .hpb.foe{left:0;top:9%;width:50%;padding:7px 26px 7px 10px;clip-path:polygon(0 0,calc(100% - 20px) 0,100% 50%,calc(100% - 20px) 100%,0 100%)}
-.hpb.me{right:0;bottom:8%;width:55%;padding:7px 10px 7px 28px;clip-path:polygon(20px 0,100% 0,100% 100%,20px 100%,0 50%)}
+.hpb.me{right:0;bottom:27%;width:55%;padding:7px 10px 7px 28px;clip-path:polygon(20px 0,100% 0,100% 100%,20px 100%,0 50%)}
 .hpb.foe[hidden],.hpb.me[hidden]{display:block!important;transform:translateX(-105%)}
 .hpb.me[hidden]{transform:translateX(105%)}
 /* Boksene fra ressurspakken: ett lerret per boks i spillets egne piksler, forstørret like mye som resten av arenaen. */
@@ -474,7 +474,7 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .hpb.pk canvas{display:block;image-rendering:pixelated;width:calc(var(--u,1.5px)*119);height:auto}
 .hpb.pk.foe canvas{width:calc(var(--u,1.5px)*110)}
 .hpb.pk.foe{left:calc(var(--u,1.5px)*-3);top:7%}
-.hpb.pk.me{right:calc(var(--u,1.5px)*-3);bottom:1.5%}
+.hpb.pk.me{right:calc(var(--u,1.5px)*-3);bottom:26.5%}
 /* Gullramma til toppbossene: selve ramma tegnes i lerretet, her legges gløden rundt. */
 @keyframes goldGlow{0%,100%{filter:drop-shadow(0 0 2px rgba(248,200,48,.55))}50%{filter:drop-shadow(0 0 7px rgba(255,236,150,.95))}}
 .hpb.gold{animation:goldGlow 1.5s ease-in-out infinite}
@@ -520,11 +520,20 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .xpr{margin-top:3px}
 .xpbar{flex:1;height:4px;background:#101014;box-shadow:inset 0 0 0 1px #3d3d48;border-radius:2px;overflow:hidden}
 .xpbar i{display:block;height:100%;background:linear-gradient(#70d0ff,#3a98f0);transition:width .8s ease-out}
-/* Tekstboksen henger fast under arenaen. Trykk for å gå videre. */
-.btext{position:relative;display:block;width:100%;min-height:62px;text-align:left;background:linear-gradient(#3a3d4a,#262833);border-top:3px solid #6e7387;box-shadow:inset 0 0 0 2px #1a1b22;padding:12px 30px 12px 16px;
-  color:#fff;font-family:var(--pix);font-weight:700;font-size:15px;line-height:1.35;text-shadow:1px 1px 0 #000}
-.btext i{position:absolute;right:12px;bottom:10px;width:0;height:0;border:6px solid transparent;border-top:8px solid #ff6a5a;opacity:0}
-@keyframes bob{50%{transform:translateY(3px)}}
+/* Skriften i kampen: DS-skriften fra ressurspakken når den er lastet (klassen dsf på siden), ellers en rolig systemskrift.
+   --fz jevner ut at de to er ulike brede, --fw er vekten. */
+.ov.battle{--dsf:var(--pix);--fz:.7;--fw:600}
+.dsf .ov.battle{--dsf:"FdxDS",var(--pix);--fz:1;--fw:400}
+/* Tekstboksen ligger gjennomsiktig over bunnen av banen, som på den øverste DS-skjermen i Black og White. Trykk for å gå videre.
+   Den viker mens et angrep spilles av, så animasjonen har hele banen. */
+.bscreen{position:relative;--u:1.5px}
+.btext{position:absolute;left:0;right:0;bottom:0;z-index:6;display:block;width:100%;min-height:calc(var(--u)*48);margin:0;border:0;border-radius:0;text-align:left;
+  background:linear-gradient(rgba(18,26,48,.58),rgba(8,12,26,.78));box-shadow:inset 0 calc(var(--u)*1) 0 rgba(200,214,255,.36),inset 0 calc(var(--u)*2) 0 rgba(0,0,12,.42),inset 0 calc(var(--u)*-1) 0 rgba(200,214,255,.2);
+  padding:calc(var(--u)*8) calc(var(--u)*20) calc(var(--u)*6) calc(var(--u)*9);color:#fff;font-family:var(--dsf);font-weight:var(--fw);font-size:calc(var(--u)*14*var(--fz));line-height:calc(var(--u)*16);
+  text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 rgba(0,0,0,.8);transition:opacity .14s;-webkit-tap-highlight-color:transparent}
+.btext.hid{opacity:0}
+.btext i{position:absolute;right:calc(var(--u)*8);bottom:calc(var(--u)*6);width:0;height:0;border:calc(var(--u)*4) solid transparent;border-top:calc(var(--u)*5) solid #fff;opacity:0;filter:drop-shadow(calc(var(--u)*1) calc(var(--u)*1) 0 rgba(0,0,0,.8))}
+@keyframes bob{50%{transform:translateY(calc(var(--u)*2))}}
 .btext.wait i{opacity:1;animation:bob .6s ease-in-out infinite}
 /* Menyen under skjermen: stor rød FIGHT-knapp og fargede valg, og angrep i typens farge. */
 .bmenu{display:block;--u:1.5px}
@@ -576,43 +585,77 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .bw-p .hpl span{display:block;width:calc(var(--u)*44);height:calc(var(--u)*5);background:#202020;box-shadow:0 0 0 calc(var(--u)*1) #f8f8f8;border-radius:calc(var(--u)*1)}
 .bw-p .hpl i{display:block;height:100%}
 .bw-p .hpn{position:absolute;right:calc(var(--u)*8);top:calc(var(--u)*31);font-size:calc(var(--u)*8.5);font-weight:800}
-.bw-tip{position:absolute;left:calc(var(--u)*6);right:calc(var(--u)*92);bottom:calc(var(--u)*6);margin:0;font-size:calc(var(--u)*8);font-weight:700;color:#cfe0ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bw-tip.top{bottom:auto;top:calc(var(--u)*5);right:calc(var(--u)*6);text-align:center}
-.bw-cancel{right:calc(var(--u)*4);bottom:calc(var(--u)*3);width:calc(var(--u)*82);height:calc(var(--u)*22);border-radius:calc(var(--u)*11)!important;background:linear-gradient(#5a86d8,#2c4ea0)!important;box-shadow:inset 0 0 0 calc(var(--u)*1.5) #dce8ff,0 calc(var(--u)*2) 0 rgba(0,0,0,.4);font-size:calc(var(--u)*10);font-weight:900;letter-spacing:.06em}
-.bw-cancel:active{transform:translateY(calc(var(--u)*1))}
-/* Angrepene: fire felt i typens farge, to og to. */
-.bw-m{width:calc(var(--u)*122);height:calc(var(--u)*56);left:calc(var(--u)*4);top:calc(var(--u)*8);border-radius:calc(var(--u)*8)!important;background:linear-gradient(color-mix(in srgb,var(--c) 82%,#fff),var(--c) 46%,color-mix(in srgb,var(--c) 70%,#000))!important;box-shadow:inset 0 0 0 calc(var(--u)*2) rgba(255,255,255,.85),inset 0 0 0 calc(var(--u)*3.5) rgba(0,0,0,.35),0 calc(var(--u)*2) 0 rgba(0,0,0,.45)}
-.bw-m:nth-child(2){left:calc(var(--u)*130)}
-.bw-m:nth-child(3){top:calc(var(--u)*70)}
-.bw-m:nth-child(4){left:calc(var(--u)*130);top:calc(var(--u)*70)}
-.bw-m:active:not(:disabled){transform:scale(.95)}
-.bw-m b{position:absolute;left:0;right:0;top:calc(var(--u)*11);text-align:center;font-size:calc(var(--u)*11.5);font-weight:900;white-space:nowrap;text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 rgba(0,0,0,.55)}
-.bw-m .mty{position:absolute;left:calc(var(--u)*8);bottom:calc(var(--u)*8);font-size:calc(var(--u)*7);font-weight:900;letter-spacing:.06em;text-transform:uppercase;background:rgba(0,0,0,.55);padding:calc(var(--u)*1) calc(var(--u)*5);border-radius:calc(var(--u)*5)}
-.bw-m .pp{position:absolute;right:calc(var(--u)*9);bottom:calc(var(--u)*8);font-size:calc(var(--u)*8.5);font-weight:800;text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 rgba(0,0,0,.55)}
+.bw-tip{position:absolute;left:calc(var(--u)*7);right:calc(var(--u)*82);bottom:calc(var(--u)*9);margin:0;font-family:var(--dsf);font-size:calc(var(--u)*12*var(--fz));font-weight:var(--fw);color:#e4ecff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 rgba(0,0,0,.7)}
+.bw-tip.top{bottom:auto;top:calc(var(--u)*5);right:calc(var(--u)*7);text-align:center}
+/* Menyene med valg (angrep, veske, RUN) er tegnet som i Black 2 og White 2: mørk flate med fint nett, røde felt i hjørnene, og valg med skrå ender
+   i sin egen farge (--c). Rammen er en liten tegning (mfr) som strekkes til feltet, og nettet er et mønster som deles av alle feltene. */
+.bw-moves,.bw-list,.bw-bag{background:#37383d}
+.mvbg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.mfr{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible;pointer-events:none}
+.mfr .a{fill:url(#mvmesh)}
+.mfr .o{fill:none;stroke:#0d0e11;stroke-width:calc(var(--u)*2.4);vector-effect:non-scaling-stroke;stroke-linejoin:miter}
+.mfr .b{fill:var(--c)}
+.mfr .h{fill:color-mix(in srgb,var(--c) 58%,#fff)}
+.mfr .l{fill:none;stroke:color-mix(in srgb,var(--c) 66%,#000);stroke-width:calc(var(--u)*1.6);vector-effect:non-scaling-stroke}
+.mfr .k{fill:none;stroke:#f4c4c4;stroke-width:calc(var(--u)*1.6);vector-effect:non-scaling-stroke;opacity:0}
+.bw button:active .mfr .k{opacity:1}
+/* Angrepene: fire felt, to og to. Navnet øverst, så typen i en liten merkelapp og PP. */
+.bw-m{width:calc(var(--u)*124);height:calc(var(--u)*44);left:calc(var(--u)*2);top:calc(var(--u)*23);background:none!important;border-radius:0!important;font-family:var(--dsf);font-weight:var(--fw)}
+.bw-moves button.bw-m:nth-of-type(2){left:calc(var(--u)*130)}
+.bw-moves button.bw-m:nth-of-type(3){top:calc(var(--u)*72)}
+.bw-moves button.bw-m:nth-of-type(4){left:calc(var(--u)*130);top:calc(var(--u)*72)}
+.bw-m:active:not(:disabled){filter:brightness(1.25)}
+.bw-m b{position:absolute;left:0;right:0;top:calc(var(--u)*5);text-align:center;font-size:calc(var(--u)*14*var(--fz));font-weight:var(--fw);line-height:calc(var(--u)*16);white-space:nowrap;text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 rgba(0,0,0,.85)}
+.bw-m .mty{position:absolute;left:calc(var(--u)*17);top:calc(var(--u)*25);min-width:calc(var(--u)*31);height:calc(var(--u)*11);padding:0 calc(var(--u)*2.5);box-sizing:border-box;text-align:center;font-size:calc(var(--u)*10.5*var(--fz));line-height:calc(var(--u)*11);text-transform:uppercase;white-space:nowrap;
+  background:linear-gradient(color-mix(in srgb,var(--c) 70%,#fff) 0 42%,var(--c) 42%);box-shadow:0 0 0 calc(var(--u)*1) color-mix(in srgb,var(--c) 45%,#000);text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 rgba(0,0,0,.5)}
+.bw-m .pp{position:absolute;left:calc(var(--u)*54);right:calc(var(--u)*17);top:calc(var(--u)*23);display:flex;justify-content:space-between;font-size:calc(var(--u)*14*var(--fz));line-height:calc(var(--u)*16);font-weight:var(--fw);white-space:nowrap;text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 rgba(0,0,0,.85)}
+.bw-m .pp em{font-style:normal}
+/* Øverst står motstanderens lag som små ringer, nederst ditt eget som baller. */
+.mv-foe{position:absolute;left:0;right:0;top:calc(var(--u)*9.5);display:flex;justify-content:center;gap:calc(var(--u)*3)}
+.mv-foe i{width:calc(var(--u)*5);height:calc(var(--u)*5);border-radius:50%;box-shadow:inset 0 0 0 calc(var(--u)*1) #d9d9df,0 0 0 calc(var(--u)*.6) #17171a}
+.mv-foe i.on{background:#f08a30}
+.mv-foe i.out{opacity:.3}
+.mv-balls{position:absolute;left:0;right:0;top:calc(var(--u)*119.5);display:flex;justify-content:center;gap:calc(var(--u)*2.5)}
+.mv-balls i{position:relative;width:calc(var(--u)*13);height:calc(var(--u)*13);border-radius:50%;background:linear-gradient(#ee5540 0 43%,#1c1c20 43% 57%,#f6f6f8 57%);box-shadow:0 0 0 calc(var(--u)*1) #17171a}
+.mv-balls i::after{content:"";position:absolute;left:50%;top:50%;width:calc(var(--u)*4);height:calc(var(--u)*4);margin:calc(var(--u)*-2) 0 0 calc(var(--u)*-2);border-radius:50%;background:#f6f6f8;box-shadow:0 0 0 calc(var(--u)*1) #1c1c20}
+.mv-balls i.out{background:linear-gradient(#6e6e75 0 43%,#2a2a2e 43% 57%,#8a8a91 57%)}
+.mv-balls i.out::after{background:#8a8a91}
+.mv-balls i.st{background:linear-gradient(#f0b830 0 43%,#1c1c20 43% 57%,#f6f6f8 57%)}
+.mv-balls i.no{background:none;box-shadow:inset 0 0 0 calc(var(--u)*1.5) #24252a}
+.mv-balls i.no::after{display:none}
+.mv-balls i.cur{box-shadow:0 0 0 calc(var(--u)*1) #17171a,0 0 0 calc(var(--u)*2) #fff}
+/* Tilbake: blått felt med en pil, nederst til høyre. */
+.bw-cancel{right:calc(var(--u)*1);bottom:calc(var(--u)*3);width:calc(var(--u)*78);height:calc(var(--u)*40);--c:#2f84e6;background:none!important;border-radius:0!important;font-size:0}
+.bw-cancel .ret{position:absolute;left:15%;right:15%;top:27%;height:46%;background:#0b0c0f;display:flex;align-items:center;justify-content:center}
+.bw-cancel .ret svg{height:66%;width:auto;fill:#fff;display:block}
+.bw-cancel:active{filter:brightness(1.3)}
 /* Veska: samme felt som angrepene, i en liste som kan rulles. */
-.bw-items{position:absolute;left:0;right:0;top:calc(var(--u)*18);bottom:calc(var(--u)*30);overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:calc(var(--u)*5);padding:calc(var(--u)*2) calc(var(--u)*5);align-content:start}
+.bw-items{position:absolute;left:0;right:0;top:calc(var(--u)*9);bottom:calc(var(--u)*46);overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:calc(var(--u)*4) calc(var(--u)*3);padding:calc(var(--u)*3) calc(var(--u)*3);align-content:start}
 .bw-items .bw-m{position:relative;left:auto!important;top:auto!important;width:auto;height:calc(var(--u)*40)}
-.bw-items .bw-m b{top:calc(var(--u)*6);font-size:calc(var(--u)*9.5)}
-.bw-items .bw-m .mty,.bw-items .bw-m .pp{bottom:calc(var(--u)*5)}
+.bw-items .bw-m b{top:calc(var(--u)*3)}
+.bw-items .bw-m .mty{top:calc(var(--u)*22)}
+.bw-items .bw-m .pp{top:calc(var(--u)*20);left:auto;justify-content:flex-end}
 .bw-items .bw-tip{position:static;grid-column:1/-1;white-space:normal;text-align:center}
 /* RUN: fart, musikk og å gi opp. */
-.bw-row{left:calc(var(--u)*30);width:calc(var(--u)*196);height:calc(var(--u)*34);top:calc(var(--u)*14);border-radius:calc(var(--u)*8)!important;background:linear-gradient(#3f6fb8,#1f3f80)!important;box-shadow:inset 0 0 0 calc(var(--u)*1.5) #dce8ff,0 calc(var(--u)*2) 0 rgba(0,0,0,.45);font-size:calc(var(--u)*11);font-weight:900;letter-spacing:.06em;text-align:left;padding:0 calc(var(--u)*14)!important}
-.bw-row b{float:right;font-size:calc(var(--u)*9);color:#f8e060}
-.bw-row:nth-child(2){top:calc(var(--u)*56)}
-.bw-row:nth-child(3){top:calc(var(--u)*98)}
-.bw-list.r4 .bw-row{height:calc(var(--u)*29);top:calc(var(--u)*8)}
-.bw-list.r4 .bw-row:nth-child(2){top:calc(var(--u)*42)}
-.bw-list.r4 .bw-row:nth-child(3){top:calc(var(--u)*76)}
-.bw-list.r4 .bw-row:nth-child(4){top:calc(var(--u)*110)}
-.bw-row.red{background:linear-gradient(#c04848,#7a2222)!important}
-.bw-row:active:not(:disabled){transform:scale(.97)}
-/* Overgangen inn i en vanlig kamp: to blink og svarte felt som lukker seg. */
-@keyframes wipeF{0%,30%,60%{opacity:0}15%,45%{opacity:.9}100%{opacity:0}}
-@keyframes wipeB{from{transform:scaleY(0)}to{transform:scaleY(1)}}
-.wipe{position:absolute;inset:0;z-index:60;pointer-events:none}
-.wipe::before{content:"";position:absolute;inset:0;background:#fff;animation:wipeF .5s linear}
-.wipe i{position:absolute;left:0;right:0;height:50.5%;background:#0b0b0d;transform:scaleY(0);animation:wipeB .32s ease-in .45s forwards}
-.wipe i:first-child{top:0;transform-origin:top}.wipe i:last-child{bottom:0;transform-origin:bottom}
+.bw-row{left:calc(var(--u)*28);width:calc(var(--u)*200);height:calc(var(--u)*36);top:calc(var(--u)*18);--c:#3f7fd8;background:none!important;border-radius:0!important;font-family:var(--dsf);font-size:calc(var(--u)*14*var(--fz));font-weight:var(--fw);text-align:left;padding:0 calc(var(--u)*24)!important;text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 rgba(0,0,0,.85)}
+.bw-row span,.bw-row b{position:relative}
+.bw-row b{float:right;color:#f8e060;font-weight:var(--fw)}
+.bw-list button.bw-row:nth-of-type(2){top:calc(var(--u)*60)}
+.bw-list button.bw-row:nth-of-type(3){top:calc(var(--u)*102)}
+.bw-list.r4 .bw-row{height:calc(var(--u)*30);top:calc(var(--u)*12)}
+.bw-list.r4 button.bw-row:nth-of-type(2){top:calc(var(--u)*46)}
+.bw-list.r4 button.bw-row:nth-of-type(3){top:calc(var(--u)*80)}
+.bw-list.r4 button.bw-row:nth-of-type(4){top:calc(var(--u)*114)}
+.bw-row.red{--c:#d84c4c}
+.bw-row:active:not(:disabled){filter:brightness(1.25)}
+/* Med DS-skriften er all tekst i menyene tynn og rolig, og litt større der den før var smal systemskrift. */
+.bw-moves button,.bw-list button,.bw-bag button{font-family:var(--dsf)}
+.dsf .bw:not(.bw-main),.dsf .bw:not(.bw-main) *{font-weight:400!important;letter-spacing:0!important}
+.dsf .bw-p .nm{font-family:var(--dsf);font-size:calc(var(--u)*13);top:calc(var(--u)*3);max-width:calc(var(--u)*60)}
+.dsf .bw-p .plv{font-family:var(--dsf);font-size:calc(var(--u)*12);top:calc(var(--u)*4)}
+.dsf .bw-p .hpn{font-family:var(--dsf);font-size:calc(var(--u)*12);top:calc(var(--u)*29)}
+.dsf .bw-p .st{font-family:var(--dsf);font-size:calc(var(--u)*10);top:calc(var(--u)*30)}
+.dsf .bw-p .hpl em{font-family:var(--dsf);font-size:calc(var(--u)*9)}
 /* Før kampen: motstanderen og laget ditt. */
 .pre-foe{display:flex;align-items:center;gap:14px}
 .pre-foe .tsb{width:84px;height:84px;border-radius:18px}
