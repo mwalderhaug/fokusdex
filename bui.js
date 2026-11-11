@@ -3,7 +3,8 @@
    Reglene ligger i battle.js og league.js, effektene i bfx.js. */
 
 const BT = { B: null, busy: false, v: null, menu: 'main', res: null, ty: 0, tap: null, lead: 0, fsel: [], tp: null, fs: null };
-const spdF = () => S.bfast ? 2.1 : 1;
+/* Farten i kampene. FXSLOW er bare til testing: et tall under 1 spiller alt i sakte film. */
+const spdF = () => (S.bfast ? 2.1 : 1) * (window.FXSLOW || 1);
 const bwait = ms => new Promise(r => setTimeout(r, ms / spdF()));
 /* Hvor mye pynt en klasse får i kort og lister: vanlig trener, boss, toppboss, og de tre sjeldne som har hver sin stil:
    de onde lederne (mørkt og rødt), mesterne (hver sin farge) og de aller største (gull, bare klasse 9). */

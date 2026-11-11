@@ -367,6 +367,8 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 
 /* Treneren står på plattformen før første Pokémon sendes ut, og sklir ut til siden. */
 .trn{position:absolute;right:13%;top:6%;width:27%;aspect-ratio:1;transition:transform .5s cubic-bezier(.5,0,.8,.4),opacity .4s .1s}
+/* Treneren på banen og i introen står fritt: rammen rundt bildet hører bare til kortene før kampen. */
+.trn .tsb,.bwi .tsb{box-shadow:none!important}
 .trn .tsb{width:100%;height:100%;border-radius:0;background:none}
 .trn .tsb img{image-rendering:pixelated}
 .trn.out{transform:translateX(160%);opacity:0}
@@ -427,7 +429,7 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .pball .ball:not(.im){border-radius:50%;background:linear-gradient(#e2574c 0 44%,#222 44% 56%,#f4f4f4 56%);box-shadow:0 0 0 2px #222}
 /* Angrepslaget: banen dempes i typens farge mens et angrep pågår, så effektene lyser. Midten av lyset ligger der angrepet treffer (--fx, --fy).
    Pokémonene, effektene og HP-boksene ligger over laget og beholder fargene sine. */
-.dim{position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:0;transition:opacity .3s ease-out;
+.dim{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .3s ease-out;
   background:radial-gradient(120% 95% at var(--fx,70%) var(--fy,40%),color-mix(in srgb,var(--tc,#fff) 46%,rgba(8,8,16,.35)) 0,color-mix(in srgb,var(--tc,#fff) 16%,rgba(5,5,12,.86)) 44%,rgba(4,4,10,.92) 100%)}
 .arena.atk .dim{opacity:var(--dim,.5);transition-duration:.16s}
 .arena.atk .trn{filter:brightness(.55)}
