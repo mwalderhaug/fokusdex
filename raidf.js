@@ -528,9 +528,9 @@
       for (let i = 0; i < 6; i++) { const x = (i % 2 ? 470 : 40) + sin(t * 0.5 + i) * 20, y = 30 + (i >> 1) * 130; im(i % 2 ? 'em_cloudR' : 'em_cloudL', x, y, { s: 3, a: 0.5, px: 1 }); }
       fill('#01030a', 0.35);
       /* Lynet: sjelden i starten, hele tiden mot slutten. Hvert nedslag lyser opp alt. */
-      let lit = 0; const rate = fin ? 16 : 1.2 + ch * ch * 13, q = floor(t * rate), ph = (t * rate) % 1, nb = fin ? 7 : 1 + floor(ch * 3);
+      let lit = 0; const rate = fin ? 9 : 1.2 + ch * ch * 7, q = floor(t * rate), ph = (t * rate) % 1, nb = fin ? 7 : 1 + floor(ch * 3);
       for (let i = 0; i < nb; i++) { const qq = q + i * 13, an = rnd(qq, 1) * TAU, R = 330, a = fin ? 0.6 + 0.4 * rnd(qq, 9) : c01(1.4 - ph * 1.4); if (fin || ph < 0.75) { const tx = fin ? cx + cos(an) * (40 + rnd(qq, 2) * 60) : cx, ty = fin ? cy + sin(an) * (40 + rnd(qq, 3) * 60) : cy; bolt(cx + cos(an) * R, cy + sin(an) * R * 0.8, tx, ty, { seed: qq * 3 + floor(ph * 3), col: '#4ad0ff', core: '#eaffff', w: fin ? 2.4 : 2 + ch * 1.5, a, br: 2 + floor(ch * 3) }); lit = max(lit, a); } }
-      fill('#3aa0ff', lit * (fin ? 0.05 : 0.1 + ch * 0.08));
+      fill('#3aa0ff', lit * (fin ? 0.04 : 0.07));   /* Selve lynene er mange, men lyset over hele bildet holdes svakt, så det ikke blinker hardt. */
       /* Ringen av strøm rundt steinen går fortere og fortere. */
       const spin = t * (2 + ch * 22); for (let i = 0; i < 3; i++) im('darkarcs', cx, cy, { s: (fin ? 2.6 : 0.9 + ch * 0.8) + i * 0.35, r: spin * (i % 2 ? -1 : 1) / (1 + i * 0.4), a: 0.5 + ch * 0.4, add: 1 }) || ring(cx, cy, 60 + i * 30, { col: '#4ad0ff', a: 0.4, w: 2 });
       if (!fin) { stone(cx, cy + sin(t * 2) * 4, 30 + ch * 12, 1, '#4ad0ff', ch * ch); dust('spark', { n: 20 + floor(ch * 40), seed: 4, cols: ['#4ad0ff', '#fff'], a: 0.9, spd: 2, size: 2 }); }
@@ -784,7 +784,7 @@
     wind: (t, k) => { for (let i = 0; i < 3; i++) im('streaks', ((t * (500 + i * 160) + i * 300) % 1500) - 380, 70 + i * 110, { s: 1, a: 0.6 * k, add: 1 }); dust('mote', { n: 30, seed: 8, cols: ['#fff'], a: 0.6 * k }); },
     star: (t, k) => { stars({ n: 120, seed: 5, a: 0.9 * k, cols: ['#fff', '#ffe9a8', '#9fd0ff'] }); for (let i = 0; i < 3; i++) { const ph = ((t * 0.5 + i * 0.37) % 1), q = floor(t * 0.5 + i * 0.37), x = mix(560, -60, ph) + rnd(q, i) * 200 - 100, y = rnd(q, i + 3) * 160 + ph * 150; for (let j = 0; j < 8; j++) glow(x + j * 10, y - j * 6, 10 - j, j ? '#ffe9a8' : '#fff', (0.9 - j * 0.1) * sin(ph * PI) * k, 1); } },
     lake: (t, k, cc) => { for (let i = 0; i < 4; i++) im(i % 2 ? 'lightA' : 'lightB', 100 + i * 100, -10, { s: 2.4, ay: 0, a: (0.14 + 0.05 * sin(t + i * 2)) * k, add: 1 }); dust('mote', { n: 50, seed: 8, cols: [cc, '#fff'], a: 0.8 * k }); for (let i = 0; i < 3; i++) wave(floor(t / 1.8 + i / 3) * 1.8 - i * 0.6, 100 + i * 150, 330, { col: cc, r: 100, d: 1.8, w: 2, a: 0.5 * k, sy: 0.3 }); },
-    moon: (t, k, cc) => { aurora(t, 0.7 * k); const X = K.g; glow(410, 70, 110, '#fff2c0', 0.5 * k, 1); X.save(); X.globalAlpha = c01(k); X.fillStyle = '#fff6d8'; X.beginPath(); X.arc(410, 70, 34, 0, TAU); X.fill(); X.globalCompositeOperation = 'destination-out'; X.beginPath(); X.arc(424, 62, 30, 0, TAU); X.fill(); X.restore(); dust('spark', { n: 30, seed: 6, cols: ['#fff', cc], a: 0.8 * k, size: 2 }); },
+    moon: (t, k, cc) => { aurora(t, 0.7 * k); const X = K.g; glow(410, 70, 110, '#fff2c0', 0.5 * k, 1); X.save(); X.globalAlpha = c01(k); X.fillStyle = '#fff6d8'; X.beginPath(); X.arc(410, 70, 34, 0, TAU); X.clip(); X.beginPath(); X.arc(410, 70, 34, 0, TAU); X.arc(424, 62, 30, 0, TAU); X.fill('evenodd'); X.restore(); dust('spark', { n: 30, seed: 6, cols: ['#fff', cc], a: 0.8 * k, size: 2 }); },
     steel: (t, k, cc) => { dust('spark', { n: 40, seed: 6, cols: ['#fff', cc], a: 0.9 * k, size: 2, spd: 1.5 }); dust('ash', { n: 20, seed: 4, cols: ['#6a7480'], a: 0.4 * k, spd: 1 }); },
     rock: (t, k) => { dust('ash', { n: 50, seed: 4, cols: ['#8a7458', '#5a4a38', '#c8b088'], a: 0.7 * k, spd: 1.6, wind: 0.3 }); strip('fog', 300, t * 18, { s: 1.3, a: 0.35 * k }); },
     music: (t, k, cc) => { for (let i = 0; i < 12; i++) { const ph = (rnd(i, 3) + t * (0.12 + rnd(i, 4) * 0.1)) % 1, x = rnd(i, 5) * W + sin(t * 1.5 + i) * 18; txt(i % 3 ? '♪' : '♫', x, H - ph * (H + 30), { size: 30 + (i % 3) * 8, col: ['#9be07a', '#fff', '#ffb0d0'][i % 3], a: sin(ph * PI) * 0.9 * k, sh: 0 }); } dust('spark', { n: 24, seed: 6, cols: ['#fff', cc], a: 0.8 * k, size: 2 }); },
@@ -809,7 +809,7 @@
           else if (way === 'fall') y = mix(-120, cy, eo(seg(t, 1.2, 2.8)));
           else if (way === 'orbit') { for (let i = 0; i < 6; i++) { const an = i / 6 * TAU + t * 2.2, r = mix(170, 16, io(seg(t, 0.6, R))); glow(cx + cos(an) * r, cy + sin(an) * r * 0.6, 20, cc, 0.9, 1); im('sparkle', cx + cos(an) * r, cy + sin(an) * r * 0.6, { s: 0.3, a: 0.9, add: 1, r: t * 2 }); } }
           const sa = way === 'dash' ? seg(t, 2.3, 3.1) : way === 'fall' ? seg(t, 1.2, 1.8) : a;
-          glow(x, y, 120 + sin(t * 3) * 8, cc, 0.3 * sa, 1); aura(x, y, s, cc, 3, 0.4 * sa); spr(x, y, s, { col: '#04060c', a: sa });
+          glow(x, y, 120 + sin(t * 3) * 8, cc, 0.3 * sa, 1); aura(x, y, s, cc, 3, 0.4 * sa * sa); spr(x, y, s, { col: '#04060c', a: c01(sa * 2.2) });
           if (way === 'dots' && REGD[id]) REGD[id].forEach((q, i) => { const on = seg(t, 1.9 + i * 0.3, 2.0 + i * 0.3); if (on > 0) { const dx = x + q[0] * 15, dy = y + q[1] * 15 - 6; glow(dx, dy, 14 + hit(t, 1.9 + i * 0.3, 0.3) * 14, cc, on, 1); rect(dx - 3, dy - 3, 6, 6, '#fff', on, 1); } });
           vig(0.6, '#02030a'); P.fade = 1 - seg(t, 0, 0.6); P.sh = seg(t, R - 0.5, R) * 3; return;
         }
