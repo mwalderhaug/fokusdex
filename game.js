@@ -254,7 +254,7 @@ function wildLv(id, t) {
 const KEY = 'fokusdex.v1';
 function fresh() {
   return {
-    v: 1, mig: 6, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
+    v: 1, mig: 7, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
     items: { poke: 15, great: 0, ultra: 0, candy: 0, stone: 0, mstone: 0, incense: 0, potion: 0, super: 0, hyper: 0, maxp: 0, heal: 0, revive: 0, maxrev: 0 }, charm: 0, ring: 0, lst: {},
     mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, routes: [1], eggs: [], pend: [], incOn: 0,
     log: {}, fm: {},
@@ -279,6 +279,7 @@ function adopt(o) {
   if (!o.mig || o.mig < 4) migrate4();
   if (!o.mig || o.mig < 5) migrate5();
   if (!o.mig || o.mig < 6) migrate6(o);
+  if (!o.mig || o.mig < 7) migrate7();
   S.routes = (S.routes || []).filter(r => S.regions.includes(r)); if (!S.routes.length) S.routes = [S.regions.includes(S.region) ? S.region : S.regions[0]];
   S.mons.forEach(ensure);
   unlockRegions();
@@ -315,6 +316,11 @@ function migrate6(o) {
   /* De som spilte før vanskelighetsgraden kom, spilte på det som nå heter Hard. */
   if (o.diff == null && (o.started || (o.mons || []).length)) S.diff = 2;
   S.mig = 6;
+}
+/* Versjon 7: en runde i ligaen er 10 kamper der klassen stiger for hver kamp (før: 12, en trener og så en boss). Du står omtrent like langt i runden. */
+function migrate7() {
+  const L = S.lad, n = Math.max(0, Math.min(11, L.n || 0)); L.n = Math.min(9, Math.round(n * 10 / 12)); L.c = L.n ? Math.max(1, Math.min(7, L.n - 1)) : 0; L.next = null; L.seen = [];
+  S.mig = 7;
 }
 function load() {
   try { const o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (o && o.v === 1) adopt(o); } catch (_) {}

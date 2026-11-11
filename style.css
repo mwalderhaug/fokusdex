@@ -1280,3 +1280,12 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .trtip{display:flex;flex-direction:column;gap:8px;box-shadow:0 0 0 1.5px color-mix(in srgb,var(--sage) 45%,transparent)}
 .trtip .hrow{background:rgba(0,0,0,.18)}
 @media (prefers-reduced-motion:reduce){.helpb.new{animation:none}}
+
+/* ---------- Ligaen: ukjent motstander, og rundens ti kamper i klassenes farger ---------- */
+.tsb.qmb{align-items:center;background:radial-gradient(circle at 34% 30%,#3a3530,#221f1c 70%);box-shadow:0 0 0 1px var(--line)}
+.tsb.qmb i{font-style:normal;font-weight:900;font-size:26px;color:var(--ink2)}
+.tsb.qmb.big{width:84px;height:84px;border-radius:18px}.tsb.qmb.big i{font-size:40px}
+.card.mystc{display:flex;flex-direction:column;gap:12px}
+.lgp.ten i{height:8px;border-radius:4px}
+.lgp.ten i.c1{background:var(--ink2)}.lgp.ten i.c2{background:var(--sage)}.lgp.ten i.c3{background:#c98a6a}.lgp.ten i.c4{background:var(--red)}.lgp.ten i.c5{background:var(--blue)}.lgp.ten i.c6{background:#7fd4c4}.lgp.ten i.c7{background:#b02030}.lgp.ten i.c8{background:var(--violet)}.lgp.ten i.c9{background:var(--gold)}
+.lgp.ten i.ul{flex:1.5;box-shadow:inset 0 0 0 1.5px var(--gold)}.lgp.ten i.ul.on{box-shadow:none}

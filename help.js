@@ -157,7 +157,7 @@ const HEV = { surge: 'Your Pokémon that have a Mega form start every battle in 
   gold: 'Every battle pays one and a half times the coins.', wind: 'One more attempt in the League, or one more run in the Frontier.', lucky: 'Shiny odds are five times as high, and bosses give one more encounter.', camp: 'Training costs 40 % less.' };
 /* De tre modusene, kort. (Hentes fra reglene, så teksten følger med når de endres.) */
 function helpModes() {
-  return hRow('<span class="ficon hfi">L</span>', 'Trainer League', `Your own team against trainers and bosses, ${LAPN} battles a lap, harder as you go. Every win gives the whole team XP, and bosses give Rare Candy and items. ${LIVES === 1 ? 'One loss ends it for the day.' : `${LIVES} losses end it for the day.`}`)
+  return hRow('<span class="ficon hfi">L</span>', 'Trainer League', `Your own team, ${LAPN} battles a lap. A trainer first, then the class rises as you go, and a Champion waits at the end. You never see who is next before the intro. Every win gives the whole team XP, and bosses give Rare Candy and items. ${LIVES === 1 ? 'One loss ends it for the day.' : `${LIVES} losses end it for the day.`}`)
     + hRow('<span class="ficon hfi">F</span>', 'Battle Frontier', `You rent Pokémon instead of using your own, and everything is Lv ${FACLV}. ${FACN} battles a round. You win items, encounters and coins, but no XP. ${FACLIVES} runs a day.`)
     + hRow('<span class="ficon hfi">W</span>', 'World Tournament', `A knockout cup, three rounds, three on three, and a new cup each weekday. Coins for every round, and a pack of encounters for the winner.`);
 }

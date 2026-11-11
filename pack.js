@@ -122,7 +122,7 @@ const PACK = (() => {
      I Battle Frontier stiger musikken gjennom runden: trenerlåter først, de store kamplåtene (Elite Four og finalelåta) før bossen. Samme trener får samme låt hver gang,
      men har de flere låter (som Ghetsis), byttes det for hver runde i ligaen. */
   const SFXCAP = -18;
-  const FALL = { evilteam: ['eviladmin'], eviladmin: ['evilteam', 'evilboss'], evilboss: ['evilteam', 'eviladmin'], champ: ['supreme'], supreme: ['champ'], rival: ['champ'] };
+  const FALL = { evilteam: ['eviladmin'], eviladmin: ['evilteam', 'evilboss'], evilboss: ['evilteam', 'eviladmin'], champ: ['supreme'], supreme: ['champ', 'evilboss'], rival: ['champ'] };
   P.trackFor = B => {
     if (!P.ok || !P.man.music) return '';
     /* Låtene til de legendariske brukes bare mot legendariske, uansett hvilke mapper filene ellers ligger i. */

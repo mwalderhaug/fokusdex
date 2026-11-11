@@ -243,6 +243,43 @@ async function envFx(B, e) {
   if (tx) await tx;
   await bwait(ok ? 320 : 800);
 }
+/* Filmen til de to helt spesielle i ligaens finale (bossf.js): spilles før oppstillingen, i takt med låta. Har bossen et eget introstykke i pakken
+   (Cynthia), spiller det gjennom filmen og oppstillingen, og kamplåta starter når du går inn. Ellers starter kamplåta med filmen (Ghetsis).
+   Uten pakke spilles den innebygde oppbyggingen, med lyder på slagene. Gir true når filmen er vist. */
+async function bossFilm(B) {
+  const tr = B.tr, id = tr.film, info = typeof CINE !== 'undefined' && id ? CINE.info(id) : null, T = ms => new Promise(r => setTimeout(r, ms));
+  if (!info) return false;
+  ov(`<div class="lgi" id="lgi" style="--cc:${tr.cc || '#fff'}"><div class="lgi-s"><canvas class="lgi-cv" id="lgicv" width="512" height="384"></canvas></div><i class="lgi-wait"></i><button type="button" class="lgi-skip" id="lgiskip" hidden>Skip</button></div>`, 'battle vsov');
+  const root = $('#lgi'), cv = $('#lgicv'), gone = () => BT.B !== B || !root.isConnected, o = { name: tr.n, cap: tr.cn, cc: tr.cc || '#fff' };
+  try { await Promise.race([PACK.portraits([tr.img.split('|')[0]]), T(1500)]); } catch (_) {}
+  await CINE.prep(id, 6000); if (gone()) return true;
+  if (calm()) { root.classList.add('on'); await CINE.still(cv, id, Math.min(info.len - 0.6, info.R + 2), o); battleMusic(B, { fade: 1.2, from: 0.1 }); await T(2600); if (gone()) return true; root.classList.add('d'); await T(260); return true; }
+  const it = PACK.introFor(B), tk = PACK.trackFor(B);
+  let started = false, own = false, t0 = 0;
+  if (it) { started = await PACK.sting(it, true); own = started; } else if (tk) started = await PACK.music(tk, { at: info.at });
+  if (gone()) return true;
+  let stop = () => {};
+  if (started) music(''); else { PACK.music(''); stop = epicIntro(tr.th === 'evil' ? 'evil' : 'ultra', info.R); }
+  t0 = performance.now(); root.classList.add('on'); sfx.appear(); buzz([40, 60, 40]);
+  const ace = B.foe[B.foe.length - 1];
+  const cue = n => { if (gone()) return;
+    if (n === 'cry') { cry(ace.id, 0, 0.6); buzz([80, 40, 260]); }
+    else if (n === 'boom') { if (!started) BSFX.mv('boom', 3); buzz([90, 60, 90, 60, 240]); }
+    else if (n === 'hit') { if (!started) BSFX.hit(); buzz([30, 30, 70]); }
+    else if (n === 'beat') { if (!started) BSFX.beat(); buzz([60, 80, 90]); }
+    else if (n === 'rumble') { if (!started) BSFX.dread(); buzz([20, 40, 20, 40, 20]); }
+    else if (n === 'chime') { if (!started) BSFX.up(); buzz(18); }
+    else if (n === 'thud') buzz(45); else buzz(18); };
+  const pl = CINE.play(cv, id, Object.assign({ clock: () => !started ? -1 : own ? (performance.now() - t0) / 1000 : PACK.clock(), cue }, o)), sk = $('#lgiskip');
+  let skipped = false; const skip = () => { if (skipped) return; skipped = true; sfx.tap(); stop(); pl.skip(); };
+  setTimeout(() => { if (!gone() && sk) sk.hidden = false; }, 1200); if (sk) sk.addEventListener('click', skip);
+  const key = e => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') skip(); }; document.addEventListener('keydown', key);
+  const watch = setInterval(() => { if (gone()) pl.stop(); }, 300);
+  await pl.done; clearInterval(watch); document.removeEventListener('keydown', key);
+  if (gone()) { stop(); PACK.stingOut(0.2); return true; }
+  root.classList.add('d'); await T(240);
+  return true;
+}
 /* Filmen når en legendarisk Pokémon viser seg (raid.js og raidf.js). Hver av de store har sin egen, lagt på slagene i låta si, og trioene og de mindre har
    roligere filmer. Låta starter med filmen og fortsetter inn i kampen. Filmen kan hoppes over. Med «redusert bevegelse» vises bare et stillbilde. */
 async function legendIntro(B) {
@@ -297,6 +334,13 @@ function evSheet(e) {
       <p class="sm" style="text-align:center">Events are only ever for you, never for your opponents. Nothing gets harder, and nothing is lost if you sit it out.</p></div>
     <div class="acts">${stat && who.some(x => !x.on) || e.k === 'camp' ? `<button type="button" class="btn" data-a="tab" data-k="lag">${e.k === 'camp' ? 'Open your team to train' : 'Change your team'}</button>` : e.k === 'lucky' ? '<button type="button" class="btn" data-a="tab" data-k="butikk">Packs are in the Shop</button>' : ''}<button type="button" class="btn gold" data-a="home">Got it</button></div>`, 'tint evov', I.c);
 }
+/* Rundens kamper som streker: de du har slått, i fargen til klassen (L.seen = klasse + nummer), den som venter, og finalen med gullkant. */
+function lapPips() {
+  const L = S.lad, cls = (L.seen || []).map(s => ORDER.find(k => s.indexOf(k) === 0 && /^\d+$/.test(s.slice(k.length))) || 'trainer');
+  return `<div class="lgp ten" role="img" aria-label="Battle ${L.n + 1} of ${LAPN} in this lap">${Array.from({ length: LAPN }, (_, n) => `<i class="${n < L.n ? 'on c' + clsI(cls[n] || 'trainer') : n === L.n ? 'cur' : ''}${n === LAPN - 1 ? ' ul' : ''}"></i>`).join('')}</div>`;
+}
+/* Hvem som venter, sies ikke: bare det reglene alltid lover (en trener først, en Champion eller noen større til slutt). */
+const nextHint = () => { const n = S.lad.n; return n <= 0 ? 'A trainer to start with' : n >= LAPN - 1 ? 'The final: a Champion, or someone greater' : 'Who is next? You find out in the intro'; };
 /* Det hver modus er, på valgskjermen og i teksten ellers. */
 const MODEIC = { league: 'L', factory: 'F', pwt: 'W' };
 const pipsEl = (n, used) => `<span class="pips" role="img" aria-label="${Math.max(0, n - used)} of ${n} attempts left today">${Array.from({ length: n }, (_, i) => `<i${i < n - used ? ' class="on"' : ''}></i>`).join('')}</span>`;
@@ -304,9 +348,9 @@ const pipsEl = (n, used) => `<span class="pips" role="img" aria-label="${Math.ma
    valget gjelder hele kampdagen og kan ikke gjøres om. */
 function modeSheet() {
   if (!S.lad.day || !modePicks()) { closeOv(); return render(); }
-  const bo = dayBoost(), t = nextTrainer(), tr = trainerInfo(t), R = S.fac.run, WR = pwtRun(), wc = WR ? CUPS[WR.wd] : cupNow(), W = pwt(), sel = MODES.includes(BT.msel) ? BT.msel : '';
+  const bo = dayBoost(), L1 = S.lad, R = S.fac.run, WR = pwtRun(), wc = WR ? CUPS[WR.wd] : cupNow(), W = pwt(), sel = MODES.includes(BT.msel) ? BT.msel : '';
   const C = {
-    league: { s: `${leagueTag()} · next: ${who(tr)}`, d: 'Your own team of six. Every win gives the whole team XP, and bosses give Rare Candy and items.', a: 'One loss ends it for the day', n: LIVES, u: ladFails() },
+    league: { s: `${leagueTag()} · ${L1.n >= LAPN - 1 ? 'the final' : L1.n <= 0 ? 'a new lap' : 'the class rises'}`, d: 'Your own team of six. Every win gives the whole team XP, and bosses give Rare Candy and items.', a: 'One loss ends it for the day', n: LIVES, u: ladFails() },
     factory: { s: R ? `Round ${R.round} · ${R.w}/${FACN} wins · streak ${R.streak}` : `Rental Pokémon at Lv ${FACLV}${S.fac.best ? ' · best streak ' + S.fac.best : ''}`, d: 'Rental Pokémon, so your own team does not matter. You win items, encounters and coins, but no XP.', a: `${FACLIVES} runs · a loss ends a run`, n: FACLIVES, u: facFails() },
     pwt: { s: `Today: ${wc.n}`, d: `A knockout cup, three rounds, three on three, and a new cup each weekday. Your three play at Lv ${WR ? WR.lv : pwtLv()}. Coins for every round, and the winner takes a trophy and ${aN(PACKS[wc.pk].n)}.`, a: 'One cup · a loss ends it', n: 1, u: W.day === S.lad.day && !WR ? 1 : 0 }
   };
@@ -320,10 +364,8 @@ function modeSheet() {
     <div class="acts"><button type="button" class="btn gold" id="mgo" data-a="mgo"${sel ? '' : ' disabled'}>${sel ? `Play the ${MODEN[sel]} today` : 'Tap a mode to choose it'}</button></div>`, 'tint modeov', 'var(--gold)');
 }
 function ladderCard() {
-  const L = S.lad, t = nextTrainer(), tr = trainerInfo(t), bo = dayBoost(), tier = TIER(tr.kind), R = S.fac.run;
-  /* En runde: seks par med en trener og en boss. Den siste bossen er en av de sjeldne. */
-  const prog = `<div class="lgp" aria-hidden="true">${Array.from({ length: LAPN }, (_, n) => `<i class="${n < L.n ? 'on' : n === L.n ? 'cur' : ''}${n % 2 === 0 && n ? ' gap' : ''}${n % 2 === 1 ? ' bo' : ''}${n === LAPN - 1 ? ' ul' : ''}"></i>`).join('')}</div>`;
-  const row = `<div class="lrow k-${tier}"${kst(tr)}>${tsprite(tr.img, 'sm')}<div class="sp"><div class="sm tn">${esc(leagueTag())}${tr.boss ? ` · class ${tr.ci} of 9${tr.ultra ? ' · ' + RARE[tr.kind] : ''}` : ''}</div><b class="${tr.boss ? 'bossn' : ''}">${esc(who(tr))}</b></div></div>`;
+  const L = S.lad, bo = dayBoost(), R = S.fac.run;
+  const prog = lapPips(), row = `<div class="lrow myst"><span class="tsb qmb" aria-hidden="true"><i>?</i></span><div class="sp"><div class="sm tn">${esc(leagueTag())}</div><b>${nextHint()}</b></div></div>`;
   const fac = `<div class="modec"><span class="ficon">F</span><div class="sp"><b>Battle Frontier</b><div class="sm tn">${R ? `Round ${R.round} · ${R.w}/${FACN} wins · streak ${R.streak}` : `Rent 4 of 7 random Pokémon · everything is Lv ${FACLV}${S.fac.best ? ' · best streak ' + S.fac.best : ''}`}</div></div></div>`;
   const tag = m => bo.mode === m ? `<span class="bonus">Bonus · coins ×${DAYCOIN}</span>` : '';
   const lab = '<button type="button" class="btn wide nf" data-a="lab">Demo battle · try any class</button>', rules = '<button type="button" class="btn wide nf" data-a="rules">Rules and rewards</button>';
@@ -342,7 +384,7 @@ function ladderCard() {
   const mult = `<p class="sm tn">Coins ×${sm} ${k1 ? `in the ${MODEN[k1]}` : ''}: ×${studyMult()} from ${hrs(ladMin())} h of focus${L.day !== dayKey() ? ' that day' : ' today'}${k1 && bo.mode === k1 ? `, ×${DAYCOIN} for today's bonus mode` : ''}${evIs('gold') ? `, ×${EVCOIN} for the Gold Rush` : ''}. Your goal of ${hrs(goalMin())} h gives ×${goalTop().toFixed(1)} from focus.${firstWin() && modeOn('league') ? ' Your first League win today pays double coins.' : ''}</p><p class="sm tn">Difficulty: ${diff().n} · coins ×${diff().coin}, XP ×${diff().xp}. Change it under Profile.</p>`;
   const cards = {
     league: `<div class="card stack" id="mode-league"><div class="row" style="justify-content:space-between"><b>Trainer League</b><span class="row" style="gap:8px">${tag('league')}${pipsEl(ladLives(), ladFails())}</span></div>${row}${prog}
-      ${ladLost() ? '<p class="sm">You lost today. The League opens again after your next day of focus, and you keep your place and the XP.</p>' : `<p class="sm">${bo.mode === 'league' ? '+30% XP and better odds for Rare Candy today. ' : ''}A trainer, then a boss, through the nine classes. XP for the whole team after each battle. ${ladLives() - ladFails() > 1 ? 'Second Wind: you can lose once today and still go on.' : 'One loss closes the League for the day, so a boss you cannot beat is a project for tomorrow.'}</p><button type="button" class="go${tr.boss ? ' gold' : ''}" data-a="bpre">Battle</button>`}</div>`,
+      ${ladLost() ? '<p class="sm">You lost today. The League opens again after your next day of focus, and you keep your place and the XP.</p>' : `<p class="sm">${bo.mode === 'league' ? '+30% XP and better odds for Rare Candy today. ' : ''}${LAPN} battles a lap, and the class rises as you go: a trainer first, a Champion at the end. XP for the whole team after each battle. ${ladLives() - ladFails() > 1 ? 'Second Wind: you can lose once today and still go on.' : 'One loss closes the League for the day, so a boss you cannot beat is a project for tomorrow.'}</p><button type="button" class="go${L.n >= LAPN - 1 ? ' gold' : ''}" data-a="bpre">Battle</button>`}</div>`,
     factory: `<div class="card stack" id="mode-factory"><div class="row" style="justify-content:space-between"><b>Battle Frontier</b><span class="row" style="gap:8px">${tag('factory')}${pipsEl(facLives(), facFails())}</span></div>${fac}
       ${facLost() ? '<p class="sm">Your runs for today are used. The Frontier opens again after your next day of focus.</p>' : `<p class="sm">${bo.mode === 'factory' ? '1.5× luck on items, encounters and rare bosses today. ' : ''}Six trainers, then a boss. No XP and no Bag here: you win coins, items and encounters. A loss ends the run, and you have ${facLives() - facFails() === 1 ? 'one run left today' : (facLives() - facFails()) + ' runs left today'}.</p><button type="button" class="btn wide gold" data-a="fenter">${R ? 'Continue the run' : 'Enter the Frontier'}</button>`}</div>`,
     pwt: `<div class="card stack" id="mode-pwt"><div class="row" style="justify-content:space-between"><b>World Tournament</b><span class="row" style="gap:8px">${tag('pwt')}${pipsEl(1, pwtOpen() ? 0 : 1)}</span></div>
@@ -355,14 +397,15 @@ function ladderCard() {
 }
 /* Oppstilling før en ligakamp: hvem du møter, hva de gir, og hvem av dine som går ut først. */
 function preBattle() {
-  const t = nextTrainer(), tr = trainerInfo(t), p = leaguePlan(t), tier = TIER(tr.kind), team = S.party.map(monBy).filter(Boolean);
+  /* Motstanderen trekkes nå (og står fast), men vises ikke: den kommer fram i introen. */
+  const t = nextTrainer(), L = S.lad, team = S.party.map(monBy).filter(Boolean), lv = Math.round(leagueLv());
   if (!S.party.includes(BT.lead)) BT.lead = S.party[0];
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">${esc(leagueTag())}</span></div>
-    <div class="card k-${tier}"${kst(tr)}><div class="pre-foe">${tsprite(tr.img)}<div class="sp"><div class="sm">${tr.boss ? `Class ${tr.ci} of 9 · ${esc(tr.cn)}${tr.ultra ? ' · ' + RARE[tr.kind] : ''}${t.sup ? ' · surprise' : ''}` : 'Trainer'}</div><b class="${tr.boss ? 'bossn' : ''}" style="font-size:19px">${esc(who(tr))}</b><div class="sm tn" style="margin-top:4px">${p.n} Pokémon · around Lv ${p.lv}</div><div class="sm" style="margin-top:4px">Gives ${REW[t.k]}.</div>${megaCls(p.st) ? '<div class="sm" style="margin-top:4px"><span class="pill mgp">Mega Ring</span> One of the team can Mega Evolve.</div>' : ''}<div class="sm tn" style="margin-top:4px;color:var(--gold)">About ${nb(leagueCoins(p.st, t.lap))} coins${firstWin() ? ' · first win today, double' : ''} · ${diff().n}</div></div></div></div>
+    <div class="card mystc"><div class="pre-foe"><span class="tsb qmb big" aria-hidden="true"><i>?</i></span><div class="sp"><div class="sm">${L.n <= 0 ? 'Class 1 of 9 · the lap starts here' : L.n >= LAPN - 1 ? 'The final of the lap' : 'The class rises as you go'}</div><b style="font-size:19px">${nextHint()}</b>
+      <div class="sm tn" style="margin-top:4px">Around your team's level (Lv ${lv})</div><div class="sm tn" style="margin-top:4px;color:var(--gold)">Higher class, more coins${firstWin() ? ' · first win today pays double' : ''} · ${diff().n}</div></div></div>${lapPips()}</div>
     <div><div class="lab">Your team · tap the one that leads</div><div class="lineup">${team.map(m => `<button type="button" data-a="blead" data-u="${m.u}" class="${m.u === BT.lead ? 'lead' : ''}">${spr(m.id, { sh: m.sh, mega: m.mega })}<span class="sp"><b>${esc(mName(m))}</b><br><span class="sm tn">Lv ${m.lv} · ${m.mv.map(x => esc(MOVES[x][0])).join(', ')}</span> ${evTag(m)}</span>${hasNews(m) ? '<span class="bang">!</span>' : ''}${m.u === BT.lead ? '<span class="pill">Leads</span>' : ''}</button>`).join('')}</div></div>
-    <div class="acts"><button type="button" class="btn gold" data-a="bgo">Start battle</button><button type="button" class="btn nf" data-a="bteam">Edit team</button></div>`, 'tint', `var(--t${tr.ty})`);
+    <div class="acts"><button type="button" class="btn gold" data-a="bgo">Start battle</button><button type="button" class="btn nf" data-a="bteam">Edit team</button></div>`, 'tint', 'var(--sage)');
 }
-
 /* ---------- Kampskjermen ---------- */
 const hpCol = f => f > 0.5 ? '#48d868' : f > 0.2 ? '#f8c830' : '#f05038';
 const STAG = { par: 'PAR', slp: 'SLP', frz: 'FRZ', brn: 'BRN', psn: 'PSN' };
@@ -975,7 +1018,7 @@ async function playEv(ev) {
 const BARC = ['grey', 'brown', 'cyan', 'purple', 'brown', 'brown', 'lime', 'purple', 'steel', 'orange', 'blue', 'green', 'yellow', 'purple', 'cyan', 'blue', 'grey', 'purple'];
 async function bossIntro(B, o = {}) {
   /* o.quick = vanlig trener: samme oppstilling, men raskere og uten trykk. Den blir stående (båndene går) til kampen er lastet (o.until), så skjermen aldri er svart. */
-  const quick = !!o.quick, tr = B.tr, lead = B.me[0], tier = TIER(tr.kind), V = PACK.vs, clip = tr.ultra && B.mode !== 'fac', evil = tr.th === 'evil', sp = (S.bfast ? 0.6 : 1) * (quick ? 0.7 : 1), T = ms => new Promise(r => setTimeout(r, ms * sp));
+  const quick = !!o.quick, tr = B.tr, lead = B.me[0], tier = TIER(tr.kind), V = PACK.vs, clip = tr.ultra && B.mode !== 'fac' && !o.filmed, evil = tr.th === 'evil', sp = (S.bfast ? 0.6 : 1) * (quick ? 0.7 : 1), T = ms => new Promise(r => setTimeout(r, ms * sp));
   const im = k => V && V[k] ? `url(${V[k]})` : 'none', plasma = /Plasma/.test(tr.title) || tr.n === 'Ghetsis';
   ov(`<div class="bwi bwi-${tier} i${tr.int}${V ? ' pk' : ''}${tr.th ? ' th-' + tr.th : ''}" id="bwi" style="--ac:var(--t${tr.ty});--cc:${tr.cc || (evil ? '#e02020' : 'var(--t' + tr.ty + ')')};--bar:${im(evil ? 'bar_me' : 'bar_' + BARC[tr.ty])};--barme:${im(evil ? 'bar_steel' : 'bar_me')};--vsi:${im(tr.int >= 6 && !evil ? 'vs2' : 'vs')};--bolt:${im('bolt')};--vbolt:${im('vbolt')};--stars:${im(evil ? 'cloud' : 'stars')};--orb:${im('flash')};--em:${plasma ? im('plasma') : 'none'}">
     <div class="bwi-s"><div class="bwi-bg"></div><canvas class="bwi-cv" id="bwicv" width="256" height="192"></canvas><div class="bwi-em"></div>
@@ -1005,7 +1048,7 @@ async function bossIntro(B, o = {}) {
     on('c4'); await T(240); if (gone()) return;
   }
   on('s1'); await T(330); on('s2'); await T(380); if (gone()) return;
-  on('s3'); if (!clip) battleMusic(B); BSFX.vs(PACK.keyOf(PACK.trackFor(B))); buzz([60, 40, 60, 40, 200]);
+  on('s3'); if (!clip && !PACK.stinging()) battleMusic(B); BSFX.vs(PACK.keyOf(PACK.trackFor(B))); buzz([60, 40, 60, 40, 200]);
   await T(520); on('s4');
   if (quick) { await Promise.race([Promise.all([o.until, T(640)]), new Promise(r => setTimeout(r, 12000))]); if (gone()) return; on('s5'); await T(260); return; }
   await T(clip ? 1100 : 800); if (gone()) return PACK.stingOut(0.2);
@@ -1046,7 +1089,12 @@ async function startBattle(B) {
   const pre = Promise.all([preSpr(B.me[0].id, { ani: 1, back: 1, sh: B.me[0].sh, mega: B.me[0].mega }), preSpr(B.foe[0].id, { ani: 1, sh: B.foe[0].sh, mega: B.foe[0].mega })]);
   B.me.slice(1).forEach(b => preSpr(b.id, { ani: 1, back: 1, sh: b.sh, mega: b.mega })); B.foe.slice(1).forEach(b => preSpr(b.id, { ani: 1, sh: b.sh, mega: b.mega }));
   if (B.tr.wild) { await Promise.race([prep, new Promise(r => setTimeout(r, 2500))]); if (BT.B !== B) return; await legendIntro(B); }
-  else { await PACK.introPrep(B); if (BT.B !== B) return; await bossIntro(B, B.tr.boss ? {} : { quick: 1, until: prep }); }
+  else {
+    await PACK.introPrep(B); if (BT.B !== B) return;
+    /* De to helt spesielle har sin egen film før oppstillingen. */
+    const filmed = B.tr.film && B.mode !== 'fac' ? await bossFilm(B) : false; if (BT.B !== B) return;
+    await bossIntro(B, B.tr.boss ? { filmed } : { quick: 1, until: prep });
+  }
   await prep; await Promise.race([pre, new Promise(r => setTimeout(r, 2000))]);
   if (BT.B !== B) return;
   drawBattle(); drawMenu(); packHint();
@@ -1165,7 +1213,7 @@ function overview() {
   const L = S.lad, R = S.fac.run;
   const next = raid ? esc(res.note) : cup ? (!res.win ? esc(res.note) : res.done ? `You won the ${esc(res.cup)}. A new cup opens after your next day of focus.` : `Next: the ${ROUNDN[res.r + 1].toLowerCase()} of the ${esc(res.cup)}. Your team is healed.`) : lab ? 'Demo battle: no XP or rewards, and your League and Frontier progress are untouched.'
     : fac ? (res.win ? (res.roundDone ? `Round ${res.round} cleared. Round ${res.round + 1} has stronger rentals and opponents.` : `Next: battle ${R.w + 1} of ${FACN}${R.w === FACN - 1 ? ' · the boss' : ''}`) : `The run ends at a streak of ${res.streak}. ${res.left ? 'You have one more run today.' : 'The Frontier opens again after your next day of focus.'}`)
-    : res.win ? (res.lapDone ? `Lap cleared. Lap ${L.lap + 1} begins, with stronger trainers, bigger teams and better rewards.` : 'Next: ' + esc(leagueTag()) + (L.n % 2 === 1 ? ' · a boss' : '')) : `${res.gone ? esc(tr.n) + ' moves on: rare bosses give you one chance.' + (res.lapDone ? ` Lap ${L.lap + 1} begins without the prize.` : '') : esc(tr.n) + ' waits for you.'} ${res.left ? 'You can lose once more today.' : 'The League opens again after your next day of focus.'}`;
+    : res.win ? (res.lapDone ? `Lap cleared. Lap ${L.lap + 1} begins, with stronger trainers, bigger teams and better rewards.` : 'Next: ' + esc(leagueTag()) + (L.n >= LAPN - 1 ? ' · the final' : '')) : `${res.gone ? esc(tr.n) + ' moves on: the greatest give you one chance. A Champion takes the place.' : 'Someone else of the same class takes the place next time.'} ${res.left ? 'You can lose once more today.' : 'The League opens again after your next day of focus.'}`;
   const open = lab ? true : raid ? false : cup ? !!pwtRun() : fac ? facOpen() && (!!R || !!res.left) : ladderOpen();
   ov(`<div class="hof"><div class="hof-h"><span>${res.win ? 'VICTORY' : 'DEFEAT'}</span><span class="tn">${esc(battleTag(B))}</span></div>
       <div class="hof-stage">${B.me.map((b, i) => `<span style="--i:${i};--n:${B.me.length}" class="${b.hp <= 0 ? 'ko' : ''}">${spr(b.id, { ani: 1, sh: b.sh, mega: b.mega })}</span>`).join('')}</div>
@@ -1226,8 +1274,10 @@ function rulesSheet() {
       ${row('Right now', '×' + studyMult())}${row('First League win of the day', 'double coins')}${row('Difficulty · ' + d.n, `coins ×${d.coin} · XP ×${d.xp} · Bag ${d.bag}`)}${row('Attempts a day', `League ${LIVES} · Frontier ${FACLIVES} · Tournament 1 · Raid 1`)}</div>
     ${MODESN < MODES.length ? `<div class="card stack"><b>One mode a day</b><p class="sm">When you press Done for today, you choose ${MODESN === 1 ? 'one' : MODESN} of the three modes for that battle day. The other two stay closed until your next battle day, and the choice cannot be changed. Each day one of the three pays bonus coins: which one is shown when you choose. Raids are separate and always open.</p>
       ${row('Bonus mode', `coins ×${DAYCOIN}`)}${row('League on its bonus day', '+30 % XP, better odds for Rare Candy')}${row('Frontier on its bonus day', '1.5× luck on items and encounters')}</div>` : ''}
-    <div class="card stack"><b>Trainer League</b><p class="sm">Your own team. A trainer, then a boss, twelve battles a lap through the nine classes. The whole team gets XP after every battle, and bosses give Rare Candy and items. One loss closes it for the day, and you keep your place.</p>
-      ${row('Coins per win', `${TCL.trainer.coin} for a trainer up to ${TCL.supreme.coin} for a supreme boss`)}</div>
+    <div class="card stack"><b>Trainer League</b><p class="sm">Your own team, ${LAPN} battles a lap. The first is always a trainer. From there the class usually rises one step for every battle, sometimes two, and sometimes it stays, so no two laps are the same. Who is waiting, you find out in the intro. The whole team gets XP after every battle, and bosses give Rare Candy and items. One loss closes it for the day, and someone else of the same class takes the place next time.</p>
+      ${row('Battle ' + LAPN, 'always a Champion')}${row('Or one of the greatest', `${Math.round(SUPP(0) * 100)} % in the first lap, up to ${Math.round(SUPP(99) * 100)} %`)}
+      ${row('Coins per win', `${TCL.trainer.coin} for a trainer up to ${TCL.champ.coin} for a Champion<br>${TCL.supreme.coin} for one of the greatest`)}
+      <p class="sm"><b>Cynthia</b> and <b>Ghetsis, Champions Edition</b> are the rarest finals. Each has a film of their own and a team to match, gives you one chance only, and pays half again as many coins, with one more legendary encounter, Rare Candy and a Mega Stone on top.</p></div>
     <div class="card stack"><b>Battle Frontier</b><p class="sm">Rental Pokémon at Lv ${FACLV}. Six trainers and then a boss a round. No XP: you win items, encounters and coins. A loss ends the run, and you can start ${FACLIVES} runs a day.</p>
       ${row('Coins per win', 'about 30 to 80 × bonus')}${row('Round cleared', `${FACROUND(1)} and up × bonus`)}</div>
     <div class="card stack"><b>World Tournament</b><p class="sm">One cup a day, a new one each day of the week. Quarter-final, semi-final and final, three on three. Your three all play at your team's level, whatever level they really are, and the opponents stand at the same level on Hard and a little below it on Normal and Easy. You see the opponent's team before you pick. No Bag, no XP, and one loss ends the cup.</p>

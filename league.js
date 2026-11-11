@@ -77,11 +77,14 @@ const POOL = {
   rival: [['Blue', 'blue', 'Rival', 0, [18, 65, 112, 130, 59, 103], 'Rival Blue>>FireRed'], ['Silver', 'silver', 'Rival', 16, [160, 215, 169, 82, 94, 65], 'HeartGold'], ['Barry', 'barry', 'Rival', 10, [395, 398, 214, 78, 407, 143], 'Brilliant'], ['Wally', 'wally|wally-rse', 'Rival', 13, [282, 334, 301, 315, 82, 475], 'Wally'],
     ['Hugh', 'hugh', 'Rival', 9, [500, 521, 512, 626, 330, 604], 'Rival \\(B2'], ['Cheren', 'cheren', 'Rival', 0, [508, 521, 510, 512, 573, 628], 'White - Rival'], ['Bianca', 'bianca', 'Rival', 13, [518, 508, 516, 609, 591, 500], 'White - Rival'], ['N', 'n', 'Rival', 16, [571, 565, 567, 584, 601, 530], 'B2 W2 - N']],
   evilboss: [['Giovanni', 'giovanni', 'Team Rocket Boss', 4, [34, 31, 464, 53, 115, 51], 'Rocket', { sc: 'building' }], ['Cyrus', 'cyrus', 'Team Galactic Boss', 16, [461, 430, 169, 130, 229, 462], 'Galactic Boss', { sc: 'mountain' }], ['Archie', 'archie-gen3|archie', 'Team Aqua Leader', 10, [319, 262, 169, 89, 342, 321], 'Leader', { sc: 'water' }],
-    ['Maxie', 'maxie-gen3|maxie', 'Team Magma Leader', 4, [323, 262, 169, 110, 324, 229], 'Leader', { sc: 'mountain' }], ['Ghetsis', 'ghetsis', 'Team Plasma Leader', 16, [635, 563, 537, 626, 604, 625], 'Ghetsis', { sc: 'kyurem_cave' }], ['N', 'n', 'King of Team Plasma', 15, [644, 571, 567, 565, 584, 601], 'N Final', { sc: 'black_tower_10' }]],
+    ['Maxie', 'maxie-gen3|maxie', 'Team Magma Leader', 4, [323, 262, 169, 110, 324, 229], 'Leader', { sc: 'mountain' }], ['Ghetsis', 'ghetsis', 'Team Plasma Leader', 16, [635, 563, 537, 626, 604, 625], 'Black & White - Ghetsis>>Ghetsis', { sc: 'kyurem_cave' }], ['N', 'n', 'King of Team Plasma', 15, [644, 571, 567, 565, 584, 601], 'N Final', { sc: 'black_tower_10' }]],
   champ: [['Blue', 'blue', 'Champion', 0, [65, 18, 112, 130, 59, 103], 'Champion Blue', { sc: 'pwt', th: 'spark', cc: '#5aa2ff' }], ['Lance', 'lance', 'Champion', 15, [149, 130, 142, 6, 230, 373], 'Lance', { sc: 'black_tower_10', th: 'flame', cc: '#ff7a2a' }], ['Zinnia', 'zinnia', 'Lorekeeper', 15, [373, 334, 330, 612, 149, 230], 'Zinnia', { sc: 'kyurem_cave', th: 'meteor', cc: '#a98bff' }],
     ['Steven', 'steven', 'Champion', 8, [376, 227, 306, 344, 346, 348], 'Steven & Wallace', { sc: 'cave', th: 'shard', cc: '#9fc7d8' }], ['Wallace', 'wallace', 'Champion', 10, [350, 130, 73, 272, 340, 321], 'Steven & Wallace', { sc: 'water', th: 'bubble', cc: '#3fd0c4' }], ['Alder', 'alder', 'Champion', 6, [637, 626, 621, 617, 589, 584], 'Alder', { sc: 'pinwheel_road', th: 'petal', cc: '#ff9a4a' }]],
-  supreme: [['Red', 'red', 'Legend', 9, [6, 25, 3, 9, 143, 131], 'Red & Blue|Champion & Red', { sc: 'snowy_tall_grass' }], ['Blue', 'blue', 'Legend', 9, [59, 65, 68, 142, 130, 103], 'Red & Blue', { sc: 'pwt' }], ['Cynthia', 'cynthia', 'Sinnoh Champion', 15, [445, 442, 448, 350, 407, 468], 'Cynthia', { sc: 'black_tower_10' }],
-    ['Iris', 'iris', 'Unova Champion', 15, [612, 635, 621, 567, 306, 131], 'Iris', { sc: 'black_tower_3_5' }], ['Steven', 'steven', 'Hoenn Champion', 8, [376, 373, 306, 344, 346, 348], 'Champion Steven', { sc: 'cave' }], ['Colress', 'colress', 'Team Plasma', 8, [462, 601, 376, 606, 604, 474], 'Colress', { sc: 'black_tower_1_2' }]]
+  supreme: [['Red', 'red', 'Legend', 9, [6, 25, 3, 9, 143, 131], 'Red & Blue|Champion & Red', { sc: 'snowy_tall_grass' }], ['Blue', 'blue', 'Legend', 9, [59, 65, 68, 142, 130, 103], 'Red & Blue', { sc: 'pwt' }], ['Cynthia', 'cynthia', 'Sinnoh Champion', 15, [445, 442, 448, 350, 407, 468], 'Cynthia', { sc: 'black_tower_10', sp: 1, film: 'b:cynthia', cc: '#e9d28a' }],
+    ['Iris', 'iris', 'Unova Champion', 15, [612, 635, 621, 567, 306, 131], 'Iris', { sc: 'black_tower_3_5' }], ['Steven', 'steven', 'Hoenn Champion', 8, [376, 373, 306, 344, 346, 348], 'Champion Steven', { sc: 'cave' }], ['Colress', 'colress', 'Team Plasma', 8, [462, 601, 376, 606, 604, 474], 'Colress', { sc: 'black_tower_1_2' }],
+    /* Ghetsis, Champions Edition: den andre av de to helt spesielle (ved siden av Cynthia). Laget er bygd rundt det han er i Black 2 og White 2 –
+       Hydreigon som ess, og Kyurem, dragen han tvang til å lyde – og han står litt over de andre i klassen (st). Egen film (bossf.js) og B2W2-låta. */
+    ['Ghetsis', 'ghetsis', 'Tyrant', 16, [635, 563, 604, 609, 625, 646], 'B2 W2 - Ghetsis>>Ghetsis', { sc: 'kyurem_cave', th: 'evil', sp: 1, film: 'b:ghetsis', cc: '#c8102e', cn: 'Champions Edition', st: { rel: 0.02, ev: 1.4 } }]]
 };
 /* Frontier Brains: de vanlige bossene i Battle Frontier. [navn, bilde, tittel, type, lag med esset først, låt]. */
 const BRAIN = [['Noland', 'noland-gen3|noland', 'Factory Head', 8, [376, 130, 94, 248], 'Sapphire - Frontier'], ['Greta', 'greta-gen3|greta', 'Arena Tycoon', 1, [197, 214, 94, 286], 'Sapphire - Frontier'], ['Tucker', 'tucker-gen3|tucker', 'Dome Ace', 15, [373, 260, 6, 376], 'Sapphire - Frontier'],
@@ -91,15 +94,24 @@ const BRAIN = [['Noland', 'noland-gen3|noland', 'Factory Head', 8, [376, 130, 94
 POOL.brain = BRAIN;
 TCL.brain = { i: 5, n: 'Frontier Brain', mons: 4, rel: 1, sk: 1, iv: 22, ev: 24, q: 2, coin: 0, xp: 0, slack: 99 };
 
-/* Ligaen: uendelig, i runder på 12 kamper: en vanlig trener og så en boss, seks ganger. Bossene kommer i klasserekkefølge (2 til 6), og hver
-   runde avsluttes med en sjelden boss (klasse 7, 8 eller 9, de sterkeste sjeldnest). Så starter en ny runde med høyere nivå, større lag og bedre belønninger. */
-const BOSSEQ = ['gym', 'evilteam', 'eviladmin', 'e4', 'rival', 'ultra'], LAPN = BOSSEQ.length * 2;
-/* Hvilken toppboss som dukker opp: oftest en leder (klasse 7), sjeldnere en mester (8), og sjeldnest de aller største (9: fra 10 % og opp til 25 % etter mange runder). */
+/* Ligaen: uendelig, i runder på LAPN kamper. Kamp 1 er alltid en vanlig trener. Derfra stiger klassen for hver kamp, som oftest ett trinn (CLIMBUP),
+   en sjelden gang to (CLIMBJUMP), og noen ganger blir den stående – så samme runde kan bli lettere eller tyngre enn forrige. Før finalen går det
+   ikke høyere enn klasse CLIMBTOP (Evil Leader). Kamp LAPN er alltid en Champion, med en liten sjanse (SUPP) for en av de aller største i stedet:
+   oftest Cynthia eller Ghetsis i Champions Edition (SPW), som har egen film, eget lag og ekstra belønning. Hvem som venter, vises ikke før introen.
+   S.lad.c = klassen til den du sist slo i runden (0 ved rundestart). Så starter en ny runde med høyere nivå, større lag og bedre belønninger. */
+const LAPN = 10, CLIMBUP = 0.72, CLIMBJUMP = 0.08, CLIMBTOP = 7, SPW = 3;
+const SUPP = lap => Math.min(0.25, 0.1 + 0.03 * (lap || 0));
+/* Klassen (1–7) i kamp n (0-basert) når forrige kamp var klasse c0. Aldri høyere enn kampnummeret, og aldri lavere enn halve veien. */
+function climb(n, c0) {
+  if (n <= 0) return 1;
+  const r = Math.random(), c = (c0 || 1) + (r < CLIMBJUMP ? 2 : r < CLIMBJUMP + CLIMBUP ? 1 : 0);
+  return Math.max(1, Math.floor((n + 1) / 2), Math.min(CLIMBTOP, n + 1, c));
+}
+/* Hvilken toppboss som dukker opp i Battle Frontier: oftest en leder (klasse 7), sjeldnere en mester (8), og sjeldnest de aller største (9). */
 const pickUltra = lap => { const r = Math.random(), s = Math.min(0.25, 0.1 + 0.03 * (lap || 0)), c = Math.min(0.35, 0.3 + 0.01 * (lap || 0)); return r < s ? 'supreme' : r < s + c ? 'champ' : 'evilboss'; };
-/* Hvor i ligaen kamp nummer n (0-basert i runden) ligger: klassen, om det er en boss, og laveste nivå uansett hvor lavt laget ditt er. */
+/* Hvor i runden kamp nummer n (0-basert) ligger: hvor langt (rd, for de vanlige trenerne og musikken), om det er finalen, og laveste nivå uansett lag. */
 function rungInfo(n, lap) {
-  const rd = Math.min(BOSSEQ.length - 1, Math.floor(n / 2)), boss = n % 2 === 1, k = boss ? BOSSEQ[rd] : 'trainer';
-  return { n, rd, boss, k, floor: Math.round(5 + n * 1.5 + (boss ? 1 : 0) + 6 * (lap || 0)) };
+  return { n, rd: Math.min(4, Math.floor(n / 2)), boss: n > 0, final: n >= LAPN - 1, k: n <= 0 ? 'trainer' : n >= LAPN - 1 ? 'final' : 'climb', floor: Math.round(5 + n * 1.8 + 6 * (lap || 0)) };
 }
 /* Vanlige trenere blir bedre utover i runden: flere Pokémon, smartere spill og bedre lag. */
 const trainerCls = rd => Object.assign({}, TCL.trainer, { mons: rd >= 2 ? 4 : 3, rel: 0.93 + 0.008 * rd, sk: 0.5 + 0.05 * rd, iv: 6 + 2 * rd, q: rd >= 1 ? 1 : 0, coin: 60 + 12 * rd, xp: 1 + 0.04 * rd });
@@ -181,7 +193,7 @@ function liveLoss() {
   const d = L.d || S.lad.day || dayKey(), used = t => (t && t.d === d ? t.n : 0) + 1; let what = 'battle';
   if (L.m === 'league') {
     const n = used(S.lad.tries); S.lad.tries = { d, n }; if (n >= ladLives()) S.lad.lost = d; what = 'League battle';
-    if (L.u) { S.lad.next = null; if (rungInfo(S.lad.n, S.lad.lap).k === 'ultra') { S.lad.lap++; S.lad.n = 0; S.lad.seen = []; } } else if (S.lad.next) S.lad.next.fail = d;
+    if (S.lad.next) S.lad.next.fail = d;
   } else if (L.m === 'fac') {
     const R = S.fac.run, n = used(S.fac.tries); if (R) S.fac.best = Math.max(S.fac.best || 0, R.streak || 0); S.fac.tries = { d, n }; if (n >= facLives()) S.fac.lost = d; S.fac.run = null; what = 'Frontier run';
   } else if (L.m === 'pwt') { pwt().run = null; what = 'cup';
@@ -359,8 +371,8 @@ function ringAward(ci, res) {
 function trainerOf(k, i, x) {
   const d = POOL[k][i], c = TCL[k], boss = k !== 'trainer';
   const e = (boss && d[6]) || {};
-  return Object.assign({ n: d[0], img: d[1], title: boss ? d[2] : '', ty: boss ? d[3] : (d[2][0] == null ? 0 : d[2][0]), kind: k, ci: c.i, cn: c.n, skill: c.sk, boss, ultra: ULTRA.has(k), gold: k === 'supreme', int: c.i - 1,
-    sc: e.sc || '', th: k === 'evilboss' ? 'evil' : e.th || '', cc: e.cc || '',
+  return Object.assign({ n: d[0], img: d[1], title: boss ? d[2] : '', ty: boss ? d[3] : (d[2][0] == null ? 0 : d[2][0]), kind: k, ci: c.i, cn: e.cn || c.n, skill: c.sk, boss, ultra: ULTRA.has(k), gold: k === 'supreme', int: c.i - 1,
+    sc: e.sc || '', th: k === 'evilboss' ? 'evil' : e.th || '', cc: e.cc || '', sp: e.sp || 0, film: e.film || '',
     arena: boss ? 'hall' : d[3], v: i % 3, mre: boss ? d[5] || '' : '' }, x || {});
 }
 const foeTeam = (k, d, n, base, st, flat) => k === 'trainer' ? regTeam(d[2], n, base, st) : k === 'evilteam' ? regTeam(d[4], n, base, st) : bossTeam(d, n, base, st, flat);
@@ -372,22 +384,24 @@ function nextTrainer() {
   const L = S.lad, day = L.day || dayKey(), old = L.next && L.next.n === L.n && L.next.lap === L.lap && POOL[L.next.k] && POOL[L.next.k][L.next.i] ? L.next : null;
   /* Den som slo deg, står der resten av dagen (omkampen). Neste dag venter en annen fra samme klasse, så du ikke blir stående fast mot ett lag. */
   if (old && !(old.fail && old.fail !== day)) return old;
-  const ri = rungInfo(L.n, L.lap);
-  let k = ri.k, sup = 0;
-  if (old && !ULTRA.has(old.k)) k = old.k;
-  else if (k === 'ultra') k = pickUltra(L.lap);
-  else if (ri.boss && ri.rd >= 1 && Math.random() < 0.06) { k = pickUltra(L.lap); sup = 1; }
+  /* Tapte du i går, står en annen fra samme klasse der i dag. En av de aller største gir bare én sjanse: da tar en vanlig Champion plassen. */
+  const k = old ? (old.k === 'supreme' ? 'champ' : old.k) : L.n >= LAPN - 1 ? (Math.random() < SUPP(L.lap) ? 'supreme' : 'champ') : ORDER[climb(L.n, L.c || 0) - 1];
   const pool = POOL[k], all = pool.map((_, i) => i);
   let c = all.filter(i => !(L.seen || []).includes(k + i) && !(old && old.k === k && old.i === i));
   if (!c.length) c = all.filter(i => !(old && old.k === k && old.i === i));
   if (!c.length) c = all;
-  L.next = { n: L.n, lap: L.lap, k, i: c[rnd(c.length)], sup };
+  /* Blant de aller største kommer de to spesielle oftest (SPW ganger så ofte som de andre), og ikke den samme to ganger på rad. */
+  if (k === 'supreme') { const c2 = c.filter(i => !(L.lsp === pool[i][0] && c.length > 1)), w = c2.map(i => (pool[i][6] || {}).sp ? SPW : 1); let x = Math.random() * w.reduce((a, b) => a + b, 0), pick = c2[c2.length - 1]; for (let j = 0; j < c2.length; j++) { x -= w[j]; if (x <= 0) { pick = c2[j]; break; } } L.lsp = pool[pick][0]; L.next = { n: L.n, lap: L.lap, k, i: pick, sup: 0 }; return L.next; }
+  L.next = { n: L.n, lap: L.lap, k, i: c[rnd(c.length)], sup: 0 };
   return L.next;
 }
 const trainerInfo = t => trainerOf(t.k, t.i);
 /* Klassen, nivået og antallet for treneren som venter (brukes også på oppstillingen før kampen). */
 function leaguePlan(t) {
-  const ri = rungInfo(t.n, t.lap), st = diffSt(t.k === 'trainer' ? trainerCls(ri.rd) : TCL[t.k]);
+  const ri = rungInfo(t.n, t.lap), x = ((POOL[t.k] || [])[t.i] || [])[6] || {};
+  let st = diffSt(t.k === 'trainer' ? trainerCls(ri.rd) : TCL[t.k]);
+  /* De spesielle kan stå litt over klassen sin (st: rel = tillegg i nivå, ev = ganger i trening). */
+  if (x.st) st = Object.assign({}, st, { rel: st.rel + (x.st.rel || 0), ev: Math.round(st.ev * (x.st.ev || 1)) });
   return { ri, st, lv: rungLv(ri, t.lap, st), n: teamSize(st, t.lap) };
 }
 /* Myntene en seier gir akkurat nå: klassens sats × vanskelighetsgrad × studiebonus × runde, og dobbelt for dagens første seier. */
@@ -465,13 +479,16 @@ function finishLeague(B) {
       res.trade = B.foe.filter(f => !isLeg(f.id)).map(f => { const lv = Math.min(f.lv, cap); return { id: fitForm(f.id, lv, 0), lv, iv: f.src.iv.slice(), nat: f.src.nat, g: f.src.g }; });
       if (!res.trade.length) res.trade = null;
     }
-    L.best = (L.best || 0) + 1; (L.seen = L.seen || []).push(k + B.ti); L.next = null;
-    if (++L.n >= LAPN) { L.lap++; L.n = 0; L.seen = []; res.lapDone = true; raidSpawn(res); }
+    /* De to spesielle gir mer av alt, og seieren huskes (S.spw). */
+    if (B.tr.sp) { const extra = Math.round(res.coins * 0.5); res.coins += extra; S.coins += extra; give('candy', 4); give('mstone', 1); pushEnc(res, legEnc()); (S.spw || (S.spw = {}))[B.tr.n] = (S.spw[B.tr.n] || 0) + 1; res.perks.push(`${B.tr.n} is beaten. Half again as many coins, and one more legendary encounter.`); }
+    L.best = (L.best || 0) + 1; (L.seen = L.seen || []).push(k + B.ti); L.next = null; L.c = Math.min(CLIMBTOP, clsI(k)); L.won = (L.won || 0) + 1;
+    if (++L.n >= LAPN) { L.lap++; L.n = 0; L.seen = []; L.c = 0; res.lapDone = true; raidSpawn(res); }
   } else {
     const d = L.day || dayKey(), n = ladFails() + 1; L.tries = { d, n }; if (n >= ladLives()) L.lost = d; res.left = Math.max(0, ladLives() - n);
     /* De sjeldne bossene gir deg bare én sjanse. Taper du mot den som avslutter runden, drar den videre og neste runde begynner uten belønningen.
        Taper du mot en som dukket opp overraskende midt i runden, står den vanlige bossen der neste gang. */
-    if (B.tr.ultra) { L.next = null; res.gone = true; if (rungInfo(L.n, L.lap).k === 'ultra') { L.lap++; L.n = 0; L.seen = []; res.lapDone = true; raidSpawn(res); } } else if (L.next) L.next.fail = d;
+    if (L.next) L.next.fail = d;
+    if (k === 'supreme') res.gone = true;
   }
   save();
   return res;
