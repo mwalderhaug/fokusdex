@@ -222,7 +222,7 @@ async function raidEntry(B) {
 /* Stedet kjemper med: teksten skrives mens hendelsen spilles over banen. Raseriet blir stående: glød rundt den legendariske, og sterkere luft resten av kampen. */
 async function envFx(B, e) {
   const cv = $('#rfx'), name = 'ev:' + e.k, ok = !!cv && !calm() && typeof CINE !== 'undefined' && !!CINE.fxInfo(name);
-  if (e.k === 'rage') { const fo = $('#s-foe'), ar = $('#arena'); if (fo) fo.classList.add('rage'); if (ar) ar.classList.add('raging'); if (BT.airO) BT.airO.k = 1.7; }
+  if (e.k === 'rage') { const fo = $('#s-foe'), ar = $('#arena'); if (fo) fo.classList.add('rage'); if (ar) ar.classList.add('raging'); if (BT.airO) BT.airO.k = 1.5; }
   const tx = e.s ? typeOut(e.s) : null;
   if (ok) await CINE.fx(cv, name, Object.assign(fxAt(B), { cue: fxCue(B) }));
   if (tx) await tx;
@@ -474,7 +474,7 @@ function drawBattle() {
   /* De legendariske og klasse 9 har sin egen luft over banen (raidf.js): tåke, lyn, glør, snøstorm … De legendariske har også sitt eget sted bak plattformene (raidx.js). */
   const airId = tr.wild ? (tr.dk ? 'dk' + tr.leg : tr.leg) : tr.kind === 'supreme' && B.mode !== 'fac' ? 's:' + tr.n : 0, ainf = airId && typeof CINE !== 'undefined' ? CINE.info(airId) : null, own = !!(tr.wild && ainf && ainf.bg);
   const scene = own ? '' : PACK.now(PACK.sceneFor(B)), pl = own && ainf.plat ? `;--p1:${ainf.plat[0]};--p2:${ainf.plat[1]};--p3:${ainf.plat[2]}` : '';
-  ov(`<div class="btop k-${tier}"${kst(tr)}><span class="pill tn">${esc(battleTag(B))}</span><span class="btn-n"><b class="${tr.boss ? 'bossn' : ''}">${esc(who(tr))}</b></span></div>
+  ov(`<div class="btop k-${tier}"${kst(tr)}><span class="pill tn">${esc(B.raid && raidDom(tr) ? raidDom(tr).n : battleTag(B))}</span><span class="btn-n"><b class="${tr.boss ? 'bossn' : ''}">${esc(who(tr))}</b></span></div>
     <div class="bscreen t-${tier}"${kst(tr)}><div class="arena a-${tr.arena} v${tr.v} t-${tier} i${tr.int}${tr.th ? ' th-' + tr.th : ''}${scene ? ' has-scene' : ''}" id="arena" style="--ac:var(--t${tr.ty});--cc:${tr.cc || 'var(--t' + tr.ty + ')'}${pl}">
       <div class="cam" id="cam"><div class="world" id="world">${scene ? `<img class="scene" alt="" src="${scene}">` : ''}<div class="abg"></div>${own ? '<canvas class="fxc bgc evc" id="evc" width="512" height="384"></canvas>' : ''}<canvas class="fxc bgc" id="bgc" width="256" height="192"></canvas><canvas class="fxc amc" id="amc" width="512" height="384"></canvas><div class="plat pf"></div><div class="plat pm"></div></div></div><div class="dim"></div>
       ${tr.wild ? '' : `<div class="trn" id="trn">${tsprite(tr.img)}</div>`}
