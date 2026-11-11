@@ -409,8 +409,8 @@ function finishFactory(B) {
 function facSwap(mine, theirs) { const R = S.fac.run; if (R && R.team && R.team[mine] && theirs) { R.team[mine] = theirs; save(); } }
 
 /* ---------- World Tournament ----------
-   En daglig cup med utslagsrunder: kvartfinale, semifinale og finale på rad. Tre mot tre, og alle Pokémon på begge sider spiller på samme nivå (lagets nivå da cupen
-   startet), så det er valget av de tre og spillet som avgjør, ikke hvem som har trent mest. Du ser motstanderens tre før du velger dine. Ingen veske og ingen XP,
+   En daglig cup med utslagsrunder: kvartfinale, semifinale og finale på rad. Tre mot tre, og alle dine spiller på samme nivå (lagets nivå da cupen startet).
+   Motstanderne står på det samme nivået på Hard, og litt under på Normal og Easy (som i ligaen), så det er valget av de tre og spillet som avgjør, ikke hvem som har trent mest. Du ser motstanderens tre før du velger dine. Ingen veske og ingen XP,
    og laget er friskt til hver runde. Ett tap, og du er ute til neste dag med kamper. Cupen skifter med ukedagen (CUPS, søndag først): lederne fra hver region,
    Elite Four-cupen med en mester i finalen, og mesternes cup med en av de aller største i finalen.
    PREMIER: mynter for hver runde (PWTCOIN × cupens faktor × vanskelighetsgrad × studiebonus). Vinneren får et trofé, PWTCANDY Rare Candy og en pakke encounters
@@ -434,12 +434,14 @@ const pwtCoins = (c, r) => Math.round(PWTCOIN[r] * c.f * studyMult() * diff().co
 function pwtStart() {
   const P = pwt(), c = cupNow(), opp = [];
   c.rounds.forEach(([k, re]) => { let l = POOL[k].map((_, i) => i).filter(i => (!re || re.test(POOL[k][i][5] || '')) && !opp.some(o => o[0] === k && o[1] === i)); if (!l.length) l = POOL[k].map((_, i) => i); opp.push([k, l[rnd(l.length)]]); });
-  P.day = S.lad.day; P.run = { day: S.lad.day, wd: CUPS.indexOf(c), lv: pwtLv(), n: pwtSize(), opp, r: 0, foe: null }; save();
+  const lv = pwtLv();
+  /* Motstanderne følger vanskelighetsgraden slik som i ligaen: litt lavere nivå på Easy og Normal, likt på Hard. */
+  P.day = S.lad.day; P.run = { day: S.lad.day, wd: CUPS.indexOf(c), lv, flv: Math.max(5, Math.round(lv * (1 + diff().rel))), n: pwtSize(), opp, r: 0, foe: null }; save();
 }
 /* Motstanderen i runden som venter. Laget trekkes én gang, så det du ser på forhånd er det du møter. */
 function pwtFoe() {
   const R = pwtRun(), c = CUPS[R.wd], [k, i] = R.opp[R.r], d = POOL[k][i], st = diffSt(TCL[k]);
-  if (!R.foe) { R.foe = bossTeam(d, R.n, R.lv, st, true); save(); }
+  if (!R.foe) { R.foe = bossTeam(d, R.n, R.flv || R.lv, st, true); save(); }
   return { c, k, st, team: R.foe, tr: trainerOf(k, i, { skill: st.sk, sc: 'pwt' }) };
 }
 /* us = de du har valgt (u), den første går ut først. Dine spiller på cupens nivå i denne kampen, uten at de egentlige nivåene røres. */

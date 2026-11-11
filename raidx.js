@@ -69,6 +69,7 @@
       const x = o.x, y = o.y, cc = o.cc, dk = env(t, 0, 0.3, 1.5, 2.25), up = eo(seg(t, 0.35, 1.2)), fall = seg(t, 1.25, 2.0), X = K.g;
       fill('#02101e', 0.52 * dk); dust('rain', { n: 110, seed: 5, cols: ['#bfe8ff'], a: 0.7 * dk, spd: 1.6, wind: -0.5 });
       for (let i = 0; i < 3; i++) wave(0.1 + i * 0.3, x, y, { col: '#bfe8ff', r: 150, d: 0.9, w: 3, a: 0.7, sy: 0.3 });
+      if (o.id === 249) for (let i = 0; i < 12; i++) { const ph = (rnd(i, 7) + t * (0.5 + rnd(i, 8) * 0.5)) % 1; leaf(W - ph * (W + 60) + 30, 40 + rnd(i, 9) * 230 + sin(ph * 9 + i) * 14, 7, ph * 7 + i, '#e8f2ff', 0.85 * dk * sin(ph * PI)); }
       const hh = 230 * up * (1 - fall), w = 34 + 6 * sin(t * 20);
       if (hh > 2) {
         const gr = X.createLinearGradient(x - w, 0, x + w, 0); gr.addColorStop(0, rgba(cc, 0)); gr.addColorStop(0.25, rgba('#3f8cff', 0.75)); gr.addColorStop(0.5, '#e8f6ff'); gr.addColorStop(0.75, rgba('#3f8cff', 0.75)); gr.addColorStop(1, rgba(cc, 0));
@@ -88,6 +89,7 @@
       for (let i = 0; i < 9; i++) { const ph = (rnd(i, 3) + t * (1.4 + rnd(i, 4))) % 1; rect(W - ph * (W + 300), 20 + rnd(i, 5) * 300, 80 + rnd(i, 6) * 120, 2, '#fff', 0.5 * dk * sin(ph * PI), 1); }
       for (const s of [-1, 1]) for (let i = 0; i < 4; i++) glow(x + s * (50 + i * 44 + op * 230), 40 + (i % 2) * 44 + sin(t * 2 + i) * 4, 96 - i * 8, i % 2 ? '#aab4cc' : '#7c88a6', 0.7 * dk);
       beam(x, 30 + op * 50, -10, y, '#eaf6ff', 0.3 * op * dk, '#fff');
+      if (o.id === 384) for (let i = 0; i < 3; i++) { const k = (t * 1.2 + i / 3) % 1; ring(x, 46, 30 + k * 190, { col: cc, w: 4 * (1 - k) + 1, a: (1 - k) * 0.8 * dk, sy: 0.28 }); }
       if (o.id === 250) { X.save(); X.globalCompositeOperation = 'lighter'; X.lineWidth = 7; ['#ff5a5a', '#ffb040', '#ffe94a', '#5ae07a', '#5aa8ff', '#b07aff'].forEach((c, i) => { X.strokeStyle = c; X.globalAlpha = 0.55 * op * dk; X.beginPath(); X.arc(x - 150, y + 60, 250 - i * 7, PI * 1.05, PI * 1.05 + PI * 0.75 * op); X.stroke(); }); X.restore(); }
       if (dv > 0 && dv < 1) { const e = ei(dv), px = mix(x + 190, x, e), py = mix(-60, y - 50, e); for (let j = 0; j < 10; j++) glow(px + j * 9 * (1.2 - e), py - j * 14 * (1.2 - e), 26 - j * 2, j ? cc : '#fff', 0.9 - j * 0.08, 1); spr(px, py + 50, o.s || 1.85, { col: '#fff', a: 0.9, ay: 1 }); }
       if (t >= 1.25) {
@@ -101,13 +103,15 @@
       const x = o.x, y = o.y, by = y - 60, cc = o.cc, dk = env(t, 0, 0.35, 1.7, 2.45), op = eo(seg(t, 0.25, 1.2)), cl = seg(t, 1.45, 2.0), X = K.g;
       fill('#05010c', 0.74 * dk); vig(0.5 * dk, '#12021e');
       for (let i = 0; i < 5; i++) { const q = floor(t * 11 + i * 3); if (rnd(q, i) > 0.62) rect(0, rnd(q, i + 1) * H, W, 2 + rnd(q, i + 2) * 5, i % 2 ? cc : '#fff', 0.22 * dk, 1); }
-      const w = (16 + op * 44) * (1 - cl), h = 110 * op * (1 - cl);
+      const v = o.id === 150 ? 1 : o.id === 491 ? 2 : 0, w = (v === 1 ? 20 + op * 62 : v === 2 ? 30 + op * 100 : 16 + op * 44) * (1 - cl), h = (v === 1 ? 20 + op * 62 : v === 2 ? 8 + op * 16 : 110 * op) * (1 - cl), ry = v === 2 ? y + 2 : by;
       if (h > 1) {
         glow(x, by, 150 * op, cc, 0.55 * (1 - cl), 1);
-        X.save(); X.translate(x, by); X.rotate(0.12 * sin(t * 3)); X.fillStyle = cc; X.beginPath(); X.ellipse(0, 0, w + 5, h + 6, 0, 0, TAU); X.fill(); X.fillStyle = '#000'; X.beginPath(); X.ellipse(0, 0, w, h, 0, 0, TAU); X.fill(); X.restore();
-        for (let i = 0; i < 6; i++) { const an = i / 6 * TAU + t * 1.3, L = 50 + op * 90; bolt(x + cos(an) * w * 0.6, by + sin(an) * h * 0.8, x + cos(an) * L * 1.5, by + sin(an) * L, { seed: i * 9 + floor(t * 10), col: cc, core: '#fff', w: 1.4, a: 0.8 * (1 - cl), depth: 4 }); }
+        X.save(); X.translate(x, ry); if (!v) X.rotate(0.12 * sin(t * 3)); X.fillStyle = cc; X.beginPath(); X.ellipse(0, 0, w + 5, h + (v === 2 ? 3 : 6), 0, 0, TAU); X.fill(); X.fillStyle = v === 1 ? '#0a0418' : '#000'; X.beginPath(); X.ellipse(0, 0, w, h, 0, 0, TAU); X.fill(); X.restore();
+        if (v === 1) for (let i = 0; i < 3; i++) { const k = (t * 1.3 + i / 3) % 1; ring(x, by, w + (1 - k) * 150, { col: i % 2 ? '#fff' : cc, w: 1 + k * 3, a: k * (1 - cl) }); }
+        if (v === 2) for (let i = 0; i < 9; i++) { const ph = (rnd(i, 3) + t * (0.7 + rnd(i, 4))) % 1; glow(x + (rnd(i, 5) - 0.5) * w * 1.7, y - ph * 150 * op, 14 * (1 - ph) + 5, '#000', 0.8 * (1 - ph) * (1 - cl)); }
+        if (v !== 2) for (let i = 0; i < 6; i++) { const an = i / 6 * TAU + t * 1.3, L = 50 + op * 90; bolt(x + cos(an) * w * 0.6, by + sin(an) * h * 0.8, x + cos(an) * L * 1.5, by + sin(an) * L, { seed: i * 9 + floor(t * 10), col: cc, core: '#fff', w: 1.4, a: 0.8 * (1 - cl), depth: 4 }); }
         sil(o, '#000', seg(t, 0.9, 1.3) * (1 - cl), 0.5 + 0.5 * seg(t, 0.9, 1.45));
-        const e2 = seg(t, 1.05, 1.3); if (e2 > 0 && t < 1.45) { glow(x - 7, by - 12, 10, '#ff3040', e2, 1); glow(x + 8, by - 12, 10, '#ff3040', e2, 1); }
+        const e2 = seg(t, 1.05, 1.3), ec = v === 1 ? '#e0b0ff' : v === 2 ? '#5ad0ff' : '#ff3040'; if (e2 > 0 && t < 1.45) { glow(x - 7, by - 12, 10, ec, e2, 1); if (v !== 2) glow(x + 8, by - 12, 10, ec, e2, 1); }
       }
       if (t >= 1.45) { fill('#000', hit(t, 1.45, 0.12)); fill(cc, hit(t, 1.55, 0.3) * 0.55); wave(1.5, x, by, { col: cc, r: 380, d: 0.8, w: 12 }); wave(1.62, x, by, { col: '#fff', r: 300, d: 0.7, w: 4 }); }
       dust('up', { n: 30, seed: 9, cols: [cc, '#5a3a7a'], a: 0.7 * dk, spd: 1.4 });
