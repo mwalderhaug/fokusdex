@@ -449,6 +449,30 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 @keyframes goldGlow{0%,100%{filter:drop-shadow(0 0 2px rgba(248,200,48,.55))}50%{filter:drop-shadow(0 0 7px rgba(255,236,150,.95))}}
 .hpb.gold{animation:goldGlow 1.5s ease-in-out infinite}
 .hpb.gold:not(.pk){background:linear-gradient(#5a4a1c,#3a2e10 55%,#2a2109);box-shadow:inset 0 0 0 2px #f8c830}
+@keyframes evilGlow{0%,100%{filter:drop-shadow(0 0 2px rgba(200,20,20,.5))}6%{filter:drop-shadow(0 0 9px rgba(255,40,40,1))}14%{filter:drop-shadow(0 0 3px rgba(200,20,20,.6))}24%{filter:drop-shadow(0 0 7px rgba(255,40,40,.9))}34%{filter:drop-shadow(0 0 2px rgba(200,20,20,.5))}}
+.hpb.evil{animation:evilGlow 1.15s linear infinite}
+.hpb.evil:not(.pk){background:linear-gradient(#3a0a0c,#1f0506);box-shadow:inset 0 0 0 2px #c01818}
+.hpb.champ{filter:drop-shadow(0 0 4px color-mix(in srgb,var(--cc) 70%,transparent))}
+.hpb.champ:not(.pk){box-shadow:inset 0 0 0 2px var(--cc)}
+/* De onde: banen er mørkere, og av og til rykker bildet til. */
+.arena.th-evil .scene,.arena.th-evil .abg{filter:brightness(.6) saturate(.75) contrast(1.15)}
+.arena.th-evil.glitch .scene,.arena.th-evil.glitch .abg{transform:translateX(calc(var(--u)*4)) skewX(3deg);filter:brightness(.85) saturate(1.8) hue-rotate(-25deg) contrast(1.5)}
+.arena.th-evil.glitch .bs.foe{filter:drop-shadow(calc(var(--u)*3) 0 0 rgba(255,0,60,.7)) drop-shadow(calc(var(--u)*-3) 0 0 rgba(0,240,255,.5))}
+.bscreen.t-evil{box-shadow:0 0 0 3px #7a0f14,0 0 34px rgba(200,20,30,.5)}
+.t-evil .abg{background:radial-gradient(circle at 50% 50%,#3a0a0c 0,#150405 60%,#070102 100%)}
+.bscreen.t-champ{box-shadow:0 0 0 3px var(--cc,var(--violet)),0 0 26px color-mix(in srgb,var(--cc,var(--violet)) 40%,transparent)}
+.t-champ .abg{background:radial-gradient(80% 60% at 50% 58%,color-mix(in srgb,var(--cc) 50%,transparent),transparent 72%),linear-gradient(#14121b,#1f1a28 60%,#15121b)}
+.k-evil .bossn{color:#ff5a4a;text-shadow:0 0 10px rgba(255,40,40,.55)}
+.k-evil .tsb{box-shadow:0 0 0 3px #7a0f14}
+.k-champ .bossn{color:var(--cc,var(--violet))}
+.k-champ .tsb{box-shadow:0 0 0 3px var(--cc,var(--violet))}
+.lablist .k-evil .cno{background:#7a0f14;color:#ffd8d2}.lablist .k-champ .cno{background:var(--blue);color:#0c1420}
+/* Veska i kampmenyen */
+.bmain.b3{grid-template-columns:1fr 1fr 1fr}
+.bmain.b3 .bm-fight{grid-column:1/-1}
+.bmain.b3 .bm-b{font-size:13px;letter-spacing:.04em}
+.bm-bag{background:linear-gradient(#f2b45a,#d07a2a)}
+.bagh{text-align:center;margin:2px 0 6px}
 .fxc.bgc{z-index:-1}
 .hpn{display:flex;align-items:baseline;gap:6px;min-width:0}
 .hpn b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13.5px;letter-spacing:.02em}
@@ -519,7 +543,7 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .lgp{display:flex;gap:3px;margin-top:2px}
 .lgp i{flex:1;height:6px;border-radius:3px;background:var(--soft)}
 .lgp i.on{background:var(--sage)}.lgp i.cur{background:var(--gold)}.lgp i.gap{margin-left:4px}
-.lgp i.bo{flex:1.5;height:8px;margin-top:-1px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--violet) 70%,transparent)}.lgp i.ul{box-shadow:inset 0 0 0 1.5px var(--gold)}
+.lgp i.bo{flex:1.4;height:8px;margin-top:-1px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--violet) 70%,transparent)}.lgp i.ul{box-shadow:inset 0 0 0 1.5px var(--gold)}
 /* Demoen: de ni klassene som en liste */
 .lablist{display:flex;flex-direction:column;gap:8px}
 .lablist button{display:flex;align-items:center;gap:12px;text-align:left;border-radius:16px;background:var(--card);padding:12px 14px;box-shadow:0 0 0 1px var(--line)}
@@ -593,7 +617,7 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .bwi-cls{position:absolute;left:0;right:0;bottom:calc(var(--u)*5);text-align:center;font-size:calc(var(--u)*9);letter-spacing:.22em;text-transform:uppercase;opacity:0;transform:translateY(60%);transition:opacity .2s,transform .25s cubic-bezier(.2,.9,.3,1.3);text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 #000}
 .bwi.s4 .bwi-cls{opacity:1;transform:none}
 .bwi-top .bwi-cls{color:var(--violet)}
-.bwi-ultra .bwi-cls,.bwi-pre b,.bwi-sil .nm b{background:linear-gradient(100deg,#b8780c 0,#f8c830 30%,#fffbe0 45%,#f8c830 60%,#b8780c 100%) 0 0/250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;animation:goldSweep 1.4s linear infinite}
+.bwi-ultra .bwi-cls,.bwi-ultra .bwi-pre b,.bwi-ultra .bwi-sil .nm b{background:linear-gradient(100deg,#b8780c 0,#f8c830 30%,#fffbe0 45%,#f8c830 60%,#b8780c 100%) 0 0/250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;animation:goldSweep 1.4s linear infinite}
 @keyframes goldSweep{from{background-position-x:125%}to{background-position-x:-125%}}
 .bwi-fl{position:absolute;inset:0;z-index:5;background:#fff;opacity:0;pointer-events:none}
 @keyframes bwiBlink{0%,66%{opacity:1}33%,100%{opacity:0}}
@@ -630,7 +654,40 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .bwi.c3 .bwi-sil .nm{opacity:1;transform:none;transition:opacity .2s .15s,transform .3s .15s}
 .bwi-sil .nm span{font-size:calc(var(--u)*8);letter-spacing:.12em;text-transform:uppercase;text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 #000}
 .bwi-sil .nm b{font-size:calc(var(--u)*20);line-height:1}
-@media (prefers-reduced-motion:reduce){.bwi-bb,.bwi-bb::after,.bwi-bg{animation:none!important}}
+.bwi-cv{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;pointer-events:none;opacity:0;transition:opacity .4s}
+.bwi.c1 .bwi-cv{opacity:1}
+.bwi.s1 .bwi-cv{opacity:.55}
+/* Mesterne (klasse 8): rolig, i hver sin farge. Ingen lyn. */
+.bwi-champ .bwi-pre span,.bwi-champ .bwi-pre::after{color:var(--cc)}
+.bwi-champ .bwi-pre::after{background:linear-gradient(90deg,transparent,var(--cc),transparent)}
+.bwi-champ .bwi-cls,.bwi-champ .bwi-pre b,.bwi-champ .bwi-sil .nm b{background:linear-gradient(100deg,var(--cc) 0,var(--cc) 30%,#fff 45%,var(--cc) 60%,var(--cc) 100%) 0 0/250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;animation:goldSweep 2.4s linear infinite}
+.bwi-champ .bwi-sil .vb{display:none}
+.bwi-champ .bwi-sil .tsb{filter:brightness(0) drop-shadow(0 0 calc(var(--u)*1.5) #fff) drop-shadow(0 0 calc(var(--u)*6) var(--cc))}
+.bwi-champ.c3 .bwi-sil .tsb{filter:drop-shadow(0 0 calc(var(--u)*3) var(--cc))}
+.bwi-champ .bwi-bg{background:radial-gradient(80% 70% at 50% 45%,color-mix(in srgb,var(--cc) 45%,#000),#05060c 85%)!important;animation:none!important}
+/* De onde lederne (klasse 7): mørkt og rødt. Teksten rykker, bildet rives, lynene er røde, og alt pulserer som et hjerteslag. */
+.bwi-evil .bwi-pre span{color:#b01818;letter-spacing:.5em}
+.bwi-evil .bwi-pre::after{background:linear-gradient(90deg,transparent,#e02020,transparent)}
+@keyframes evilTxt{0%,100%{transform:none;text-shadow:calc(var(--u)*1.5) 0 #0ff,calc(var(--u)*-1.5) 0 #f00}25%{transform:translate(calc(var(--u)*-2),calc(var(--u)*1)) skewX(-8deg);text-shadow:calc(var(--u)*-3) 0 #0ff,calc(var(--u)*3) 0 #f00}50%{transform:translate(calc(var(--u)*2),0)}75%{transform:translate(0,calc(var(--u)*-1)) skewX(6deg);text-shadow:calc(var(--u)*3) 0 #0ff,calc(var(--u)*-2) 0 #f00}}
+.bwi-evil .bwi-pre b,.bwi-evil .bwi-sil .nm b,.bwi-evil .bwi-cls{color:#ff2a2a;animation:evilTxt .22s steps(2) infinite}
+@keyframes evilBeat{0%,100%{transform:scale(1)}6%{transform:scale(1.035)}14%{transform:scale(1)}24%{transform:scale(1.02)}34%{transform:scale(1)}}
+.bwi-evil.c1 .bwi-s,.bwi-evil.c2 .bwi-s{animation:evilBeat 1.15s linear infinite}
+.bwi-evil .bwi-s::after{content:"";position:absolute;inset:0;z-index:4;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 calc(var(--u)*1),transparent calc(var(--u)*1) calc(var(--u)*2))}
+.bwi-evil .bwi-bg{filter:hue-rotate(95deg) saturate(2.2) brightness(.45)}
+.bwi-evil:not(.pk) .bwi-bg{filter:none;background:radial-gradient(70% 60% at 50% 50%,#3a0508,#000 80%)}
+.bwi-evil .bwi-sil .vb,.bwi-evil .bwi-bolt{filter:hue-rotate(170deg) saturate(3) brightness(1.1)}
+.bwi-evil .bwi-sil .tsb{filter:brightness(0) drop-shadow(0 0 calc(var(--u)*1.5) #ff2a2a) drop-shadow(0 0 calc(var(--u)*7) #a00000);transition:transform 2s cubic-bezier(.6,0,.9,.4)}
+.bwi-evil.c2 .bwi-sil .tsb{transform:scale(2.3)}
+.bwi-evil.c3 .bwi-sil .tsb{filter:drop-shadow(0 0 calc(var(--u)*4) #ff2a2a);transform:scale(1.8)}
+@keyframes evilTear{0%,100%{clip-path:none;transform:none}20%{clip-path:inset(0 0 62% 0);transform:translateX(calc(var(--u)*6))}40%{clip-path:inset(38% 0 30% 0);transform:translateX(calc(var(--u)*-8))}60%{clip-path:inset(70% 0 0 0);transform:translateX(calc(var(--u)*4))}80%{clip-path:none;transform:translateX(calc(var(--u)*-2))}}
+.bwi-evil .bwi-s.glitch .bwi-sil,.bwi-evil .bwi-s.glitch .bwi-pre{animation:evilTear .15s steps(1) 1}
+.bwi-evil .bwi-fl{background:#ff1a1a}
+.bwi-evil .bwi-vs{filter:hue-rotate(-28deg) saturate(1.8) brightness(.95)}
+.bwi-evil.s5 .bwi-fl{background:#000}
+.bwi-evil .bwi-bar.foe .bwi-bb{filter:brightness(.42) saturate(1.5)}
+.bwi-evil:not(.pk) .bwi-bar.foe .bwi-bb{background:linear-gradient(#1a0204,#7a0a10 48%,#1a0204);filter:none}
+.bwi-evil .bwi-bar.foe .tsb{filter:drop-shadow(0 0 calc(var(--u)*3) #ff2a2a)}
+@media (prefers-reduced-motion:reduce){.bwi-bb,.bwi-bb::after,.bwi-bg,.bwi-evil .bwi-s,.bwi-evil .bwi-pre b{animation:none!important}}
 
 /* Etter kampen */
 .stealg{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:10px;width:100%}

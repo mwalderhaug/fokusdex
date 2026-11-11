@@ -14,17 +14,18 @@
    mons = antall Pokémon, rel = nivå i forhold til de tre sterkeste på laget ditt, sk = hvor godt de spiller, iv/ev = hvor godt oppdrettet laget er,
    q = hvor gjennomtenkte angrepene er, coin = mynter (× studiebonus), xp = XP-faktor, slack = hvor tidlig de får utvikle.
    Nivået stiger bare litt fra klasse til klasse. Det som gjør de høye klassene vanskelige, er fulle lag, bedre oppdrett, bedre angrep og smartere spill.
-   Tallene er stilt inn med simulerte kamper (et jevnt lag på samme nivå, uten EV): omtrent 95, 85, 75, 70, 50, 30, 25 og under 10 % seier for klasse 2 til 9. */
+   De sjeldneste får også utvikle laget tidligst (slack), så de er farlige selv på lave nivåer: klasse 9 stiller nesten alltid med ferdig utviklede Pokémon.
+   Tallene er stilt inn med simulerte kamper (et jevnt lag på samme nivå, uten EV og uten veske). */
 const TCL = {
-  trainer: { i: 1, n: 'Trainer', mons: 3, rel: 0.92, sk: 0.5, iv: 6, ev: 0, q: 0, coin: 22, xp: 1 },
-  gym: { i: 2, n: 'Gym Leader', mons: 4, rel: 0.96, sk: 0.84, iv: 18, ev: 24, q: 2, coin: 70, xp: 1.3, slack: 3 },
-  evilteam: { i: 3, n: 'Evil Team', mons: 5, rel: 0.96, sk: 0.85, iv: 18, ev: 24, q: 2, coin: 60, xp: 1.35 },
-  eviladmin: { i: 4, n: 'Evil Admin', mons: 5, rel: 0.965, sk: 0.87, iv: 16, ev: 16, q: 2, coin: 100, xp: 1.4, slack: 4 },
-  e4: { i: 5, n: 'Elite Four', mons: 5, rel: 0.97, sk: 0.9, iv: 21, ev: 28, q: 2, coin: 125, xp: 1.5, slack: 6 },
-  rival: { i: 6, n: 'Rival', mons: 6, rel: 0.975, sk: 0.93, iv: 18, ev: 20, q: 2, coin: 150, xp: 1.6, slack: 6 },
-  evilboss: { i: 7, n: 'Evil Leader', mons: 6, rel: 0.98, sk: 0.96, iv: 18, ev: 24, q: 2, coin: 200, xp: 1.75, slack: 8 },
-  champ: { i: 8, n: 'Champion', mons: 6, rel: 0.985, sk: 1, iv: 24, ev: 40, q: 2, coin: 270, xp: 1.9, slack: 8 },
-  supreme: { i: 9, n: 'Supreme Boss', mons: 6, rel: 0.99, sk: 1, iv: 31, ev: 64, q: 2, coin: 420, xp: 2.2, slack: 10 }
+  trainer: { i: 1, n: 'Trainer', mons: 3, rel: 0.93, sk: 0.5, iv: 6, ev: 0, q: 0, coin: 22, xp: 1 },
+  gym: { i: 2, n: 'Gym Leader', mons: 4, rel: 0.97, sk: 0.84, iv: 18, ev: 24, q: 2, coin: 70, xp: 1.3, slack: 5 },
+  evilteam: { i: 3, n: 'Evil Team', mons: 5, rel: 0.97, sk: 0.85, iv: 18, ev: 24, q: 2, coin: 60, xp: 1.35 },
+  eviladmin: { i: 4, n: 'Evil Admin', mons: 5, rel: 0.975, sk: 0.87, iv: 17, ev: 20, q: 2, coin: 100, xp: 1.4, slack: 6 },
+  e4: { i: 5, n: 'Elite Four', mons: 5, rel: 0.98, sk: 0.9, iv: 21, ev: 28, q: 2, coin: 125, xp: 1.5, slack: 8 },
+  rival: { i: 6, n: 'Rival', mons: 6, rel: 0.985, sk: 0.93, iv: 19, ev: 22, q: 2, coin: 150, xp: 1.6, slack: 8 },
+  evilboss: { i: 7, n: 'Evil Leader', mons: 6, rel: 0.99, sk: 0.96, iv: 20, ev: 28, q: 2, coin: 220, xp: 1.75, slack: 12 },
+  champ: { i: 8, n: 'Champion', mons: 6, rel: 1, sk: 1, iv: 28, ev: 56, q: 2, coin: 320, xp: 1.9, slack: 16 },
+  supreme: { i: 9, n: 'Supreme Boss', mons: 6, rel: 1.01, sk: 1, iv: 31, ev: 60, q: 2, coin: 600, xp: 2.2, slack: 30 }
 };
 const ORDER = ['trainer', 'gym', 'evilteam', 'eviladmin', 'e4', 'rival', 'evilboss', 'champ', 'supreme'];
 const ULTRA = new Set(['evilboss', 'champ', 'supreme']);
@@ -64,13 +65,13 @@ const POOL = {
     ['Caitlin', 'caitlin', 'Elite Four', 13, [579, 576, 518, 561, 475, 376], 'Black'], ['Marshal', 'marshal', 'Elite Four', 1, [534, 620, 538, 539, 448, 68], 'Black']],
   rival: [['Blue', 'blue', 'Rival', 0, [18, 65, 112, 130, 59, 103], 'FireRed'], ['Silver', 'silver', 'Rival', 16, [160, 215, 169, 82, 94, 65], 'HeartGold'], ['Barry', 'barry', 'Rival', 10, [395, 398, 214, 78, 407, 143], 'Brilliant'], ['Wally', 'wally|wally-rse', 'Rival', 13, [282, 334, 301, 315, 82, 475], 'Wally'],
     ['Hugh', 'hugh', 'Rival', 9, [500, 521, 512, 626, 330, 604], 'Rival \\(B2'], ['Cheren', 'cheren', 'Rival', 0, [508, 521, 510, 512, 573, 628], 'Rival \\(B2'], ['Bianca', 'bianca', 'Rival', 13, [518, 508, 516, 609, 591, 500], 'Rival \\(B2'], ['N', 'n', 'Rival', 16, [571, 565, 567, 584, 601, 530], 'B2 W2 - N']],
-  evilboss: [['Giovanni', 'giovanni', 'Team Rocket Boss', 4, [34, 31, 464, 53, 115, 51], 'Rocket'], ['Cyrus', 'cyrus', 'Team Galactic Boss', 16, [461, 430, 169, 130, 229, 462], 'Galactic Boss'], ['Archie', 'archie-gen3|archie', 'Team Aqua Leader', 10, [319, 262, 169, 89, 342, 321], 'Leader'],
-    ['Maxie', 'maxie-gen3|maxie', 'Team Magma Leader', 4, [323, 262, 169, 110, 324, 229], 'Leader'], ['Ghetsis', 'ghetsis', 'Team Plasma Leader', 16, [635, 563, 537, 626, 604, 625], 'Ghetsis'], ['N', 'n', 'King of Team Plasma', 15, [644, 571, 567, 565, 584, 601], 'N Final']],
-  champ: [['Blue', 'blue', 'Champion', 0, [65, 18, 112, 130, 59, 103], 'Champion Blue'], ['Lance', 'lance', 'Champion', 15, [149, 130, 142, 6, 230, 373], 'Lance'], ['Red', 'red', 'Champion', 0, [143, 25, 3, 6, 9, 196], 'Champion & Red'],
-    ['Steven', 'steven', 'Champion', 8, [376, 227, 306, 344, 346, 348], 'Steven & Wallace'], ['Wallace', 'wallace', 'Champion', 10, [350, 130, 73, 272, 340, 321], 'Steven & Wallace'], ['Alder', 'alder', 'Champion', 6, [637, 626, 621, 617, 589, 584], 'Alder']],
-  supreme: [['Red', 'red', 'Legend', 9, [6, 25, 3, 9, 143, 131], 'Red & Blue'], ['Blue', 'blue', 'Legend', 9, [59, 65, 68, 142, 130, 103], 'Red & Blue'], ['Cynthia', 'cynthia', 'Sinnoh Champion', 15, [445, 442, 448, 350, 407, 468], 'Cynthia'],
-    ['Iris', 'iris', 'Unova Champion', 15, [612, 635, 621, 567, 306, 131], 'Iris'], ['Steven', 'steven', 'Hoenn Champion', 8, [376, 373, 306, 344, 346, 348], 'Battle! Champion'], ['Colress', 'colress', 'Team Plasma', 8, [462, 601, 376, 606, 604, 474], 'Colress'],
-    ['Zinnia', 'zinnia', 'Lorekeeper', 15, [373, 334, 330, 612, 149, 230], 'Zinnia']]
+  evilboss: [['Giovanni', 'giovanni', 'Team Rocket Boss', 4, [34, 31, 464, 53, 115, 51], 'Rocket', { sc: 'building' }], ['Cyrus', 'cyrus', 'Team Galactic Boss', 16, [461, 430, 169, 130, 229, 462], 'Galactic Boss', { sc: 'mountain' }], ['Archie', 'archie-gen3|archie', 'Team Aqua Leader', 10, [319, 262, 169, 89, 342, 321], 'Leader', { sc: 'water' }],
+    ['Maxie', 'maxie-gen3|maxie', 'Team Magma Leader', 4, [323, 262, 169, 110, 324, 229], 'Leader', { sc: 'mountain' }], ['Ghetsis', 'ghetsis', 'Team Plasma Leader', 16, [635, 563, 537, 626, 604, 625], 'Ghetsis', { sc: 'kyurem_cave' }], ['N', 'n', 'King of Team Plasma', 15, [644, 571, 567, 565, 584, 601], 'N Final', { sc: 'black_tower_10' }]],
+  champ: [['Blue', 'blue', 'Champion', 0, [65, 18, 112, 130, 59, 103], 'Champion Blue', { sc: 'pwt', th: 'spark', cc: '#5aa2ff' }], ['Lance', 'lance', 'Champion', 15, [149, 130, 142, 6, 230, 373], 'Lance', { sc: 'black_tower_10', th: 'flame', cc: '#ff7a2a' }], ['Red', 'red', 'Champion', 0, [143, 25, 3, 6, 9, 196], 'Champion & Red', { sc: 'snowy_tall_grass', th: 'snow', cc: '#dfe9f5' }],
+    ['Steven', 'steven', 'Champion', 8, [376, 227, 306, 344, 346, 348], 'Steven & Wallace', { sc: 'cave', th: 'shard', cc: '#9fc7d8' }], ['Wallace', 'wallace', 'Champion', 10, [350, 130, 73, 272, 340, 321], 'Steven & Wallace', { sc: 'water', th: 'bubble', cc: '#3fd0c4' }], ['Alder', 'alder', 'Champion', 6, [637, 626, 621, 617, 589, 584], 'Alder', { sc: 'pinwheel_road', th: 'petal', cc: '#ff9a4a' }]],
+  supreme: [['Red', 'red', 'Legend', 9, [6, 25, 3, 9, 143, 131], 'Red & Blue', { sc: 'mountain' }], ['Blue', 'blue', 'Legend', 9, [59, 65, 68, 142, 130, 103], 'Red & Blue', { sc: 'pwt' }], ['Cynthia', 'cynthia', 'Sinnoh Champion', 15, [445, 442, 448, 350, 407, 468], 'Cynthia', { sc: 'black_tower_10' }],
+    ['Iris', 'iris', 'Unova Champion', 15, [612, 635, 621, 567, 306, 131], 'Iris', { sc: 'black_tower_3_5' }], ['Steven', 'steven', 'Hoenn Champion', 8, [376, 373, 306, 344, 346, 348], 'Battle! Champion', { sc: 'cave' }], ['Colress', 'colress', 'Team Plasma', 8, [462, 601, 376, 606, 604, 474], 'Colress', { sc: 'black_tower_1_2' }],
+    ['Zinnia', 'zinnia', 'Lorekeeper', 15, [373, 334, 330, 612, 149, 230], 'Zinnia', { sc: 'kyurem_cave' }]]
 };
 /* Frontier Brains: de vanlige bossene i Battle Frontier. [navn, bilde, tittel, type, lag med esset først, låt]. */
 const BRAIN = [['Noland', 'noland-gen3|noland', 'Factory Head', 8, [376, 130, 94, 248], 'Sapphire - Frontier'], ['Greta', 'greta-gen3|greta', 'Arena Tycoon', 1, [197, 214, 94, 286], 'Sapphire - Frontier'], ['Tucker', 'tucker-gen3|tucker', 'Dome Ace', 15, [373, 260, 6, 376], 'Sapphire - Frontier'],
@@ -80,18 +81,18 @@ const BRAIN = [['Noland', 'noland-gen3|noland', 'Factory Head', 8, [376, 130, 94
 POOL.brain = BRAIN;
 TCL.brain = { i: 5, n: 'Frontier Brain', mons: 4, rel: 1, sk: 1, iv: 22, ev: 24, q: 2, coin: 0, xp: 0, slack: 99 };
 
-/* Ligaen: uendelig, i runder på to vanlige trenere og en boss. Bossene kommer i klasserekkefølge (2 til 6), og hver runde avsluttes med
-   en toppboss (klasse 7, 8 eller 9, de sterkeste sjeldnest). Så starter en ny runde med høyere nivå, større lag og bedre belønninger. */
-const BOSSEQ = ['gym', 'evilteam', 'eviladmin', 'e4', 'rival', 'ultra'], LAPN = BOSSEQ.length * 3;
+/* Ligaen: uendelig, i runder på 12 kamper: en vanlig trener og så en boss, seks ganger. Bossene kommer i klasserekkefølge (2 til 6), og hver
+   runde avsluttes med en sjelden boss (klasse 7, 8 eller 9, de sterkeste sjeldnest). Så starter en ny runde med høyere nivå, større lag og bedre belønninger. */
+const BOSSEQ = ['gym', 'evilteam', 'eviladmin', 'e4', 'rival', 'ultra'], LAPN = BOSSEQ.length * 2;
 /* Hvilken toppboss som dukker opp: oftest en leder (klasse 7), sjeldnere en mester (8), og sjeldnest de aller største (9: fra 10 % og opp til 25 % etter mange runder). */
 const pickUltra = lap => { const r = Math.random(), s = Math.min(0.25, 0.1 + 0.03 * (lap || 0)), c = Math.min(0.35, 0.3 + 0.01 * (lap || 0)); return r < s ? 'supreme' : r < s + c ? 'champ' : 'evilboss'; };
 /* Hvor i ligaen kamp nummer n (0-basert i runden) ligger: klassen, om det er en boss, og laveste nivå uansett hvor lavt laget ditt er. */
 function rungInfo(n, lap) {
-  const rd = Math.min(BOSSEQ.length - 1, Math.floor(n / 3)), boss = n % 3 === 2, k = boss ? BOSSEQ[rd] : 'trainer';
-  return { n, rd, boss, k, floor: Math.round(5 + n * 1.6 + (boss ? 1 : 0) + 6 * (lap || 0)) };
+  const rd = Math.min(BOSSEQ.length - 1, Math.floor(n / 2)), boss = n % 2 === 1, k = boss ? BOSSEQ[rd] : 'trainer';
+  return { n, rd, boss, k, floor: Math.round(5 + n * 1.5 + (boss ? 1 : 0) + 6 * (lap || 0)) };
 }
 /* Vanlige trenere blir bedre utover i runden: flere Pokémon, smartere spill og bedre lag. */
-const trainerCls = rd => Object.assign({}, TCL.trainer, { mons: rd >= 2 ? 4 : 3, rel: 0.92 + 0.008 * rd, sk: 0.5 + 0.05 * rd, iv: 6 + 2 * rd, q: rd >= 1 ? 1 : 0, coin: 22 + 5 * rd, xp: 1 + 0.04 * rd });
+const trainerCls = rd => Object.assign({}, TCL.trainer, { mons: rd >= 2 ? 4 : 3, rel: 0.93 + 0.008 * rd, sk: 0.5 + 0.05 * rd, iv: 6 + 2 * rd, q: rd >= 1 ? 1 : 0, coin: 22 + 5 * rd, xp: 1 + 0.04 * rd });
 /* Lagene vokser med rundene (høyst seks). */
 const teamSize = (st, lap) => Math.min(6, st.mons + (lap >= 3 ? 2 : lap >= 1 ? 1 : 0));
 
@@ -101,6 +102,8 @@ const studyMult = () => Math.round((0.5 + Math.min(1.5, ladMin() / 300 * 1.5)) *
 const xpMult = () => 0.8 + Math.min(0.4, ladMin() / 300 * 0.4);
 const ladLost = () => !!S.lad.lost && S.lad.lost === (S.lad.day || dayKey());
 /* Ligaen tåler ett tap per dag: du får én omkamp, og det andre tapet stenger den for dagen. */
+/* Veska: så mange gjenstander kan brukes per kamp. Ellers kunne nok Revive vinne enhver kamp. */
+const BAGN = 3;
 const LIVES = 2, ladFails = () => { const t = S.lad.tries, d = S.lad.day || dayKey(); return t && t.d === d ? t.n : 0; };
 const ladderOpen = () => !!S.lad.day && !ladLost();
 const facLost = () => !!S.fac.lost && S.fac.lost === (S.lad.day || dayKey());
@@ -170,10 +173,13 @@ function bossTeam(d, n, base, st, flat) {
   const ids = d[4].slice(1, n).concat(d[4][0]);
   return ids.map((id, k) => { const ace = k === ids.length - 1, lv = flat ? base : Math.max(3, Math.min(100, base + (ace ? 1 : -1 - rnd(2)))); return foeMon(fitForm(id, lv, st.slack || 0), lv, st); });
 }
-/* Det en kamp trenger å vite om treneren. k = klassen, i = hvem i klassen. int = hvor mye show kampen får (0 til 8, følger klassen). */
+/* Det en kamp trenger å vite om treneren. k = klassen, i = hvem i klassen. int = hvor mye show kampen får (0 til 8, følger klassen).
+   ultra = de sjeldne (klasse 7 til 9), gold = bare klasse 9. sc/th/cc = egen bane, eget tema og egen farge (mesterne har hver sin). */
 function trainerOf(k, i, x) {
   const d = POOL[k][i], c = TCL[k], boss = k !== 'trainer';
-  return Object.assign({ n: d[0], img: d[1], title: boss ? d[2] : '', ty: boss ? d[3] : (d[2][0] == null ? 0 : d[2][0]), kind: k, ci: c.i, cn: c.n, skill: c.sk, boss, ultra: ULTRA.has(k), int: c.i - 1,
+  const e = (boss && d[6]) || {};
+  return Object.assign({ n: d[0], img: d[1], title: boss ? d[2] : '', ty: boss ? d[3] : (d[2][0] == null ? 0 : d[2][0]), kind: k, ci: c.i, cn: c.n, skill: c.sk, boss, ultra: ULTRA.has(k), gold: k === 'supreme', int: c.i - 1,
+    sc: e.sc || '', th: k === 'evilboss' ? 'evil' : e.th || '', cc: e.cc || '',
     arena: boss ? 'hall' : d[3], v: i % 3, mre: boss ? d[5] || '' : '' }, x || {});
 }
 const foeTeam = (k, d, n, base, st, flat) => k === 'trainer' ? regTeam(d[2], n, base, st) : k === 'evilteam' ? regTeam(d[4], n, base, st) : bossTeam(d, n, base, st, flat);
@@ -208,7 +214,7 @@ function newBattle(lead) {
   const t = nextTrainer(), p = leaguePlan(t), d = POOL[t.k][t.i], tr = trainerInfo(t);
   if (t.k === 'trainer') tr.skill = p.st.sk;
   const party = S.party.map(monBy).filter(Boolean); party.sort((a, b) => (b.u === lead) - (a.u === lead));
-  return mkBattle(party, foeTeam(t.k, d, p.n, p.lv, p.st), tr, { mode: 'league', st: p.st, k: t.k, rd: p.ri.rd, n: t.n, lap: t.lap, ti: t.i, xm: xpMult(), sm: studyMult(), boost: dayBoost() });
+  return mkBattle(party, foeTeam(t.k, d, p.n, p.lv, p.st), tr, { mode: 'league', st: p.st, k: t.k, rd: p.ri.rd, n: t.n, lap: t.lap, ti: t.i, bag: BAGN, xm: xpMult(), sm: studyMult(), boost: dayBoost() });
 }
 /* XP til hele laget etter kampen. Alle får like mye, uansett hvem som kjempet. Sterkere motstandere og høyere klasse gir mer, og de som ligger
    under motstanderens nivå får mer enn de som ligger over (som i Black og White). Ligaen tar aldri slutt, så andelen er satt slik at en bossseier
@@ -229,25 +235,36 @@ function grantXp(B, res) {
     res.ups.push(Object.assign({ u: m.u, xp: x, l0, l1: m.lv, x0 }, m.lv > l0 ? learnUp(m, l0) : {}));
   });
 }
-const pushEnc = (res, e) => { S.pend.push(e); if (S.pend.length > 15) S.pend.splice(0, S.pend.length - 15); res.encs.push(e); };
-/* Hva hver klasse gir ved seier (i tillegg til mynter og XP). Hver klasse har sin egen type belønning, så det lønner seg å komme videre. */
+const pushEnc = (res, e) => { S.pend.push(e); if (S.pend.length > 30) S.pend.splice(0, S.pend.length - 30); res.encs.push(e); };
+/* De pseudo-legendariske (første form): Dratini, Larvitar, Bagon, Beldum, Gible og Deino. */
+const PSEUDO = [147, 246, 371, 374, 443, 633];
+const giveCharm = res => { S.charm = (S.charm || 0) + CHARM.n; res.perks.push(`Shiny Charm: ${CHARM.m}× shiny odds in your next ${S.charm} focus sessions.`); };
+/* Det de sjeldne bossene gir i tillegg, likt i ligaen og i Battle Frontier. Belønningen følger sjeldenheten:
+   klasse 7 gir sjeldne møter og av og til et pseudo-legendarisk, klasse 8 alltid et pseudo-legendarisk, klasse 9 et legendarisk, et pseudo-legendarisk og en Shiny Charm. */
+function rareLoot(ci, res, give, ty) {
+  const hit = p => Math.random() < p, enc = o => pushEnc(res, genEnc(o));
+  if (ci === 7) { give('candy', 3); give('ultra', 2); give('stone', 1); give('maxp', 1); give('revive', 1); enc({ ty, min: 3, luck: 2 }); enc({ min: 3, luck: 2 }); enc({ min: 2, luck: 1.5 }); if (hit(0.35)) enc({ ids: PSEUDO }); }
+  if (ci === 8) { give('candy', 4); give('ultra', 3); give('stone', 1); give('maxrev', 1); enc({ ty, min: 3, luck: 2 }); enc({ min: 3, luck: 2 }); enc({ min: 2, luck: 1.5 }); enc({ ids: PSEUDO }); if (hit(0.25)) giveCharm(res); }
+  if (ci === 9) { give('candy', 6); give('ultra', 5); give('stone', 2); give('maxrev', 2); enc({ leg: 1 }); enc({ ids: PSEUDO }); enc({ ty, min: 3, luck: 2 }); enc({ min: 3, luck: 2 }); giveCharm(res); }
+}
+/* Hva hver klasse gir ved seier (i tillegg til mynter og XP). Hver klasse har sin egen type belønning, alle bossene gir møter, og jo sjeldnere bossen er, jo mer. */
 function classLoot(B, res, give) {
-  const sm = B.sm, ty = [B.tr.ty], hit = p => Math.random() < p, enc = o => pushEnc(res, genEnc(o));
+  const sm = B.sm, ty = [B.tr.ty], hit = p => Math.random() < p, enc = o => pushEnc(res, genEnc(o)), boost = (n, m) => { S.boost = { n, m }; res.perks.push(`Your next ${n} focus sessions give ${m}× coins.`); };
   ({
-    trainer: () => { if (hit(0.3)) give('poke', 1 + (sm >= 1.5 ? 1 : 0)); if (B.rd >= 3 && hit(0.3)) give('great', 1); if (B.rd >= 2 && hit(0.12 * sm)) give('candy', 1); },
-    gym: () => { give('candy', 1); enc({ ty, min: 2, luck: 1.5 }); },
-    evilteam: () => { give('great', 2); if (hit(0.5)) give('ultra', 1); const loot = Math.round(40 * sm); res.coins += loot; S.coins += loot; res.note = 'Recovered stolen coins.'; },
-    eviladmin: () => { give('ultra', 2); if (hit(0.45)) give('stone', 1); enc({ ty, min: 2, luck: 1.5 }); },
-    e4: () => { give('candy', 1 + (hit(0.5) ? 1 : 0)); give('ultra', 1); enc({ ty, min: 3, luck: 1.5 }); },
-    rival: () => { give('candy', 2); if (S.eggs.length < 3) { S.eggs.push({ need: 120, got: 0 }); res.items.push('1 × Egg'); } else enc({ min: 3, luck: 1.5 }); },
-    evilboss: () => { give('candy', 2); give('ultra', 2); give('stone', 1); enc({ ty, min: 3, luck: 2 }); S.boost = { n: 2, m: 1.5 }; res.perk = 'Your next 2 focus sessions give 1.5× coins.'; },
-    champ: () => { give('candy', 3); give('ultra', 3); give('stone', 1); enc({ ty, min: 3, luck: 2 }); enc({ min: 3, luck: 1.5 }); S.boost = { n: 3, m: 1.5 }; res.perk = 'Your next 3 focus sessions give 1.5× coins.'; },
-    supreme: () => { give('candy', 5); give('ultra', 5); give('stone', 2); enc({ leg: 1 }); enc({ min: 3, luck: 2 }); S.boost = { n: 5, m: 2 }; res.perk = 'Your next 5 focus sessions give 2× coins.'; }
+    trainer: () => { if (hit(0.3)) give('poke', 1 + (sm >= 1.5 ? 1 : 0)); if (hit(0.2)) give('potion', 1); if (B.rd >= 3 && hit(0.3)) give('great', 1); if (hit(0.25)) enc({ luck: 1 }); if (B.rd >= 2 && hit(0.12 * sm)) give('candy', 1); },
+    gym: () => { give('candy', 1); give('super', 1); enc({ ty, min: 2, luck: 1.5 }); },
+    evilteam: () => { give('great', 2); if (hit(0.5)) give('ultra', 1); const loot = Math.round(40 * sm); res.coins += loot; S.coins += loot; res.note = 'Recovered stolen coins.'; enc({ ty, min: 1, luck: 1.2 }); },
+    eviladmin: () => { give('ultra', 2); if (hit(0.45)) give('stone', 1); enc({ ty, min: 2, luck: 1.5 }); enc({ min: 1, luck: 1.2 }); },
+    e4: () => { give('candy', 1 + (hit(0.5) ? 1 : 0)); give('ultra', 1); give('hyper', 1); enc({ ty, min: 3, luck: 1.5 }); enc({ min: 2, luck: 1.5 }); },
+    rival: () => { give('candy', 2); give('revive', 1); if (S.eggs.length < 3) { S.eggs.push({ need: 120, got: 0 }); res.items.push('1 × Egg'); } else enc({ min: 3, luck: 1.5 }); enc({ min: 2, luck: 1.5 }); enc({ min: 2, luck: 1.5 }); },
+    evilboss: () => { rareLoot(7, res, give, ty); boost(2, 1.5); },
+    champ: () => { rareLoot(8, res, give, ty); boost(3, 1.5); },
+    supreme: () => { rareLoot(9, res, give, ty); boost(5, 2); }
   })[B.k]();
 }
 /* Ligakampen er over: XP til laget (også ved tap), og ved seier mynter, klassens belønning og noen ganger et byttetilbud. */
 function finishLeague(B) {
-  const win = B.over === 'win', L = S.lad, st = B.st, k = B.k, res = { mode: 'league', win, ups: [], items: [], encs: [], coins: 0, trade: null, perk: '', note: '', kind: k, lapDone: false };
+  const win = B.over === 'win', L = S.lad, st = B.st, k = B.k, res = { mode: 'league', win, ups: [], items: [], encs: [], coins: 0, trade: null, perks: [], note: '', kind: k, lapDone: false };
   grantXp(B, res);
   if (win) {
     const bm = B.boost.mode === 'league', give = (it, n) => { if (n > 0) { S.items[it] += n; res.items.push(`${n} × ${SHOP[it].n}`); } };
@@ -264,8 +281,9 @@ function finishLeague(B) {
     if (++L.n >= LAPN) { L.lap++; L.n = 0; L.seen = []; res.lapDone = true; }
   } else {
     const d = L.day || dayKey(), n = ladFails() + 1; L.tries = { d, n }; if (n >= LIVES) L.lost = d; res.left = Math.max(0, LIVES - n);
-    /* Toppbossene gir deg bare én sjanse. Taper du, drar de videre, og en annen (eller den vanlige bossen) står der neste gang. */
-    if (B.tr.ultra) { L.next = null; res.gone = true; } else if (L.next) L.next.fail = d;
+    /* De sjeldne bossene gir deg bare én sjanse. Taper du mot den som avslutter runden, drar den videre og neste runde begynner uten belønningen.
+       Taper du mot en som dukket opp overraskende midt i runden, står den vanlige bossen der neste gang. */
+    if (B.tr.ultra) { L.next = null; res.gone = true; if (rungInfo(L.n, L.lap).k === 'ultra') { L.lap++; L.n = 0; L.seen = []; res.lapDone = true; } } else if (L.next) L.next.fail = d;
   }
   save();
   return res;
@@ -305,9 +323,11 @@ function facFoe() {
   if (boss) {
     const up = dayBoost().mode === 'factory' ? 1.5 : 1, ultra = Math.random() < Math.min(0.6, (0.12 + 0.06 * (R.round - 1)) * up);
     const k = ultra ? pickUltra(R.round - 1) : Math.random() < 0.5 ? 'brain' : ['gym', 'eviladmin', 'e4', 'rival'][rnd(4)], i = rnd(POOL[k].length);
-    /* Bossen vokser med rundene: i første runde er laget dårligere oppdrettet og de som utvikler seg sent, står i en tidligere form. */
-    const r = Math.min(4, R.round), st = { iv: Math.min(31, (ultra ? 12 : k === 'brain' ? 0 : 4) + 6 * r), ev: (ultra ? 12 : 0) + 8 * (r - 1), q: k === 'brain' && r < 3 ? 1 : 2, slack: [0, 6, 14, 99][r - 1] };
-    f = { boss: 1, k, i, sk: [0.76, 0.86, 0.94, 1][r - 1] - (k === 'brain' ? 0.06 : 0), team: bossTeam(POOL[k][i], 4, FACLV, st, true), hint: POOL[k][i][3] };
+    /* Bossen vokser med rundene: i første runde er laget dårligere oppdrettet og de som utvikler seg sent, står i en tidligere form.
+       De sjeldne (u = 1 til 3 for klasse 7 til 9) ligger alltid et hakk eller mer over, så de sjeldneste er vanskeligst også her. */
+    const r = Math.min(4, R.round), u = ultra ? TCL[k].i - 6 : 0;
+    const st = { iv: Math.min(31, (u ? 10 + 4 * u : k === 'brain' ? 0 : 4) + 6 * r), ev: (u ? 8 + 8 * u : 0) + 8 * (r - 1), q: k === 'brain' && r < 3 ? 1 : 2, slack: u >= 3 ? 99 : [0, 6, 14, 99][Math.min(3, r - 1 + u)] };
+    f = { boss: 1, k, i, sk: Math.min(1, [0.76, 0.86, 0.94, 1][r - 1] - (k === 'brain' ? 0.06 : 0) + 0.06 * u), team: bossTeam(POOL[k][i], 4, FACLV, st, true), hint: POOL[k][i][3] };
   } else {
     const d = [-90, -75, -55, -40, -25, -10][R.w], team = Array.from({ length: 4 }, () => facMon(R.round, used, d));
     team.forEach(m => { const t = D(m.id)[1]; cnt[t] = (cnt[t] || 0) + 1; });
@@ -327,7 +347,7 @@ function facBattle() {
 }
 /* Frontier gir gjenstander og møter, ikke XP (Pokémonene er leid). Et tap avslutter rekken og stenger Frontier for dagen. */
 function finishFactory(B) {
-  const R = S.fac.run, win = B.over === 'win', res = { mode: 'fac', win, ups: [], items: [], encs: [], coins: 0, round: R.round, w: R.w, swap: null, roundDone: false, streak: R.streak, perk: '', note: '' };
+  const R = S.fac.run, win = B.over === 'win', res = { mode: 'fac', win, ups: [], items: [], encs: [], coins: 0, round: R.round, w: R.w, swap: null, roundDone: false, streak: R.streak, perks: [], note: '' };
   if (!win) { S.fac.best = Math.max(S.fac.best || 0, R.streak); S.fac.lost = S.lad.day || dayKey(); S.fac.run = null; save(); return res; }
   const sm = B.sm, bm = B.boost.mode === 'factory' ? B.boost.m : 1, r = R.round, roll = p => Math.random() < p * bm;
   const give = (it, n) => { if (n > 0) { S.items[it] += n; res.items.push(`${n} × ${SHOP[it].n}`); } };
@@ -341,14 +361,8 @@ function finishFactory(B) {
     give('ultra', r >= 2 ? 2 : 1); give(Math.random() < 0.5 ? 'stone' : 'candy', 1);
     if (r >= 2 && S.eggs.length < 3 && roll(0.5)) { S.eggs.push({ need: 120, got: 0 }); res.items.push('1 × Egg'); }
     if (r >= 3 && roll(0.12)) pushEnc(res, genEnc({ leg: 1 }));
-    /* Toppboss: mye mer av alt, og god sjanse for et legendarisk møte (best for de aller største). */
-    if (B.tr.ultra) {
-      const c = B.tr.ci, extra = Math.round(150 * (c - 6) * sm); res.coins += extra; S.coins += extra;
-      give('ultra', c - 5); give('stone', 1); give('candy', c - 6);
-      pushEnc(res, genEnc({ ty: [B.tr.ty], min: 3, luck: 2 }));
-      if (roll([0.25, 0.4, 0.65][c - 7])) pushEnc(res, genEnc({ leg: 1 }));
-      res.note = 'Ultra rare boss: extra rewards.';
-    }
+    /* Sjelden boss: klassens egen belønning på toppen, som i ligaen. */
+    if (B.tr.ultra) { const c = B.tr.ci, extra = Math.round([150, 250, 500][c - 7] * sm); res.coins += extra; S.coins += extra; rareLoot(c, res, give, [B.tr.ty]); res.note = `${B.tr.cn}: extra rewards.`; }
     res.roundDone = true; R.round++; R.w = 0; R.team = null; R.offer = facOffer(R.round);
   } else res.swap = B.foe.map(f => f.src);
   R.foe = null;
@@ -360,8 +374,8 @@ function facSwap(mine, theirs) { const R = S.fac.run; if (R && R.team && R.team[
 
 /* ---------- Demo ---------- */
 /* Prøvekamp mot en valgfri klasse. Gir ingenting og rører verken ligaen eller Frontier. rent = leide Pokémon på nivå 50 i stedet for ditt eget lag. */
-function labBattle(k, rent) {
-  const i = rnd(POOL[k].length), d = POOL[k][i], c = TCL[k], rd = 2;
+function labBattle(k, rent, pi) {
+  const i = pi == null ? rnd(POOL[k].length) : pi, d = POOL[k][i], c = TCL[k], rd = 2;
   let me, foes, tr;
   if (rent) {
     const used = new Set(); me = Array.from({ length: 4 }, () => facMon(2, used, 0));
@@ -373,6 +387,6 @@ function labBattle(k, rent) {
     me = S.party.map(monBy).filter(Boolean); foes = foeTeam(k, d, st.mons, base, st); tr = trainerOf(k, i);
     if (k === 'trainer') tr.skill = st.sk;
   }
-  return mkBattle(me, foes, tr, { mode: 'lab', st: c, k, rd, n: 0, lap: 0, ti: i, rent: rent ? 1 : 0, xm: 1, sm: 1, boost: { mode: '', m: 1, xp: 1 } });
+  return mkBattle(me, foes, tr, { mode: 'lab', st: c, k, rd, n: 0, lap: 0, ti: i, rent: rent ? 1 : 0, bag: rent ? 0 : BAGN, xm: 1, sm: 1, boost: { mode: '', m: 1, xp: 1 } });
 }
-const finishLab = B => ({ mode: 'lab', win: B.over === 'win', ups: [], items: [], encs: [], coins: 0, trade: null, perk: '', note: '', kind: B.k });
+const finishLab = B => ({ mode: 'lab', win: B.over === 'win', ups: [], items: [], encs: [], coins: 0, trade: null, perks: [], note: '', kind: B.k });

@@ -25,6 +25,14 @@ const SHOP = {
   poke: { n: 'Poké Ball', p: 20, d: 'Standard ball', img: 'poke-ball', bc: '#d98f7e' },
   great: { n: 'Great Ball', p: 60, d: 'Better odds · trainer level 3', lv: 3, img: 'great-ball', bc: '#7fa8e6' },
   ultra: { n: 'Ultra Ball', p: 150, d: 'Best odds · trainer level 7', lv: 7, img: 'ultra-ball', bc: '#e3c577' },
+  /* Til kamp: brukes fra veska i ligakamper (bt = kampgjenstand). */
+  potion: { n: 'Potion', p: 20, d: 'Heals 20 HP in battle', img: 'potion', bc: '#b28fe0', bt: 1 },
+  super: { n: 'Super Potion', p: 45, d: 'Heals 60 HP in battle', img: 'super-potion', bc: '#e0845a', bt: 1 },
+  hyper: { n: 'Hyper Potion', p: 90, d: 'Heals 120 HP in battle', img: 'hyper-potion', bc: '#e06a9a', bt: 1 },
+  maxp: { n: 'Max Potion', p: 160, d: 'Heals all HP in battle', img: 'max-potion', bc: '#5a8fe0', bt: 1 },
+  heal: { n: 'Full Heal', p: 40, d: 'Cures poison, burn, sleep and the rest', img: 'full-heal', bc: '#e3c577', bt: 1 },
+  revive: { n: 'Revive', p: 120, d: 'Brings back a fainted Pokémon with half its HP', img: 'revive', bc: '#e3c577', bt: 1 },
+  maxrev: { n: 'Max Revive', p: 300, d: 'Brings back a fainted Pokémon with all its HP', img: 'max-revive', bc: '#e3c577', bt: 1 },
   incense: { n: 'Incense', p: 80, d: 'Next session: one extra encounter and rarer finds', ic: 'smoke' },
   candy: { n: 'Rare Candy', p: 150, d: 'One level up for one Pokémon', ic: 'candy' },
   stone: { n: 'Evolution Stone', p: 300, d: 'For those that do not evolve by level alone', ic: 'gem' },
@@ -137,8 +145,8 @@ function wildLv(id, t) {
 const KEY = 'fokusdex.v1';
 function fresh() {
   return {
-    v: 1, mig: 4, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
-    items: { poke: 15, great: 0, ultra: 0, candy: 0, stone: 0, incense: 0 },
+    v: 1, mig: 5, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
+    items: { poke: 15, great: 0, ultra: 0, candy: 0, stone: 0, incense: 0, potion: 0, super: 0, hyper: 0, maxp: 0, heal: 0, revive: 0, maxrev: 0 }, charm: 0,
     mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, routes: [1], eggs: [], pend: [], incOn: 0,
     log: {}, fm: {},
     fag: {}, extra: ['annet'],
@@ -158,6 +166,7 @@ function adopt(o) {
   if (!o.mig || o.mig < 2) migrate2();
   if (!o.mig || o.mig < 3) migrate3();
   if (!o.mig || o.mig < 4) migrate4();
+  if (!o.mig || o.mig < 5) migrate5();
   S.routes = (S.routes || []).filter(r => S.regions.includes(r)); if (!S.routes.length) S.routes = [S.regions.includes(S.region) ? S.region : S.regions[0]];
   S.mons.forEach(ensure);
   buildFags();
@@ -181,6 +190,11 @@ function migrate4() {
   const L = S.lad; L.n = Math.max(0, Math.min(17, L.n || 0)); L.next = null; L.seen = [];
   if (S.fac) S.fac.run = null;
   S.mig = 4;
+}
+/* Versjon 5: en runde i ligaen er 12 kamper (en trener og så en boss, seks ganger) i stedet for 18. Du står foran samme boss som før. */
+function migrate5() {
+  const L = S.lad, n = Math.max(0, Math.min(17, L.n || 0)); L.n = Math.floor(n / 3) * 2 + (n % 3 === 2 ? 1 : 0); L.next = null;
+  S.mig = 5;
 }
 function load() {
   try { const o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (o && o.v === 1) adopt(o); } catch (_) {}
@@ -215,7 +229,9 @@ function streak() {
   }
   return n;
 }
-const shinyOdds = () => (1 / 150) * (1 + Math.min(streak(), 10) * 0.15);
+/* Shiny Charm: vinnes fra de sjeldneste bossene og virker av seg selv i de neste fokusøktene (S.charm = antall økter igjen). Flere legges sammen. */
+const CHARM = { n: 5, m: 8 };
+const shinyOdds = () => (1 / 150) * (1 + Math.min(streak(), 10) * 0.15) * (S.charm > 0 ? CHARM.m : 1);
 
 function addMon(id, lv, sh, egg) {
   const m = { u: S.uid++, id, lv, xp: xpAt(lv), sh: sh ? 1 : 0, fav: 0, at: Date.now(), iv: rollIv(egg), ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: defaultMoves(id, lv) };
@@ -233,6 +249,9 @@ function genEnc(o = {}) {
   const push = (id, w) => { pool.push([id, w]); tot += w; };
   if (o.egg) {
     for (let id = 1; id <= 649; id++) { if (isLeg(id) || stageOf(id)) continue; const t = tierOf(id); push(id, (t >= 2 ? 3 : 1) * (D(id)[6] & 4 ? 2 : 1)); }
+  } else if (o.ids) {
+    /* En bestemt gruppe arter (for eksempel de pseudo-legendariske), uansett rute og nivå. */
+    for (const id of o.ids) push(id, 1);
   } else if (o.leg) {
     for (const r of S.regions) for (let id = REG[r].a; id <= REG[r].b; id++) if (isLeg(id)) push(id, D(id)[6] & 2 ? 0.5 : 1);
   } else {
@@ -329,6 +348,7 @@ function grant(fag, min, full, planned) {
     }
   }
   R.enc = encs.length;
+  if (S.charm > 0 && n > 0) { S.charm--; R.gifts.push(`Shiny Charm: ${CHARM.m}× shiny odds this session${S.charm ? ` · ${S.charm} more session${S.charm > 1 ? 's' : ''}` : ' · it has now faded'}`); }
   S.pend.push(...encs);
   if (S.pend.length > 15) S.pend.splice(0, S.pend.length - 15);
   save();

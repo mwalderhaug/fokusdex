@@ -151,10 +151,10 @@ const FX = (() => {
   F.heal = b => { if (g) PROG.heal(b, b, PAL[11]); };
   F.open = (b, c) => { if (!g) return; flash('#fff', 0.1, 0.35); ring(b.x, b.y, '#fff', 4, 54, 0.3, 3); burst(b.x, b.y, ['#fff', c || '#ffd9d0'], 12, 90, 'sp', 5, 0.35, 0); };
   F.weather = k => { if (g && k) PROG.weather({ x: 128, y: 96 }, { x: 128, y: 96 }, PAL[0], { name: { rain: 'Rain', sun: 'Sunny', sand: 'Sand', hail: 'Hail' }[k] }); };
-  /* Inngangen til bossenes ess: lyssøyle, ringer og gnister i trenerens farge. De legendariske får lyn i tillegg. */
-  F.ace = (b, ty, gold) => {
+  /* Inngangen til bossenes ess: lyssøyle, ringer og gnister i trenerens farge. Klasse 9 (gull) og de onde (rødt) får lyn i tillegg. */
+  F.ace = (b, ty, o = {}) => {
     if (!g) return wait(900);
-    const P = gold ? ['#fff7cf', '#ffd45a', '#c98a12'] : PAL[ty] || PAL[0];
+    const gold = o.gold || o.th === 'evil', P = o.gold ? ['#fff7cf', '#ffd45a', '#c98a12'] : o.th === 'evil' ? ['#ff8a7a', '#e02020', '#5a0a0a'] : o.cc ? ['#ffffff', o.cc, o.cc] : PAL[ty] || PAL[0];
     add({ k: 'fs', c: '#000', life: 1.25, a: 0.55, x: 0, y: 0 });
     at(150, () => { add({ x: b.x, y: b.y + 18, s: 4, gs: 110, life: 0.9, c: [P[0], P[1]], k: 'pl', a: 0.75 }); add({ x: b.x, y: b.y + 18, s: 2, gs: 36, life: 0.9, c: '#fff', k: 'pl' }); shake(700); });
     for (let i = 0; i < 4; i++) at(250 + i * 150, () => { ring(b.x, b.y + 14, P[i % 2], 8, 120, 0.5, 3); for (let j = 0; j < 8; j++) add({ x: b.x + (R() - 0.5) * 50, y: b.y + 18, vy: -160 - R() * 120, life: 0.6, s: 5, c: [P[0], '#fff', P[1]], k: 'sp' }); });
@@ -163,36 +163,61 @@ const FX = (() => {
     return wait(1250);
   };
   /* Bakgrunnsshowet: jo høyere klasse motstanderen har, jo mer skjer bak Pokémonene. Det tegnes på et eget lerret bak spritene (256 × 192), rundt 30 ganger i sekundet.
-     Nivå 1: lysbånd · 2: svevende gnister · 4: puls bak motstanderen · 6: fartsstriper og mørke kanter som puster · 7: lyn · 8: nordlys. gold = gullpalett (de aller største). */
+     Nivå 1: lysbånd · 2: svevende gnister · 4: puls bak motstanderen · 6: fartsstriper · 7: lyn · 8: nordlys.
+     o.th = tema: 'evil' (mørkt, rød puls som hjerteslag, aske, røde lyn og forstyrrelser), mesternes egne ('snow', 'bubble', 'flame', 'shard', 'petal', 'spark', rolige og i deres farge o.cc),
+     og o.gold (bare klasse 9: gull, nordlys og lyn). */
   let showId = 0;
   F.intensity = 0;
-  F.show = (c, lvl, ty, gold) => {
+  const TPN = { snow: 46, bubble: 20, flame: 30, shard: 16, petal: 22, spark: 26, evil: 38 };
+  F.show = (c, lvl, ty, o = {}) => {
     cancelAnimationFrame(showId); showId = 0; F.intensity = lvl || 0;
     if (!c || !lvl) return;
-    const x = c.getContext('2d'), P = gold ? ['#fff7cf', '#ffd45a', '#c98a12'] : PAL[ty] || PAL[0];
-    const motes = Array.from({ length: lvl >= 2 ? Math.min(46, 6 + lvl * 5) : 0 }, () => ({ x: R() * 256, y: R() * 192, v: (6 + R() * 14) * (1 + lvl / 4), s: R() < 0.3 ? 2 : 1, p: R() * TAU }));
-    const lines = Array.from({ length: lvl >= 6 ? 6 + (lvl - 6) * 4 : 0 }, () => ({ x: R() * 256, y: R() < 0.5 ? R() * 34 : 158 + R() * 34, v: 160 + R() * 220, w: 14 + R() * 30 }));
-    let t0 = 0, bolt = null, nextBolt = 1.2;
+    const x = c.getContext('2d'), th = o.th || '', evil = th === 'evil', calm = !!th && !evil;
+    const P = o.gold ? ['#fff7cf', '#ffd45a', '#c98a12'] : evil ? ['#ff8a7a', '#e02020', '#5a0a0a'] : o.cc ? ['#ffffff', o.cc, o.cc] : PAL[ty] || PAL[0];
+    const motes = Array.from({ length: lvl >= 2 && !th ? Math.min(46, 6 + lvl * 5) : 0 }, () => ({ x: R() * 256, y: R() * 192, v: (6 + R() * 14) * (1 + lvl / 4), s: R() < 0.3 ? 2 : 1, p: R() * TAU }));
+    const lines = Array.from({ length: lvl >= 6 && !calm ? 6 + (lvl - 6) * 4 : 0 }, () => ({ x: R() * 256, y: R() < 0.5 ? R() * 34 : 158 + R() * 34, v: 160 + R() * 220, w: 14 + R() * 30 }));
+    const tp = Array.from({ length: TPN[th] || 0 }, () => ({ x: R() * 256, y: R() * 192, v: 0.4 + R(), p: R() * TAU, s: R() < 0.3 ? 2 : 1 }));
+    let t0 = 0, bolt = null, nextBolt = 1.2, glitch = 0, nextGl = 2;
     const step = ts => {
       if (!c.isConnected) { showId = 0; return; }
       showId = requestAnimationFrame(step);
       if (ts - t0 < 32) return;
       const dt = Math.min(0.1, (ts - t0) / 1000), T = ts / 1000; t0 = ts;
-      x.clearRect(0, 0, 256, 192); x.globalCompositeOperation = 'lighter';
-      const bands = 2 + Math.floor(lvl / 3);
-      for (let i = 0; i < bands; i++) { const bx = ((T * (10 + lvl * 3) + i * 320 / bands) % 320) - 32; x.globalAlpha = 0.04 + 0.007 * lvl; x.fillStyle = P[i % 2]; x.beginPath(); x.moveTo(bx, 0); x.lineTo(bx + 12, 0); x.lineTo(bx - 36, 192); x.lineTo(bx - 48, 192); x.fill(); }
-      if (lvl >= 4) { const k = 0.5 + 0.5 * Math.sin(T * (2 + lvl * 0.35)), r = 34 + lvl * 3 + k * 10, gr = x.createRadialGradient(189, 74, 4, 189, 74, r); gr.addColorStop(0, P[1]); gr.addColorStop(1, 'rgba(0,0,0,0)'); x.globalAlpha = 0.14 + 0.03 * lvl + 0.1 * k; x.fillStyle = gr; x.fillRect(189 - r, 74 - r, r * 2, r * 2); }
-      if (lvl >= 8) for (let j = 0; j < 3; j++) { x.globalAlpha = 0.1; x.fillStyle = [P[0], P[1], '#fff'][j]; x.beginPath(); x.moveTo(0, 0); for (let i = 0; i <= 256; i += 16) x.lineTo(i, 24 + j * 9 + Math.sin(i / 40 + T * (0.8 + j * 0.3) + j) * 10); x.lineTo(256, 0); x.fill(); }
+      x.clearRect(0, 0, 256, 192);
+      /* De onde: banen mørkner, og kantene pulserer rødt i to slag som et hjerte. */
+      let beat = 0;
+      if (evil) { const ph = (T % 1.15) / 1.15; beat = Math.max(Math.exp(-Math.pow(ph - 0.06, 2) / 0.0016), 0.7 * Math.exp(-Math.pow(ph - 0.26, 2) / 0.003)); x.fillStyle = 'rgba(0,0,0,.3)'; x.fillRect(0, 0, 256, 192); }
+      x.globalCompositeOperation = 'lighter';
+      const bands = calm ? 2 : 2 + Math.floor(lvl / 3);
+      for (let i = 0; i < bands; i++) { const bx = ((T * (10 + lvl * 3) + i * 320 / bands) % 320) - 32; x.globalAlpha = (0.04 + 0.007 * lvl) * (evil ? 0.5 : 1); x.fillStyle = P[i % 2]; x.beginPath(); x.moveTo(bx, 0); x.lineTo(bx + 12, 0); x.lineTo(bx - 36, 192); x.lineTo(bx - 48, 192); x.fill(); }
+      if (lvl >= 4) { const k = evil ? beat : 0.5 + 0.5 * Math.sin(T * (2 + lvl * 0.35)), r = 34 + lvl * 3 + k * 10, gr = x.createRadialGradient(189, 74, 4, 189, 74, r); gr.addColorStop(0, P[1]); gr.addColorStop(1, 'rgba(0,0,0,0)'); x.globalAlpha = 0.14 + 0.03 * lvl + 0.1 * k; x.fillStyle = gr; x.fillRect(189 - r, 74 - r, r * 2, r * 2); }
+      if (lvl >= 8 && !th) for (let j = 0; j < 3; j++) { x.globalAlpha = 0.1; x.fillStyle = [P[0], P[1], '#fff'][j]; x.beginPath(); x.moveTo(0, 0); for (let i = 0; i <= 256; i += 16) x.lineTo(i, 24 + j * 9 + Math.sin(i / 40 + T * (0.8 + j * 0.3) + j) * 10); x.lineTo(256, 0); x.fill(); }
       x.globalAlpha = 0.35; x.fillStyle = P[0];
       for (const l of lines) { l.x -= l.v * dt; if (l.x < -l.w) { l.x = 256 + R() * 60; l.y = R() < 0.5 ? R() * 34 : 158 + R() * 34; } x.fillRect(px(l.x), px(l.y), px(l.w), 1); }
       for (const m of motes) { m.y -= m.v * dt; m.x += Math.sin(T * 1.3 + m.p) * 6 * dt; if (m.y < -2) { m.y = 194; m.x = R() * 256; } x.globalAlpha = 0.35 + 0.3 * Math.sin(T * 3 + m.p); x.fillStyle = m.s > 1 ? P[0] : P[1]; x.fillRect(px(m.x), px(m.y), m.s, m.s); }
-      if (lvl >= 7) {
+      /* Temaene: snø som faller, bobler som stiger, flammer fra bunnen, krystaller som glimter, blader som driver, gnister som blinker, og aske og glør hos de onde. */
+      for (const q of tp) {
+        if (th === 'snow') { q.y += (12 + 20 * q.v) * dt; q.x += (Math.sin(T + q.p) * 8 - 6) * dt; x.globalAlpha = 0.75; x.fillStyle = '#fff'; x.fillRect(px(q.x), px(q.y), q.s, q.s); }
+        else if (th === 'bubble') { q.y -= (10 + 16 * q.v) * dt; q.x += Math.sin(T * 1.6 + q.p) * 7 * dt; x.globalAlpha = 0.55; x.strokeStyle = P[q.s > 1 ? 0 : 1]; x.lineWidth = 1; x.beginPath(); x.arc(px(q.x), px(q.y), 1.5 + q.s * 1.5, 0, TAU); x.stroke(); }
+        else if (th === 'flame') { q.y -= (36 + 50 * q.v) * dt; q.x += Math.sin(T * 5 + q.p) * 10 * dt; const h = Math.max(0, q.y / 192); x.globalAlpha = 0.7 * h; x.fillStyle = h > 0.7 ? '#fff2a6' : h > 0.4 ? P[1] : '#e2481f'; x.fillRect(px(q.x), px(q.y), q.s, 2 + q.s); }
+        else if (th === 'shard') { const a = Math.sin(T * 1.8 + q.p); if (a > 0) { x.globalAlpha = a * 0.8; x.fillStyle = q.s > 1 ? '#fff' : P[1]; const s = 1 + q.s; x.fillRect(px(q.x) - s, px(q.y), s * 2 + 1, 1); x.fillRect(px(q.x), px(q.y) - s, 1, s * 2 + 1); } }
+        else if (th === 'petal') { q.x += (14 + 14 * q.v) * dt; q.y += (8 + Math.sin(T * 2 + q.p) * 10) * dt; x.globalAlpha = 0.7; x.fillStyle = q.s > 1 ? '#ffe9b0' : P[1]; x.fillRect(px(q.x), px(q.y), 2, 1); x.fillRect(px(q.x) + 1, px(q.y) + 1, 2, 1); }
+        else if (th === 'spark') { if (Math.sin(T * 5 + q.p) > 0.86) { x.globalAlpha = 0.9; x.fillStyle = q.s > 1 ? '#fff' : P[1]; x.fillRect(px(q.x) - 1, px(q.y), 3, 1); x.fillRect(px(q.x), px(q.y) - 1, 1, 3); } else if (R() < 0.01) { q.x = R() * 256; q.y = R() * 192; } }
+        else if (evil) { if (q.s > 1) { q.y -= (10 + 14 * q.v) * dt; x.globalAlpha = 0.5 + 0.4 * Math.sin(T * 4 + q.p); x.fillStyle = '#ff5a3a'; } else { q.y += (9 + 12 * q.v) * dt; q.x += Math.sin(T + q.p) * 5 * dt; x.globalAlpha = 0.5; x.fillStyle = '#6a5a5c'; } x.fillRect(px(q.x), px(q.y), q.s, q.s); }
+        if (q.y > 194) { q.y = -2; q.x = R() * 256; } else if (q.y < -3) { q.y = 194; q.x = R() * 256; } if (q.x > 258) q.x = -2; else if (q.x < -3) q.x = 257;
+      }
+      if ((lvl >= 7 && !calm) || evil) {
         nextBolt -= dt;
-        if (nextBolt <= 0) { nextBolt = (lvl >= 8 ? 1.1 : 2.2) + R() * 2; let bx = 20 + R() * 216, by = 0; const pts = [[bx, by]], end = 60 + R() * 60; while (by < end) { bx += (R() - 0.5) * 26; by += 8 + R() * 12; pts.push([bx, by]); } bolt = { pts, t: 0.22 }; }
-        if (bolt) { bolt.t -= dt; x.globalAlpha = Math.max(0, bolt.t / 0.22) * 0.8; x.strokeStyle = P[0]; x.lineWidth = 2; x.beginPath(); bolt.pts.forEach((q, i) => i ? x.lineTo(px(q[0]), px(q[1])) : x.moveTo(px(q[0]), px(q[1]))); x.stroke(); x.strokeStyle = '#fff'; x.lineWidth = 1; x.stroke(); if (bolt.t <= 0) bolt = null; }
+        if (nextBolt <= 0) { nextBolt = (lvl >= 8 ? 1.1 : evil ? 1.6 : 2.2) + R() * 2; let bx = 20 + R() * 216, by = 0; const pts = [[bx, by]], end = 60 + R() * 60; while (by < end) { bx += (R() - 0.5) * 26; by += 8 + R() * 12; pts.push([bx, by]); } bolt = { pts, t: 0.22 }; }
+        if (bolt) { bolt.t -= dt; x.globalAlpha = Math.max(0, bolt.t / 0.22) * 0.8; x.strokeStyle = P[evil ? 1 : 0]; x.lineWidth = 2; x.beginPath(); bolt.pts.forEach((q, i) => i ? x.lineTo(px(q[0]), px(q[1])) : x.moveTo(px(q[0]), px(q[1]))); x.stroke(); x.strokeStyle = evil ? '#ffd0c8' : '#fff'; x.lineWidth = 1; x.stroke(); if (bolt.t <= 0) bolt = null; }
       }
       x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
-      if (lvl >= 6) { const k = 0.5 + 0.5 * Math.sin(T * 1.7), gr = x.createRadialGradient(128, 100, 60, 128, 100, 170); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, `rgba(0,0,0,${(0.28 + 0.12 * k).toFixed(2)})`); x.fillStyle = gr; x.fillRect(0, 0, 256, 192); }
+      if (evil) {
+        const gr = x.createRadialGradient(128, 100, 50, 128, 100, 165); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, `rgba(${Math.round(60 + 150 * beat)},0,0,${(0.42 + 0.3 * beat).toFixed(2)})`); x.fillStyle = gr; x.fillRect(0, 0, 256, 192);
+        /* Forstyrrelser: noen striper som rykker til, og banen rister med (kroken hooks.glitch). */
+        nextGl -= dt; if (nextGl <= 0) { nextGl = 2.2 + R() * 3.5; glitch = 0.14; if (F.hooks.glitch) F.hooks.glitch(150); }
+        if (glitch > 0) { glitch -= dt; for (let i = 0; i < 5; i++) { x.fillStyle = i % 2 ? 'rgba(255,20,60,.3)' : 'rgba(0,240,255,.16)'; x.fillRect(px((R() - 0.5) * 30), px(R() * 192), 256, 1 + px(R() * 5)); } }
+      } else if (lvl >= 6 && !calm) { const k = 0.5 + 0.5 * Math.sin(T * 1.7), gr = x.createRadialGradient(128, 100, 60, 128, 100, 170); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, `rgba(0,0,0,${(0.28 + 0.12 * k).toFixed(2)})`); x.fillStyle = gr; x.fillRect(0, 0, 256, 192); }
     };
     showId = requestAnimationFrame(step);
   };

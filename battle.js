@@ -530,9 +530,27 @@ const autoAct = B => { const V = B.me[B.a].v; return V.rech || V.lock ? { t: 'mo
 const canSwitch = B => { const b = B.me[B.a], V = b.v; return b.hp <= 0 || !(V.trap || V.nosw || V.ingrain || V.lock || V.rech); };
 const moveOk = (B, k) => { const b = B.me[B.a], V = b.v, x = b.mv[k]; return !!x && x.pp > 0 && !(V.dis && V.dis.k === k) && !(V.taunt && MOVES[x.i][4] === 0) && (!V.enc || V.enc.k === k); };
 /* Én runde. a = { t: 'move', k } (k = -1 er Struggle) eller { t: 'switch', i }. */
+/* Veska: gjenstander fra butikken brukt i kamp. Å bruke en koster turen din, akkurat som et bytte.
+   hp = hvor mye som helbredes, cure = fjerner status, rev = vekker en som har besvimt (andel av HP). */
+const BAG = { potion: { hp: 20 }, super: { hp: 60 }, hyper: { hp: 120 }, maxp: { hp: 9999 }, heal: { cure: 1 }, revive: { rev: 0.5 }, maxrev: { rev: 1 } };
+function itemOk(B, k, i) {
+  const d = BAG[k], b = B.me[i]; if (!d || !b) return false;
+  if (d.rev) return b.hp <= 0;
+  if (b.hp <= 0) return false;
+  return d.cure ? !!b.status || !!b.v.conf : b.hp < b.max;
+}
+function useItem(B, k, i, ev) {
+  const d = BAG[k], b = B.me[i], on = i === B.a, nm = SHOP[k].n, say = s => ev.push({ t: 'msg', s });
+  say(`You used ${/^[AEIOU]/.test(nm) ? 'an' : 'a'} ${nm} on ${b.name}.`);
+  if (d.rev) { b.hp = Math.max(1, Math.floor(b.max * d.rev)); b.out = 0; b.status = ''; b.tox = 0; b.slp = 0; b.sg = Z8(); b.v = {}; say(`${b.name} is back on its feet!`); }
+  else if (d.cure) { b.status = ''; b.tox = 0; b.slp = 0; b.v.conf = 0; if (on) ev.push({ t: 'status', side: 'me', st: '' }); say(`${b.name} is healthy again.`); }
+  else { const h = Math.min(b.max - b.hp, d.hp); b.hp += h; if (on) ev.push({ t: 'heal', side: 'me', hp: b.hp }); say(`${b.name} recovered ${h} HP.`); }
+  B.bag = Math.max(0, (B.bag || 0) - 1);
+}
 function runTurn(B, a) {
   const ev = []; B.turn++;
   const fa = aiAct(B);
+  if (a.t === 'item') useItem(B, a.k, a.i, ev);
   if (a.t === 'switch') swapTo(B, 'me', a.i, ev);
   if (fa.t === 'switch' && !B.over) { swapTo(B, 'foe', fa.i, ev); B.aiSw = B.turn; }
   const q = [];

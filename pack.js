@@ -4,7 +4,7 @@
    med synk-nøkkelen første gang de trengs og lagrer dem på enheten. Uten pakke (eller uten synk) brukes de innebygde, kodetegnede effektene.
    Animasjonene er rammedata (ark med ruter på 192 × 192 og én liste per ramme med hvor hver rute skal tegnes) og spilles av én felles avspiller. */
 const PACK = (() => {
-  const P = { ok: false, man: null, anims: null }, mem = new Map(), pend = new Map(), imgs = new Map(), bufs = new Map(), CN = 'fokusdex-pack';
+  const P = { ok: false, man: null, anims: null, err: '' }, mem = new Map(), pend = new Map(), imgs = new Map(), bufs = new Map(), CN = 'fokusdex-pack';
   const dev = () => { try { return localStorage.getItem('fokusdex.pack') || ''; } catch (_) { return ''; } };
   const key = p => 'https://pack.invalid/' + (P.man ? P.man.v : 0) + '/' + p;
   const MIME = { png: 'image/png', mp3: 'audio/mpeg', json: 'application/json' };
@@ -13,9 +13,16 @@ const PACK = (() => {
     const d = dev();
     if (d) { const r = await fetch(d + path, { cache: 'no-store' }); if (!r.ok) throw new Error(r.status); return r.blob(); }
     if (!GH || !GH.ok) throw new Error('nosync');
+    await slot();
+    try { return await ghGet(path); } finally { free(); }
+  }
+  /* Høyst seks nedlastinger om gangen, så GitHub ikke bremser oss når en kamp trenger mange filer på en gang. */
+  let busy = 0; const wait = [];
+  const slot = () => busy < 6 ? (busy++, Promise.resolve()) : new Promise(r => wait.push(r)), free = () => { const n = wait.shift(); if (n) n(); else busy--; };
+  async function ghGet(path) {
     const r = await fetch(`https://api.github.com/repos/${GH.repo}/contents/pack/${path.split('/').map(encodeURIComponent).join('/')}`,
-      { headers: { Authorization: 'Bearer ' + GH.token, Accept: 'application/vnd.github.raw+json', 'X-GitHub-Api-Version': '2022-11-28' }, cache: 'no-store' });
-    if (!r.ok) throw new Error(r.status);
+      { headers: { Authorization: 'Bearer ' + GH.t, Accept: 'application/vnd.github.raw+json', 'X-GitHub-Api-Version': '2022-11-28' }, cache: 'no-store' });
+    if (!r.ok) { P.err = String(r.status); throw new Error(r.status); }
     return r.blob();
   }
   async function blob(path) {
@@ -45,9 +52,22 @@ const PACK = (() => {
     try { m = JSON.parse(await (await raw('manifest.json')).text()); localStorage.setItem('fokusdex.packman', JSON.stringify(m)); }
     catch (_) { try { m = JSON.parse(localStorage.getItem('fokusdex.packman')); } catch (_) {} }
     if (!m || !m.v) return false;
-    P.man = m; P.ok = true;
+    P.man = m; P.ok = true; P.err = '';
+    setTimeout(warmUp, 600);
     return true;
   };
+  /* Rett etter at pakken er funnet, hentes det første kampen trenger i bakgrunnen: HP-boksene, introbildene, ballene, animasjonsdataene og trenerlåtene. */
+  function warmUp() {
+    const m = P.man, list = [m.hud && m.hud.f, m.vs && m.vs.f, 'ui/ball_pokeball.png', 'ui/ball_pokeball_open.png'].filter(Boolean);
+    list.forEach(f => P.url(f)); loadHud(); loadAnims();
+    (m.music || []).filter(x => x.c === 'trainer').forEach(x => P.url(x.f));
+    try { if (S.party.length) { const t = nextTrainer(), f = P.trackFor({ tr: trainerInfo(t), lap: t.lap, rd: Math.floor(t.n / 2) }); if (f) P.url(f); } } catch (_) {}
+  }
+  let animJob = null;
+  const loadAnims = () => P.anims || !P.man.anims ? Promise.resolve() : animJob || (animJob = blob(P.man.anims).then(b => b.text()).then(t => { P.anims = JSON.parse(t); }).catch(() => { animJob = null; }));
+  /* Egne trenerbilder i pakken (manifest.trainers: navn → fil). Gir adressen hvis bildet er hentet, ellers '' mens det hentes til neste gang. */
+  P.portrait = name => { const f = P.ok && P.man.trainers && P.man.trainers[name]; if (!f) return ''; const u = mem.get(f); if (!u) P.url(f); return u || ''; };
+  P.title = () => { const x = P.ok && cur && (P.man.music || []).find(m => m.f === cur); return x ? x.t : ''; };
   const animId = m => m[0].toUpperCase().replace(/[^A-Z0-9]/g, '');
   P.animFor = m => P.anims && P.anims.a['Move:' + animId(m)] ? 'Move:' + animId(m) : '';
   P.common = k => P.anims && P.anims.a['Common:' + k] ? 'Common:' + k : '';
@@ -58,7 +78,7 @@ const PACK = (() => {
     evilboss: ['kyurem_cave', 'black_tower_10'], champ: ['black_tower_10', 'black_tower_1_2'], supreme: ['kyurem_cave', 'black_tower_10'], brain: ['pwt', 'black_tower_1_2'] };
   P.sceneFor = B => {
     if (!P.ok) return '';
-    const tr = B.tr, own = tr.boss && P.man.scenes[tr.n.toLowerCase()]; if (own) return own;
+    const tr = B.tr, own = tr.boss && (P.man.scenes[tr.sc] || P.man.scenes[tr.n.toLowerCase()]); if (own) return own;
     const l = SCENE[tr.boss ? tr.kind : tr.fr ? 'factory' : tr.arena] || SCENE.field, s = l[(tr.v + tr.n.length) % l.length]; return P.man.scenes[s] || '';
   };
   /* Hvilken låt som hører til treneren. Låtene ligger i én mappe per klasse, og tittelen sier hvem de tilhører: hver boss har et søk (mre)
@@ -73,7 +93,8 @@ const PACK = (() => {
     if (tr.kind === 'brain') { l = by('frontier', re); if (!l.length) l = by('frontier', /Frontier Brain/); }
     else if (tr.boss) { if (re) { l = by(tr.kind, re); for (const c of FALL[tr.kind] || []) if (!l.length) l = by(c, re); } if (!l.length) l = by(tr.kind); }
     else if (tr.fr) { l = (B.w || 0) >= 4 ? by('frontier', /Raikou|Giratina|Rayquaza|Reshiram|Mewtwo/) : by('frontier', /Aether|World Champion/).concat(by('trainer')); h = (B.w || 0) + (B.round || 0) * 3; }
-    if (!l.length) l = by('trainer');
+    /* Vanlige trenere bytter mellom trenerlåtene fra kamp til kamp. */
+    if (!l.length) { l = by('trainer'); if (l.length) { if (B.pick == null) B.pick = B.mode === 'league' ? (B.rd || 0) + (B.lap || 0) : Math.floor(Math.random() * 97); return l[B.pick % l.length].f; } }
     if (!l.length) return '';
     for (let i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) >>> 0;
     return l[h % l.length].f;
@@ -88,7 +109,7 @@ const PACK = (() => {
     P.vs = o;
   }
   /* Bildene til boss-introen må være klare før introen starter. Venter høyst et par sekunder. */
-  P.introPrep = async () => { if (!(await P.init())) return; await Promise.race([loadVs(), new Promise(r => setTimeout(r, 2500))]); };
+  P.introPrep = async B => { if (!(await P.init())) return; const pt = B && P.man.trainers && P.man.trainers[B.tr.img.split('|')[0]]; await Promise.race([Promise.all([loadVs(), pt ? P.url(pt) : 0]), new Promise(r => setTimeout(r, 2500))]); };
   /* Musikken spilles i ett lydelement som låses opp av trykket som starter kampen (ellers nekter mobilen å spille). */
   let au = null, cur = '';
   P.unlock = () => { try { if (!au) { au = new Audio(); au.loop = true; au.preload = 'auto'; } if (!cur) { au.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='; au.play().catch(() => {}); } } catch (_) {} };
@@ -116,12 +137,11 @@ const PACK = (() => {
   /* Gjør klart til en kamp: bane, animasjonsdata, arkene til alle angrepene på begge lag, baller og lyder. Venter høyst noen sekunder. */
   P.prep = async B => {
     if (!(await P.init())) return;
-    const jobs = [];
-    if (!P.anims && P.man.anims) jobs.push(blob(P.man.anims).then(b => b.text()).then(t => { P.anims = JSON.parse(t); }).catch(() => {}));
+    const jobs = [loadAnims()];
+    const tk = P.trackFor(B); if (tk) P.url(tk);
     const sc = P.sceneFor(B); if (sc) jobs.push(P.url(sc));
     jobs.push(loadHud()); if (B.tr.boss) jobs.push(loadVs());
     for (const b of ['pokeball', 'greatball', 'ultraball']) { jobs.push(P.url(`ui/ball_${b}.png`)); jobs.push(P.url(`ui/ball_${b}_open.png`)); }
-    const tk = P.trackFor(B); if (tk) P.url(tk);
     ['Hit Super Effective', 'Hit Normal Damage', 'Hit Weak Not Very Effective', 'Stat Rise Up', 'Stat Fall', 'In-Battle Faint No Health', 'In-Battle Heal HP Restore', 'In-Battle Recall Switch Pokeball', 'Status Burned', 'Status Poisoned', 'Status Paralyzed', 'Status Frozen'].forEach(P.warm);
     const all = B.me.concat(B.foe);
     all.forEach(b => b.mv.forEach(x => P.warm(MOVES[x.i][0])));
