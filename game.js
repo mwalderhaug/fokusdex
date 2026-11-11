@@ -158,7 +158,7 @@ function fresh() {
     log: {}, fm: {},
     fag: {}, extra: ['annet'],
     last: { fag: 'annet', min: 60 }, cap: 360, sound: 0, cries: 1, vol: 70, cvol: 80, timer: null,
-    lad: { n: 0, lap: 0, best: 0, day: '', lost: '', next: null, seen: [] }, fac: { run: null, best: 0, lost: '' }, boost: null, bfast: 0, music: 1
+    lad: { n: 0, lap: 0, best: 0, day: '', lost: '', next: null, seen: [] }, fac: { run: null, best: 0, lost: '' }, raid: null, boost: null, bfast: 0, music: 1
   };
 }
 let S = fresh();

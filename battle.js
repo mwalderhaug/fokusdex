@@ -63,8 +63,9 @@ function mkBattle(me, foe, tr, x) {
 }
 const act = (B, s) => s === 'me' ? B.me[B.a] : B.foe[B.b];
 const opp = s => s === 'me' ? 'foe' : 'me';
-const nmOf = (s, b) => s === 'foe' ? `The foe's ${b.name}` : b.name;
-const lc = s => s.replace(/^The foe/, 'the foe');
+let WILD = false;
+const nmOf = (s, b) => s === 'foe' ? `${WILD ? 'The wild' : "The foe's"} ${b.name}` : b.name;
+const lc = s => s.replace(/^The (foe|wild)/, 'the $1');
 const sideOf = (B, b) => B.me.includes(b) ? 'me' : 'foe';
 const spdB = (B, b) => b.st[5] * stgM(b.sg[5]) * (b.status === 'par' ? 0.5 : 1) * (B.sd[sideOf(B, b)].tail ? 2 : 1);
 const boosts = b => b.sg.reduce((a, c) => a + Math.max(0, c), 0);
@@ -660,7 +661,7 @@ function runQueue(B, q, ev) {
   return true;
 }
 function runTurn(B, a) {
-  const ev = []; B.turn++; GRAV = B.grav || 0;
+  const ev = []; B.turn++; GRAV = B.grav || 0; WILD = !!B.tr.wild;
   const fa = aiAct(B);
   /* Hva hver side har tenkt å gjøre denne runden: angrepets nummer, -1 for Struggle og -2 for alt annet (bytte, gjenstand). */
   const idx = (b, k) => k >= 0 && b.mv[k] ? b.mv[b.v.enc ? b.v.enc.k : k].i : -1;
@@ -689,7 +690,7 @@ function afterTurn(B, ev) {
 }
 /* Spilleren har valgt hvem som kommer inn: etter en besvimelse, eller midt i runden etter U-turn og lignende (da gjøres resten av runden etterpå). */
 function sendIn(B, i) {
-  const ev = []; GRAV = B.grav || 0;
+  const ev = []; GRAV = B.grav || 0; WILD = !!B.tr.wild;
   if (B.need === 2) {
     const q = B.rest || []; B.rest = null; B.need = 0;
     if (i !== B.a && B.me[i] && B.me[i].hp > 0) swapTo(B, 'me', i, ev); else B.pass = null;

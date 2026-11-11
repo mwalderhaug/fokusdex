@@ -91,7 +91,8 @@ const PACK = (() => {
     if (!P.ok || !P.man.music) return '';
     const tr = B.tr, n = tr.n, M = P.man.music, by = (c, re) => M.filter(x => x.c === c && (!re || re.test(x.t)));
     let re = null, l = [], h = B.lap || 0; try { if (tr.mre) re = new RegExp(tr.mre); } catch (_) {}
-    if (tr.kind === 'brain') { l = by('frontier', re); if (!l.length) l = by('frontier', /Frontier Brain/); }
+    if (tr.kind === 'legend') { l = by('legend', re); if (!l.length) l = by('legend'); }
+    else if (tr.kind === 'brain') { l = by('frontier', re); if (!l.length) l = by('frontier', /Frontier Brain/); }
     else if (tr.boss) { if (re) { l = by(tr.kind, re); for (const c of FALL[tr.kind] || []) if (!l.length) l = by(c, re); } if (!l.length) l = by(tr.kind); }
     else if (tr.fr) { l = (B.w || 0) >= 4 ? by('frontier', /Raikou|Giratina|Rayquaza|Reshiram|Mewtwo/) : by('frontier', /Aether|World Champion/).concat(by('trainer')); h = (B.w || 0) + (B.round || 0) * 3; }
     /* Vanlige trenere bytter mellom trenerlåtene fra kamp til kamp. */

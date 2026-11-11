@@ -801,3 +801,36 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .fs-mv small{font-size:10.5px;color:var(--ink2)}
 .rent button.mega{box-shadow:0 0 0 2px var(--gold)}
 .bw-p .nm u{text-decoration:none;font-size:.8em;color:#f8c830}
+/* ---------- Legendariske kamper ---------- */
+.raidc{box-shadow:0 0 0 2px var(--cc,var(--gold)),0 0 26px color-mix(in srgb,var(--cc,var(--gold)) 40%,transparent);background:linear-gradient(135deg,color-mix(in srgb,var(--cc,var(--gold)) 22%,var(--card)),var(--card) 70%)}
+.raid-sp{flex:none;width:84px;height:84px;display:flex;align-items:center;justify-content:center}
+.raid-sp .sprb{--s:84px}
+.legl{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.legl button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:14px;background:linear-gradient(color-mix(in srgb,var(--cc,#888) 26%,var(--card)),var(--card));box-shadow:0 0 0 1px var(--line);min-width:0}
+.legl .sprb{--s:44px}
+.legl b{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+/* Filmsnutten: scenen på lerretet, skyggen som vokser fram, lysglimtet og navnet. */
+.lgi{position:absolute;inset:0;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden;transition:opacity .35s}
+.lgi.d{opacity:0}
+.lgi-s{position:relative;width:min(100%,calc(var(--appH,100dvh)*1.333));aspect-ratio:4/3;overflow:hidden;--k:1.5}
+.lgi-cv{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;animation:lgIn 1.2s ease-out both}
+@keyframes lgIn{from{opacity:0}}
+.lgi-sp{position:absolute;left:50%;top:58%;width:0;height:0;opacity:0;transform:scale(.45);transition:opacity 1.2s,transform 3s cubic-bezier(.2,.6,.3,1)}
+.lgi-sp .sprb{position:absolute;left:0;top:0;width:0;height:0;display:block;background:none}
+.lgi-sp .sprb::before,.lgi-sp .sprb::after{display:none}
+.lgi-sp .spr{position:absolute;left:0;top:0;max-width:none;width:auto;height:auto;image-rendering:pixelated;transform:translate(-50%,-55%) scale(calc(var(--k)*1.5));filter:brightness(0) drop-shadow(0 0 calc(var(--k)*3px) var(--cc));animation:none}
+.lgi.b .lgi-sp{opacity:1;transform:scale(1)}
+.lgi.c .lgi-sp .spr{filter:drop-shadow(0 0 calc(var(--k)*4px) var(--cc));transition:filter .6s}
+.lgi-fl{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.lgi.c .lgi-fl{animation:lgFlash 1s ease-out}
+@keyframes lgFlash{0%{opacity:1}100%{opacity:0}}
+.lgi-nm{position:absolute;left:0;right:0;bottom:7%;text-align:center;font-family:var(--pix);color:#fff;opacity:0;transform:translateY(30%);transition:opacity .5s .25s,transform .5s .25s;text-shadow:0 0 calc(var(--k)*4px) var(--cc),calc(var(--k)*1px) calc(var(--k)*1px) 0 #000}
+.lgi.c .lgi-nm{opacity:1;transform:none}
+.lgi-nm span{display:block;font-size:calc(var(--k)*8px);letter-spacing:.3em;text-transform:uppercase;color:var(--cc)}
+.lgi-nm b{display:block;font-size:calc(var(--k)*22px);font-weight:900;letter-spacing:.12em;text-transform:uppercase;line-height:1.1}
+.lgi-nm i{font-style:normal;font-size:calc(var(--k)*9px)}
+.lgi.b .lgi-s{animation:lgRumble .1s linear infinite}
+.lgi.c .lgi-s{animation:none}
+.lgi.t4.c .lgi-s{animation:lgRumble .08s linear 12}
+@keyframes lgRumble{50%{transform:translate(calc(var(--k)*.6px),calc(var(--k)*-.5px))}}
+@media (prefers-reduced-motion:reduce){.lgi-s{animation:none!important}}

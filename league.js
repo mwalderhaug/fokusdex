@@ -278,12 +278,12 @@ function finishLeague(B) {
       if (!res.trade.length) res.trade = null;
     }
     L.best = (L.best || 0) + 1; (L.seen = L.seen || []).push(k + B.ti); L.next = null;
-    if (++L.n >= LAPN) { L.lap++; L.n = 0; L.seen = []; res.lapDone = true; }
+    if (++L.n >= LAPN) { L.lap++; L.n = 0; L.seen = []; res.lapDone = true; raidSpawn(res); }
   } else {
     const d = L.day || dayKey(), n = ladFails() + 1; L.tries = { d, n }; if (n >= LIVES) L.lost = d; res.left = Math.max(0, LIVES - n);
     /* De sjeldne bossene gir deg bare én sjanse. Taper du mot den som avslutter runden, drar den videre og neste runde begynner uten belønningen.
        Taper du mot en som dukket opp overraskende midt i runden, står den vanlige bossen der neste gang. */
-    if (B.tr.ultra) { L.next = null; res.gone = true; if (rungInfo(L.n, L.lap).k === 'ultra') { L.lap++; L.n = 0; L.seen = []; res.lapDone = true; } } else if (L.next) L.next.fail = d;
+    if (B.tr.ultra) { L.next = null; res.gone = true; if (rungInfo(L.n, L.lap).k === 'ultra') { L.lap++; L.n = 0; L.seen = []; res.lapDone = true; raidSpawn(res); } } else if (L.next) L.next.fail = d;
   }
   save();
   return res;
@@ -376,7 +376,7 @@ function finishFactory(B) {
     if (r >= 3 && roll(0.12)) pushEnc(res, genEnc({ leg: 1 }));
     /* Sjelden boss: klassens egen belønning på toppen, som i ligaen. */
     if (B.tr.ultra) { const c = B.tr.ci, extra = Math.round([150, 250, 500][c - 7] * sm); res.coins += extra; S.coins += extra; rareLoot(c, res, give, [B.tr.ty]); res.note = `${B.tr.cn}: extra rewards.`; }
-    res.roundDone = true; R.round++; R.w = 0; R.team = null; R.offer = facOffer(R.round); R.open = 0;
+    res.roundDone = true; raidSpawn(res); R.round++; R.w = 0; R.team = null; R.offer = facOffer(R.round); R.open = 0;
   } else res.swap = B.foe.map(f => f.src);
   R.foe = null;
   save();
@@ -401,5 +401,39 @@ function labBattle(k, rent, pi) {
     if (k === 'trainer') tr.skill = st.sk;
   }
   return mkBattle(me, foes, tr, { mode: 'lab', st: c, k, rd, n: 0, lap: 0, ti: i, rent: rent ? 1 : 0, bag: rent ? 0 : BAGN, xm: 1, sm: 1, boost: { mode: '', m: 1, xp: 1 } });
+}
+/* ---------- Legendariske kamper ----------
+   Når en runde i ligaen eller i Battle Frontier er fullført, viser en legendarisk Pokémon seg. Den er på et høyt nivå og har flere ganger så mye HP
+   som vanlig, så den er umulig i starten. Slår du den, venter den i gresset, og da kan du prøve å fange den.
+   LEGD: art, trinn (1 legendarisk, 2 de største, 3 mytisk, 4 Arceus), søk etter låta i pakken, bane, tema på banen, farge, scenen i filmsnutten og kjennetegnet der. */
+const LEGD = '144,1,Lugia,snowy_tall_grass,snow,#bfe6ff,ice,|145,1,Raikou,mountain,spark,#ffe14a,bolt,|146,1,Ho-oh,mountain,flame,#ff9a3a,magma,|150,2,Mewtwo,cave,shard,#c79bff,void,rings|151,3,Mewtwo,tall_grass,petal,#ffb3d9,forest,|243,1,Raikou,mountain,spark,#ffe14a,bolt,|244,1,Raikou,cave,flame,#ff7a2a,magma,|245,1,Raikou,shallow_water,bubble,#7ad0ff,sea,|249,2,Lugia,water,bubble,#cfe6ff,sea,whirl|250,2,Ho-oh,mountain,flame,#ffb23a,sky,rainbow|251,3,Ho-oh,pinwheel_road,petal,#9be07a,forest,|377,1,Heatran,cave,shard,#c9a45c,stone,|378,1,Heatran,kyurem_cave,snow,#bfe6ff,ice,|379,1,Heatran,cave,shard,#b4c0d2,stone,|380,1,Rayquaza,mountain,spark,#ff7a8a,sky,|381,1,Rayquaza,mountain,spark,#6aa8ff,sky,|382,2,Kyogre,water,bubble,#3f8cff,sea,glyph|383,2,Kyogre,cave,flame,#ff5a2a,magma,glyph|384,2,Rayquaza,mountain,spark,#3fe08a,sky,streak|385,3,Deoxys,mountain,spark,#ffe680,space,|386,3,Deoxys,black_tower_10,shard,#ff7a4a,space,rings|480,1,Uxie,shallow_water,bubble,#ffe680,sea,|481,1,Uxie,shallow_water,bubble,#ff8ab0,sea,|482,1,Uxie,shallow_water,bubble,#6aa8ff,sea,|483,2,Palkia,black_tower_10,shard,#6aa8ff,time,rings|484,2,Palkia,black_tower_10,shard,#ff8ad0,space,rift|485,1,Heatran,cave,flame,#ff7a2a,magma,|486,1,Heatran,cave,shard,#e8e0c0,stone,|487,2,Giratina,kyurem_cave,evil,#e0b030,void,stripes|488,1,Uxie,mountain,shard,#ffb3ea,space,|490,3,Uxie,water,bubble,#5ad0ff,sea,|491,3,Giratina,kyurem_cave,evil,#b03060,void,|492,3,Uxie,tall_grass,petal,#8be07a,forest,|493,4,Arceus,black_tower_10,,#ffe9a8,origin,wheel|494,3,Reshiram,pwt,flame,#ff9a3a,magma,|638,1,Cobalion,mountain,shard,#6ac0e8,stone,|639,1,Cobalion,cave,shard,#c9a45c,stone,|640,1,Cobalion,pinwheel_road,petal,#8be07a,forest,|641,1,Reshiram,mountain,spark,#8be0a0,sky,|642,1,Reshiram,mountain,spark,#6aa8ff,bolt,|643,2,Reshiram,black_tower_10,flame,#fff2e0,flame,pillar|644,2,Reshiram,black_tower_10,spark,#4ad0ff,bolt,pillar|645,1,Reshiram,cave,shard,#e0903a,stone,|646,2,Reshiram,kyurem_cave,snow,#bfe6ff,ice,pillar|647,3,Cobalion,shallow_water,bubble,#6ac0ff,sea,|648,3,Reshiram,pwt,petal,#9be07a,forest,|649,3,Reshiram,black_tower_3_5,shard,#c79bff,space,';
+const LEG = {}; LEGD.split('|').forEach(r => { const q = r.split(','); LEG[+q[0]] = { t: +q[1], mre: q[2], sc: q[3], th: q[4], cc: q[5], bg: q[6], sig: q[7] }; });
+const RAIDLV = [60, 72, 66, 85], RAIDHP = [2, 2.6, 2.2, 3.2], RAIDCOIN = [400, 900, 600, 1500];
+/* Hvem som viser seg: oftest en vanlig legendarisk, sjeldnere en mytisk eller en av de største, og Arceus bare en sjelden gang. De du alt har, kommer ikke igjen. */
+function raidPick() {
+  const r = Math.random(), t = r < 0.02 ? 4 : r < 0.2 ? 2 : r < 0.42 ? 3 : 1, all = Object.keys(LEG).map(Number), c = all.filter(id => LEG[id].t === t && !S.mons.some(m => m.id === id));
+  const l = c.length ? c : all.filter(id => LEG[id].t === 1); return l[rnd(l.length)];
+}
+function raidSpawn(res) { if (S.raid) return; const id = raidPick(); S.raid = { id, lv: Math.min(100, RAIDLV[LEG[id].t - 1] + 3 * Math.min(5, S.lad.lap || 0)), day: '', tries: 0 }; if (res) res.raid = id; }
+const raidOpen = () => !!S.raid && !!LEG[S.raid.id] && S.raid.day !== dayKey();
+function legTr(id) {
+  const L = LEG[id], d = D(id);
+  return { n: d[0], img: '', title: L.t === 4 ? 'The Original One' : L.t === 3 ? 'Mythical Pokémon' : 'Legendary Pokémon', ty: d[1], kind: 'legend', ci: 10, cn: 'Legendary raid', skill: 1, boss: true, ultra: true, gold: L.t === 4, int: 8,
+    sc: L.sc, th: L.th, cc: L.cc, arena: 'hall', v: 0, mre: L.mre, wild: 1, leg: id, lt: L.t, lbg: L.bg, sig: L.sig };
+}
+/* demo = arten som skal prøves i demoen (gir ingenting). Ellers den som har vist seg. */
+function raidBattle(lead, demo) {
+  const R = demo ? { id: demo, lv: RAIDLV[LEG[demo].t - 1] } : S.raid, L = LEG[R.id], party = S.party.map(monBy).filter(Boolean);
+  party.sort((a, b) => (b.u === lead) - (a.u === lead));
+  const foe = { id: R.id, lv: R.lv, sh: 0, iv: [31, 31, 31, 31, 31, 31], ev: [60, 60, 60, 60, 60, 60], nat: 0, mv: foeMoves(R.id, R.lv, 2) };
+  const B = mkBattle(party, [foe], legTr(R.id), { mode: demo ? 'lab' : 'raid', raid: 1, st: TCL.supreme, k: 'legend', rd: 0, n: 0, lap: 0, ti: 0, bag: BAGN, xm: 1, sm: 1, boost: { mode: '', m: 1, xp: 1 } });
+  const f = B.foe[0]; f.max = f.hp = Math.round(f.max * RAIDHP[L.t - 1]);
+  return B;
+}
+function finishRaid(B) {
+  const win = B.over === 'win', id = B.tr.leg, R = S.raid, res = { mode: 'raid', win, ups: [], items: [], encs: [], coins: 0, trade: null, perks: [], note: '', kind: 'legend', leg: id };
+  if (win) { res.coins = RAIDCOIN[B.tr.lt - 1]; S.coins += res.coins; S.items.candy = (S.items.candy || 0) + 3; res.items.push('3 × Rare Candy'); pushEnc(res, genEnc({ ids: [id] })); S.raid = null; res.note = `${D(id)[0]} is waiting in the grass. Go and catch it.`; }
+  else if (R) { R.day = dayKey(); R.tries = (R.tries || 0) + 1; res.note = `${D(id)[0]} stays where it is. You can challenge it again tomorrow.`; }
+  save(); return res;
 }
 const finishLab = B => ({ mode: 'lab', win: B.over === 'win', ups: [], items: [], encs: [], coins: 0, trade: null, perks: [], note: '', kind: B.k });
