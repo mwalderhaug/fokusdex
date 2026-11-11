@@ -11,14 +11,26 @@ const hrs = m => (Math.round(m / 6) / 10).toLocaleString('en-US');
 const SPR = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/';
 const slug = id => D(id)[0].toLowerCase().replace('♀', 'f').replace('♂', 'm').replace(/[^a-z0-9]/g, '');
 function spr(id, o = {}) {
-  const sd = `https://play.pokemonshowdown.com/sprites/${o.sh ? 'gen5-shiny' : 'gen5'}/${slug(id)}.png`;
-  const png = `${SPR}pokemon/${o.sh ? 'shiny/' : ''}${id}.png`;
-  const gif = `${SPR}pokemon/versions/generation-v/black-white/animated/${o.sh ? 'shiny/' : ''}${id}.gif`;
-  const bk = `${SPR}pokemon/versions/generation-v/black-white/animated/back/${o.sh ? 'shiny/' : ''}${id}.gif`, bkp = `${SPR}pokemon/back/${o.sh ? 'shiny/' : ''}${id}.png`;
+  /* sh: 1 = shiny, 2 = den mørke varianten (Dark Mewtwo): vanlig bilde som farges om når det er lastet (dkPaint). */
+  if (o.sh === 2 && !o.sil) { const u = `${SPR}pokemon/${o.back ? 'back/' : ''}${id}.png`; return `<span class="sprb dark" style="--tc:var(--t${D(id)[1]})${o.s ? ';--s:' + o.s : ''}" data-n="${id}"><img class="spr" alt="Dark ${esc(D(id)[0])}" crossorigin="anonymous" ${DKC.get(u) ? `src="${DKC.get(u)}" data-dk="1"` : `src="${u}?c=1"`} data-u="${u}" onload="dkPaint(this)" onerror="dkErr(this)"></span>`; }
+  const shn = o.sh === 1;
+  const sd = `https://play.pokemonshowdown.com/sprites/${shn ? 'gen5-shiny' : 'gen5'}/${slug(id)}.png`;
+  const png = `${SPR}pokemon/${shn ? 'shiny/' : ''}${id}.png`;
+  const gif = `${SPR}pokemon/versions/generation-v/black-white/animated/${shn ? 'shiny/' : ''}${id}.gif`;
+  const bk = `${SPR}pokemon/versions/generation-v/black-white/animated/back/${shn ? 'shiny/' : ''}${id}.gif`, bkp = `${SPR}pokemon/back/${shn ? 'shiny/' : ''}${id}.png`;
   const mg = o.mega ? MEGA[o.mega - 1][5] : 0;
-  const list = mg ? (o.back ? [`${SPR}pokemon/back/${mg}.png`, `${SPR}pokemon/${mg}.png`] : [`${SPR}pokemon/${mg}.png`]) : o.back ? [bk, bkp, `https://play.pokemonshowdown.com/sprites/${o.sh ? 'gen5-back-shiny' : 'gen5-back'}/${slug(id)}.png`, png] : o.ani ? [gif, png, sd] : [png, sd];
-  return `<span class="sprb${o.sil ? ' sil' : ''}${o.sh && !o.sil ? ' shiny' : ''}" style="--tc:var(--t${D(id)[1]})${o.s ? ';--s:' + o.s : ''}" data-n="${id}"><img class="spr" alt="${o.sil ? 'Unknown' : esc(D(id)[0])}" ${o.lazy ? 'loading="lazy" ' : ''}src="${list[0]}" data-f="${list.slice(1).join('|')}" onload="this.classList.add('ok')" onerror="sprErr(this)"></span>`;
+  const list = mg ? (o.back ? [`${SPR}pokemon/back/${mg}.png`, `${SPR}pokemon/${mg}.png`] : [`${SPR}pokemon/${mg}.png`]) : o.back ? [bk, bkp, `https://play.pokemonshowdown.com/sprites/${shn ? 'gen5-back-shiny' : 'gen5-back'}/${slug(id)}.png`, png] : o.ani ? [gif, png, sd] : [png, sd];
+  return `<span class="sprb${o.sil ? ' sil' : ''}${shn && !o.sil ? ' shiny' : ''}" style="--tc:var(--t${D(id)[1]})${o.s ? ';--s:' + o.s : ''}" data-n="${id}"><img class="spr" alt="${o.sil ? 'Unknown' : esc(D(id)[0])}" ${o.lazy ? 'loading="lazy" ' : ''}src="${list[0]}" data-f="${list.slice(1).join('|')}" onload="this.classList.add('ok')" onerror="sprErr(this)"></span>`;
 }
+/* Den mørke varianten: bildet tegnes på et lerret, farges om piksel for piksel (CINE.darken) og settes tilbake som bilde. Resultatet huskes per adresse.
+   Kan ikke pikslene leses, vises det vanlige bildet mørklagt i stedet. */
+const DKC = new Map();
+window.dkPaint = img => {
+  if (img.dataset.dk) return img.classList.add('ok'); img.dataset.dk = '1';
+  try { const c = document.createElement('canvas'), x = c.getContext('2d'); c.width = img.naturalWidth; c.height = img.naturalHeight; x.drawImage(img, 0, 0); const d = x.getImageData(0, 0, c.width, c.height); CINE.darken(d.data); x.putImageData(d, 0, 0); const u = c.toDataURL(); DKC.set(img.dataset.u, u); img.src = u; }
+  catch (_) { img.classList.add('dkf', 'ok'); }
+};
+window.dkErr = img => { if (img.dataset.e) { img.parentNode.classList.add('noimg'); return img.remove(); } img.dataset.e = '1'; img.dataset.dk = '1'; img.removeAttribute('crossorigin'); img.classList.add('dkf'); img.src = img.dataset.u; };
 window.sprErr = img => {
   const f = (img.dataset.f || '').split('|').filter(Boolean);
   if (f.length) { img.dataset.f = f.slice(1).join('|'); img.src = f[0]; }
@@ -257,7 +269,7 @@ function monSheet(m) {
   const fresh = m.nw; if (fresh) { m.nw = 0; save(true); renderNav(); }
   const d = D(m.id), ev = evoOpts(m), inP = S.party.includes(m.u), lead = S.party[0] === m.u, a = xpAt(m.lv), b = xpAt(m.lv + 1), n = countOf(m.id);
   const j = judge(m), up = natUp(m.nat), dn = natDn(m.nat), nx = nextMove(m), evt = m.ev.reduce((x, y) => x + y, 0), more = movesAt(m.id, m.lv).length > m.mv.length;
-  openSheet(`<div class="shead">${spr(m.id, { ani: 1, sh: m.sh })}<div class="sp"><div class="sm tn">No. ${m.id} · ${REG[regOf(m.id)].n}${m.sh ? ' · <b style="color:var(--gold)">Shiny</b>' : ''}</div><div class="pn">${esc(d[0])}</div><div class="row" style="margin-top:6px;flex-wrap:wrap;gap:6px">${types(m.id)} ${tierEl(m.id)}</div></div></div>
+  openSheet(`<div class="shead">${spr(m.id, { ani: 1, sh: m.sh })}<div class="sp"><div class="sm tn">No. ${m.id} · ${REG[regOf(m.id)].n}${m.sh === 2 ? ' · <b style="color:#ff8a2a">Dark</b>' : m.sh ? ' · <b style="color:var(--gold)">Shiny</b>' : ''}</div><div class="pn">${esc(d[0])}</div><div class="row" style="margin-top:6px;flex-wrap:wrap;gap:6px">${types(m.id)} ${tierEl(m.id)}</div></div></div>
     <div><div class="row sm tn" style="justify-content:space-between"><span>Level ${m.lv}</span><span>${n > 1 ? 'You have ' + n + ' of these' : 'Your only one'}</span></div><div class="bar" style="margin-top:6px"><i style="width:${Math.round((m.xp - a) / (b - a) * 100)}%"></i></div></div>
     <div class="card2" style="--tc:var(--t${d[1]})">${hexEl(m)}
       <div class="row" style="flex-wrap:wrap;gap:6px;justify-content:center"><span class="pill">${NAT[m.nat]}${up !== dn ? ` · +${SN[up]} −${SN[dn]}` : ' · neutral'}</span><span class="pill" style="color:${j.sum >= 121 ? 'var(--gold)' : j.sum >= 91 ? 'var(--sage)' : 'var(--ink2)'}">Judge: ${j.t} · best ${SN[j.best]}</span><span class="pill tn">Trained ${evt} of 510</span></div>${abLine(m.id)}</div>
@@ -492,7 +504,7 @@ function drawEnc(reveal) {
   const e = E.e, d = D(e.id), n = countOf(e.id), noBalls = !['poke', 'great', 'ultra'].some(k => S.items[k] > 0);
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="later">Save for later</button><span class="pill tn" id="e-left">${S.pend.length} ${S.pend.length === 1 ? 'encounter' : 'encounters'} left</span></div>
     <div class="mid r${e.t}"><div class="stage${reveal ? ' rev' : ''}" id="e-stage">${spr(e.id, { ani: 1, sh: e.sh })}<span class="tball">${ballEl(E.ball, '54px')}</span><span class="stars" id="e-stars"></span></div>
-      <div><div class="ename">${e.sh ? 'Shiny ' : ''}${esc(d[0])}</div><div class="row" style="justify-content:center;margin-top:8px;flex-wrap:wrap;gap:6px">${tierEl(e.id)} ${types(e.id)} <span class="pill tn">Level ${e.lv}</span></div>
+      <div><div class="ename">${e.sh === 2 ? 'Dark ' : e.sh ? 'Shiny ' : ''}${esc(d[0])}</div><div class="row" style="justify-content:center;margin-top:8px;flex-wrap:wrap;gap:6px">${tierEl(e.id)} ${types(e.id)} <span class="pill tn">Level ${e.lv}</span></div>
       <p class="sm" style="margin-top:8px" id="e-msg">${S.caught[e.id] ? (n ? `You already have ${n}.` : 'You have had it before.') : '<b style="color:var(--sage)">New to your collection</b>'}</p></div>
       <div class="hearts" id="e-hearts" aria-label="Attempts left">${Array.from({ length: isLeg(e.id) ? 4 : 3 }, (_, i) => `<i class="${i < e.tr ? '' : 'off'}"></i>`).join('')}</div></div>
     <div id="e-ctl" style="display:flex;flex-direction:column;gap:12px">${noBalls ? `<p class="sm" style="text-align:center">You are out of balls. Buy more in the shop and the encounter will wait here.</p><div class="acts"><button type="button" class="btn pri" data-a="toshop">To the shop</button><button type="button" class="btn nf" data-a="skip">Let it go</button></div>` : `

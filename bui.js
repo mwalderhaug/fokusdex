@@ -162,15 +162,15 @@ const leagueTag = () => { const L = S.lad; return `${L.lap ? 'Lap ' + (L.lap + 1
 /* Den legendariske som har vist seg. Én utfordring om dagen til den er slått. */
 function raidCard() {
   const R = S.raid; if (!R || !LEG[R.id]) return '';
-  const L = LEG[R.id], open = raidOpen();
-  return `<div class="card k-ultra raidc" style="--cc:${L.cc}"><div class="pre-foe"><span class="raid-sp">${spr(R.id, { ani: 1 })}</span><div class="sp"><div class="sm">Legendary raid${R.tries ? ' · attempt ' + (R.tries + 1) : ''}</div><b class="bossn" style="font-size:19px">${esc(D(R.id)[0])}</b><div class="sm tn" style="margin-top:4px">Lv ${R.lv} · ${TYN[D(R.id)[1]]}${D(R.id)[2] >= 0 ? ' / ' + TYN[D(R.id)[2]] : ''} · your own team of six</div></div></div>
+  const L = raidInfo(R), open = raidOpen();
+  return `<div class="card k-ultra raidc" style="--cc:${L.cc}"><div class="pre-foe"><span class="raid-sp">${spr(R.id, { ani: 1, sh: R.dk ? 2 : 0 })}</span><div class="sp"><div class="sm">Legendary raid${R.tries ? ' · attempt ' + (R.tries + 1) : ''}</div><b class="bossn" style="font-size:19px">${esc(R.dk ? L.n : D(R.id)[0])}</b><div class="sm tn" style="margin-top:4px">Lv ${R.lv} · ${TYN[D(R.id)[1]]}${D(R.id)[2] >= 0 ? ' / ' + TYN[D(R.id)[2]] : ''} · your own team of six</div></div></div>
     <button type="button" class="btn gold wide" data-a="raid" style="margin-top:10px"${open ? '' : ' disabled'}>${open ? 'Challenge it' : 'Again tomorrow'}</button></div>`;
 }
 function raidScreen() {
   const R = S.raid; if (!R) return render();
-  const L = LEG[R.id], party = S.party.map(monBy).filter(Boolean), lead = BT.lead && party.some(m => m.u === BT.lead) ? BT.lead : party[0] && party[0].u;
+  const L = raidInfo(R), party = S.party.map(monBy).filter(Boolean), lead = BT.lead && party.some(m => m.u === BT.lead) ? BT.lead : party[0] && party[0].u;
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Legendary raid</span></div>
-    <div class="card k-ultra raidc" style="--cc:${L.cc}"><div class="pre-foe"><span class="raid-sp">${spr(R.id, { ani: 1 })}</span><div class="sp"><div class="sm">${L.t === 4 ? 'The Original One' : L.t === 3 ? 'Mythical Pokémon' : 'Legendary Pokémon'}</div><b class="bossn" style="font-size:21px">${esc(D(R.id)[0])}</b><div class="sm tn" style="margin-top:4px">Lv ${R.lv} · far more HP than a normal Pokémon</div></div></div>
+    <div class="card k-ultra raidc" style="--cc:${L.cc}"><div class="pre-foe"><span class="raid-sp">${spr(R.id, { ani: 1, sh: R.dk ? 2 : 0 })}</span><div class="sp"><div class="sm">${R.dk ? 'Shadow Pokémon · the rarest of all' : L.t === 4 ? 'The Original One' : L.t === 3 ? 'Mythical Pokémon' : 'Legendary Pokémon'}</div><b class="bossn" style="font-size:21px">${esc(R.dk ? L.n : D(R.id)[0])}</b><div class="sm tn" style="margin-top:4px">Lv ${R.lv} · far more HP than a normal Pokémon</div></div></div>
       <p class="sm" style="margin-top:10px">One Pokémon against your whole team, with the Bag. Win and it waits in the grass for you to catch, with ${nb(RAIDCOIN[L.t - 1])} coins and 3 Rare Candy. Lose and it stays: you can try again tomorrow.</p></div>
     <div><div class="lab">Your team · tap the one that leads</div><div class="lineup">${party.map(m => `<button type="button" data-a="rlead" data-u="${m.u}" class="${m.u === lead ? 'lead' : ''}">${spr(m.id, { sh: m.sh })}<span class="sp"><b>${esc(D(m.id)[0])}</b><br><span class="sm tn">Lv ${m.lv}</span></span>${m.u === lead ? '<span class="pill">Leads</span>' : ''}</button>`).join('')}</div></div>
     <div class="acts"><button type="button" class="btn gold" data-a="raidgo"${raidOpen() && party.length ? '' : ' disabled'}>${raidOpen() ? 'Start the raid' : 'Again tomorrow'}</button></div>`, 'tint', L.cc);
@@ -178,7 +178,7 @@ function raidScreen() {
 /* Filmen når en legendarisk Pokémon viser seg (raid.js og raidf.js). Hver av de store har sin egen, lagt på slagene i låta si, og trioene og de mindre har
    roligere filmer. Låta starter med filmen og fortsetter inn i kampen. Filmen kan hoppes over. Med «redusert bevegelse» vises bare et stillbilde. */
 async function legendIntro(B) {
-  const tr = B.tr, f = B.foe[0], id = tr.leg, info = typeof CINE !== 'undefined' ? CINE.info(id) : null, T = ms => new Promise(r => setTimeout(r, ms));
+  const tr = B.tr, f = B.foe[0], id = tr.dk ? 'dk' + tr.leg : tr.leg, info = typeof CINE !== 'undefined' ? CINE.info(id) : null, T = ms => new Promise(r => setTimeout(r, ms));
   if (!info) { battleMusic(B); return; }
   ov(`<div class="lgi" id="lgi" style="--cc:${tr.cc}"><div class="lgi-s"><canvas class="lgi-cv" id="lgicv" width="512" height="384"></canvas></div><i class="lgi-wait"></i><button type="button" class="lgi-skip" id="lgiskip" hidden>Skip</button></div>`, 'battle vsov');
   const root = $('#lgi'), cv = $('#lgicv'), gone = () => BT.B !== B || !root.isConnected, o = { name: tr.n, cap: tr.title, lv: f.lv, cc: tr.cc };
@@ -373,7 +373,7 @@ function drawBattle() {
   /* Bakgrunnsshowet følger klassen og temaet. Rammene som beveger seg (gull og de ondes røde puls) tegnes på nytt mange ganger i sekundet. */
   FX.hooks.glitch = ms => { const a = $('#arena'); if (!a) return; a.classList.add('glitch'); setTimeout(() => a.classList.remove('glitch'), ms); };
   /* De legendariske og klasse 9 har sin egen luft over banen (raidf.js): tåke, lyn, glør, snøstorm … Da dempes det vanlige showet, så det ikke blir for mye. */
-  const airId = tr.wild ? tr.leg : tr.kind === 'supreme' && B.mode !== 'fac' ? 's:' + tr.n : 0, air = !!airId && !calm() && typeof CINE !== 'undefined' && CINE.has(airId);
+  const airId = tr.wild ? (tr.dk ? 'dk' + tr.leg : tr.leg) : tr.kind === 'supreme' && B.mode !== 'fac' ? 's:' + tr.n : 0, air = !!airId && !calm() && typeof CINE !== 'undefined' && CINE.has(airId);
   if (BT.air) BT.air(); BT.air = air ? CINE.air($('#amc'), airId, { cc: tr.cc || '#ffffff', k: 1 }) : null;
   FX.show($('#bgc'), calm() ? 0 : air ? (tr.wild ? 0 : 4) : tr.int, tr.ty, tr);
   clearInterval(BT.goldT);
@@ -879,7 +879,7 @@ function overview() {
   ov(`<div class="hof"><div class="hof-h"><span>${res.win ? 'VICTORY' : 'DEFEAT'}</span><span class="tn">${esc(battleTag(B))}</span></div>
       <div class="hof-stage">${B.me.map((b, i) => `<span style="--i:${i};--n:${B.me.length}" class="${b.hp <= 0 ? 'ko' : ''}">${spr(b.id, { ani: 1, sh: b.sh })}</span>`).join('')}</div>
       <p class="hof-t">${res.win ? `You beat ${nm}.` : lab ? `${nm} won this time.` : fac ? `${nm} stopped your run.` : `${nm} won this time. You keep your place and the XP.`}</p></div>
-    ${team}${rew}${extra}${res.raid && S.raid ? `<div class="card k-ultra raidc"><div class="sm">A legendary Pokémon has appeared</div><b class="bossn" style="font-size:19px">${esc(D(S.raid.id)[0])} · Lv ${S.raid.lv}</b><p class="sm" style="margin-top:4px">Beat it and it waits in the grass for you to catch. It is far stronger than anything in the League.</p><button type="button" class="btn gold wide" data-a="raid" style="margin-top:8px">See the raid</button></div>` : ''}
+    ${team}${rew}${extra}${res.raid && S.raid ? `<div class="card k-ultra raidc"><div class="sm">A legendary Pokémon has appeared</div><b class="bossn" style="font-size:19px">${esc(S.raid.dk ? DARK.n : D(S.raid.id)[0])} · Lv ${S.raid.lv}</b><p class="sm" style="margin-top:4px">Beat it and it waits in the grass for you to catch. It is far stronger than anything in the League.</p><button type="button" class="btn gold wide" data-a="raid" style="margin-top:8px">See the raid</button></div>` : ''}
     <div class="card"><span class="sm" style="color:var(--ink)">${next}</span></div>
     <div class="acts">${lab ? '<button type="button" class="btn gold" data-a="lab">Another demo</button><button type="button" class="btn nf" data-a="home">Done</button>' : (res.win || res.left) && open ? `<button type="button" class="btn gold" data-a="${fac ? 'fenter' : 'bpre'}">${!res.win ? (res.gone ? 'Next battle' : 'Rematch') : fac && res.roundDone ? 'Pick new rentals' : 'Next battle'}</button><button type="button" class="btn nf" data-a="home">Done</button>` : '<button type="button" class="btn pri" data-a="home">Done</button>'}</div>`, 'tint ovtop', res.win ? 'var(--gold)' : 'var(--red)');
   if (first && !fac && !lab && !raid) setTimeout(animXp, 500);
@@ -957,7 +957,7 @@ function labScreen() {
     ${PACK.ok ? '' : `<div class="card nopack"><b>Built-in graphics and music</b><p class="sm" style="margin-top:4px">${GH && GH.ok ? `Sync is on, but your pack is not loaded${PACK.err ? ' (error ' + esc(PACK.err) + ')' : ' yet'}.` : 'Sync is off on this device, so your own pack is not loaded: music, HP boxes, sounds and move animations are the built-in ones.'}</p><button type="button" class="btn wide" data-a="${GH && GH.ok ? 'packre' : 'sync'}" style="margin-top:8px">${GH && GH.ok ? 'Look for the pack again' : 'Connect Sync'}</button></div>`}
     <div class="row labm"><button type="button" class="btn sp${rent ? ' nf' : ''}" data-a="labmode" data-k="0" aria-pressed="${!rent}">My team</button><button type="button" class="btn sp${rent ? '' : ' nf'}" data-a="labmode" data-k="1" aria-pressed="${rent}">Rentals · Lv ${FACLV}</button></div>
     <div class="lablist">${ORDER.map(k => { const c = TCL[k]; return `<button type="button" data-a="labgo" data-k="${k}" class="k-${TIER(k)}"><span class="cno">${c.i}</span><span class="sp"><b>${c.n}</b><br><span class="sm">${LABD[k]}</span></span>${ULTRA.has(k) ? `<span class="pill">${RARE[k].replace(' boss', '')}</span>` : ''}</button>`; }).join('')}</div>
-    <div class="stack"><div class="lab">Legendary raids · the film and the fight</div>${[['The greatest', id => LEG[id].t === 4 || LEG[id].t === 2], ['Mythical', id => LEG[id].t === 3], ['Legendary', id => LEG[id].t === 1]].map(([n, f]) => `<div class="sm tn">${n}</div><div class="legl">${Object.keys(LEG).map(Number).filter(f).sort((a, b) => (LEG[b].t === 4) - (LEG[a].t === 4)).map(id => `<button type="button" data-a="labraid" data-k="${id}" style="--cc:${LEG[id].cc}">${spr(id, { lazy: 1 })}<b>${esc(D(id)[0])}</b></button>`).join('')}</div>`).join('')}</div>
+    <div class="stack"><div class="lab">Legendary raids · the film and the fight</div>${[['The greatest', id => LEG[id].t === 4 || LEG[id].t === 2], ['Mythical', id => LEG[id].t === 3], ['Legendary', id => LEG[id].t === 1]].map(([n, f]) => `<div class="sm tn">${n}</div><div class="legl">${Object.keys(LEG).map(Number).filter(f).sort((a, b) => (LEG[b].t === 4) - (LEG[a].t === 4)).map(id => `<button type="button" data-a="labraid" data-k="${id}" style="--cc:${LEG[id].cc}">${spr(id, { lazy: 1 })}<b>${esc(D(id)[0])}</b></button>`).join('')}${n === 'The greatest' ? `<button type="button" data-a="labraid" data-k="dk" style="--cc:${DARK.cc}">${spr(150, { sh: 2 })}<b>Dark Mewtwo</b></button>` : ''}</div>`).join('')}</div>
     ${PACK.ok ? `<p class="sm tn">Your pack is loaded: ${Object.keys(PACK.man.scenes || {}).length} arenas, ${(PACK.man.music || []).length} tracks and ${Object.keys(PACK.man.sfx || {}).length} sounds.</p>` : ''}`, 'tint', 'var(--gold)');
 }
 
@@ -967,7 +967,7 @@ const BA = {
   raid: () => { BT.B = null; BT.busy = false; stopMusic(); sfx.open(); raidScreen(); },
   rlead: el => { BT.lead = +el.dataset.u; raidScreen(); },
   raidgo: () => { if (!raidOpen() || !S.party.map(monBy).filter(Boolean).length) return; PACK.unlock(); sfx.start(); BT.busy = false; startBattle(raidBattle(BT.lead)); },
-  labraid: el => { if (!S.party.map(monBy).filter(Boolean).length) return toast('You need a Pokémon in your team.'); const id = +el.dataset.k; if (!LEG[id]) return; PACK.unlock(); sfx.start(); BT.busy = false; startBattle(raidBattle(BT.lead, id)); },
+  labraid: el => { if (!S.party.map(monBy).filter(Boolean).length) return toast('You need a Pokémon in your team.'); const id = el.dataset.k === 'dk' ? 'dk' : +el.dataset.k; if (id !== 'dk' && !LEG[id]) return; PACK.unlock(); sfx.start(); BT.busy = false; startBattle(raidBattle(BT.lead, id)); },
   bbag: () => { if (BT.busy || !BT.B || BT.B.over) return; BT.menu = 'bag'; drawMenu(); },
   bitem: el => { BT.item = el.dataset.k; BT.menu = 'bagt'; drawMenu(); },
   btarget: el => { if (BT.busy) return; const B = BT.B, k = BT.item, i = +el.dataset.k; if (!(B.bag > 0) || !itemOk(B, k, i)) return; if (B.mode !== 'lab') { if (!(S.items[k] > 0)) return; S.items[k]--; save(true); } BT.menu = 'main'; playEv(runTurn(B, { t: 'item', k, i })); },

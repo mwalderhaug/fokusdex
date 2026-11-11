@@ -58,6 +58,9 @@ button:disabled{opacity:.4;cursor:default}
 .sprb.sil .spr{filter:brightness(0) opacity(.55)}
 .sprb.noimg::before{content:attr(data-n);width:70%;height:70%;border-radius:50%;background:var(--tc,var(--soft));color:#17130f;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:calc(var(--s,64px)*.2)}
 .sprb.noimg.sil::before{background:var(--soft);color:var(--ink2);content:"?"}
+.sprb.dark::after{content:"";position:absolute;top:2px;right:2px;width:9px;height:9px;background:#ff8a2a;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.bs .sprb.dark::after{display:none}
+.spr.dkf{filter:brightness(.36) contrast(1.35)}
 .sprb.shiny::after{content:"";position:absolute;top:2px;right:2px;width:9px;height:9px;background:var(--gold);clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%)}
 .ball{width:var(--s,28px);height:var(--s,28px);flex:none;border-radius:50%;background:var(--bc,var(--ink2)) center/contain no-repeat;image-rendering:pixelated}
 .ball.im{background-color:transparent}

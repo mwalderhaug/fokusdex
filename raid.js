@@ -33,8 +33,19 @@ const CINE = (() => {
      Bildet hentes med lov til å lese pikslene (da kan det beskjæres til selve figuren). Går ikke det, brukes hele ruta. */
   const sprs = new Map();
   C.spriteUrl = id => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+  /* Den mørke varianten (Dark Mewtwo): lilla blir oransje og resten blir nesten svart. d = pikslene (RGBA), endres på stedet. */
+  C.darken = d => {
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < 8) continue; const r = d[i], g2 = d[i + 1], b = d[i + 2], mx = max(r, g2, b), mn = min(r, g2, b), v = mx / 255, sat = mx ? (mx - mn) / mx : 0;
+      let h = 0; if (mx !== mn) { h = mx === r ? ((g2 - b) / (mx - mn)) % 6 : mx === g2 ? (b - r) / (mx - mn) + 2 : (r - g2) / (mx - mn) + 4; h *= 60; if (h < 0) h += 360; }
+      if (sat > 0.25 && v > 0.3 && h >= 250 && h <= 335) { const v2 = min(1, v * 1.25 + 0.14), s2 = min(1, sat * 1.5 + 0.3); d[i] = 255 * v2; d[i + 1] = 255 * v2 * (1 - s2 * 0.62); d[i + 2] = 255 * v2 * (1 - s2 * 0.94); }
+      else { const v2 = max(0.03, v * 0.34); d[i] = 255 * v2 * 0.94; d[i + 1] = 255 * v2 * 0.86; d[i + 2] = 255 * v2 * 1.04; }
+    }
+  };
+  /* id = artens nummer, eller 'dk' + nummeret for den mørke varianten. */
   function loadSprite(id) {
     if (sprs.has(id)) return sprs.get(id);
+    const dk = typeof id === 'string' && id.indexOf('dk') === 0, base = dk ? +id.slice(2) : id;
     const j = new Promise(res => {
       const done = (i, clean) => {
         const cv = document.createElement('canvas'), x = cv.getContext('2d'); let bx = 0, by = 0, bw = i.naturalWidth || 96, bh = i.naturalHeight || 96;
@@ -44,11 +55,12 @@ const CINE = (() => {
           for (let y = 0; y < bh; y++) for (let xx = 0; xx < bw; xx++) if (d[(y * bw + xx) * 4 + 3] > 20) { if (xx < x0) x0 = xx; if (xx > x1) x1 = xx; if (y < y0) y0 = y; if (y > y1) y1 = y; }
           if (x1 >= x0) { bx = x0; by = y0; bw = x1 - x0 + 1; bh = y1 - y0 + 1; }
         } catch (_) { clean = false; }
+        if (dk) { let done2 = false; if (clean) try { const im2 = x.getImageData(0, 0, cv.width, cv.height); C.darken(im2.data); x.putImageData(im2, 0, 0); done2 = true; } catch (_) {} if (!done2) { x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(8,5,14,.74)'; x.fillRect(0, 0, cv.width, cv.height); x.globalCompositeOperation = 'source-over'; } }
         res({ cv, bx, by, bw, bh, clean, tint: new Map() });
       };
       const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => done(i, true);
-      i.onerror = () => { const i2 = new Image(); i2.onload = () => done(i2, false); i2.onerror = () => res(null); i2.src = C.spriteUrl(id); };
-      const u = C.spriteUrl(id); i.src = u + (u.indexOf('githubusercontent') > 0 ? '?c=1' : '');
+      i.onerror = () => { const i2 = new Image(); i2.onload = () => done(i2, false); i2.onerror = () => res(null); i2.src = C.spriteUrl(base); };
+      const u = C.spriteUrl(base); i.src = u + (u.indexOf('githubusercontent') > 0 ? '?c=1' : '');
     });
     sprs.set(id, j); return j;
   }
@@ -229,7 +241,7 @@ const CINE = (() => {
   /* Henter det filmen trenger. Venter ikke lenger enn ms. */
   C.prep = async (id, ms) => {
     const f = filmOf(id); if (!f) return false;
-    const jobs = Promise.all([need((f.use || []).concat(['paint'])), typeof id === 'number' ? loadSprite(id) : 0].concat((f.sps || []).map(loadSprite)));
+    const jobs = Promise.all([need((f.use || []).concat(['paint'])), (typeof id === 'number' || /^dk/.test(id)) ? loadSprite(id) : 0].concat((f.sps || []).map(loadSprite)));
     await Promise.race([jobs, new Promise(r => setTimeout(r, ms || 4000))]); return true;
   };
   let B = null;

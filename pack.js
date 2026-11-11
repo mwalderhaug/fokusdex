@@ -236,7 +236,7 @@ const PACK = (() => {
     const jobs = [loadAnims(), loadEbx()];
     const tk = P.trackFor(B); if (tk) P.cue(tk);
     const it = B.tr.ultra && B.mode !== 'fac' ? P.introFor(B) : ''; if (it) P.cue(it);
-    if (B.tr.wild && typeof CINE !== 'undefined') CINE.prep(B.tr.leg, 6000);
+    if (B.tr.wild && typeof CINE !== 'undefined') CINE.prep(B.tr.dk ? 'dk' + B.tr.leg : B.tr.leg, 6000);
     const pt = P.man.trainers && P.man.trainers[B.tr.img.split('|')[0]]; if (pt) jobs.push(P.url(pt));
     const sc = P.sceneFor(B); if (sc) jobs.push(P.url(sc));
     jobs.push(loadHud()); jobs.push(loadMenu()); jobs.push(loadFont()); jobs.push(loadVs());
