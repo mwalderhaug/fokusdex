@@ -94,6 +94,8 @@ const PACK = (() => {
     im.src = u; try { await im.decode(); } catch (_) { URL.revokeObjectURL(u); return null; }
     URL.revokeObjectURL(u); return im;
   };
+  /* Bildene til raid-filmene (raid.js): en innholdsliste og én samlefil der bildene ligger etter hverandre. */
+  if (typeof CINE !== 'undefined') CINE.source = async () => { if (!(await P.init()) || !P.man.raid) return null; const [j, b] = await Promise.all([blob(P.man.raid.idx), blob(P.man.raid.bin)]); return { idx: JSON.parse(await j.text()).img, blob: b }; };
   /* Hvilken EBDX-animasjon et angrep har. Angrep uten sin egen låner en som likner (listen ligger i pakken). '' hvis ingen. */
   P.ebxFor = m => { if (!P.ebx || S.dx === 0 || typeof EBX === 'undefined' || !EBX.ok) return ''; const n = animId(m), k = P.ebx.map[n] || 'MOVE:' + n; return EBX.has(k) ? k : ''; };
   P.ebxCommon = k => { const key = 'COMMON:' + String(k).toUpperCase(); return P.ebx && S.dx !== 0 && typeof EBX !== 'undefined' && EBX.has(key) ? key : ''; };
@@ -180,7 +182,7 @@ const PACK = (() => {
       s.buffer = d; s.loop = o.loop !== false; s.connect(g2); g2.connect(a.destination);
       if (o.fade) { g2.gain.setValueAtTime(Math.max(0.0001, v * (o.from || 0)), t); g2.gain.linearRampToValueAtTime(v, t + o.fade); } else g2.gain.setValueAtTime(v, t);
       s.start(0, Math.max(0, Math.min(d.duration - 0.2, o.at || 0)));
-      return { s, g: g2 };
+      return { s, g: g2, t0: t };
     } catch (_) { return null; }
   }
   function fadeOut(h, sec) {
@@ -217,6 +219,8 @@ const PACK = (() => {
   P.stinging = () => !!sting;
   P.stingOut = sec => { if (sting) { fadeOut(sting, sec == null ? 1.2 : sec); sting = null; } };
   P.playing = () => !!cur;
+  /* Sekunder siden låta som spiller nå ble startet (til å holde raid-filmene i takt med den), justert for forsinkelsen ut til høyttaleren. −1 hvis ingen låt spiller. */
+  P.clock = () => { try { return node && mode === 'wa' && AC.state === 'running' ? AC.currentTime - node.t0 - (AC.outputLatency || AC.baseLatency || 0) : -1; } catch (_) { return -1; } };
   /* Korte lyder (angrep, treff, status) dekodes og spilles gjennom appens vanlige lydutgang, så volumknappen gjelder. Gir false hvis lyden ikke er klar. */
   P.sfxPath = name => (P.ok && P.man.sfx && P.man.sfx[name]) || '';
   P.warm = name => { const f = P.sfxPath(name); if (!f || bufs.has(f) || !S.sound) return; bufs.set(f, null); P.url(f).then(u => u && fetch(u)).then(r => r && r.arrayBuffer()).then(b => b && ac() && AC.decodeAudioData(b)).then(d => { if (d) bufs.set(f, d); else bufs.delete(f); }).catch(() => bufs.delete(f)); };
@@ -232,6 +236,7 @@ const PACK = (() => {
     const jobs = [loadAnims(), loadEbx()];
     const tk = P.trackFor(B); if (tk) P.cue(tk);
     const it = B.tr.ultra && B.mode !== 'fac' ? P.introFor(B) : ''; if (it) P.cue(it);
+    if (B.tr.wild && typeof CINE !== 'undefined') CINE.prep(B.tr.leg, 6000);
     const pt = P.man.trainers && P.man.trainers[B.tr.img.split('|')[0]]; if (pt) jobs.push(P.url(pt));
     const sc = P.sceneFor(B); if (sc) jobs.push(P.url(sc));
     jobs.push(loadHud()); jobs.push(loadMenu()); jobs.push(loadFont()); jobs.push(loadVs());

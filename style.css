@@ -888,27 +888,16 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .legl .sprb{--s:44px}
 .legl b{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 /* Filmsnutten: scenen på lerretet, skyggen som vokser fram, lysglimtet og navnet. */
-.lgi{position:absolute;inset:0;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden;transition:opacity .35s}
+.lgi{position:absolute;inset:0;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden;transition:opacity .24s}
 .lgi.d{opacity:0}
-.lgi-s{position:relative;width:min(100%,calc(var(--appH,100dvh)*1.333));aspect-ratio:4/3;overflow:hidden;--k:1.5}
-.lgi-cv{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;animation:lgIn 1.2s ease-out both}
-@keyframes lgIn{from{opacity:0}}
-.lgi-sp{position:absolute;left:50%;top:58%;width:0;height:0;opacity:0;transform:scale(.45);transition:opacity 1.2s,transform 3s cubic-bezier(.2,.6,.3,1)}
-.lgi-sp .sprb{position:absolute;left:0;top:0;width:0;height:0;display:block;background:none}
-.lgi-sp .sprb::before,.lgi-sp .sprb::after{display:none}
-.lgi-sp .spr{position:absolute;left:0;top:0;max-width:none;width:auto;height:auto;image-rendering:pixelated;transform:translate(-50%,-55%) scale(calc(var(--k)*1.5));filter:brightness(0) drop-shadow(0 0 calc(var(--k)*3px) var(--cc));animation:none}
-.lgi.b .lgi-sp{opacity:1;transform:scale(1)}
-.lgi.c .lgi-sp .spr{filter:drop-shadow(0 0 calc(var(--k)*4px) var(--cc));transition:filter .6s}
-.lgi-fl{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
-.lgi.c .lgi-fl{animation:lgFlash 1s ease-out}
-@keyframes lgFlash{0%{opacity:1}100%{opacity:0}}
-.lgi-nm{position:absolute;left:0;right:0;bottom:7%;text-align:center;font-family:var(--pix);color:#fff;opacity:0;transform:translateY(30%);transition:opacity .5s .25s,transform .5s .25s;text-shadow:0 0 calc(var(--k)*4px) var(--cc),calc(var(--k)*1px) calc(var(--k)*1px) 0 #000}
-.lgi.c .lgi-nm{opacity:1;transform:none}
-.lgi-nm span{display:block;font-size:calc(var(--k)*8px);letter-spacing:.3em;text-transform:uppercase;color:var(--cc)}
-.lgi-nm b{display:block;font-size:calc(var(--k)*22px);font-weight:900;letter-spacing:.12em;text-transform:uppercase;line-height:1.1}
-.lgi-nm i{font-style:normal;font-size:calc(var(--k)*9px)}
-.lgi.b .lgi-s{animation:lgRumble .1s linear infinite}
-.lgi.c .lgi-s{animation:none}
-.lgi.t4.c .lgi-s{animation:lgRumble .08s linear 12}
-@keyframes lgRumble{50%{transform:translate(calc(var(--k)*.6px),calc(var(--k)*-.5px))}}
-@media (prefers-reduced-motion:reduce){.lgi-s{animation:none!important}}
+.lgi-s{position:relative;width:min(100%,calc(var(--appH,100dvh)*1.333));aspect-ratio:4/3;overflow:hidden;background:#000}
+.lgi-cv{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;opacity:0}
+.lgi.on .lgi-cv{opacity:1}
+/* På en stående mobil vises den midterste firkanten av filmen, så bildet blir en tredjedel større. Alt viktig i filmene ligger innenfor den. */
+@media (max-aspect-ratio:4/5){.lgi-s{aspect-ratio:1/1;width:100%}.lgi-cv{left:50%;width:133.34%;transform:translateX(-50%)}}
+/* Mens filmen lastes: en liten ring som pulserer. */
+.lgi-wait{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;box-shadow:0 0 0 2px var(--cc,#fff);opacity:.5;animation:lgWait 1s ease-in-out infinite}
+.lgi.on .lgi-wait{display:none}
+@keyframes lgWait{50%{transform:scale(1.5);opacity:.15}}
+.lgi-skip{position:absolute;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));padding:8px 14px;border-radius:12px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);font-size:13px;font-weight:700;letter-spacing:.04em;box-shadow:0 0 0 1px rgba(255,255,255,.18)}
+.lgi-skip:active{background:rgba(255,255,255,.2)}

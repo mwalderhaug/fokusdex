@@ -175,25 +175,31 @@ function raidScreen() {
     <div><div class="lab">Your team · tap the one that leads</div><div class="lineup">${party.map(m => `<button type="button" data-a="rlead" data-u="${m.u}" class="${m.u === lead ? 'lead' : ''}">${spr(m.id, { sh: m.sh })}<span class="sp"><b>${esc(D(m.id)[0])}</b><br><span class="sm tn">Lv ${m.lv}</span></span>${m.u === lead ? '<span class="pill">Leads</span>' : ''}</button>`).join('')}</div></div>
     <div class="acts"><button type="button" class="btn gold" data-a="raidgo"${raidOpen() && party.length ? '' : ' disabled'}>${raidOpen() ? 'Start the raid' : 'Again tomorrow'}</button></div>`, 'tint', L.cc);
 }
-/* Filmsnutten når en legendarisk Pokémon viser seg. Sangen dens starter her. Scenen bygges opp rundt den (hav, magma, himmel, tid, rom …),
-   skyggen vokser fram, og så lyser den opp med navnet. De største har hvert sitt kjennetegn, og Arceus har den lengste: platene samler seg til hjulet,
-   lyssøyler slår ned, og dommen stråler ut. Uten låt i pakken spilles den innebygde introen. */
+/* Filmen når en legendarisk Pokémon viser seg (raid.js og raidf.js). Hver av de store har sin egen, lagt på slagene i låta si, og trioene og de mindre har
+   roligere filmer. Låta starter med filmen og fortsetter inn i kampen. Filmen kan hoppes over. Med «redusert bevegelse» vises bare et stillbilde. */
 async function legendIntro(B) {
-  const tr = B.tr, f = B.foe[0], t = tr.lt, sp = S.bfast ? 0.6 : 1, T = ms => new Promise(r => setTimeout(r, ms * sp));
-  ov(`<div class="lgi t${t}" id="lgi" style="--cc:${tr.cc}"><div class="lgi-s"><canvas class="lgi-cv" id="lgicv" width="256" height="192"></canvas><div class="lgi-sp">${spr(f.id, { ani: 1 })}</div><div class="lgi-nm"><span>${esc(tr.title)}</span><b>${esc(tr.n)}</b><i class="tn">Lv ${f.lv}</i></div><div class="lgi-fl"></div></div></div>`, 'battle vsov');
-  const root = $('#lgi'), st = root.querySelector('.lgi-s'), on = c => { if (root.isConnected) root.classList.add(c); }, gone = () => BT.B !== B || !root.isConnected;
-  st.style.setProperty('--k', (st.clientWidth / 256).toFixed(3));
-  const d = t === 4 ? [4200, 3600, 3000] : t === 2 ? [2400, 2600, 2200] : [1500, 1700, 1800], has = !!PACK.trackFor(B);
-  const show = calm() ? null : FX.legend($('#lgicv'), { bg: tr.lbg, sig: tr.sig, cc: tr.cc, t });
+  const tr = B.tr, f = B.foe[0], id = tr.leg, info = typeof CINE !== 'undefined' ? CINE.info(id) : null, T = ms => new Promise(r => setTimeout(r, ms));
+  if (!info) { battleMusic(B); return; }
+  ov(`<div class="lgi" id="lgi" style="--cc:${tr.cc}"><div class="lgi-s"><canvas class="lgi-cv" id="lgicv" width="512" height="384"></canvas></div><i class="lgi-wait"></i><button type="button" class="lgi-skip" id="lgiskip" hidden>Skip</button></div>`, 'battle vsov');
+  const root = $('#lgi'), cv = $('#lgicv'), gone = () => BT.B !== B || !root.isConnected, o = { name: tr.n, cap: tr.title, lv: f.lv, cc: tr.cc };
+  const tk = PACK.trackFor(B), ready = CINE.prep(id, 6000);
+  if (calm()) { await ready; if (gone()) return; root.classList.add('on'); await CINE.still(cv, id, Math.min(info.len - 0.6, info.R + 2), o); battleMusic(B, { fade: 1.2, from: 0.1 }); cry(f.id, 300, 0.5); await T(2600); if (gone()) return; root.classList.add('d'); await T(260); return; }
+  /* Låta og filmen starter samtidig. Uten låt i pakken spilles den innebygde oppbyggingen, med drønnet i det den viser seg. */
+  await ready; if (gone()) return;
+  const started = tk ? await PACK.music(tk, { at: info.at }) : false; if (gone()) return;
   let stop = () => {};
-  if (has) battleMusic(B, { fade: 1.4, from: 0.05 }); else stop = epicIntro('ultra', (d[0] + d[1]) * sp / 1000);
-  sfx.appear(); buzz([40, 60, 40]);
-  await T(d[0]); if (gone()) return stop();
-  on('b'); if (show) show.stage(1); BSFX.dread(); buzz([90, 150, 90, 300, 90]);
-  await T(d[1]); if (gone()) return stop();
-  on('c'); if (show) show.stage(2); cry(f.id, 0, 0.6); buzz([80, 40, 260]); if (!has) battleMusic(B);
-  await T(d[2]); if (gone()) return;
-  on('d'); await T(350); if (show) show.stop();
+  if (started) music(''); else { PACK.music(''); stop = epicIntro('ultra', info.R); }
+  root.classList.add('on'); sfx.appear(); buzz([40, 60, 40]);
+  const cue = n => { if (gone()) return; if (n === 'cry') { cry(f.id, 0, 0.6); buzz([80, 40, 260]); if (!started) battleMusic(B); } else if (n === 'boom') buzz([90, 60, 90, 60, 240]); else if (n === 'thud') buzz(45); else buzz(18); };
+  const pl = CINE.play(cv, id, Object.assign({ clock: () => started ? PACK.clock() : -1, cue }, o)), sk = $('#lgiskip');
+  let skipped = false; const skip = () => { if (skipped) return; skipped = true; sfx.tap(); stop(); pl.skip(); };
+  setTimeout(() => { if (!gone() && sk) sk.hidden = false; }, 1200); if (sk) sk.addEventListener('click', skip);
+  const key = e => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') skip(); }; document.addEventListener('keydown', key);
+  const watch = setInterval(() => { if (gone()) pl.stop(); }, 300);
+  await pl.done; clearInterval(watch); document.removeEventListener('keydown', key);
+  if (gone()) return stop();
+  if (!started && !PACK.playing() && !MUS.id) battleMusic(B);
+  root.classList.add('d'); await T(240);
 }
 function ladderCard() {
   const L = S.lad, t = nextTrainer(), tr = trainerInfo(t), sm = studyMult(), bo = dayBoost(), tier = TIER(tr.kind), R = S.fac.run;
@@ -353,7 +359,7 @@ function drawBattle() {
   const B = BT.B, tr = B.tr, tier = TIER(tr.kind), scene = PACK.now(PACK.sceneFor(B));
   ov(`<div class="btop k-${tier}"${kst(tr)}><span class="pill tn">${esc(battleTag(B))}</span><span class="btn-n"><b class="${tr.boss ? 'bossn' : ''}">${esc(who(tr))}</b></span></div>
     <div class="bscreen t-${tier}"${kst(tr)}><div class="arena a-${tr.arena} v${tr.v} t-${tier} i${tr.int}${tr.th ? ' th-' + tr.th : ''}${scene ? ' has-scene' : ''}" id="arena" style="--ac:var(--t${tr.ty});--cc:${tr.cc || 'var(--t' + tr.ty + ')'}">
-      <div class="world" id="world">${scene ? `<img class="scene" alt="" src="${scene}">` : ''}<div class="abg"></div><canvas class="fxc bgc" id="bgc" width="256" height="192"></canvas><div class="plat pf"></div><div class="plat pm"></div></div><div class="dim"></div>
+      <div class="world" id="world">${scene ? `<img class="scene" alt="" src="${scene}">` : ''}<div class="abg"></div><canvas class="fxc bgc" id="bgc" width="256" height="192"></canvas><canvas class="fxc amc" id="amc" width="512" height="384"></canvas><div class="plat pf"></div><div class="plat pm"></div></div><div class="dim"></div>
       ${tr.wild ? '' : `<div class="trn" id="trn">${tsprite(tr.img)}</div>`}
       <div class="bs foe gone" id="s-foe"></div><div class="bs me gone" id="s-me"></div>
       <canvas class="fxc" id="fxc" width="256" height="192"></canvas><canvas class="fxc" id="axc" width="512" height="384"></canvas><div class="fx" id="fx"></div>
@@ -366,7 +372,10 @@ function drawBattle() {
   FX.hooks.shake = (ms, amp, kind) => shake(ms, amp == null ? 3 : amp, kind);
   /* Bakgrunnsshowet følger klassen og temaet. Rammene som beveger seg (gull og de ondes røde puls) tegnes på nytt mange ganger i sekundet. */
   FX.hooks.glitch = ms => { const a = $('#arena'); if (!a) return; a.classList.add('glitch'); setTimeout(() => a.classList.remove('glitch'), ms); };
-  FX.show($('#bgc'), calm() ? 0 : tr.int, tr.ty, tr);
+  /* De legendariske og klasse 9 har sin egen luft over banen (raidf.js): tåke, lyn, glør, snøstorm … Da dempes det vanlige showet, så det ikke blir for mye. */
+  const airId = tr.wild ? tr.leg : tr.kind === 'supreme' && B.mode !== 'fac' ? 's:' + tr.n : 0, air = !!airId && !calm() && typeof CINE !== 'undefined' && CINE.has(airId);
+  if (BT.air) BT.air(); BT.air = air ? CINE.air($('#amc'), airId, { cc: tr.cc || '#ffffff', k: 1 }) : null;
+  FX.show($('#bgc'), calm() ? 0 : air ? (tr.wild ? 0 : 4) : tr.int, tr.ty, tr);
   clearInterval(BT.goldT);
   const rk = hudRing('foe');
   if (rk === 'gold' || rk === 'evil') BT.goldT = setInterval(() => { const el = $('#b-foe'); if (!$('#arena') || BT.B !== B) return clearInterval(BT.goldT); if (el && !el.hidden && PACK.hud) hudDraw('foe'); }, 66);
@@ -813,7 +822,7 @@ async function startBattle(B) {
 }
 function endBattle() {
   const B = BT.B; stopMusic(); BT.busy = false;
-  clearInterval(BT.goldT); FX.show(null);
+  clearInterval(BT.goldT); FX.show(null); if (BT.air) { BT.air(); BT.air = null; }
   const res = BT.res = B.mode === 'fac' ? finishFactory(B) : B.mode === 'lab' ? finishLab(B) : B.mode === 'raid' ? finishRaid(B) : finishLeague(B);
   if (res.win) BSFX.win(); else BSFX.lose();
   BT.tp = null; BT.fs = null;
