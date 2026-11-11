@@ -12,10 +12,12 @@ const CH = TYPES.map(t => { const row = TYPES.map(() => 1); TCH[t].split('/').fo
 /* GRAV settes for hver runde: under Gravity treffer Ground-angrep også de som flyr eller svever. */
 let GRAV = 0;
 const typeEff = (t, b) => {
-  const V = b.v || {};
-  if (t === 4 && !GRAV && (V.mag || V.tele)) return 0;
-  const one = x => { const c = CH[t][x]; if (c) return c; return (t === 4 && x === 2 && GRAV) || (V.fore === 1 && x === 7 && (t === 0 || t === 1)) || (V.fore === 2 && x === 16 && t === 13) ? 1 : 0; };
-  return one(b.ty[0]) * (b.ty[1] >= 0 && b.ty[1] !== b.ty[0] ? one(b.ty[1]) : 1);
+  const V = b.v || {}, gr = GRAV || V.smack;
+  if (t === 4 && !gr && (V.mag || V.tele)) return 0;
+  const one = x => { const c = CH[t][x]; if (c) return c; return (t === 4 && x === 2 && gr) || (V.fore === 1 && x === 7 && (t === 0 || t === 1)) || (V.fore === 2 && x === 16 && t === 13) ? 1 : 0; };
+  /* Roost: flygetypen er borte resten av runden (en ren Flying-type står da uten type). */
+  const ty = V.roost ? b.ty.map(x => x === 2 ? -1 : x) : b.ty;
+  return (ty[0] >= 0 ? one(ty[0]) : 1) * (ty[1] >= 0 && ty[1] !== ty[0] ? one(ty[1]) : 1);
 };
 const stgM = s => s >= 0 ? (2 + s) / 2 : 2 / (2 - s);
 const accM = s => s >= 0 ? (3 + s) / 3 : 3 / (3 - s);
@@ -27,7 +29,15 @@ const AILTXT = { par: 'is paralyzed! It may be unable to move!', slp: 'fell asle
 const RECHARGE = new Set(['Hyper Beam', 'Giga Impact', 'Blast Burn', 'Frenzy Plant', 'Hydro Cannon', 'Rock Wrecker', 'Roar of Time']), BOOM = new Set(['Explosion', 'Self-Destruct']);
 /* To-runders angrep: [tekst i første runde, 1 = utenfor rekkevidde mens den lader]. */
 const CHARGE = { 'Fly': ['flew up high!', 1], 'Dig': ['burrowed its way under the ground!', 1], 'Bounce': ['sprang up!', 1], 'Dive': ['hid underwater!', 1], 'Shadow Force': ['vanished instantly!', 1],
+  'Sky Drop': ['took its foe into the sky!', 1],
   'Solar Beam': ['absorbed light!', 0], 'Skull Bash': ['tucked in its head!', 0], 'Razor Wind': ['whipped up a whirlwind!', 0], 'Sky Attack': ['became cloaked in a harsh light!', 0] };
+/* Den som er utenfor rekkevidde (i lufta, under jorda eller under vann), kan likevel treffes av noen få angrep, og da med dobbel styrke for dem i AWAY2. */
+const AIRHIT = ['Gust', 'Twister', 'Thunder', 'Hurricane', 'Sky Uppercut', 'Smack Down'];
+const AWAYHIT = { 'Fly': AIRHIT, 'Bounce': AIRHIT, 'Sky Drop': AIRHIT, 'Dig': ['Earthquake', 'Magnitude', 'Fissure'], 'Dive': ['Whirlpool'] }, AWAY2 = new Set(['Gust', 'Twister', 'Earthquake', 'Magnitude', 'Whirlpool']);
+const awayMv = b => b.v.away && b.v.lock && b.mv[b.v.lock.k] ? MOVES[b.mv[b.v.lock.k].i][0] : '';
+const reaches = (m, t) => (AWAYHIT[awayMv(t)] || []).includes(m[0]);
+/* Angrep som tiner brukeren, og angrep som slår dobbelt og aldri bommer mot en som har brukt Minimize. */
+const DEFROST = new Set(['Flame Wheel', 'Sacred Fire', 'Flare Blitz', 'Scald', 'Fusion Flare']), STOMP = new Set(['Stomp', 'Steamroller', 'Body Slam', 'Dragon Rush', 'Heavy Slam', 'Heat Crash']);
 /* Låser brukeren: raseri i 2–3 runder (så forvirring), rulling i opptil fem runder med doblet styrke per treff, og angrep som dobles når de gjentas. */
 const RAGE = new Set(['Outrage', 'Thrash', 'Petal Dance']), ROLL = new Set(['Rollout', 'Ice Ball']), CHAIN = new Set(['Fury Cutter', 'Echoed Voice']);
 const WXTXT = { rain: ['It started to rain!', 'The rain stopped.'], sun: ['The sunlight turned harsh!', 'The harsh sunlight faded.'], sand: ['A sandstorm kicked up!', 'The sandstorm subsided.'], hail: ['It started to hail!', 'The hail stopped.'] };
@@ -45,9 +55,27 @@ const VPOW = { 'Flail': hpPow, 'Reversal': hpPow, 'Low Kick': wPow, 'Grass Knot'
   'Gyro Ball': (u, t, B) => Math.max(1, Math.min(150, Math.floor(25 * spdB(B, t) / Math.max(1, spdB(B, u))))),
   'Wring Out': (u, t) => 1 + Math.floor(120 * t.hp / t.max), 'Crush Grip': (u, t) => 1 + Math.floor(120 * t.hp / t.max),
   'Punishment': (u, t) => Math.min(200, 60 + 20 * t.sg.reduce((a, b) => a + Math.max(0, b), 0)), 'Magnitude': () => [10, 30, 50, 70, 90, 110, 150][[0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 6][rnd(20)]],
-  'Present': () => [40, 80, 120][rnd(3)], 'Spit Up': u => 100 * (u.v.stock || 1), 'Natural Gift': () => 70, 'Trump Card': () => 60, 'Fling': () => 50, 'Beat Up': () => 50, 'Bide': () => 60 };
+  'Present': () => [40, 80, 120][rnd(3)], 'Spit Up': u => 100 * (u.v.stock || 1), 'Natural Gift': () => 70, 'Fling': () => 50, 'Bide': () => 60,
+  /* Trump Card blir sterkere jo mindre PP som er igjen etter bruken. */
+  'Trump Card': u => { const x = u.mv.find(y => MOVES[y.i][0] === 'Trump Card'), pp = x ? x.pp : 4; return pp >= 4 ? 40 : pp === 3 ? 50 : pp === 2 ? 60 : pp === 1 ? 80 : 200; },
+  /* Snittet per slag, til motstanderens vurdering. I selve angrepet regnes hvert slag for seg (se useMove). */
+  'Beat Up': (u, t, B) => { const l = beatUp(B, u); return l.reduce((a, c) => a + c, 0) / l.length; }, 'Triple Kick': () => 20 };
+/* Beat Up: ett slag fra hver på laget som er frisk (brukeren selv slår alltid). Styrken følger den som slår: 5 + base Attack / 10, altså rundt 10–20 per slag. */
+const beatUp = (B, u) => (B.me.includes(u) ? B.me : B.foe).filter(b => b === u || (b.hp > 0 && !b.status)).map(b => 5 + Math.floor(BST[b.id - 1][1] / 10));
+/* Antall treff. Angrep med 2–5 treff: en tredel hver for 2 og 3, en sjettedel hver for 4 og 5. avg = forventet antall (til vurderinger). */
+const hitsFor = (B, u, m, avg) => m[0] === 'Beat Up' ? beatUp(B, u).length : !m[13] ? 1 : m[13] === m[14] ? m[13] : avg ? 3 : [2, 2, 3, 3, 4, 5][rnd(6)];
+/* Angrep som skifter type: Hidden Power følger brukerens IV-er, Weather Ball følger været. Gir en kopi av angrepet med riktig type. */
+const hpType = iv => 1 + Math.floor(((iv[0] & 1) + 2 * (iv[1] & 1) + 4 * (iv[2] & 1) + 8 * (iv[5] & 1) + 16 * (iv[3] & 1) + 32 * (iv[4] & 1)) * 15 / 63);
+const WXT = { sun: 9, rain: 10, sand: 5, hail: 14 };
+function mvEff(B, u, m) {
+  let ty = m[1];
+  if (m[0] === 'Hidden Power' && u && u.src && u.src.iv) ty = hpType(u.src.iv);
+  else if (m[0] === 'Weather Ball' && B && WXT[B.wx.k] != null) ty = WXT[B.wx.k];
+  if (ty === m[1]) return m;
+  const c = m.slice(); c[1] = ty; return c;
+}
 /* Unike statusangrep som retter seg mot motstanderen (resten virker på brukeren eller banen). */
-const FOEU = new Set(['Psycho Shift', 'Transform', 'Mimic', 'Sketch', 'Guard Split', 'Power Split', 'Telekinesis', 'Taunt', 'Encore', 'Disable', 'Mean Look', 'Block', 'Spider Web', 'Lock-On', 'Mind Reader', 'Spite', 'Soak', 'Pain Split', 'Psych Up', 'Memento', 'Power Swap', 'Guard Swap', 'Heart Swap', 'Reflect Type']);
+const FOEU = new Set(['Psycho Shift', 'Transform', 'Mimic', 'Sketch', 'Guard Split', 'Power Split', 'Telekinesis', 'Taunt', 'Encore', 'Disable', 'Mean Look', 'Block', 'Spider Web', 'Lock-On', 'Mind Reader', 'Spite', 'Soak', 'Pain Split', 'Psych Up', 'Memento', 'Power Swap', 'Guard Swap', 'Heart Swap', 'Reflect Type', 'Defog']);
 
 /* En Pokémon i kamp. src er den eide Pokémonen (eller en generert motstander med samme felter). v = det som nullstilles ved bytte. */
 function bmon(src) {
@@ -81,7 +109,10 @@ function powOf(B, u, t, m, ord) {
   if (u.v.mefirst) p = Math.floor(p * 1.5);
   if (n === 'Solar Beam' && B.wx.k && B.wx.k !== 'sun') p = Math.floor(p / 2);
   if (ROLL.has(n)) p *= Math.pow(2, Math.min(4, u.v.roll || 0));
-  if (CHAIN.has(n)) p = Math.min(160, p * Math.pow(2, u.v.chain || 0));
+  /* Fury Cutter dobles for hvert treff på rad (40, 80, 160). Echoed Voice øker med 40 om gangen opp til 200. */
+  if (CHAIN.has(n)) p = n === 'Echoed Voice' ? Math.min(200, p * (1 + (u.v.chain || 0))) : Math.min(160, p * Math.pow(2, u.v.chain || 0));
+  if (n === 'Pursuit' && B.pursuit) p *= 2;
+  if ((STOMP.has(n) && t.v.mini) || (AWAY2.has(n) && reaches(m, t))) p *= 2;
   return p;
 }
 function dmgOf(B, u, t, m, pow, crit, roll) {
@@ -191,7 +222,14 @@ const UM = {
   'Destiny Bond': c => { c.V.dbond = 1; c.say(`${c.N} is trying to take its foe down with it!`); },
   'Refresh': c => { if (!c.u.status || c.u.status === 'slp' || c.u.status === 'frz') return fail(c); c.u.status = ''; c.u.tox = 0; c.ev.push({ t: 'status', side: c.s, st: '' }); c.say(`${c.N}'s status returned to normal!`); },
   'Heal Bell': c => { for (const b of c.s === 'me' ? c.B.me : c.B.foe) if (b.hp > 0) { b.status = ''; b.tox = 0; } c.ev.push({ t: 'status', side: c.s, st: '' }); c.say(c.m[0] === 'Heal Bell' ? 'A bell chimed!' : 'A soothing aroma wafted through the area!'); },
-  'Splash': c => c.say('But nothing happened!'), 'Teleport': fail, 'Helping Hand': fail,
+  'Splash': c => c.say('But nothing happened!'), 'Helping Hand': fail,
+  /* Teleport bytter brukeren ut, som i de nyere spillene. Alene på laget slår den feil. */
+  'Teleport': c => { if (!(c.s === 'me' ? c.B.me : c.B.foe).some(b => b !== c.u && b.hp > 0)) return fail(c); c.B.pivot = c.s; },
+  /* Defog senker målets unnvikelse og blåser bort skjermer hos motstanderen og pigger og steiner på begge sider. */
+  'Defog': c => { const B = c.B, a = B.sd[c.o], b = B.sd[c.s]; let any = 0; changeStats(B, c.o, [[8, -1]], c.ev, true);
+    for (const k of ['ref', 'ls', 'safe', 'mist']) if (a[k]) { a[k] = 0; any = 1; }
+    for (const sd of [a, b]) for (const k of ['spikes', 'tsp', 'rock']) if (sd[k]) { sd[k] = 0; any = 1; }
+    if (any) c.say('The field was blown clear!'); },
   'Magnet Rise': c => { if (c.V.mag) return fail(c); c.V.mag = 5; c.say(`${c.N} levitated with electromagnetism!`); },
   'Soak': c => { keep(c.t); c.t.ty = [10, -1]; c.say(`${nmOf(c.o, c.t)} transformed into the Water type!`); },
   'Reflect Type': c => { keep(c.u); c.u.ty = c.t.ty.slice(); c.say(`${c.N}'s type became the same as ${lc(nmOf(c.o, c.t))}'s type!`); },
@@ -248,7 +286,7 @@ const AILX = {
 const CALLS = new Set(['Metronome', 'Sleep Talk', 'Copycat', 'Mirror Move', 'Me First', 'Assist', 'Nature Power']), HEALS = new Set(['Rest', 'Wish', 'Swallow', 'Pain Split', 'Aqua Ring', 'Ingrain', 'Healing Wish', 'Lunar Dance']), PIVOT = new Set(['U-turn', 'Volt Switch']);
 const handled = m => m[4] > 0 || !!UM[m[0]] || CALLS.has(m[0]) || (m[6] === 1 && (!!AIL[m[7]] || m[7] === 6 || !!AILX[m[7]])) || m[6] === 3 || m[6] === 5 || m[12].length > 0;
 /* Angrep som ikke gjør noe i disse kampene ennå. De velges ikke automatisk, og trenerne bruker dem ikke. */
-window.DEADMV = new Set(MOVES.map((m, i) => handled(m) && !['Splash', 'Teleport', 'Helping Hand'].includes(m[0]) ? -1 : i).filter(i => i >= 0));
+window.DEADMV = new Set(MOVES.map((m, i) => handled(m) && !['Splash', 'Helping Hand', 'Heal Pulse'].includes(m[0]) ? -1 : i).filter(i => i >= 0));
 const METRO = MOVES.map((m, i) => m[4] > 0 && m[2] > 0 && !CHARGE[m[0]] && !BOOM.has(m[0]) ? i : -1).filter(i => i >= 0);
 
 /* Ett angrep. k = plass i angrepslista (-1 = Struggle). ord = 0 hvis brukeren er først ut av to denne runden. */
@@ -262,7 +300,7 @@ function useMove(B, s, k, ev, ord) {
     if (u.slp-- > 0) { say(`${N} is fast asleep.`); const nm = k >= 0 && u.mv[k] ? MOVES[u.mv[k].i][0] : ''; if (nm !== 'Sleep Talk' && nm !== 'Snore') return stop(); }
     else { u.status = ''; V.night = 0; ev.push({ t: 'status', side: s, st: '' }); say(`${N} woke up!`); }
   }
-  if (u.status === 'frz') { if (Math.random() < 0.8) { say(`${N} is frozen solid!`); return stop(); } u.status = ''; ev.push({ t: 'status', side: s, st: '' }); say(`${N} thawed out!`); }
+  if (u.status === 'frz') { const pre = k >= 0 && u.mv[k] ? MOVES[u.mv[k].i][0] : ''; if (!DEFROST.has(pre) && Math.random() < 0.8) { say(`${N} is frozen solid!`); return stop(); } u.status = ''; ev.push({ t: 'status', side: s, st: '' }); say(`${N} thawed out!`); }
   if (V.fl) { V.fl = 0; say(`${N} flinched!`); return stop(); }
   if (V.conf) {
     V.conf--;
@@ -321,7 +359,8 @@ function useMove(B, s, k, ev, ord) {
   else if (m[0] === 'Nature Power') { mi = MOVES.findIndex(x => x[0] === 'Tri Attack'); if (mi < 0) return say('But it failed!'); m = MOVES[mi]; say(`Nature Power turned into ${m[0]}!`); }
   else if (m[0] === 'Copycat' || m[0] === 'Mirror Move') { const lm = B.lastM[o]; if (lm == null || lm < 0 || MOVES[lm][4] === 0 || CHARGE[MOVES[lm][0]]) return say('But it failed!'); mi = lm; m = MOVES[mi]; say(`${N} used ${m[0]}!`); }
   B.lastM[s] = mi;
-  const atFoe = m[4] > 0 || (m[17] !== 1 && ![3, 10, 11].includes(m[6]) && (m[6] !== 13 || FOEU.has(m[0])) && !UM_SELF.has(m[0]));
+  m = mvEff(B, u, m);
+  const atFoe = m[4] > 0 || m[0] === 'Heal Pulse' || (m[17] !== 1 && ![3, 10, 11].includes(m[6]) && (m[6] !== 13 || FOEU.has(m[0])) && !UM_SELF.has(m[0]));
   if (m[0] === 'Dream Eater' && t.status !== 'slp') { say('But it failed!'); return stop(); }
   if (m[0] === 'Snore' && u.status !== 'slp') { say('But it failed!'); return stop(); }
   if (m[0] === 'Fake Out' && V.t) { say('But it failed!'); return stop(); }
@@ -334,8 +373,8 @@ function useMove(B, s, k, ev, ord) {
     if (t.hp <= 0) { say('But there was no target…'); return stop(); }
     if (t.v.prot && m[0] !== 'Feint' && m[0] !== 'Shadow Force') { say(`${nmOf(o, t)} protected itself!`); return stop(); }
     let hit = true;
-    if (V.lockon || (t.v.tele && m[6] !== 9)) hit = true;
-    else if (t.v.away) hit = false;
+    if (V.lockon || (t.v.tele && m[6] !== 9) || (STOMP.has(m[0]) && t.v.mini && !t.v.away)) hit = true;
+    else if (t.v.away && !reaches(m, t)) hit = false;
     else if (m[6] === 9) hit = u.lv >= t.lv && Math.random() < (30 + u.lv - t.lv) / 100;
     else if (m[3] && !((m[0] === 'Thunder' || m[0] === 'Hurricane') && B.wx.k === 'rain') && !(m[0] === 'Blizzard' && B.wx.k === 'hail')) hit = Math.random() < m[3] / 100 * accM(clampS(u.sg[6] - (t.v.fore ? Math.min(0, t.sg[7]) : t.sg[7]))) * (B.grav ? 5 / 3 : 1);
     V.lockon = 0;
@@ -350,14 +389,17 @@ function useMove(B, s, k, ev, ord) {
     if (te === 0) { say(`It doesn't affect ${lc(nmOf(o, t))}…`); return stop(); }
     if (fixed && !(fixed(u, t, B) > 0)) { say('But it failed!'); return stop(); }
     if (ROLL.has(m[0])) V.roll = cont ? (V.roll || 0) + 1 : 0;
-    if (CHAIN.has(m[0])) V.chain = V.cm === m[0] ? Math.min(3, (V.chain || 0) + 1) : 0;
+    if (CHAIN.has(m[0])) V.chain = V.cm === m[0] ? Math.min(m[0] === 'Echoed Voice' ? 4 : 2, (V.chain || 0) + 1) : 0;
     V.cm = CHAIN.has(m[0]) ? m[0] : '';
-    ev.push({ t: 'anim', side: s, mi, self: 0, roll: V.roll || 0 });
-    const hits = m[13] ? (m[13] === m[14] ? m[13] : [2, 2, 2, 3, 3, 3, 4, 5][rnd(8)]) : 1, cs = Math.min(3, m[16] + (V.focus ? 2 : 0));
+    ev.push({ t: 'anim', side: s, mi, self: 0, roll: V.roll || 0, ty: m[1] });
+    const bu = m[0] === 'Beat Up' ? beatUp(B, u) : null, hits = hitsFor(B, u, m), cs = Math.min(3, m[16] + (V.focus ? 2 : 0));
     let total = 0, n = 0, crit = false, sub = false, held = false;
     for (; n < hits && t.hp > 0 && u.hp > 0; n++) {
-      crit = !fixed && m[6] !== 9 && m !== STRUGGLE && !B.sd[o].lucky && Math.random() < [1 / 16, 1 / 8, 1 / 2, 1][cs];
-      let d = m[6] === 9 ? t.hp : fixed ? fixed(u, t, B) : m === STRUGGLE ? Math.max(1, Math.floor(dmgOf(B, u, t, m, 50, false, true) / (u.ty.includes(0) ? 1.5 : 1) / (typeEff(0, t) || 1))) : dmgOf(B, u, t, m, powOf(B, u, t, m, ord), crit, true);
+      /* Kritisk treff: 1 av 24 til vanlig, 1 av 8 for angrep med høy sjanse, og halvparten eller alltid over det. Skaden er × 1,5. */
+      crit = !fixed && m[6] !== 9 && m !== STRUGGLE && !B.sd[o].lucky && Math.random() < [1 / 24, 1 / 8, 1 / 2, 1][cs];
+      /* Beat Up har én styrke per lagkamerat, og Triple Kick slår hardere for hvert spark (10, 20, 30). */
+      const pw = bu ? bu[n] : m[0] === 'Triple Kick' ? 10 * (n + 1) : 0;
+      let d = m[6] === 9 ? t.hp : fixed ? fixed(u, t, B) : m === STRUGGLE ? Math.max(1, Math.floor(dmgOf(B, u, t, m, 50, false, true) / (u.ty.includes(0) ? 1.5 : 1) / (typeEff(0, t) || 1))) : dmgOf(B, u, t, m, pw || powOf(B, u, t, m, ord), crit, true);
       if (fixed && d <= 0) { say('But it failed!'); return stop(); }
       if (t.v.sub) {
         t.v.sub -= d; sub = true; ev.push({ t: 'hit', side: o, hp: t.hp, e, crit, sub: 1 });
@@ -376,7 +418,9 @@ function useMove(B, s, k, ev, ord) {
     else if (!fixed && m !== STRUGGLE) { if (e > 1) say("It's super effective!"); else if (e < 1) say("It's not very effective…"); }
     if (hits > 1) say(`Hit ${n} time${n > 1 ? 's' : ''}!`);
     if (held) say(`${nmOf(o, t)} endured the hit!`);
-    if (t.status === 'frz' && m[1] === 9 && t.hp > 0) { t.status = ''; ev.push({ t: 'status', side: o, st: '' }); say(`${nmOf(o, t)} thawed out!`); }
+    if (t.status === 'frz' && (m[1] === 9 || m[0] === 'Scald') && t.hp > 0) { t.status = ''; ev.push({ t: 'status', side: o, st: '' }); say(`${nmOf(o, t)} thawed out!`); }
+    /* Smack Down slår målet i bakken: Ground-angrep treffer det, og det mister svevingen. Den som var i lufta, kommer ned. */
+    if (m[0] === 'Smack Down' && t.hp > 0 && (total > 0 || sub)) { const up = t.ty.includes(2) || t.v.mag || t.v.tele || t.v.away; t.v.smack = 1; t.v.mag = 0; t.v.tele = 0; if (t.v.away) { t.v.away = 0; t.v.lock = null; ev.push({ t: 'vanish', side: o, on: 0 }); } if (up) say(`${nmOf(o, t)} fell straight down!`); }
     if (m[9] > 0 && total > 0 && u.hp < u.max) { u.hp = Math.min(u.max, u.hp + Math.max(1, Math.floor(total * m[9] / 100))); ev.push({ t: 'heal', side: s, hp: u.hp }); say(`${nmOf(o, t)} had its energy drained!`); }
     if (m[9] < 0 && total > 0) { u.hp = Math.max(0, u.hp - Math.max(1, m === STRUGGLE ? Math.floor(u.max / 4) : Math.floor(total * -m[9] / 100))); ev.push({ t: 'hit', side: s, hp: u.hp, e: 1, quiet: 1 }); say(`${N} is hit with recoil!`); }
     if (RECHARGE.has(m[0]) && t.hp > 0) V.rech = 1;
@@ -385,6 +429,7 @@ function useMove(B, s, k, ev, ord) {
     if (t.hp > 0 && !sub) {
       if (m[7] > 0 && m[7] <= 6 && Math.random() * 100 < (m[8] || 100)) applyAil(B, o, m[7], ev, false, m[0] === 'Poison Fang');
       if (m[0] === 'Tri Attack' && Math.random() < 0.2) applyAil(B, o, [1, 4, 3][rnd(3)], ev, false);
+      if (m[0] === 'Secret Power' && Math.random() < 0.3) applyAil(B, o, 1, ev, false);
       if (m[7] === 8 && !t.v.trap) { t.v.trap = 4 + rnd(2); t.v.trapn = m[0]; t.v.trapBy = u; say(`${nmOf(o, t)} was trapped by ${m[0]}!`); }
       if (m[6] === 6 && m[12].length && Math.random() * 100 < (m[11] || 100)) changeStats(B, o, m[12], ev, true);
       if (m[15] && ord === 0 && Math.random() * 100 < m[15]) t.v.fl = 1;
@@ -402,7 +447,7 @@ function useMove(B, s, k, ev, ord) {
     }
     if (m[0] === 'Uproar' && u.hp > 0) { if (!cont) { V.lock = { k, kind: 'uproar', n: 2 }; say(`${N} caused an uproar!`); } else if (--V.lock.n <= 0) { V.lock = null; say(`${N} calmed down.`); } }
     if (t.hp <= 0 && t.v.grudge && slot && u.hp > 0) { slot.pp = 0; say(`${N}'s ${m[0]} lost all its PP due to the grudge!`); }
-    if (PIVOT.has(m[0]) && total > 0 && u.hp > 0 && (s === 'me' ? B.me : B.foe).some(b => b !== u && b.hp > 0)) B.pivot = s;
+    if (PIVOT.has(m[0]) && (total > 0 || sub) && u.hp > 0 && (s === 'me' ? B.me : B.foe).some(b => b !== u && b.hp > 0)) B.pivot = s;
     if (t.hp <= 0 && t.v.dbond && u.hp > 0) { u.hp = 0; ev.push({ t: 'hit', side: s, hp: 0, e: 1, quiet: 1 }); say(`${nmOf(o, t)} took its attacker down with it!`); }
     return;
   }
@@ -419,12 +464,19 @@ function statusMove(c) {
   if (UM[m[0]]) UM[m[0]](c);
   else if (m[6] === 1) { if (AILX[m[7]]) AILX[m[7]](c); else applyAil(B, o, m[7], ev, true, m[0] === 'Toxic'); }
   else if (m[6] === 3) {
-    if (u.hp >= u.max) return say('But it failed!');
+    /* Heal Pulse helbreder målet, og i enkeltkamp er det motstanderen. Alle andre helbreder brukeren. */
+    const pulse = m[0] === 'Heal Pulse', w = pulse ? t : u, ws = pulse ? o : s;
+    if (w.hp <= 0 || w.hp >= w.max || (pulse && (w.v.hblock || w.v.sub))) return say('But it failed!');
     const sunny = ['Synthesis', 'Moonlight', 'Morning Sun'].includes(m[0]), pct = sunny && B.wx.k ? (B.wx.k === 'sun' ? 66 : 25) : m[10] || 50;
-    u.hp = Math.min(u.max, u.hp + Math.max(1, Math.floor(u.max * pct / 100))); ev.push({ t: 'heal', side: s, hp: u.hp }); say(`${N} regained health!`);
+    w.hp = Math.min(w.max, w.hp + Math.max(1, Math.floor(w.max * pct / 100))); ev.push({ t: 'heal', side: ws, hp: w.hp }); say(`${nmOf(ws, w)} regained health!`);
+    if (m[0] === 'Roost') u.v.roost = 1;
   }
   else if (m[6] === 5) { changeStats(B, o, m[12], ev, true); applyAil(B, o, 6, ev, false); }
-  else if (m[12].length) changeStats(B, m[17] === 1 ? s : o, m[12], ev, m[17] !== 1);
+  else if (m[12].length) {
+    /* Growth gir dobbelt i sterkt sollys. Minimize gjør brukeren sårbar for tramp. */
+    changeStats(B, m[17] === 1 ? s : o, m[0] === 'Growth' && B.wx.k === 'sun' ? m[12].map(x => [x[0], x[1] * 2]) : m[12], ev, m[17] !== 1);
+    if (m[0] === 'Minimize') u.v.mini = 1;
+  }
   else say('But nothing happened!');
 }
 /* Unike angrep som virker på brukeren eller banen, selv om dataene ikke sier «seg selv». */
@@ -494,17 +546,18 @@ function endTurn(B, ev) {
   if (B.grav && --B.grav <= 0 && !B.over) say('Gravity returned to normal!');
   if (B.mroom && --B.mroom <= 0 && !B.over) say('Magic Room wore off, and held item effects returned to normal!');
   if (B.wroom && --B.wroom <= 0 && !B.over) say('Wonder Room wore off, and Defense and Sp. Def stats returned to normal!');
-  for (const b of [...B.me, ...B.foe]) { b.v.prot = 0; b.v.endure = 0; b.v.fl = 0; b.v.hit = null; b.v.mcoat = 0; b.v.snatch = 0; }
+  for (const b of [...B.me, ...B.foe]) { b.v.prot = 0; b.v.endure = 0; b.v.fl = 0; b.v.hit = null; b.v.mcoat = 0; b.v.snatch = 0; b.v.roost = 0; }
 }
 
 /* ---------- Motstanderens valg ---------- */
 /* Forventet skade (i HP) for ett angrep og det beste angrepet u har mot t. */
 function estDmg(B, u, t, m) {
   if (m[4] === 0) return 0;
-  if (FIXED[m[0]]) return FIXED[m[0]](u, t, B) || 0;
+  m = mvEff(B, u, m);
+  if (FIXED[m[0]]) return typeEff(m[1], t) === 0 && m[0] !== 'Bide' ? 0 : FIXED[m[0]](u, t, B) || 0;
   if (typeEff(m[1], t) === 0) return 0;
   if (m[6] === 9) return u.lv >= t.lv ? t.hp * 0.3 : 0;
-  let d = dmgOf(B, u, t, m, powOf(B, u, t, m, 1), false, false) * (m[13] ? (m[13] === m[14] ? m[13] : 3) : 1) * (m[3] ? m[3] / 100 : 1);
+  let d = dmgOf(B, u, t, m, powOf(B, u, t, m, 1), false, false) * hitsFor(B, u, m, true) * (m[3] ? m[3] / 100 : 1);
   if (CHARGE[m[0]] || RECHARGE.has(m[0])) d *= 0.6;
   if (m[0] === 'Focus Punch') d *= 0.4;
   if ((m[0] === 'Dream Eater' && t.status !== 'slp') || (m[0] === 'Snore' && u.status !== 'slp') || (m[0] === 'Fake Out' && u.v.t)) d = 0;
@@ -596,7 +649,7 @@ function aiAct(B) {
       const d = estDmg(B, u, t, m);
       sc = Math.min(100, d / t.hp * 100) + (d >= t.hp ? 30 + (m[5] > 0 ? 12 : 0) : 0);
       if (t.v.away) sc = 1;
-      if (BOOM.has(m[0])) sc = u.hp < u.max * 0.25 ? sc * 0.8 : sc * 0.12;
+      if (BOOM.has(m[0]) || m[0] === 'Final Gambit') sc = u.hp < u.max * 0.25 ? sc * 0.8 : sc * 0.12;
       if (m[9] < 0 && u.hp < u.max * 0.2) sc *= 0.8;
     } else sc = V.taunt || DEADMV.has(x.i) ? 0 : aiStatus(B, u, t, m);
     opts.push([k, sc * (0.9 + Math.random() * 0.2)]);
@@ -652,7 +705,7 @@ function runQueue(B, q, ev) {
     if (B.pivot) {
       const side = B.pivot; B.pivot = null;
       if (!B.over && act(B, side).hp > 0) {
-        if (side === 'me') { B.rest = q; B.need = 2; return false; }
+        if (side === 'me') { if (!B.pass) ev.push({ t: 'msg', s: `${act(B, 'me').name} comes back to you!`, hold: 500 }); B.rest = q; B.need = 2; return false; }
         const c = B.foe.map((x, i) => i).filter(i => i !== B.b && B.foe[i].hp > 0), t = B.me[B.a];
         if (c.length) { let best = c[0], bs = -9; for (const i of c) { const f = B.foe[i], sc = bestDmg(B, f, t) / Math.max(1, t.hp) - bestDmg(B, t, f) / f.hp; if (sc > bs) { bs = sc; best = i; } } swapTo(B, 'foe', best, ev); B.aiSw = B.turn; }
       } else B.pass = null;
@@ -667,11 +720,16 @@ function runTurn(B, a) {
   const idx = (b, k) => k >= 0 && b.mv[k] ? b.mv[b.v.enc ? b.v.enc.k : k].i : -1;
   B.intent = { me: a.t === 'move' ? idx(B.me[B.a], a.k) : -2, foe: fa.t === 'move' ? idx(B.foe[B.b], fa.k) : -2 }; B.moved = { me: 0, foe: 0 }; B.pivot = null; B.rest = null;
   if (a.t === 'item') useItem(B, a.k, a.i, ev);
-  if (a.t === 'switch') swapTo(B, 'me', a.i, ev);
-  if (fa.t === 'switch' && !B.over) { swapTo(B, 'foe', fa.i, ev); B.aiSw = B.turn; }
+  /* Pursuit: bytter målet ut denne runden, rekker Pursuit å slå først, og da med dobbel styrke. */
+  const isPur = (b, k) => k >= 0 && !!b.mv[k] && !b.v.rech && MOVES[b.mv[b.v.enc ? b.v.enc.k : k].i][0] === 'Pursuit', pur = (sd, k) => { B.pursuit = 1; useMove(B, sd, k, ev, 0); B.pursuit = 0; B.moved[sd] = 1; settle(B, ev); };
+  const purF = a.t === 'switch' && fa.t === 'move' && isPur(B.foe[B.b], fa.k), purM = fa.t === 'switch' && a.t === 'move' && isPur(B.me[B.a], a.k);
+  if (purF) pur('foe', fa.k);
+  if (purM) pur('me', a.k);
+  if (a.t === 'switch' && !B.over && B.me[B.a].hp > 0) swapTo(B, 'me', a.i, ev);
+  if (fa.t === 'switch' && !B.over && B.foe[B.b].hp > 0) { swapTo(B, 'foe', fa.i, ev); B.aiSw = B.turn; }
   const q = [];
-  if (a.t === 'move') q.push(['me', a.k, B.me[B.a]]);
-  if (fa.t === 'move') q.push(['foe', fa.k, B.foe[B.b]]);
+  if (a.t === 'move' && !purM) q.push(['me', a.k, B.me[B.a]]);
+  if (fa.t === 'move' && !purF) q.push(['foe', fa.k, B.foe[B.b]]);
   if (q.length === 2) {
     const pr = ([, k, b]) => k >= 0 && b.mv[k] ? MOVES[b.mv[k].i][5] : 0, pa = pr(q[0]), pb = pr(q[1]), sa = spdB(B, q[0][2]), sb = spdB(B, q[1][2]);
     const first = pa !== pb ? pa > pb : sa !== sb ? (sa > sb) !== !!B.troom : Math.random() < 0.5;

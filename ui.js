@@ -222,7 +222,7 @@ function hexEl(m) {
   return `<svg class="hex" viewBox="0 0 260 208" role="img" aria-label="${order.map(s => SN[s] + ' ' + st[s]).join(', ')}"><polygon points="${ring(1)}" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.14)"/><polygon points="${ring(0.5)}" fill="none" stroke="rgba(255,255,255,.08)"/>${order.map((_, k) => `<line x1="${cx}" y1="${cy}" x2="${pt(k, 1)[0]}" y2="${pt(k, 1)[1]}" stroke="rgba(255,255,255,.06)"/>`).join('')}<polygon points="${shape}" fill="var(--tc)" fill-opacity=".38" stroke="var(--tc)" stroke-width="2" stroke-linejoin="round"/>${lab}</svg>`;
 }
 const CLS = ['Status', 'Physical', 'Special'];
-const moveEl = (x, o = {}) => { const mv = MOVES[x]; return `<${o.btn ? `button type="button" data-a="${o.act || 'mvtog'}" data-k="${x}" aria-pressed="${o.on ? 'true' : 'false'}"` : 'div'} class="mvc" style="--c:var(--t${mv[1]})"><b>${esc(mv[0])}</b><span><i></i>${TYN[mv[1]]} · ${CLS[mv[4]]}${mv[2] ? ' · ' + mv[2] : ''}</span></${o.btn ? 'button' : 'div'}>`; };
+const moveEl = (x, o = {}) => { const mv = o.m && MOVES[x][0] === 'Hidden Power' && o.m.iv ? mvEff(null, { src: o.m }, MOVES[x]) : MOVES[x]; return `<${o.btn ? `button type="button" data-a="${o.act || 'mvtog'}" data-k="${x}" aria-pressed="${o.on ? 'true' : 'false'}"` : 'div'} class="mvc" style="--c:var(--t${mv[1]})"><b>${esc(mv[0])}</b><span><i></i>${TYN[mv[1]]} · ${CLS[mv[4]]}${mv[2] ? ' · ' + mv[2] : ''}</span></${o.btn ? 'button' : 'div'}>`; };
 /* Utviklingsveien med nivå eller stein mellom hvert ledd. cur = arten som er uthevet. */
 function evoLine(id, cur) {
   let b = id; while (D(b)[4]) b = D(b)[4];
@@ -255,7 +255,7 @@ function monSheet(m) {
 function movePick(m) {
   const sel = U.mvsel;
   openSheet(`<h2 class="h">Moves for ${esc(D(m.id)[0])}</h2><p class="sm tn">Pick up to four. ${sel.length} of 4 chosen.</p>
-    <div class="mvg">${movesAt(m.id, m.lv).concat(m.mv.filter(x => !movesAt(m.id, m.lv).includes(x))).map(x => moveEl(x, { btn: 1, on: sel.includes(x) })).join('')}</div>
+    <div class="mvg">${movesAt(m.id, m.lv).concat(m.mv.filter(x => !movesAt(m.id, m.lv).includes(x))).map(x => moveEl(x, { btn: 1, on: sel.includes(x), m })).join('')}</div>
     <p class="err" id="mv-err" role="alert"></p>
     <button type="button" class="btn pri wide" data-a="mvsave" data-u="${m.u}">Save moves</button>`);
 }

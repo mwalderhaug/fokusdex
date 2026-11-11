@@ -345,11 +345,11 @@ const FX = (() => {
   };
   /* Bakgrunnsshowet: jo høyere klasse motstanderen har, jo mer skjer bak Pokémonene. Det tegnes på et eget lerret bak spritene (256 × 192), rundt 30 ganger i sekundet.
      Nivå 1: lysbånd · 2: svevende gnister · 4: puls bak motstanderen · 6: fartsstriper · 7: lyn · 8: nordlys.
-     o.th = tema: 'evil' (mørkt, rød puls som hjerteslag, aske, røde lyn og forstyrrelser), mesternes egne ('snow', 'bubble', 'flame', 'shard', 'petal', 'spark', rolige og i deres farge o.cc),
+     o.th = tema: 'evil' (mørkt, rød puls som hjerteslag, aske, røde lyn og forstyrrelser), mesternes egne ('snow', 'bubble', 'flame', 'shard', 'petal', 'spark', 'meteor', rolige og i deres farge o.cc),
      og o.gold (bare klasse 9: gull, nordlys og lyn). */
   let showId = 0;
   F.intensity = 0;
-  const TPN = { snow: 46, bubble: 20, flame: 30, shard: 16, petal: 22, spark: 26, evil: 38 };
+  const TPN = { snow: 46, bubble: 20, flame: 30, shard: 16, petal: 22, spark: 26, meteor: 18, evil: 38 };
   F.show = (c, lvl, ty, o = {}) => {
     cancelAnimationFrame(showId); showId = 0; F.intensity = lvl || 0;
     if (!c || !lvl) return;
@@ -383,6 +383,7 @@ const FX = (() => {
         else if (th === 'flame') { q.y -= (36 + 50 * q.v) * dt; q.x += Math.sin(T * 5 + q.p) * 10 * dt; const h = Math.max(0, q.y / 192); x.globalAlpha = 0.7 * h; x.fillStyle = h > 0.7 ? '#fff2a6' : h > 0.4 ? P[1] : '#e2481f'; x.fillRect(px(q.x), px(q.y), q.s, 2 + q.s); }
         else if (th === 'shard') { const a = Math.sin(T * 1.8 + q.p); if (a > 0) { x.globalAlpha = a * 0.8; x.fillStyle = q.s > 1 ? '#fff' : P[1]; const s = 1 + q.s; x.fillRect(px(q.x) - s, px(q.y), s * 2 + 1, 1); x.fillRect(px(q.x), px(q.y) - s, 1, s * 2 + 1); } }
         else if (th === 'petal') { q.x += (14 + 14 * q.v) * dt; q.y += (8 + Math.sin(T * 2 + q.p) * 10) * dt; x.globalAlpha = 0.7; x.fillStyle = q.s > 1 ? '#ffe9b0' : P[1]; x.fillRect(px(q.x), px(q.y), 2, 1); x.fillRect(px(q.x) + 1, px(q.y) + 1, 2, 1); }
+        else if (th === 'meteor') { const v = 60 + 90 * q.v; q.x -= v * 0.55 * dt; q.y += v * dt; x.fillStyle = q.s > 1 ? '#fff' : P[1]; for (let j = 0; j < 4 + q.s * 2; j++) { x.globalAlpha = 0.85 * (1 - j / (4 + q.s * 2)); x.fillRect(px(q.x + j * 0.55 * q.s), px(q.y - j * q.s), q.s, q.s); } }
         else if (th === 'spark') { if (Math.sin(T * 5 + q.p) > 0.86) { x.globalAlpha = 0.9; x.fillStyle = q.s > 1 ? '#fff' : P[1]; x.fillRect(px(q.x) - 1, px(q.y), 3, 1); x.fillRect(px(q.x), px(q.y) - 1, 1, 3); } else if (R() < 0.01) { q.x = R() * 256; q.y = R() * 192; } }
         else if (evil) { if (q.s > 1) { q.y -= (10 + 14 * q.v) * dt; x.globalAlpha = 0.5 + 0.4 * Math.sin(T * 4 + q.p); x.fillStyle = '#ff5a3a'; } else { q.y += (9 + 12 * q.v) * dt; q.x += Math.sin(T + q.p) * 5 * dt; x.globalAlpha = 0.5; x.fillStyle = '#6a5a5c'; } x.fillRect(px(q.x), px(q.y), q.s, q.s); }
         if (q.y > 194) { q.y = -2; q.x = R() * 256; } else if (q.y < -3) { q.y = 194; q.x = R() * 256; } if (q.x > 258) q.x = -2; else if (q.x < -3) q.x = 257;

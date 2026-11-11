@@ -67,11 +67,10 @@ const POOL = {
     ['Hugh', 'hugh', 'Rival', 9, [500, 521, 512, 626, 330, 604], 'Rival \\(B2'], ['Cheren', 'cheren', 'Rival', 0, [508, 521, 510, 512, 573, 628], 'White - Rival'], ['Bianca', 'bianca', 'Rival', 13, [518, 508, 516, 609, 591, 500], 'White - Rival'], ['N', 'n', 'Rival', 16, [571, 565, 567, 584, 601, 530], 'B2 W2 - N']],
   evilboss: [['Giovanni', 'giovanni', 'Team Rocket Boss', 4, [34, 31, 464, 53, 115, 51], 'Rocket', { sc: 'building' }], ['Cyrus', 'cyrus', 'Team Galactic Boss', 16, [461, 430, 169, 130, 229, 462], 'Galactic Boss', { sc: 'mountain' }], ['Archie', 'archie-gen3|archie', 'Team Aqua Leader', 10, [319, 262, 169, 89, 342, 321], 'Leader', { sc: 'water' }],
     ['Maxie', 'maxie-gen3|maxie', 'Team Magma Leader', 4, [323, 262, 169, 110, 324, 229], 'Leader', { sc: 'mountain' }], ['Ghetsis', 'ghetsis', 'Team Plasma Leader', 16, [635, 563, 537, 626, 604, 625], 'Ghetsis', { sc: 'kyurem_cave' }], ['N', 'n', 'King of Team Plasma', 15, [644, 571, 567, 565, 584, 601], 'N Final', { sc: 'black_tower_10' }]],
-  champ: [['Blue', 'blue', 'Champion', 0, [65, 18, 112, 130, 59, 103], 'Champion Blue', { sc: 'pwt', th: 'spark', cc: '#5aa2ff' }], ['Lance', 'lance', 'Champion', 15, [149, 130, 142, 6, 230, 373], 'Lance', { sc: 'black_tower_10', th: 'flame', cc: '#ff7a2a' }], ['Red', 'red', 'Champion', 0, [143, 25, 3, 6, 9, 196], 'Champion & Red', { sc: 'snowy_tall_grass', th: 'snow', cc: '#dfe9f5' }],
+  champ: [['Blue', 'blue', 'Champion', 0, [65, 18, 112, 130, 59, 103], 'Champion Blue', { sc: 'pwt', th: 'spark', cc: '#5aa2ff' }], ['Lance', 'lance', 'Champion', 15, [149, 130, 142, 6, 230, 373], 'Lance', { sc: 'black_tower_10', th: 'flame', cc: '#ff7a2a' }], ['Zinnia', 'zinnia', 'Lorekeeper', 15, [373, 334, 330, 612, 149, 230], 'Zinnia', { sc: 'kyurem_cave', th: 'meteor', cc: '#a98bff' }],
     ['Steven', 'steven', 'Champion', 8, [376, 227, 306, 344, 346, 348], 'Steven & Wallace', { sc: 'cave', th: 'shard', cc: '#9fc7d8' }], ['Wallace', 'wallace', 'Champion', 10, [350, 130, 73, 272, 340, 321], 'Steven & Wallace', { sc: 'water', th: 'bubble', cc: '#3fd0c4' }], ['Alder', 'alder', 'Champion', 6, [637, 626, 621, 617, 589, 584], 'Alder', { sc: 'pinwheel_road', th: 'petal', cc: '#ff9a4a' }]],
-  supreme: [['Red', 'red', 'Legend', 9, [6, 25, 3, 9, 143, 131], 'Red & Blue', { sc: 'mountain' }], ['Blue', 'blue', 'Legend', 9, [59, 65, 68, 142, 130, 103], 'Red & Blue', { sc: 'pwt' }], ['Cynthia', 'cynthia', 'Sinnoh Champion', 15, [445, 442, 448, 350, 407, 468], 'Cynthia', { sc: 'black_tower_10' }],
-    ['Iris', 'iris', 'Unova Champion', 15, [612, 635, 621, 567, 306, 131], 'Iris', { sc: 'black_tower_3_5' }], ['Steven', 'steven', 'Hoenn Champion', 8, [376, 373, 306, 344, 346, 348], 'Battle! Champion', { sc: 'cave' }], ['Colress', 'colress', 'Team Plasma', 8, [462, 601, 376, 606, 604, 474], 'Colress', { sc: 'black_tower_1_2' }],
-    ['Zinnia', 'zinnia', 'Lorekeeper', 15, [373, 334, 330, 612, 149, 230], 'Zinnia', { sc: 'kyurem_cave' }]]
+  supreme: [['Red', 'red', 'Legend', 9, [6, 25, 3, 9, 143, 131], 'Red & Blue|Champion & Red', { sc: 'snowy_tall_grass' }], ['Blue', 'blue', 'Legend', 9, [59, 65, 68, 142, 130, 103], 'Red & Blue', { sc: 'pwt' }], ['Cynthia', 'cynthia', 'Sinnoh Champion', 15, [445, 442, 448, 350, 407, 468], 'Cynthia', { sc: 'black_tower_10' }],
+    ['Iris', 'iris', 'Unova Champion', 15, [612, 635, 621, 567, 306, 131], 'Iris', { sc: 'black_tower_3_5' }], ['Steven', 'steven', 'Hoenn Champion', 8, [376, 373, 306, 344, 346, 348], 'Battle! Champion', { sc: 'cave' }], ['Colress', 'colress', 'Team Plasma', 8, [462, 601, 376, 606, 604, 474], 'Colress', { sc: 'black_tower_1_2' }]]
 };
 /* Frontier Brains: de vanlige bossene i Battle Frontier. [navn, bilde, tittel, type, lag med esset først, låt]. */
 const BRAIN = [['Noland', 'noland-gen3|noland', 'Factory Head', 8, [376, 130, 94, 248], 'Sapphire - Frontier'], ['Greta', 'greta-gen3|greta', 'Arena Tycoon', 1, [197, 214, 94, 286], 'Sapphire - Frontier'], ['Tucker', 'tucker-gen3|tucker', 'Dome Ace', 15, [373, 260, 6, 376], 'Sapphire - Frontier'],
@@ -421,11 +420,18 @@ function legTr(id) {
   return { n: d[0], img: '', title: L.t === 4 ? 'The Original One' : L.t === 3 ? 'Mythical Pokémon' : 'Legendary Pokémon', ty: d[1], kind: 'legend', ci: 10, cn: 'Legendary raid', skill: 1, boss: true, ultra: true, gold: L.t === 4, int: 8,
     sc: L.sc, th: L.th, cc: L.cc, arena: 'hall', v: 0, mre: L.mre, wild: 1, leg: id, lt: L.t, lbg: L.bg, sig: L.sig };
 }
+/* En legendarisk slår aldri ut seg selv: Explosion, Final Gambit, Memento og lignende byttes ut med det beste den ellers kan. */
+const SELFKO = new Set(['Explosion', 'Self-Destruct', 'Final Gambit', 'Memento', 'Healing Wish', 'Lunar Dance', 'Destiny Bond', 'Perish Song']);
+function raidMoves(id, lv) {
+  const ok = x => !SELFKO.has(MOVES[x][0]), mv = foeMoves(id, lv, 2).filter(ok);
+  for (const x of movesAt(id, lv + 8).filter(x => ok(x) && !DEADMV.has(x) && MOVES[x][4] > 0).sort((a, b) => (MOVES[b][2] || 0) - (MOVES[a][2] || 0))) { if (mv.length >= 4) break; if (!mv.includes(x)) mv.push(x); }
+  return mv.length ? mv : defaultMoves(id, lv);
+}
 /* demo = arten som skal prøves i demoen (gir ingenting). Ellers den som har vist seg. */
 function raidBattle(lead, demo) {
   const R = demo ? { id: demo, lv: RAIDLV[LEG[demo].t - 1] } : S.raid, L = LEG[R.id], party = S.party.map(monBy).filter(Boolean);
   party.sort((a, b) => (b.u === lead) - (a.u === lead));
-  const foe = { id: R.id, lv: R.lv, sh: 0, iv: [31, 31, 31, 31, 31, 31], ev: [60, 60, 60, 60, 60, 60], nat: 0, mv: foeMoves(R.id, R.lv, 2) };
+  const foe = { id: R.id, lv: R.lv, sh: 0, iv: [31, 31, 31, 31, 31, 31], ev: [60, 60, 60, 60, 60, 60], nat: 0, mv: raidMoves(R.id, R.lv) };
   const B = mkBattle(party, [foe], legTr(R.id), { mode: demo ? 'lab' : 'raid', raid: 1, st: TCL.supreme, k: 'legend', rd: 0, n: 0, lap: 0, ti: 0, bag: BAGN, xm: 1, sm: 1, boost: { mode: '', m: 1, xp: 1 } });
   const f = B.foe[0]; f.max = f.hp = Math.round(f.max * RAIDHP[L.t - 1]);
   return B;

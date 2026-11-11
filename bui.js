@@ -3,8 +3,9 @@
    Reglene ligger i battle.js og league.js, effektene i bfx.js. */
 
 const BT = { B: null, busy: false, v: null, menu: 'main', res: null, ty: 0, tap: null, lead: 0, fsel: [], tp: null, fs: null };
-/* Farten i kampene. FXSLOW er bare til testing: et tall under 1 spiller alt i sakte film. */
-const spdF = () => (S.bfast ? 2.1 : 1) * (window.FXSLOW || 1);
+/* Farten i kampene: vanlig fart er satt opp en fjerdedel etter tilbakemelding om at angrepene gikk for sakte, og FAST er litt over det dobbelte.
+   FXSLOW er bare til testing: et tall under 1 spiller alt i sakte film. */
+const spdF = () => (S.bfast ? 2.2 : 1.25) * (window.FXSLOW || 1);
 const bwait = ms => new Promise(r => setTimeout(r, ms / spdF()));
 /* Hvor mye pynt en klasse får i kort og lister: vanlig trener, boss, toppboss, og de tre sjeldne som har hver sin stil:
    de onde lederne (mørkt og rødt), mesterne (hver sin farge) og de aller største (gull, bare klasse 9). */
@@ -319,7 +320,7 @@ function hpTo(side, hp, o = {}) {
   const B = BT.B, v = BT.v[side], b = teamOf(side)[v.i], from = v.hp, el = $('#b-' + side), pk = !!(PACK.hud && el && el.querySelector('canvas')), bar = pk ? el : $('#b-' + side + ' .hpbar i'), gh = pk ? null : $('#b-' + side + ' .hpbar b'), num = $('#b-' + side + ' .hpnum');
   const e = o.e == null ? 1 : o.e, dmg = hp < from, frac = Math.abs(from - hp) / b.max;
   /* Fart i «andel av full linje per sekund», og korteste og lengste tid. */
-  const rate = !dmg ? 0.55 : e > 1 ? 1.3 : e < 1 ? 0.26 : o.crit ? 0.85 : 0.58, lim = !dmg ? [420, 1500] : e > 1 ? [230, 780] : e < 1 ? [620, 2600] : [420, 1700];
+  const rate = !dmg ? 0.55 : e > 1 ? 1.3 : e < 1 ? 0.26 : o.crit ? 0.85 : 0.58, lim = !dmg ? [420, 1300] : e > 1 ? [230, 780] : e < 1 ? [520, 1700] : [400, 1400];
   const dur = Math.max(lim[0], Math.min(lim[1], frac / rate * 1000)) / spdF(), ease = !dmg ? EASE.io : e > 1 ? EASE.out : e < 1 ? EASE.sine : EASE.io;
   const ghost = dmg && !!o.hit, lag = (e > 1 ? 220 : 130) / spdF(), gdur = ghost ? dur + (e > 1 ? 420 : 260) / spdF() : dur, t0 = performance.now(), my = v.tk = (v.tk || 0) + 1;
   v.hp = hp;
@@ -384,7 +385,7 @@ async function say(s, hold) {
   const b = $('#btext'); if (!b) return;
   if (hold) { await new Promise(r => { const id = setTimeout(r, hold / spdF()); BT.tap = () => { clearTimeout(id); r(); }; }); BT.tap = null; return; }
   b.classList.add('wait');
-  await new Promise(r => { const id = setTimeout(r, (S.bfast ? 420 : 950)); BT.tap = () => { clearTimeout(id); r(); }; });
+  await new Promise(r => { const id = setTimeout(r, (S.bfast ? 380 : 760)); BT.tap = () => { clearTimeout(id); r(); }; });
   BT.tap = null; b.classList.remove('wait');
 }
 /* Menyen under banen er bygd som den nederste skjermen i Black og White: den store ballen med FIGHT, og BAG, RUN og POKÉMON under.
@@ -409,7 +410,7 @@ function drawMenu() {
   }
   if (BT.menu === 'moves') {
     const any = me.mv.some((x, k) => moveOk(B, k));
-    el.innerHTML = `<div class="bw bw-moves bmv${pk}" style="${bg}">${any ? me.mv.map((x, k) => { const m = MOVES[x.i]; return `<button type="button" class="bw-m" data-a="bmove" data-k="${k}" style="--c:var(--b${m[1]})"${moveOk(B, k) ? '' : ' disabled'}><b>${esc(m[0])}</b><span class="mty">${TYN[m[1]]}</span><span class="pp tn">PP ${x.pp}/${x.max}</span></button>`; }).join('') : '<button type="button" class="bw-m" data-a="bmove" data-k="-1" style="--c:var(--b0)"><b>Struggle</b><span class="mty">Normal</span><span class="pp">No PP left</span></button>'}${cancel()}</div>`;
+    el.innerHTML = `<div class="bw bw-moves bmv${pk}" style="${bg}">${any ? me.mv.map((x, k) => { const m = mvEff(B, me, MOVES[x.i]); return `<button type="button" class="bw-m" data-a="bmove" data-k="${k}" style="--c:var(--b${m[1]})"${moveOk(B, k) ? '' : ' disabled'}><b>${esc(m[0])}</b><span class="mty">${TYN[m[1]]}</span><span class="pp tn">PP ${x.pp}/${x.max}</span></button>`; }).join('') : '<button type="button" class="bw-m" data-a="bmove" data-k="-1" style="--c:var(--b0)"><b>Struggle</b><span class="mty">Normal</span><span class="pp">No PP left</span></button>'}${cancel()}</div>`;
     return;
   }
   if (BT.menu === 'pause') {
@@ -572,7 +573,7 @@ function shake(ms, amp, kind, zoom, at) {
 }
 /* Et angrep: oppladning, selve angrepet og fram til det treffer. Treffet (lyd, stopp, risting og HP-linja) hører til hendelsen som kommer etter. */
 async function playAnim(B, e) {
-  const side = e.side, sp = $('#s-' + side), m = e.mi >= 0 ? MOVES[e.mi] : STRUGGLE, self = !!e.self, a = fxPos(side), b = self ? a : fxPos(opp(side)), kind = FX.kindOf(m), tier = mvTier(m, e), d = vec(a, b);
+  const side = e.side, sp = $('#s-' + side), m0 = e.mi >= 0 ? MOVES[e.mi] : STRUGGLE, m = e.ty != null && e.ty !== m0[1] ? Object.assign(m0.slice(), { 1: e.ty }) : m0, self = !!e.self, a = fxPos(side), b = self ? a : fxPos(opp(side)), kind = FX.kindOf(m), tier = mvTier(m, e), d = vec(a, b);
   BT.ty = m[1];
   const K = BT.atk = { side, m, kind, tier, self, n: 0, style: styleOf(m, kind, self), back: null, done: null };
   stageOn(K, a, b); sp.classList.add('cast');
@@ -821,7 +822,7 @@ function learnSheet(m, back) {
   openSheet(`<h2 class="h">${esc(D(m.id)[0])} wants to learn ${esc(mv[0])}</h2>
     <div class="newmv">${moveEl(x)}<span class="sm tn">${mv[2] ? 'Power ' + mv[2] : 'No damage'} · ${mv[3] ? mv[3] + '% accuracy' : 'never misses'} · PP ${mv[18]}${window.DEADMV && DEADMV.has(x) ? ' · has no effect in battles yet' : ''}</span></div>
     <p class="sm">It already knows four moves. Tap the one to forget, or keep them as they are.</p>
-    <div class="mvg">${m.mv.map(k => moveEl(k, { btn: 1, act: 'lforget' })).join('')}</div>
+    <div class="mvg">${m.mv.map(k => moveEl(k, { btn: 1, act: 'lforget', m })).join('')}</div>
     <button type="button" class="btn wide" data-a="lskip">Don't learn ${esc(mv[0])}</button>`);
 }
 
@@ -851,7 +852,7 @@ function sumCard(m, fresh) {
   return `<div class="fsum${g ? ' mega' : ''}${fresh ? ' pop' : ''}" style="--tc:var(--t${ty[0]})">
     <div class="fs-top">${spr(m.id, { ani: 1, mega: m.mega })}<div class="sp"><b class="fs-n">${esc(mName(m))}</b><div class="sm tn">Lv ${m.lv} · ${NAT[m.nat]} · ${judge(m).t}</div><div class="row" style="gap:4px;margin-top:6px;flex-wrap:wrap">${tyEl(m)}${g ? '<span class="pill megap">MEGA</span>' : ''}</div></div></div>
     <div class="fs-st">${STN6.map((n, i) => `<div><span>${n}</span><i><b style="width:${Math.min(100, st[i] / 220 * 100).toFixed(0)}%;background:${i && st[i] === top ? 'var(--gold)' : 'var(--tc)'}"></b></i><em class="tn">${st[i]}</em></div>`).join('')}</div>
-    <div class="fs-mv">${m.mv.map(x => { const mv = MOVES[x]; return `<span style="--c:var(--t${mv[1]})"><b>${esc(mv[0])}</b><small>${TYN[mv[1]]}${mv[2] ? ' · ' + mv[2] : ''}</small></span>`; }).join('')}</div></div>`;
+    <div class="fs-mv">${m.mv.map(x => { const mv = mvEff(null, { src: m }, MOVES[x]); return `<span style="--c:var(--t${mv[1]})"><b>${esc(mv[0])}</b><small>${TYN[mv[1]]}${mv[2] ? ' · ' + mv[2] : ''}</small></span>`; }).join('')}</div></div>`;
 }
 function facDraw(R) {
   const n = R.open, vi = BT.fview != null && BT.fview < n ? BT.fview : n - 1, cur = vi >= 0 ? R.offer[vi] : null, fresh = !!BT.fnew && vi === n - 1;
