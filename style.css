@@ -520,6 +520,16 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .xpr{margin-top:3px}
 .xpbar{flex:1;height:4px;background:#101014;box-shadow:inset 0 0 0 1px #3d3d48;border-radius:2px;overflow:hidden}
 .xpbar i{display:block;height:100%;background:linear-gradient(#70d0ff,#3a98f0);transition:width .8s ease-out}
+/* Båndet som viser en egenskap (Ability): glir inn fra siden til Pokémonen som har den. */
+.abb{position:absolute;z-index:4;top:36%;left:0;display:flex;flex-direction:column;gap:calc(var(--u)*1);padding:calc(var(--u)*4) calc(var(--u)*18) calc(var(--u)*4) calc(var(--u)*8);color:#fff;font-family:var(--dsf);font-weight:var(--fw);font-size:calc(var(--u)*11*var(--fz));line-height:1.05;
+  background:linear-gradient(90deg,rgba(12,16,30,.94),rgba(12,16,30,.88) 70%,rgba(12,16,30,0));box-shadow:inset 0 calc(var(--u)*1.5) 0 #6ad0ff,inset 0 calc(var(--u)*-1.5) 0 #6ad0ff;text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 #000;animation:abbIn .22s cubic-bezier(.2,.9,.3,1) both;transition:transform .3s ease-in,opacity .3s}
+.abb b{font-size:calc(var(--u)*14*var(--fz));font-weight:var(--fw);color:#ffe86a}
+.abb.me{top:auto;bottom:46%}
+.abb.foe{left:auto;right:0;top:13%;align-items:flex-end;padding:calc(var(--u)*4) calc(var(--u)*8) calc(var(--u)*4) calc(var(--u)*18);background:linear-gradient(270deg,rgba(30,12,14,.94),rgba(30,12,14,.88) 70%,rgba(30,12,14,0));box-shadow:inset 0 calc(var(--u)*1.5) 0 #ff8a6a,inset 0 calc(var(--u)*-1.5) 0 #ff8a6a;animation-name:abbInR}
+.abb.out{opacity:0;transform:translateX(-30%)}
+.abb.foe.out{transform:translateX(30%)}
+@keyframes abbIn{from{transform:translateX(-100%)}}
+@keyframes abbInR{from{transform:translateX(100%)}}
 /* Skriften i kampen: DS-skriften fra ressurspakken når den er lastet (klassen dsf på siden), ellers en rolig systemskrift.
    --fz jevner ut at de to er ulike brede, --fw er vekten. */
 .ov.battle{--dsf:var(--pix);--fz:.7;--fw:600}

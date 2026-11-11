@@ -251,6 +251,8 @@ function evoLine(id, cur) {
   const walk = x => (EVO[x] || []).map(y => `<span class="evs"><span class="evw">${how(y)}</span>${cell(y)}${walk(y)}</span>`).join('');
   return `<div><div class="lab">Evolution</div><div class="evo">${cell(b)}${walk(b)}</div></div>`;
 }
+/* Egenskapen (Ability) til arten, hvis den har en av dem kampene bruker. */
+const abLine = id => { const a = typeof abilityOf === 'function' ? abilityOf(id) : ''; return a ? `<p class="sm" style="margin-top:8px;text-align:center"><b>Ability · ${ABN[a]}</b><br><span class="mut">${ABTXT[a]}</span></p>` : ''; };
 function monSheet(m) {
   const fresh = m.nw; if (fresh) { m.nw = 0; save(true); renderNav(); }
   const d = D(m.id), ev = evoOpts(m), inP = S.party.includes(m.u), lead = S.party[0] === m.u, a = xpAt(m.lv), b = xpAt(m.lv + 1), n = countOf(m.id);
@@ -258,7 +260,7 @@ function monSheet(m) {
   openSheet(`<div class="shead">${spr(m.id, { ani: 1, sh: m.sh })}<div class="sp"><div class="sm tn">No. ${m.id} · ${REG[regOf(m.id)].n}${m.sh ? ' · <b style="color:var(--gold)">Shiny</b>' : ''}</div><div class="pn">${esc(d[0])}</div><div class="row" style="margin-top:6px;flex-wrap:wrap;gap:6px">${types(m.id)} ${tierEl(m.id)}</div></div></div>
     <div><div class="row sm tn" style="justify-content:space-between"><span>Level ${m.lv}</span><span>${n > 1 ? 'You have ' + n + ' of these' : 'Your only one'}</span></div><div class="bar" style="margin-top:6px"><i style="width:${Math.round((m.xp - a) / (b - a) * 100)}%"></i></div></div>
     <div class="card2" style="--tc:var(--t${d[1]})">${hexEl(m)}
-      <div class="row" style="flex-wrap:wrap;gap:6px;justify-content:center"><span class="pill">${NAT[m.nat]}${up !== dn ? ` · +${SN[up]} −${SN[dn]}` : ' · neutral'}</span><span class="pill" style="color:${j.sum >= 121 ? 'var(--gold)' : j.sum >= 91 ? 'var(--sage)' : 'var(--ink2)'}">Judge: ${j.t} · best ${SN[j.best]}</span><span class="pill tn">Trained ${evt} of 510</span></div></div>
+      <div class="row" style="flex-wrap:wrap;gap:6px;justify-content:center"><span class="pill">${NAT[m.nat]}${up !== dn ? ` · +${SN[up]} −${SN[dn]}` : ' · neutral'}</span><span class="pill" style="color:${j.sum >= 121 ? 'var(--gold)' : j.sum >= 91 ? 'var(--sage)' : 'var(--ink2)'}">Judge: ${j.t} · best ${SN[j.best]}</span><span class="pill tn">Trained ${evt} of 510</span></div>${abLine(m.id)}</div>
     <div><div class="row" style="justify-content:space-between;margin-bottom:7px"><div class="lab" style="margin:0">Moves${fresh ? ' · <b style="color:var(--gold)">new move learned</b>' : ''}</div>${more ? `<button type="button" class="btn sm2" data-a="mvpick" data-u="${m.u}">Change moves</button>` : ''}</div>
       ${(m.nm || []).length ? `<button type="button" class="newmv" data-a="mlearn" data-u="${m.u}" style="width:100%;text-align:left;margin-bottom:8px"><span class="bang">!</span><span class="sm" style="color:var(--ink)">Wants to learn <b>${esc(MOVES[m.nm[0]][0])}</b>${m.nm.length > 1 ? ' and ' + (m.nm.length - 1) + ' more' : ''}. Tap to decide.</span></button>` : ''}<div class="mvg">${m.mv.map(x => moveEl(x)).join('')}</div>
       ${nx ? `<p class="sm tn" style="margin-top:7px">Next move: ${esc(MOVES[nx.mv][0])} at level ${nx.lv}</p>` : ''}</div>
@@ -297,7 +299,7 @@ VIEW.dex = () => {
 function specSheet(id) {
   const d = D(id), got = S.caught[id];
   openSheet(`<div class="shead">${spr(id, { ani: got ? 1 : 0, sil: !got })}<div class="sp"><div class="sm tn">No. ${id} · ${REG[regOf(id)].n}</div><div class="pn">${got ? esc(d[0]) : '???'}</div><div class="row" style="margin-top:6px;flex-wrap:wrap;gap:6px">${got ? types(id) : ''} ${tierEl(id)}</div></div></div>
-    <p class="sm">${got ? `You have ${countOf(id)}.` : 'Seen, but not caught yet.'}</p>
+    <p class="sm">${got ? `You have ${countOf(id)}.` : 'Seen, but not caught yet.'}</p>${got ? abLine(id) : ''}
     ${evoLine(id, id)}
     <button type="button" class="btn wide" data-a="close">Close</button>`);
 }

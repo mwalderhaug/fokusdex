@@ -653,10 +653,18 @@ async function playAnim(B, e) {
     await bwait(m[4] ? r.hit : r.ms);
   }
 }
+/* En egenskap slår inn: et bånd med navnet glir inn fra den siden Pokémonen står på, som i Black 2 og White 2. Teksten kommer i tekstboksen. */
+function abBanner(side, name) {
+  const fx = $('#fx'), b = teamOf(side)[BT.v[side].i]; if (!fx || !name || !b) return;
+  fx.querySelectorAll('.abb.' + side).forEach(x => x.remove());
+  const el = document.createElement('div'); el.className = 'abb ' + side; el.innerHTML = `<span>${esc(b.short || b.name)}'s</span><b>${esc(name)}</b>`; fx.append(el);
+  setTimeout(() => el.classList.add('out'), 1500 / spdF() + 300); setTimeout(() => el.remove(), 1500 / spdF() + 700);
+}
 /* Spiller av én hendelse fra motoren. */
 async function playOne(B, e) {
   const side = e.side, sp = side ? $('#s-' + side) : null, v = side ? BT.v[side] : null;
   if (e.t === 'msg') return say(e.s, e.hold);
+  if (e.t === 'abil') { abBanner(e.side, e.n); buzz(20); return say(e.s); }
   if (e.t === 'anim') return playAnim(B, e);
   if (e.t === 'hit') {
     const b = teamOf(side)[v.i], K = BT.atk && !e.quiet && BT.atk.side !== side ? BT.atk : null, tier = K ? K.tier : 0, sev = Math.min(1, Math.max(0, v.hp - e.hp) / b.max * 1.3);
@@ -818,7 +826,11 @@ async function startBattle(B) {
   if (BT.B !== B || !$('#arena')) return;
   await playOne(B, { t: 'send', side: 'me', i: 0, hp: B.me[0].hp, st: '', txt: `Go! ${B.me[0].name}!` });
   if (BT.B !== B || !$('#arena')) return;
-  BT.busy = false; setText(`What will ${B.me[0].name} do?`); drawMenu();
+  /* Egenskapene til de to som står inne (Intimidate, Pressure, været …) slår inn før første runde. */
+  for (const e of startAbil(B)) { if (BT.B !== B || !$('#arena')) return; await playOne(B, e); }
+  if (BT.B !== B || !$('#arena')) return;
+  if (B.over) return endBattle();
+  BT.busy = false; setText(`What will ${B.me[B.a].name} do?`); drawMenu();
 }
 function endBattle() {
   const B = BT.B; stopMusic(); BT.busy = false;
