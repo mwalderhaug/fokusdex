@@ -80,7 +80,7 @@ const FOEU = new Set(['Psycho Shift', 'Transform', 'Mimic', 'Sketch', 'Guard Spl
 /* En Pokémon i kamp. src er den eide Pokémonen (eller en generert motstander med samme felter). v = det som nullstilles ved bytte. */
 function bmon(src) {
   const st = statsOf(src);
-  return { src, id: src.id, lv: src.lv, sh: src.sh || 0, name: mName(src), short: D(src.id)[0], mega: src.mega || 0, st, max: st[0], hp: st[0], mv: src.mv.map(i => ({ i, pp: MOVES[i][18] || 10, max: MOVES[i][18] || 10 })),
+  return { src, id: src.id, lv: src.lv, sh: src.sh || 0, name: mName(src), short: src.nn || D(src.id)[0], mega: src.mega || 0, g: src.g == null ? 2 : src.g, st, max: st[0], hp: st[0], mv: src.mv.map(i => ({ i, pp: MOVES[i][18] || 10, max: MOVES[i][18] || 10 })),
     sg: Z8(), status: '', slp: 0, tox: 0, ty: mTypes(src), out: 0, v: {} };
 }
 const newSide = () => ({ ref: 0, ls: 0, safe: 0, mist: 0, tail: 0, lucky: 0, spikes: 0, tsp: 0, rock: 0, wish: null });
@@ -116,8 +116,9 @@ const ABTXT = { intimidate: "Lowers the foe's Attack when it enters.", pressure:
   baddreams: 'Hurts a sleeping foe every turn.', hugepower: 'Doubles its Attack.', purepower: 'Doubles its Attack.' };
 const ABOF = {}; ABD.split('|').forEach(r => { const q = r.split(':'); q[1].split(',').forEach(id => { ABOF[+id] = q[0]; }); });
 /* Egenskapen til en art (til visning), og til en Pokémon i kamp (den som har forvandlet seg med Transform, har ingen). */
-const abilityOf = id => ABOF[id] || '';
-const ab = b => b && !b.tf ? ABOF[b.id] || '' : '';
+/* Giratina i Origin Forme har Levitate i stedet for Pressure. */
+const abilityOf = (id, mega) => id === 487 && mega === ORIGIN ? 'levitate' : ABOF[id] || '';
+const ab = b => b && !b.tf ? abilityOf(b.id, b.mega) : '';
 const mold = b => { const a = ab(b); return a === 'moldbreaker' || a === 'teravolt' || a === 'turboblaze'; };
 const airOn = B => [act(B, 'me'), act(B, 'foe')].some(b => b && b.hp > 0 && (ab(b) === 'airlock' || ab(b) === 'cloudnine'));
 const abSay = (ev, s, b, txt) => ev.push({ t: 'abil', side: s, n: ABN[ab(b)], s: txt || `${nmOf(s, b)}'s ${ABN[ab(b)]}!` });
@@ -348,8 +349,10 @@ Object.assign(UM, {
 UM['Sketch'] = UM['Mimic']; UM['Lunar Dance'] = UM['Healing Wish'];
 UM['Aromatherapy'] = UM['Heal Bell']; UM['Block'] = UM['Spider Web'] = UM['Mean Look']; UM['Mind Reader'] = UM['Lock-On'];
 /* Tilstander utover de fem vanlige (tilstandsnummeret fra dataene). */
+/* Attract virker bare mellom en hann og en hunn (ikke på dem uten kjønn). */
+const canLove = (u, t) => u.g < 2 && t.g < 2 && u.g !== t.g;
 const AILX = {
-  7: c => { if (c.t.v.love) return fail(c); c.t.v.love = 1; c.say(`${nmOf(c.o, c.t)} fell in love!`); },
+  7: c => { if (c.t.v.love || !canLove(c.u, c.t)) return fail(c); c.t.v.love = 1; c.say(`${nmOf(c.o, c.t)} fell in love!`); },
   9: c => { if (c.t.status !== 'slp' || c.t.v.night) return fail(c); c.t.v.night = 1; c.say(`${nmOf(c.o, c.t)} began having a nightmare!`); },
   14: c => { if (c.t.status || c.t.v.yawn || c.B.sd[c.o].safe) return fail(c); c.t.v.yawn = 2; c.say(`${c.N} made ${lc(nmOf(c.o, c.t))} drowsy!`); },
   18: c => { if (c.t.v.seed) return fail(c); if (c.t.ty.includes(11)) return c.say(`It doesn't affect ${lc(nmOf(c.o, c.t))}…`); c.t.v.seed = 1; c.ev.push({ t: 'status', side: c.o, st: c.t.status, fx: 'seed' }); c.say(`${nmOf(c.o, c.t)} was seeded!`); },
@@ -698,7 +701,7 @@ function aiStatus(B, u, t, m) {
     if (a === 6) return tv.conf ? 0 : 24;
     if (a === 18) return tv.seed || t.ty.includes(11) ? 0 : 40;
     if (a === 14) return t.status || tv.yawn ? 0 : 34;
-    if (a === 7) return tv.love ? 0 : 20;
+    if (a === 7) return tv.love || !canLove(u, t) ? 0 : 20;
     if (a === 9) return t.status === 'slp' && !tv.night ? 40 : 0;
     if (a === 20) return 4;
     return 0;

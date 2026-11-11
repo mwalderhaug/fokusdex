@@ -18,8 +18,8 @@ function spr(id, o = {}) {
   const png = `${SPR}pokemon/${shn ? 'shiny/' : ''}${id}.png`;
   const gif = `${SPR}pokemon/versions/generation-v/black-white/animated/${shn ? 'shiny/' : ''}${id}.gif`;
   const bk = `${SPR}pokemon/versions/generation-v/black-white/animated/back/${shn ? 'shiny/' : ''}${id}.gif`, bkp = `${SPR}pokemon/back/${shn ? 'shiny/' : ''}${id}.png`;
-  const mg = o.mega ? MEGA[o.mega - 1][5] : 0;
-  const list = mg ? (o.back ? [`${SPR}pokemon/back/${mg}.png`, `${SPR}pokemon/${mg}.png`] : [`${SPR}pokemon/${mg}.png`]) : o.back ? [bk, bkp, `https://play.pokemonshowdown.com/sprites/${shn ? 'gen5-back-shiny' : 'gen5-back'}/${slug(id)}.png`, png] : o.ani ? [gif, png, sd] : [png, sd];
+  const mgE = o.mega ? MEGA[o.mega - 1] : null, mg = mgE ? mgE[5] : 0, sdir = shn ? 'shiny/' : '', ANI = `${SPR}pokemon/versions/generation-v/black-white/animated/`;
+  const list = mg ? (o.back ? (mgE[6] ? [`${ANI}back/${sdir}${mg}.gif`] : []).concat([`${SPR}pokemon/back/${sdir}${mg}.png`, `${SPR}pokemon/${sdir}${mg}.png`]) : (mgE[6] && o.ani ? [`${ANI}${sdir}${mg}.gif`] : []).concat([`${SPR}pokemon/${sdir}${mg}.png`])) : o.back ? [bk, bkp, `https://play.pokemonshowdown.com/sprites/${shn ? 'gen5-back-shiny' : 'gen5-back'}/${slug(id)}.png`, png] : o.ani ? [gif, png, sd] : [png, sd];
   return `<span class="sprb${o.sil ? ' sil' : ''}${shn && !o.sil ? ' shiny' : ''}" style="--tc:var(--t${D(id)[1]})${o.s ? ';--s:' + o.s : ''}" data-n="${id}"><img class="spr" alt="${o.sil ? 'Unknown' : esc(D(id)[0])}" ${o.lazy ? 'loading="lazy" ' : ''}src="${list[0]}" data-f="${list.slice(1).join('|')}" onload="this.classList.add('ok')" onerror="sprErr(this)"></span>`;
 }
 /* Den mørke varianten: bildet tegnes på et lerret, farges om piksel for piksel (CINE.darken) og settes tilbake som bilde. Resultatet huskes per adresse.
@@ -41,6 +41,8 @@ const types = id => { const d = D(id); return [d[1], d[2]].filter(t => t >= 0).m
 const tierEl = id => { const t = tierOf(id); return `<span class="tier r${t}">${TIERS[t]}</span>`; };
 const short = n => n.length > 5 ? n.slice(0, 4) : n;
 const coinEl = n => `<span class="coin tn"><i></i>${nb(n)}</span>`;
+/* Kjønnssymbolet, slik det står ved navnet i spillene (blått ♂, rødt ♀, ingenting for dem uten kjønn). */
+const gs = m => m && m.g < 2 ? `<i class="gx g${m.g}" aria-label="${m.g ? 'female' : 'male'}">${GSYM[m.g]}</i>` : '';
 
 /* ---------- Lyd: små egne pip, ingen spillmusikk ---------- */
 /* Lyden blandes med musikk du har på, og følger lydløs-bryteren på iPhone (Safari 16.4+). */
@@ -52,6 +54,31 @@ function ac() {
 /* Effektene går gjennom én hovedvolumknapp (S.vol). Skrikene har sin egen (S.cvol). */
 let MG = null, NB = null;
 function out() { const a = ac(); if (!a) return null; if (!MG) { MG = a.createGain(); MG.connect(a.destination); } MG.gain.value = Math.pow((S.vol == null ? 70 : S.vol) / 100, 1.6) * 1.6; return MG; }
+/* Lydstyrken (K-vektet som i LUFS-målinger) i det sterkeste 400 ms-vinduet av en dekodet lyd. Brukes til å holde angrepslyder og skrik på
+   nivå med musikken, uansett hvor sterkt filene er tatt opp. Regnes én gang per lyd. */
+function loudOf(buf) {
+  if (buf._lk != null) return buf._lk;
+  try {
+    const fs = buf.sampleRate, n = buf.length, H = Math.max(1, Math.round(fs * 0.05)), k = 8, nb = Math.ceil(n / H), e = new Float64Array(nb + 1);
+    let K = Math.tan(Math.PI * 1681.974450955533 / fs), Q = 0.7071752369554196, a0 = 1 + K / Q + K * K; const Vh = Math.pow(10, 3.999843853973347 / 20), Vb = Math.pow(Vh, 0.4996667741545416);
+    const b0 = (Vh + Vb * K / Q + K * K) / a0, b1 = 2 * (K * K - Vh) / a0, b2 = (Vh - Vb * K / Q + K * K) / a0, a1 = 2 * (K * K - 1) / a0, a2 = (1 - K / Q + K * K) / a0;
+    K = Math.tan(Math.PI * 38.13547087602444 / fs); Q = 0.5003270373238773; a0 = 1 + K / Q + K * K; const c1 = 2 * (K * K - 1) / a0, c2 = (1 - K / Q + K * K) / a0;
+    const chs = Math.min(2, buf.numberOfChannels);
+    for (let c = 0; c < chs; c++) {
+      const x = buf.getChannelData(c); let x1 = 0, x2 = 0, y1 = 0, y2 = 0, u1 = 0, u2 = 0, z1 = 0, z2 = 0;
+      for (let i = 0; i < n; i++) {
+        const xi = x[i], y = b0 * xi + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2; x2 = x1; x1 = xi; y2 = y1; y1 = y;
+        const z = y - 2 * u1 + u2 - c1 * z1 - c2 * z2; u2 = u1; u1 = y; z2 = z1; z1 = z;
+        e[(i / H) | 0] += z * z;
+      }
+    }
+    let best = 0, run = 0;
+    for (let i = 0; i < nb; i++) { run += e[i]; if (i >= k) run -= e[i - k]; if (run > best) best = run; }
+    /* En monolyd spilles i begge høyttalerne, så den teller dobbelt. */
+    const ms = best * (chs === 1 ? 2 : 1) / (H * k);
+    return (buf._lk = ms > 1e-12 ? -0.691 + 10 * Math.log10(ms) : -99);
+  } catch (_) { return (buf._lk = -99); }
+}
 /* f2: tonen glir mot f2 i løpet av d sekunder. */
 function tone(f, at, d, v = 0.05, type = 'square', f2 = 0) {
   if (!S.sound) return;
@@ -120,7 +147,9 @@ function cry(id, delay = 0, vol = 0.45) {
   const t0 = performance.now();
   cryBuf(id).then(buf => {
     const a = ac(), src = a.createBufferSource(), g = a.createGain();
-    src.buffer = buf; g.gain.value = vol * Math.pow((S.cvol == null ? 80 : S.cvol) / 100, 1.6) * 1.4; src.connect(g); g.connect(a.destination);
+    /* Skrikene er tatt opp med svært ulik styrke (de nyeste er mye sterkere enn de eldste), så hvert skrik jevnes til samme nivå før volumet legges på. */
+    const L = loudOf(buf), norm = L > -90 ? Math.max(0.12, Math.min(2, Math.pow(10, (-18 - L) / 20))) : 0.4;
+    src.buffer = buf; g.gain.value = Math.min(1.6, vol * norm * Math.pow((S.cvol == null ? 70 : S.cvol) / 100, 1.6) * 3.2); src.connect(g); g.connect(a.destination);
     src.start(a.currentTime + Math.max(0, delay - (performance.now() - t0)) / 1000);
     window.cryCount++;
   }).catch(() => {});
@@ -159,6 +188,8 @@ function render() {
   $('#nav').hidden = false;
   renderNav();
   $('#main').innerHTML = `<div class="wrap">${VIEW[U.tab]()}</div>`;
+  /* Et område som nettopp ble åpnet (av nivå eller antall arter), sies fra om én gang. */
+  if (S.nreg && S.nreg.length) { const l = S.nreg; S.nreg = []; save(true); setTimeout(() => toast(`New area: ${l.join(' and ')} ${l.length > 1 ? 'are' : 'is'} open. See Shop · Routes.`), 400); }
 }
 const VIEW = {};
 function enter() { const w = $('#main .wrap'); if (w) w.classList.add('enter'); }
@@ -198,12 +229,12 @@ VIEW.fokus = () => {
   let h = topBar();
   if (p) {
     const ev = evoOpts(p), nx = ev.find(x => !x.ok), rdy = ev.find(x => x.ok), a = xpAt(p.lv), b = xpAt(p.lv + 1);
-    h += `<button type="button" class="card partner" data-a="mon" data-u="${p.u}" style="--tc:var(--t${D(p.id)[1]});text-align:left;width:100%">${spr(p.id, { ani: 1, sh: p.sh })}
+    h += `<button type="button" class="card partner" data-a="mon" data-u="${p.u}" style="--tc:var(--t${D(p.id)[1]});text-align:left;width:100%">${spr(p.id, { ani: 1, sh: p.sh, mega: p.mega })}
       <div class="sp"><div class="sm">Partner</div><div class="pn">${esc(D(p.id)[0])}</div>
       <div class="row sm tn" style="justify-content:space-between;margin-top:6px"><span>Level ${p.lv}</span><span>${rdy ? '<b style="color:var(--gold)">Ready to evolve</b>' : nx ? 'evolves ' + nx.why : ''}</span></div>
       <div class="bar" style="margin-top:5px"><i style="width:${Math.round((p.xp - a) / (b - a) * 100)}%"></i></div></div></button>`;
   }
-  if (S.party.length > 1 || S.mons.length > 1) h += `<button type="button" class="card teamrow" data-a="tab" data-k="lag" aria-label="Open team"><span class="sm">Team</span><span class="tr-s">${S.party.slice(1).map(u => { const m = monBy(u); return m ? spr(m.id, { sh: m.sh, s: '38px' }) : ''; }).join('')}${Array.from({ length: 6 - S.party.length }, () => '<i></i>').join('')}</span><span class="sm tn">${S.mons.length} in box ›</span></button>`;
+  if (S.party.length > 1 || S.mons.length > 1) h += `<button type="button" class="card teamrow" data-a="tab" data-k="lag" aria-label="Open team"><span class="sm">Team</span><span class="tr-s">${S.party.slice(1).map(u => { const m = monBy(u); return m ? spr(m.id, { sh: m.sh, mega: m.mega, s: '38px' }) : ''; }).join('')}${Array.from({ length: 6 - S.party.length }, () => '<i></i>').join('')}</span><span class="sm tn">${S.mons.length} in box ›</span></button>`;
   if (S.pend.length) h += `<button type="button" class="card pendb" data-a="hunt" style="text-align:left;width:100%"><span class="grass live"><i></i><i></i><i></i><i></i></span><span class="sp"><b>${S.pend.length} ${S.pend.length === 1 ? 'encounter waiting' : 'encounters waiting'}</b><br><span class="sm">Something is rustling in the grass. Tap to step in.</span></span></button>`;
   h += `<div class="card"><div class="lab">Subject</div><div class="chips">${Object.keys(FAGS).map(k => `<button type="button" class="chip" data-a="fag" data-k="${k}" aria-pressed="${fag === k}">${esc(F(k).n)}</button>`).join('')}</div>
     <div class="lab" style="margin-top:14px">Length</div><div class="chips">${[25, 45, 60, 75, 90].map(m => `<button type="button" class="chip tn" data-a="min" data-k="${m}" aria-pressed="${min === m}">${m} min</button>`).join('')}</div>
@@ -226,19 +257,19 @@ VIEW.lag = () => {
     const rows = Array.from({ length: 6 }, (_, i) => monBy(S.party[i])).map((m, i) => {
       if (!m) return `<button type="button" class="tcard empty" data-a="lagv" data-k="boks"><span class="plus">+</span><span class="sm">Empty slot. Pick one from the box.</span></button>`;
       const a = xpAt(m.lv), b = xpAt(m.lv + 1), rdy = evoOpts(m).some(x => x.ok);
-      return `<button type="button" class="tcard${i ? '' : ' lead'}" data-a="mon" data-u="${m.u}" style="--tc:var(--t${D(m.id)[1]})">${hasNews(m) ? '<span class="bang abs" title="New move">!</span>' : ''}${spr(m.id, { ani: !i, sh: m.sh, s: i ? '60px' : '84px' })}
-        <span class="sp"><span class="row" style="gap:6px"><b class="tn-n">${esc(D(m.id)[0])}</b>${i ? '' : '<span class="pill" style="background:var(--sage);color:#152013">Partner</span>'}${rdy ? '<span class="pill" style="color:var(--gold)">Can evolve</span>' : ''}</span>
+      return `<button type="button" class="tcard${i ? '' : ' lead'}" data-a="mon" data-u="${m.u}" style="--tc:var(--t${D(m.id)[1]})">${hasNews(m) ? '<span class="bang abs" title="New move">!</span>' : ''}${spr(m.id, { ani: !i, sh: m.sh, mega: m.mega, s: i ? '60px' : '84px' })}
+        <span class="sp"><span class="row" style="gap:6px"><b class="tn-n">${esc(mName(m))}${gs(m)}</b>${i ? '' : '<span class="pill" style="background:var(--sage);color:#152013">Partner</span>'}${rdy ? '<span class="pill" style="color:var(--gold)">Can evolve</span>' : ''}</span>
         <span class="row sm tn" style="justify-content:space-between;margin-top:5px"><span>Level ${m.lv} · ${i ? '30% XP' : 'all XP'}</span><span>${rdy ? '' : (evoOpts(m)[0] || {}).s ? 'evolves ' + evoOpts(m).map(x => x.s).filter((x, k, a) => a.indexOf(x) === k).join(' / ') : 'fully evolved'}</span></span>
         <span class="bar" style="margin-top:5px"><i style="width:${Math.round((m.xp - a) / (b - a) * 100)}%;background:var(--tc)"></i></span></span></button>`;
     }).join('');
-    return `${head}<div class="stack">${rows}</div><p class="sm">Your partner sits in the timer and gets all XP from sessions. In battles the whole team gets XP afterwards. Tap a Pokémon to switch partner, change moves, evolve it or remove it. ! means a new move.</p>`;
+    return `${head}<div class="stack">${rows}</div><p class="sm">Your partner sits in the timer and gets all XP from sessions. In battles the whole team gets XP afterwards. Tap a Pokémon to switch partner, change moves, rename it, evolve it or remove it. ! means a new move you have not looked at yet.</p>`;
   }
   const sorts = { ny: (a, b) => b.at - a.at, niva: (a, b) => b.lv - a.lv, sjelden: (a, b) => tierOf(b.id) - tierOf(a.id) || b.sh - a.sh || a.id - b.id, nr: (a, b) => a.id - b.id || b.lv - a.lv };
   const list = S.mons.slice().sort(sorts[U.sort]), du = dupes(), val = du.reduce((s, m) => s + sellValue(m), 0);
   return `${head}
     <div class="chips">${[['ny', 'Newest'], ['niva', 'Level'], ['sjelden', 'Rarity'], ['nr', 'Number']].map(([k, n]) => `<button type="button" class="chip" data-a="sort" data-k="${k}" aria-pressed="${U.sort === k}">${n}</button>`).join('')}</div>
     ${du.length ? `<button type="button" class="btn wide" data-a="selldupes">Sell ${du.length} ${du.length === 1 ? 'duplicate' : 'duplicates'} for ${coinEl(val)}</button>` : ''}
-    <div class="grid box">${list.map(m => { const t = tierOf(m.id); return `<button type="button" class="cell nm r${t}${t >= 2 ? ' rr' : ''}${S.party.includes(m.u) ? ' inp' : ''}" data-a="mon" data-u="${m.u}" aria-label="${esc(D(m.id)[0])}, level ${m.lv}">${spr(m.id, { sh: m.sh, lazy: 1 })}<span class="nx">${esc(D(m.id)[0])}</span><span class="l tn">${m.lv}</span>${m.fav ? '<span class="c">★</span>' : ''}${hasNews(m) ? '<span class="bang">!</span>' : ''}</button>`; }).join('')}</div>
+    <div class="grid box">${list.map(m => { const t = tierOf(m.id); return `<button type="button" class="cell nm r${t}${t >= 2 ? ' rr' : ''}${S.party.includes(m.u) ? ' inp' : ''}" data-a="mon" data-u="${m.u}" aria-label="${esc(mName(m))}, level ${m.lv}">${spr(m.id, { sh: m.sh, mega: m.mega, lazy: 1 })}<span class="nx">${esc(mName(m))}</span><span class="l tn">${m.lv}</span>${m.fav ? '<span class="c">★</span>' : ''}${hasNews(m) ? '<span class="bang">!</span>' : ''}</button>`; }).join('')}</div>
     <p class="sm">Green dot = in team. Colored frame = rare or better. ! = a new move to look at.</p>`;
 };
 /* Sekskanten: hver akse viser staten målt mot en sterk art (base 130) på samme nivå. */
@@ -264,21 +295,24 @@ function evoLine(id, cur) {
   return `<div><div class="lab">Evolution</div><div class="evo">${cell(b)}${walk(b)}</div></div>`;
 }
 /* Egenskapen (Ability) til arten, hvis den har en av dem kampene bruker. */
-const abLine = id => { const a = typeof abilityOf === 'function' ? abilityOf(id) : ''; return a ? `<p class="sm" style="margin-top:8px;text-align:center"><b>Ability · ${ABN[a]}</b><br><span class="mut">${ABTXT[a]}</span></p>` : ''; };
+const abLine = (id, mega) => { const a = typeof abilityOf === 'function' ? abilityOf(id, mega) : ''; return a ? `<p class="sm" style="margin-top:8px;text-align:center"><b>Ability · ${ABN[a]}</b><br><span class="mut">${ABTXT[a]}</span></p>` : ''; };
 function monSheet(m) {
-  const fresh = m.nw; if (fresh) { m.nw = 0; save(true); renderNav(); }
+  /* Utropstegnet forsvinner når kortet åpnes, også om angrepet som venter ikke er besvart ennå. */
+  const fresh = m.nw; if (seeNews(m)) { renderNav(); document.querySelectorAll(`[data-u="${m.u}"] .bang`).forEach(x => x.remove()); }
+  const ed = U.nick === m.u, fm = megaOf(m), canForm = m.id === 487;
   const d = D(m.id), ev = evoOpts(m), inP = S.party.includes(m.u), lead = S.party[0] === m.u, a = xpAt(m.lv), b = xpAt(m.lv + 1), n = countOf(m.id);
   const j = judge(m), up = natUp(m.nat), dn = natDn(m.nat), nx = nextMove(m), evt = m.ev.reduce((x, y) => x + y, 0), more = movesAt(m.id, m.lv).length > m.mv.length;
-  openSheet(`<div class="shead">${spr(m.id, { ani: 1, sh: m.sh })}<div class="sp"><div class="sm tn">No. ${m.id} · ${REG[regOf(m.id)].n}${m.sh === 2 ? ' · <b style="color:#ff8a2a">Dark</b>' : m.sh ? ' · <b style="color:var(--gold)">Shiny</b>' : ''}</div><div class="pn">${esc(d[0])}</div><div class="row" style="margin-top:6px;flex-wrap:wrap;gap:6px">${types(m.id)} ${tierEl(m.id)}</div></div></div>
+  openSheet(`<div class="shead">${spr(m.id, { ani: 1, sh: m.sh, mega: m.mega })}<div class="sp"><div class="sm tn">No. ${m.id} · ${REG[regOf(m.id)].n}${m.sh === 2 ? ' · <b style="color:#ff8a2a">Dark</b>' : m.sh ? ' · <b style="color:var(--gold)">Shiny</b>' : ''}</div>${ed ? `<div class="nkrow"><input class="nkin" id="nkin" maxlength="12" value="${esc(m.nn || '')}" placeholder="${esc(d[0])}" autocomplete="off" autocapitalize="words" aria-label="Nickname"><button type="button" class="btn sm2 pri" data-a="nicksave" data-u="${m.u}">Save</button></div>` : `<div class="pn">${esc(mName(m))}${gs(m)}<button type="button" class="nkb" data-a="nick" data-u="${m.u}" aria-label="Give a nickname">✎</button></div>`}${m.nn && !ed ? `<div class="sm">${esc(spName(m))}</div>` : ''}<div class="row" style="margin-top:6px;flex-wrap:wrap;gap:6px">${types(m.id)} ${tierEl(m.id)}${fm && fm[1] === 'Origin' ? ' <span class="pill">Origin Forme</span>' : canForm ? ' <span class="pill">Altered Forme</span>' : ''}</div></div></div>
     <div><div class="row sm tn" style="justify-content:space-between"><span>Level ${m.lv}</span><span>${n > 1 ? 'You have ' + n + ' of these' : 'Your only one'}</span></div><div class="bar" style="margin-top:6px"><i style="width:${Math.round((m.xp - a) / (b - a) * 100)}%"></i></div></div>
     <div class="card2" style="--tc:var(--t${d[1]})">${hexEl(m)}
-      <div class="row" style="flex-wrap:wrap;gap:6px;justify-content:center"><span class="pill">${NAT[m.nat]}${up !== dn ? ` · +${SN[up]} −${SN[dn]}` : ' · neutral'}</span><span class="pill" style="color:${j.sum >= 121 ? 'var(--gold)' : j.sum >= 91 ? 'var(--sage)' : 'var(--ink2)'}">Judge: ${j.t} · best ${SN[j.best]}</span><span class="pill tn">Trained ${evt} of 510</span></div>${abLine(m.id)}</div>
+      <div class="row" style="flex-wrap:wrap;gap:6px;justify-content:center"><span class="pill">${NAT[m.nat]}${up !== dn ? ` · +${SN[up]} −${SN[dn]}` : ' · neutral'}</span><span class="pill" style="color:${j.sum >= 121 ? 'var(--gold)' : j.sum >= 91 ? 'var(--sage)' : 'var(--ink2)'}">Judge: ${j.t} · best ${SN[j.best]}</span><span class="pill tn">Trained ${evt} of 510</span></div>${abLine(m.id, m.mega)}</div>
     <div><div class="row" style="justify-content:space-between;margin-bottom:7px"><div class="lab" style="margin:0">Moves${fresh ? ' · <b style="color:var(--gold)">new move learned</b>' : ''}</div>${more ? `<button type="button" class="btn sm2" data-a="mvpick" data-u="${m.u}">Change moves</button>` : ''}</div>
       ${(m.nm || []).length ? `<button type="button" class="newmv" data-a="mlearn" data-u="${m.u}" style="width:100%;text-align:left;margin-bottom:8px"><span class="bang">!</span><span class="sm" style="color:var(--ink)">Wants to learn <b>${esc(MOVES[m.nm[0]][0])}</b>${m.nm.length > 1 ? ' and ' + (m.nm.length - 1) + ' more' : ''}. Tap to decide.</span></button>` : ''}<div class="mvg">${m.mv.map(x => moveEl(x)).join('')}</div>
       ${nx ? `<p class="sm tn" style="margin-top:7px">Next move: ${esc(MOVES[nx.mv][0])} at level ${nx.lv}</p>` : ''}</div>
     ${evoLine(m.id, m.id)}
     <div class="stack">
     ${ev.map(o => `<button type="button" class="btn ${o.ok ? 'gold' : ''} wide" data-a="evolve" data-u="${m.u}" data-k="${o.to}"${o.ok ? '' : ' disabled'}>${o.ok ? 'Evolve into ' + esc(D(o.to)[0]) : 'Evolves ' + o.why}</button>`).join('')}
+    ${canForm ? `<button type="button" class="btn wide" data-a="form" data-u="${m.u}">Change to ${m.mega === ORIGIN ? 'Altered' : 'Origin'} Forme</button>` : ''}
     ${lead ? '' : `<button type="button" class="btn sage wide" data-a="lead" data-u="${m.u}">Make partner</button>`}
     <div class="row"><button type="button" class="btn sp" data-a="party" data-u="${m.u}"${(inP && S.party.length < 2) || (!inP && S.party.length >= 6) ? ' disabled' : ''}>${inP ? 'Remove from team' : 'Add to team'}</button><button type="button" class="btn sp" data-a="fav" data-u="${m.u}">${m.fav ? 'Unfavorite' : 'Favorite'}</button></div>
     <button type="button" class="btn wide" data-a="candy" data-u="${m.u}"${S.items.candy > 0 ? '' : ' disabled'}>Use Rare Candy (${S.items.candy})</button>
@@ -325,8 +359,9 @@ VIEW.butikk = () => {
       return `<div class="item"><span class="ic">${ic(k)}</span><div class="sp"><b>${it.n}</b> <span class="sm tn">· own ${own(k)}</span><div class="sm">${it.d}</div></div><button type="button" class="btn sm2 ${S.coins >= it.p && !lock && !full ? 'pri' : ''}" data-a="buy" data-k="${k}"${S.coins < it.p || lock || full ? ' disabled' : ''}>${lock ? 'Level ' + it.lv : full ? 'Full' : nb(it.p)}</button></div>`; }).join('')}</div>`).join('')}
     <h2 class="h">Routes</h2>
     <div class="card" style="padding-top:6px;padding-bottom:6px">${[1, 2, 3, 4, 5].map(r => { const g = REG[r], has = S.regions.includes(r);
-      return `<div class="item"><span class="ic"><span class="map"></span></span><div class="sp"><b>${g.n}</b><div class="sm tn">${g.b - g.a + 1} species · ${dexCount(r)} caught</div></div>${has ? `<button type="button" class="btn sm2${S.routes.includes(r) ? ' sage' : ''}" data-a="reg" data-k="${r}">${S.routes.includes(r) ? 'On' : 'Off'}</button>` : `<button type="button" class="btn sm2 ${S.coins >= g.c ? 'pri' : ''}" data-a="buyreg" data-k="${r}"${S.coins < g.c ? ' disabled' : ''}>${nb(g.c)}</button>`}</div>`; }).join('')}</div>
-    <p class="sm">Every route that is on takes part in your encounters. More routes means more variety, fewer means better odds for the ones you are hunting. Coins come from focus minutes (3 per minute), completed sessions, battles and selling duplicates.</p>`;
+      return `<div class="item"><span class="ic"><span class="map"></span></span><div class="sp"><b>${g.n}</b><div class="sm tn">${g.b - g.a + 1} species · ${dexCount(r)} caught</div>${has ? '' : `<div class="sm tn" style="margin-top:4px">Opens at trainer level ${g.lv} (you are ${tlv()}) or ${g.dex} species caught (you have ${dexAll()})</div><div class="bar" style="margin-top:6px"><i style="width:${Math.round(Math.min(1, Math.max((tlv() - 1) / Math.max(1, g.lv - 1), dexAll() / g.dex)) * 100)}%"></i></div>`}</div>${has ? `<button type="button" class="btn sm2${S.routes.includes(r) ? ' sage' : ''}" data-a="reg" data-k="${r}">${S.routes.includes(r) ? 'On' : 'Off'}</button>` : '<span class="pill">Locked</span>'}</div>`; }).join('')}</div>
+    <p class="sm">New areas open by themselves as you gain experience or fill the Pokédex, whichever comes first. Every route that is on takes part in your encounters: more routes means more variety, fewer means better odds for the ones you are hunting.</p>
+    <p class="sm">Coins come from focus minutes (3 per minute), completed sessions, battles and selling duplicates.</p>`;
 };
 
 /* ---------- Profil: merker, statistikk, innstillinger ---------- */
@@ -348,10 +383,14 @@ VIEW.profil = () => {
     <div class="card"><div class="lab">Last ten weeks</div><div class="hm">${hm}</div></div>
     <h2 class="h">Settings</h2>
     <div class="card stack">
-      <label class="field">Daily cap before your team gets tired<select data-c="cap">${[240, 300, 360, 420, 480].map(c => `<option value="${c}"${S.cap === c ? ' selected' : ''}>${c / 60} hours</option>`).join('')}</select></label>
+      <label class="field">Daily goal<select data-c="cap">${[120, 180, 240, 300, 360, 420, 480].map(c => `<option value="${c}"${S.cap === c ? ' selected' : ''}>${c / 60} hours · battle rewards up to ×${(Math.round((1 + c / 360) * 10) / 10).toFixed(1)}</option>`).join('')}</select></label>
+      <p class="sm" style="margin-top:-4px">Battle rewards grow with today's focus and peak when you reach your goal: a higher goal has a higher peak. Past the goal your team is tired (half XP, no encounters).</p>
+      <div><div class="lab">Difficulty</div><div class="seg">${DIFF.map((d, i) => `<button type="button" data-a="diff" data-k="${i}" aria-pressed="${(S.diff == null ? 2 : S.diff) === i}">${d.n}</button>`).join('')}</div>
+        <p class="sm" style="margin-top:6px">${['Opponents are a good bit below your level, play simply and bring smaller teams. You may use 5 items per battle.', 'Opponents are slightly below your level and make the odd mistake. You may use 4 items per battle.', 'Opponents match your level, are well trained and play to win. You may use 3 items per battle.'][S.diff == null ? 2 : S.diff]} Coins ×${diff().coin} and XP ×${diff().xp} from battles.</p></div>
+      <div class="row"><button type="button" class="btn sp" data-a="hfx">Move hints: ${S.hfx === 0 ? 'off' : 'on'}</button><button type="button" class="btn sp" data-a="hty">Type tags: ${S.hty === 0 ? 'off' : 'on'}</button></div>
       <div class="row"><button type="button" class="btn sp" data-a="sound">Sound: ${S.sound ? 'on' : 'off'}</button><button type="button" class="btn sp" data-a="cries"${S.sound ? '' : ' disabled'}>Cries: ${S.cries ? 'on' : 'off'}</button></div>
       <button type="button" class="btn wide" data-a="music"${S.sound ? '' : ' disabled'}>Battle music: ${S.music === 0 ? 'off' : 'on'}</button>
-      ${S.sound ? `<div class="volrow"><span>Effects</span><input type="range" min="0" max="100" step="5" value="${S.vol}" data-v="vol" aria-label="Effects volume"><b class="tn" id="vv-vol">${S.vol}%</b></div>${S.cries ? `<div class="volrow"><span>Cries</span><input type="range" min="0" max="100" step="5" value="${S.cvol}" data-v="cvol" aria-label="Cries volume"><b class="tn" id="vv-cvol">${S.cvol}%</b></div>` : ''}` : ''}
+      ${S.sound ? `${S.music === 0 ? '' : `<div class="volrow"><span>Music</span><input type="range" min="0" max="100" step="5" value="${S.mvol}" data-v="mvol" aria-label="Music volume"><b class="tn" id="vv-mvol">${S.mvol}%</b></div>`}<div class="volrow"><span>Effects</span><input type="range" min="0" max="100" step="5" value="${S.vol}" data-v="vol" aria-label="Effects volume"><b class="tn" id="vv-vol">${S.vol}%</b></div>${S.cries ? `<div class="volrow"><span>Cries</span><input type="range" min="0" max="100" step="5" value="${S.cvol}" data-v="cvol" aria-label="Cries volume"><b class="tn" id="vv-cvol">${S.cvol}%</b></div>` : ''}` : ''}
       <button type="button" class="btn wide" data-a="plan">Edit subjects</button>
       <button type="button" class="btn wide" data-a="sync">Sync between devices${GH && GH.ok ? ' · ' + (ghState === 'ok' ? 'on' : ghState || 'connecting') : ''}</button>
       <button type="button" class="btn wide" data-a="backup">Backup</button>
@@ -440,7 +479,7 @@ function showTimer() {
   U.quit = 0;
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="quit" id="t-quit">Cancel</button><span class="pill" style="background:${F(t.fag).c};color:#17130f">${esc(F(t.fag).n)} · ${t.min} min</span></div>
     <div class="mid"><div class="ring"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="a0" cx="50" cy="50" r="46"/><circle class="a1" id="t-arc" cx="50" cy="50" r="46" stroke-dasharray="${CIRC}" stroke-dashoffset="0"/></svg>
-      <div class="in">${p ? spr(p.id, { ani: 1, sh: p.sh }) : ''}<div class="clock" id="t-clock" role="timer"></div><div class="sm" id="t-sub"></div></div></div>
+      <div class="in">${p ? spr(p.id, { ani: 1, sh: p.sh, mega: p.mega }) : ''}<div class="clock" id="t-clock" role="timer"></div><div class="sm" id="t-sub"></div></div></div>
       <div><div class="found" id="t-found" aria-label="Encounters found">${Array.from({ length: n }, () => '<i></i>').join('')}</div><p class="sm" style="margin-top:8px" id="t-hint">A new encounter every 20 minutes.</p></div></div>
     <div class="acts"><button type="button" class="btn nf" data-a="pause" id="t-pause">Pause</button><button type="button" class="btn pri" data-a="early">Finish now</button></div>`, 'tint', F(t.fag).c);
   keepAwake();
@@ -473,8 +512,8 @@ function endTimer() {
 function countUp(el, to) { const t0 = performance.now(); (function f(t) { const k = Math.min(1, (t - t0) / 900); el.textContent = '+' + nb(to * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(f); })(t0); }
 function showReward(R) {
   const news = [];
-  R.hatch.forEach(x => { const m = monBy(x.u); if (m) news.push(`<div>${spr(m.id, { sh: m.sh })}<span><b>Egg hatched: ${esc(D(m.id)[0])}</b><br><span class="sm">${x.isNew ? 'New to your collection' : 'You already have it'}${m.sh ? ' · shiny' : ''}</span></span></div>`); });
-  R.ups.forEach(x => { const m = monBy(x.u); if (m) news.push(`<div>${spr(m.id, { sh: m.sh })}<span><b>${esc(D(m.id)[0])} level ${x.l0} → ${x.l1}</b>${x.evo ? '<br><span class="sm" style="color:var(--gold)">Ready to evolve</span>' : ''}${(x.learned || []).length ? `<br><span class="sm">Learned ${esc(x.learned.join(', '))}</span>` : ''}${(x.avail || []).length ? `<br><span class="sm">New move to pick: ${esc(x.avail.join(', '))}</span>` : ''}</span></div>`); });
+  R.hatch.forEach(x => { const m = monBy(x.u); if (m) news.push(`<div>${spr(m.id, { sh: m.sh, mega: m.mega })}<span><b>Egg hatched: ${esc(D(m.id)[0])}</b><br><span class="sm">${x.isNew ? 'New to your collection' : 'You already have it'}${m.sh ? ' · shiny' : ''}</span></span></div>`); });
+  R.ups.forEach(x => { const m = monBy(x.u); if (m) news.push(`<div>${spr(m.id, { sh: m.sh, mega: m.mega })}<span><b>${esc(mName(m))} level ${x.l0} → ${x.l1}</b>${x.evo ? '<br><span class="sm" style="color:var(--gold)">Ready to evolve</span>' : ''}${(x.learned || []).length ? `<br><span class="sm">Learned ${esc(x.learned.join(', '))}</span>` : ''}${(x.avail || []).length ? `<br><span class="sm">New move to pick: ${esc(x.avail.join(', '))}</span>` : ''}</span></div>`); });
   R.gifts.forEach(g => news.push(`<div><span class="grass"><i></i><i></i><i></i><i></i></span><span>${esc(g)}</span></div>`));
   const notes = [R.rested ? 'Rested bonus: 1.5× on your first session of the day.' : '', R.tired ? 'Your team is tired: minutes past the daily cap gave half XP and no encounters.' : '', R.full ? '' : 'Ended early: you are rewarded for the minutes you did.'].filter(Boolean);
   ov(`<div class="mid" style="justify-content:flex-start;padding-top:8vh"><div><h1 class="big">${R.full ? 'Session complete.' : 'Nice work.'}</h1><p class="mut tn" style="margin-top:6px">${R.min} min ${esc(F(R.fag).n)}</p></div>
@@ -503,8 +542,8 @@ function drawEnc(reveal) {
   if (!(S.items[E.ball] > 0)) E.ball = bestBall();
   const e = E.e, d = D(e.id), n = countOf(e.id), noBalls = !['poke', 'great', 'ultra'].some(k => S.items[k] > 0);
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="later">Save for later</button><span class="pill tn" id="e-left">${S.pend.length} ${S.pend.length === 1 ? 'encounter' : 'encounters'} left</span></div>
-    <div class="mid r${e.t}"><div class="stage${reveal ? ' rev' : ''}" id="e-stage">${spr(e.id, { ani: 1, sh: e.sh })}<span class="tball">${ballEl(E.ball, '54px')}</span><span class="stars" id="e-stars"></span></div>
-      <div><div class="ename">${e.sh === 2 ? 'Dark ' : e.sh ? 'Shiny ' : ''}${esc(d[0])}</div><div class="row" style="justify-content:center;margin-top:8px;flex-wrap:wrap;gap:6px">${tierEl(e.id)} ${types(e.id)} <span class="pill tn">Level ${e.lv}</span></div>
+    <div class="mid r${e.t}"><div class="stage${reveal ? ' rev' : ''}" id="e-stage">${spr(e.id, { ani: 1, sh: e.sh, mega: defForm(e.id) })}<span class="tball">${ballEl(E.ball, '54px')}</span><span class="stars" id="e-stars"></span></div>
+      <div><div class="ename">${e.sh === 2 ? 'Dark ' : e.sh ? 'Shiny ' : ''}${esc(d[0])}${gs(e)}</div><div class="row" style="justify-content:center;margin-top:8px;flex-wrap:wrap;gap:6px">${tierEl(e.id)} ${types(e.id)} <span class="pill tn">Level ${e.lv}</span></div>
       <p class="sm" style="margin-top:8px" id="e-msg">${S.caught[e.id] ? (n ? `You already have ${n}.` : 'You have had it before.') : '<b style="color:var(--sage)">New to your collection</b>'}</p></div>
       <div class="hearts" id="e-hearts" aria-label="Attempts left">${Array.from({ length: isLeg(e.id) ? 4 : 3 }, (_, i) => `<i class="${i < e.tr ? '' : 'off'}"></i>`).join('')}</div></div>
     <div id="e-ctl" style="display:flex;flex-direction:column;gap:12px">${noBalls ? `<p class="sm" style="text-align:center">You are out of balls. Buy more in the shop and the encounter will wait here.</p><div class="acts"><button type="button" class="btn pri" data-a="toshop">To the shop</button><button type="button" class="btn nf" data-a="skip">Let it go</button></div>` : `
@@ -555,7 +594,7 @@ function doThrow() {
 }
 function evoShow(m, from) {
   closeSheet();
-  ov(`<div class="mid r${tierOf(m.id)}"><div class="stage rev">${spr(m.id, { ani: 1, sh: m.sh })}</div><div><p class="mut">${esc(D(from)[0])} evolved into</p><div class="ename">${esc(D(m.id)[0])}</div><div class="row" style="justify-content:center;margin-top:8px;gap:6px">${types(m.id)}</div></div></div>
+  ov(`<div class="mid r${tierOf(m.id)}"><div class="stage rev">${spr(m.id, { ani: 1, sh: m.sh, mega: m.mega })}</div><div><p class="mut">${esc(D(from)[0])} evolved into</p><div class="ename">${esc(D(m.id)[0])}</div><div class="row" style="justify-content:center;margin-top:8px;gap:6px">${types(m.id)}</div></div></div>
     <div class="acts"><button type="button" class="btn pri" data-a="home">Continue</button></div>`, 'tint', `var(--t${D(m.id)[1]})`);
   sfx.evo(); cry(m.id, 750); buzz([80, 50, 80, 50, 200]);
 }
@@ -578,7 +617,7 @@ const A = {
   toshop: () => { closeOv(); U.tab = 'butikk'; render(); },
   ball: el => { if (E.busy) return; E.ball = el.dataset.k; drawEnc(false); aim(); },
   throw: () => doThrow(),
-  mon: el => { const m = monBy(+el.dataset.u); if (m) { cry(m.id, 0, 0.35); monSheet(m); } },
+  mon: el => { const m = monBy(+el.dataset.u); if (m) { U.nick = 0; cry(m.id, 0, 0.35); monSheet(m); } },
   spec: el => specSheet(+el.dataset.k),
   close: () => closeSheet(),
   avatar: () => avSheet(false),
@@ -600,6 +639,12 @@ const A = {
   buy: el => { if (buy(el.dataset.k)) { sfx.coin(); render(); toast(`${SHOP[el.dataset.k].n} bought.`); } },
   buyreg: el => { const r = +el.dataset.k; if (buyRegion(r)) { sfx.evo(); render(); toast(`${REG[r].n} is unlocked. You are there now.`); } },
   sound: () => { S.sound = S.sound ? 0 : 1; save(); sfx.tap(); render(); },
+  diff: el => { S.diff = +el.dataset.k; save(); render(); toast(`Difficulty: ${diff().n}. It applies from your next battle.`); },
+  hfx: () => { S.hfx = S.hfx === 0 ? 1 : 0; save(); render(); },
+  hty: () => { S.hty = S.hty === 0 ? 1 : 0; save(); render(); },
+  nick: el => { const m = monBy(+el.dataset.u); if (!m) return; U.nick = m.u; monSheet(m); const i = $('#nkin'); if (i) { i.focus(); i.select(); } },
+  nicksave: el => { const m = monBy(+el.dataset.u), i = $('#nkin'); if (!m) return; const n = setNick(m, i ? i.value : ''); U.nick = 0; render(); monSheet(m); toast(n ? `${D(m.id)[0]} is now called ${n}.` : `${D(m.id)[0]} goes by its own name again.`); },
+  form: el => { const m = monBy(+el.dataset.u); if (!m || m.id !== 487) return; m.mega = m.mega === ORIGIN ? 0 : ORIGIN; save(); sfx.evo(); render(); monSheet(m); },
   music: () => { S.music = S.music === 0 ? 1 : 0; save(); sfx.tap(); render(); },
   cries: () => { S.cries = S.cries ? 0 : 1; save(); if (S.cries) { const p = partner(); if (p) cry(p.id); } render(); },
   plan: () => subjSheet(),
@@ -651,7 +696,7 @@ document.addEventListener('input', ev => {
   if (!v) return;
   S[v] = +ev.target.value; $('#vv-' + v).textContent = S[v] + '%';
   const now = performance.now(); if (now - volT < 180) return; volT = now;
-  if (v === 'vol') sfx.chip(); else { const p = partner(); if (p && now - (window.cryT || 0) > 700) { window.cryT = now; cry(p.id, 0, 0.45); } }
+  if (v === 'mvol') { if (typeof PACK !== 'undefined' && PACK.vol) PACK.vol(); } else if (v === 'vol') sfx.chip(); else { const p = partner(); if (p && now - (window.cryT || 0) > 700) { window.cryT = now; cry(p.id, 0, 0.45); } }
 });
 document.addEventListener('change', ev => { if (ev.target.dataset && ev.target.dataset.v) save(); });
 document.addEventListener('input', ev => { const t = ev.target; if (t.dataset && t.dataset.f && U.sd && U.sd[+t.dataset.i]) { U.sd[+t.dataset.i][t.dataset.f] = t.value; const e = $('#se-err'); if (e) e.textContent = ''; } });

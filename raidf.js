@@ -46,7 +46,7 @@
     fog('smoke', { n: 5, seed: 12, a: 0.3, spd: 9, s: 1.9, y0: 60, y1: 330 });
     strip('darkfog', 262, t * 16, { a: 0.5 }); strip('darkfog', -50, -t * 10, { a: 0.3 });
   };
-  film(487, { len: 14.3, R: 10.09, outc: '#000', use: ['giratina', 'evilbg', 'vortex', 'darkfog', 'smoke', 'cracks', 'redswirl', 'redglow'],
+  film(487, { len: 14.3, R: 10.09, outc: '#000', spid: 10007, use: ['giratina', 'evilbg', 'vortex', 'darkfog', 'smoke', 'cracks', 'redswirl', 'redglow'],
     cues: [[0.29, 'boom'], [9.26, 'thud'], [9.6, 'thud'], [9.91, 'thud'], [10.09, 'cry'], [10.09, 'boom'], [11.39, 'thud']],
     draw(t, P, c) {
       const sil = tintArt('giratina', '#000'), red = mulArt('giratina', '#ff3a3a');
@@ -299,7 +299,7 @@
   });
 
   /* ================= DARK MEWTWO =================
-     Samme låt som Mewtwo (den har ingen egen ennå), men en annen film: steinen av skygge i tomrommet, og Mewtwo foran den. For hvert slag bryter svarte
+     Egen låt (Mewtwo-temaet fra X og Y; filmen starter 2,17 s ute i den, så avsløringen faller der hovedtemaet setter inn) og en annen film enn Mewtwo: steinen av skygge i tomrommet, og Mewtwo foran den. For hvert slag bryter svarte
      krystaller opp av mørket, og skyggen spiser seg inn i den. Fire tunge slag, en svart sol stiger bak – og så står den der, oransje øyne i mørket. */
   /* En svart krystall som skyter inn fra kanten. k = hvor langt den har vokst. */
   const shard = (x0, y0, ang, len, k, w) => { if (k <= 0.01) return; const L = len * k, nx = -sin(ang) * (w || 16), ny = cos(ang) * (w || 16), tx = x0 + cos(ang) * L, ty = y0 + sin(ang) * L, mx = x0 + cos(ang) * L * 0.3, my = y0 + sin(ang) * L * 0.3;
@@ -308,40 +308,42 @@
   /* Den svarte sola: en skive med en krans av oransje ild. */
   const blackSun = (t, x, y, r, a) => { if (a <= 0) return; rays(x, y, { n: 22, rot: t * 0.2, col: '#ff7a1a', a: 0.45 * a, r0: r * 0.9, r1: r * 3.4, wid: 0.34 }); rays(x, y, { n: 22, rot: -t * 0.13, col: '#ffd070', a: 0.25 * a, r0: r * 0.9, r1: r * 2.4, wid: 0.18 }); glow(x, y, r * 2.2, '#ff5a14', 0.7 * a, 1); ring(x, y, r * 1.04, { col: '#ffd070', w: 5, a }); K.g.save(); K.g.globalAlpha = c01(a); K.g.fillStyle = '#030106'; K.g.beginPath(); K.g.arc(x, y, r, 0, TAU); K.g.fill(); K.g.restore(); };
   const dVoid = (t, heat) => { lin(['#04020a', '#0e0618', '#1a0a14', '#020104']); im('vortex', 256, 180, { s: 1.3, r: -t * 0.1, a: 0.5, add: 'screen' }); im('redswirl', 256, 180, { s: 1.6, r: t * 0.2, a: 0.2 + heat * 0.3, add: 1 }); dust('up', { n: 30, seed: 4, cols: ['#ff8a2a', '#5a3a7a'], a: 0.5 + heat * 0.3, spd: 1 + heat }); };
-  film('dk150', { len: 15.3, R: 9.57, outc: '#000', sps: [150], use: ['vortex', 'redswirl', 'cracks', 'arcs', 'burst', 'smoke', 'curtain1', 'curtain2', 'sparkle', 'evilbg'],
-    cues: [[1.16, 'thud'], [5.15, 'thud'], [6.94, 'boom'], [7.6, 'boom'], [8.25, 'boom'], [8.9, 'boom'], [9.57, 'cry'], [9.57, 'boom'], [12.84, 'thud']],
+  /* Takten i låta: en halv takt er 0,667 s. DT0 = første slag, DMH = de fire tunge slagene før avsløringen. */
+  const DT0 = 0.907, DBI = 0.6667, DMH = [6.907, 7.573, 8.24, 8.907];
+  film('dk150', { len: 15.6, at: 2.17, R: 9.57, outc: '#000', sps: [150], use: ['vortex', 'redswirl', 'cracks', 'arcs', 'burst', 'smoke', 'curtain1', 'curtain2', 'sparkle', 'evilbg'],
+    cues: [[DT0, 'thud'], [5.14, 'thud'], [DMH[0], 'boom'], [DMH[1], 'boom'], [DMH[2], 'boom'], [DMH[3], 'boom'], [9.57, 'cry'], [9.57, 'boom'], [12.24, 'thud']],
     draw(t, P, c) {
       const cx = 256, cy = 184, sp = c.sp, ex = sp ? (0.4 - 0.5) * sp.bw : -6, ey = sp ? (0.13 - 0.5) * sp.bh : -26, crk = tintArt('cracks', '#ff8a2a');
       if (t < 9.57) {
-        P.bars = 1; const power = c01(seg(t, 1.16, 8.9)), beat = t > 1.16 ? hit((t - 1.16) % 0.65, 0, 0.3) : 0, hv = hits(t, MH, 0.4), h2 = hits(t, [5.15, 5.48], 0.3), nb = t > 1.16 ? floor((t - 1.16) / 0.65) : 0, s = 2.5, y = cy + sin(t * 1.3) * 4, sun = seg(t, 6.94, 8.9), imp = seg(t, 9.0, 9.5);
+        P.bars = 1; const power = c01(seg(t, DT0, DMH[3])), beat = t > DT0 ? hit((t - DT0) % DBI, 0, 0.3) : 0, hv = hits(t, DMH, 0.4), h2 = hits(t, [5.14, 5.31], 0.3), nb = t > DT0 ? floor((t - DT0) / DBI) : 0, s = 2.5, y = cy + sin(t * 1.3) * 4, sun = seg(t, DMH[0], DMH[3]), imp = seg(t, 9.0, 9.5);
         dVoid(t, power); blackSun(t, cx, 150, 40 + sun * 60, sun);
         /* Steinen. */
         const sy = 96 + sin(t * 1.1) * 5, sa = 1 - seg(t, 6.6, 7.2); if (sa > 0) { glow(cx, sy, 70 + beat * 30, '#ff7a1a', 0.5 * sa, 1); poly([[cx, sy - 34], [cx + 16, sy - 4], [cx + 6, sy + 30], [cx - 8, sy + 30], [cx - 16, sy - 4]], '#07040c', sa); poly([[cx, sy - 34], [cx + 16, sy - 4], [cx + 2, sy]], '#3a2050', sa); poly([[cx - 4, sy - 6], [cx + 4, sy - 6], [cx, sy + 14]], '#ff8a2a', sa * (0.6 + beat * 0.4), 1); }
         /* Krystallene bryter fram, én for hvert slag. */
-        DSH.forEach((q, i) => shard(q[0], q[1], q[2], q[3], eo(seg(t, 1.16 + i * 0.5, 1.16 + i * 0.5 + 0.35)), q[4]));
+        DSH.forEach((q, i) => shard(q[0], q[1], q[2], q[3], eo(seg(t, DT0 + i * 0.5, DT0 + i * 0.5 + 0.35)), q[4]));
         /* Mewtwo, og skyggen som spiser seg inn. */
         const a = seg(t, 0.4, 1.2), cor = c01(power * 1.15 + beat * 0.25 * power + hv * 0.5 + h2 * 0.4), fl = (hv > 0.3 || h2 > 0.3 || (beat > 0.6 && power > 0.5 && rnd(nb, 3) > 0.4)) ? 1 : cor;
-        if (sa > 0 && t > 1.16) for (let i = 0; i < 2; i++) bolt(cx, sy + 10, cx + (rnd(nb, i) - 0.5) * 60, y - 40, { seed: nb * 3 + i + floor(t * 12), col: '#ff8a2a', core: '#fff2d0', w: 1.6, a: beat * sa, br: 1 });
+        if (sa > 0 && t > DT0) for (let i = 0; i < 2; i++) bolt(cx, sy + 10, cx + (rnd(nb, i) - 0.5) * 60, y - 40, { seed: nb * 3 + i + floor(t * 12), col: '#ff8a2a', core: '#fff2d0', w: 1.6, a: beat * sa, br: 1 });
         aura(cx, y, s, '#ff7a1a', 2 + hv * 5, (0.05 + power * 0.3 + hv * 0.3) * a); spr(cx, y, s, { id: 150, a: a * (1 - fl) }); spr(cx, y, s, { a: a * fl });
         if (fl > 0.5) { glow(cx + ex * s, y + ey * s, 20 + hv * 20, '#ff8a2a', 0.9, 1); glow(cx + ex * s, y + ey * s, 5, '#fff', 1, 1); }
         if (crk) im(crk, 256, 192, { a: hv * 0.9 + h2 * 0.5, add: 1 });
-        MH.forEach(q => wave(q, cx, y, { col: '#ff8a2a', r: 560, d: 0.6, w: 14 })); if (t > 1.16) wave(1.16 + nb * 0.65, cx, y, { col: '#ff7a1a', r: 100 + power * 240, d: 0.6, w: 2 + power * 4, a: 0.25 + power * 0.4 });
+        DMH.forEach(q => wave(q, cx, y, { col: '#ff8a2a', r: 560, d: 0.6, w: 14 })); if (t > DT0) wave(DT0 + nb * DBI, cx, y, { col: '#ff7a1a', r: 100 + power * 240, d: 0.6, w: 2 + power * 4, a: 0.25 + power * 0.4 });
         /* Alt trekkes inn i ett punkt. */
         if (imp > 0) { fill('#000', imp * 0.96); ring(cx, cy, (1 - imp) * 260 + 6, { col: '#ff8a2a', w: 3, a: 1 }); glow(cx, cy, 30, '#ffd070', imp, 1); }
-        vig(0.65, '#020106'); P.sh = beat * power * 3 + h2 * 7 + hv * 14; P.fl = hits(t, MH, 0.12) * 0.55; P.fc = '#ffd8a0'; P.z = 1 + power * 0.16 + hv * 0.05; P.zy = cy; P.rgb = hv * 7 + h2 * 4; P.gl = hv * 0.6 + h2 * 0.3 + (power > 0.4 && rnd(floor(t * 9), 4) > 0.9 ? 0.3 : 0); P.inv = 0;
+        vig(0.65, '#020106'); P.sh = beat * power * 3 + h2 * 7 + hv * 14; P.fl = hits(t, DMH, 0.12) * 0.55; P.fc = '#ffd8a0'; P.z = 1 + power * 0.16 + hv * 0.05; P.zy = cy; P.rgb = hv * 7 + h2 * 4; P.gl = hv * 0.6 + h2 * 0.3 + (power > 0.4 && rnd(floor(t * 9), 4) > 0.9 ? 0.3 : 0); P.inv = 0;
         return;
       }
       /* Dark Mewtwo. */
-      const bt = hits(t, [9.57, 10.87, 12.84, 13.49, 14.14], 0.5), y = 182 + sin(t * 1.6) * 6, s = 3.4, k = seg(t, 9.57, 10.1);
+      const bt = hits(t, [9.57, 10.9, 12.24, 13.57, 14.9], 0.5), y = 182 + sin(t * 1.6) * 6, s = 3.4, k = seg(t, 9.57, 10.1);
       dVoid(t, 1); im('evilbg', 256, 192, { a: 0.4 }); blackSun(t, cx, 150, 104 + bt * 6, 1);
       DSH.forEach((q, i) => shard(q[0], q[1], q[2], q[3] * (0.9 + 0.1 * sin(t * 2 + i)), 1, q[4] * 1.2));
       flames(t * 1.4, 0.45, 0.8, ['#ff5a14', '#7a2a9a']); im('arcs', cx, y, { s: 1.1, r: t * 1.6, a: 0.6, add: 1 });
       for (let i = 0; i < 5; i++) { const q = floor(t * 8 + i * 1.7), an = rnd(q, i) * TAU; bolt(cx + cos(an) * 50, y + sin(an) * 40, cx + cos(an) * (200 + rnd(q, i + 4) * 130), y + sin(an) * (160 + rnd(q, i + 5) * 90), { seed: q * 5 + i, col: '#ff8a2a', core: '#fff2d0', w: 1.8, a: 0.9, br: 2 }); }
       glow(cx, y, 200, '#ff5a14', 0.3 + bt * 0.25, 1); aura(cx, y, s, '#ff8a2a', 4 + bt * 5, 0.4 + bt * 0.3); spr(cx, y, s); glow(cx + ex * s, y + ey * s, 26 + bt * 12, '#ff8a2a', 1, 1); glow(cx + ex * s, y + ey * s, 6, '#fff', 1, 1);
       dust('ember', { n: 90, seed: 7, cols: ['#ff8a2a', '#ffd070', '#ff3a1a'], a: 1, spd: 2.2 }); if (crk) im(crk, 256, 192, { a: hit(t, 9.57, 1.2) * 0.9 + bt * 0.2, add: 1 });
-      im('burst', cx, y, { s: 0.6 + k * 1.8, a: 1 - k, add: 1, r: t }); wave(9.57, cx, y, { col: '#fff', r: 600, d: 0.8, w: 20 }); wave(9.85, cx, y, { col: '#ff8a2a', r: 600, d: 0.9, w: 12 }); wave(10.87, cx, y, { col: '#ff8a2a', r: 600, d: 0.9 }); wave(12.84, cx, y, { col: '#ffd070', r: 600, d: 0.9 });
-      vig(0.6 + bt * 0.2, '#0a0200'); card(12.84, { col: '#ff8a2a', cap: 'Shadow Pokémon' });
-      P.sh = hit(t, 9.57, 1.3) * 18 + hit(t, 12.84, 0.5) * 9 + bt * 3; P.fl = max(hit(t, 9.57, 0.45), hit(t, 12.84, 0.2) * 0.6); P.fc = '#ffe0b0'; P.rgb = hit(t, 9.57, 0.9) * 10 + bt * 3; P.gl = hit(t, 9.57, 0.7) * 0.8 + (rnd(floor(t * 8), 3) > 0.9 ? 0.25 : 0); P.z = 1 + hit(t, 9.57, 0.45) * 0.18; P.zy = cy; P.fade = seg(t, 15.05, 15.3);
+      im('burst', cx, y, { s: 0.6 + k * 1.8, a: 1 - k, add: 1, r: t }); wave(9.57, cx, y, { col: '#fff', r: 600, d: 0.8, w: 20 }); wave(9.85, cx, y, { col: '#ff8a2a', r: 600, d: 0.9, w: 12 }); wave(10.9, cx, y, { col: '#ff8a2a', r: 600, d: 0.9 }); wave(12.24, cx, y, { col: '#ffd070', r: 600, d: 0.9 }); wave(14.9, cx, y, { col: '#ff8a2a', r: 600, d: 0.9 });
+      vig(0.6 + bt * 0.2, '#0a0200'); card(12.24, { col: '#ff8a2a', cap: 'Shadow Pokémon' });
+      P.sh = hit(t, 9.57, 1.3) * 18 + hit(t, 12.24, 0.5) * 9 + hit(t, 14.9, 0.5) * 7 + bt * 3; P.fl = max(hit(t, 9.57, 0.45), hit(t, 12.24, 0.2) * 0.6); P.fc = '#ffe0b0'; P.rgb = hit(t, 9.57, 0.9) * 10 + bt * 3; P.gl = hit(t, 9.57, 0.7) * 0.8 + (rnd(floor(t * 8), 3) > 0.9 ? 0.25 : 0); P.z = 1 + hit(t, 9.57, 0.45) * 0.18; P.zy = cy; P.fade = seg(t, 15.35, 15.6);
     },
     air(t, k) {
       fill('#08030e', 0.36 * k); blackSun(t, 378, 140, 54, 0.55 * k); DSH.slice(0, 8).forEach((q, i) => shard(q[0], q[1], q[2], q[3] * 0.55, 1, q[4]));
@@ -760,10 +762,10 @@
      Trioene og de mindre legendariske får roligere filmer, så de store beholder tyngden: et sted (bildene fra HeartGold og SoulSilver), stemningen der,
      skikkelsen som viser seg på sin egen måte, og så navnet. Alle følger samme løp: den viser seg på R (rundt 4.5 sekunder), lagt på et slag i låta.
      Hver rad: sted, mørkning (farge og styrke), stemning, måten den kommer på, hvor i låta filmen starter, og når den viser seg. */
-  const TR = { Raikou: [0, 4.16], Lugia: [8.3, 4.6], 'Ho-oh': [4.6, 4.5], Mewtwo: [5.1, 4.47], Heatran: [2.2, 4.49], Rayquaza: [0.9, 4.34], Deoxys: [0, 3.91], Uxie: [1.0, 4.46], Reshiram: [1.9, 4.49], Cobalion: [1.4, 4.43] };
+  const TR = { Raikou: [0, 4.16], Lugia: [8.3, 4.6], 'Ho-oh': [4.6, 4.5], Mewtwo: [5.1, 4.47], Heatran: [2.2, 4.49], Rayquaza: [0.9, 4.34], Deoxys: [0, 3.91], Uxie: [1.0, 4.49], Entei: [0.3, 4.61], Reshiram: [1.9, 4.49], Cobalion: [1.4, 4.43] };
   const CALM = {
     144: ['loc_icepath', '#04122a', 0.35, 'ice', 'fall', 'Lugia'], 145: ['', '#000', 0, 'bolt', 'fall', 'Raikou'], 146: ['loc_mortar', '#2a0600', 0.3, 'fire', 'fall', 'Ho-oh'], 151: ['loc_ilexday', '#1a0a2a', 0.25, 'dream', 'orbit', 'Mewtwo'],
-    243: ['loc_burned', '#0a0a04', 0.25, 'bolt', 'dash', 'Raikou'], 244: ['loc_burned', '#1a0400', 0.25, 'fire', 'dash', 'Raikou'], 245: ['loc_tohjo', '#041a2a', 0.35, 'water', 'dash', 'Raikou'], 251: ['loc_ilex', '#000', 0, 'forest', 'orbit', 'Ho-oh'],
+    243: ['loc_burned', '#0a0a04', 0.25, 'bolt', 'dash', 'Raikou'], 244: ['loc_burned', '#1a0400', 0.25, 'fire', 'dash', 'Entei'], 245: ['loc_tohjo', '#041a2a', 0.35, 'water', 'dash', 'Raikou'], 251: ['loc_ilex', '#000', 0, 'forest', 'orbit', 'Ho-oh'],
     377: ['loc_alph', '#1a0e04', 0.3, 'regi', 'dots', 'Heatran'], 378: ['loc_icepath', '#04122a', 0.5, 'regi', 'dots', 'Heatran'], 379: ['loc_alph', '#0a0e14', 0.45, 'regi', 'dots', 'Heatran'], 486: ['loc_alph', '#14140a', 0.35, 'regi', 'dots', 'Heatran'],
     380: ['loc_dragonsden', '#0a1a3a', 0.3, 'wind', 'dash', 'Rayquaza'], 381: ['loc_dragonsden', '#0a1a3a', 0.3, 'wind', 'dash', 'Rayquaza'], 385: ['', '#000', 0, 'star', 'fall', 'Deoxys'],
     480: ['loc_mortar', '#1a1400', 0.3, 'lake', 'orbit', 'Uxie'], 481: ['loc_mortar', '#2a0618', 0.3, 'lake', 'orbit', 'Uxie'], 482: ['loc_mortar', '#04102a', 0.3, 'lake', 'orbit', 'Uxie'],

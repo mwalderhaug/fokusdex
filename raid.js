@@ -231,7 +231,7 @@ const CINE = (() => {
     if (P.fade > 0.01) { o.globalAlpha = c01(P.fade); o.fillStyle = P.fadec; o.fillRect(0, 0, W, H); o.globalAlpha = 1; }
   }
 
-  /* ---------- Filmene ---------- FILM[art] = { len, at (hvor i låta filmen starter), R (når den viser seg), use (bilder), sps (andre former), draw(), air(k) }. */
+  /* ---------- Filmene ---------- FILM[art] = { len, at (hvor i låta filmen starter), R (når den viser seg), use (bilder), sps (andre former), spid (bildet som brukes i stedet for artens vanlige, f.eks. Giratina i Origin Forme), draw(), air(k) }. */
   const FILM = {};
   const film = (ids, def) => { (Array.isArray(ids) ? ids : [ids]).forEach(id => { FILM[id] = def; }); };
   C.FILM = FILM;
@@ -241,14 +241,14 @@ const CINE = (() => {
   /* Henter det filmen trenger. Venter ikke lenger enn ms. */
   C.prep = async (id, ms) => {
     const f = filmOf(id); if (!f) return false;
-    const jobs = Promise.all([need((f.use || []).concat(['paint'])), (typeof id === 'number' || /^dk/.test(id)) ? loadSprite(id) : 0].concat((f.sps || []).map(loadSprite)));
+    const jobs = Promise.all([need((f.use || []).concat(['paint'])), (typeof id === 'number' || /^dk/.test(id)) ? loadSprite(f.spid || id) : 0].concat((f.sps || []).map(loadSprite)));
     await Promise.race([jobs, new Promise(r => setTimeout(r, ms || 4000))]); return true;
   };
   let B = null;
   async function setCur(id, o) {
     const f = filmOf(id); o = o || {}; const sps = {};
     for (const s of f.sps || []) sps[s] = await Promise.race([loadSprite(s), new Promise(r => setTimeout(() => r(null), 30))]);
-    cur = { id, f, sp: await Promise.race([loadSprite(id), new Promise(r => setTimeout(() => r(null), 30))]), sps, cc: o.cc || '#ffffff', name: o.name || '', cap: o.cap || 'Legendary Pokémon', lv: o.lv || 0 };
+    cur = { id, f, sp: await Promise.race([loadSprite(f.spid || id), new Promise(r => setTimeout(() => r(null), 30))]), sps, cc: o.cc || '#ffffff', name: o.name || '', cap: o.cap || 'Legendary Pokémon', lv: o.lv || 0 };
     if (!B) { B = document.createElement('canvas'); B.width = W; B.height = H; }
   }
   /* Tegner ett bilde av filmen på lerretet out. */

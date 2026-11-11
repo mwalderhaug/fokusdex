@@ -333,7 +333,7 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .btn-n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px;padding:4px 0}
 /* Skjermen: arenaen og tekstboksen henger sammen som én flate. */
 .bscreen{border-radius:16px;overflow:hidden;box-shadow:0 0 0 2px #34343c,0 0 0 5px #0b0b0d,0 10px 30px rgba(0,0,0,.5);background:#0b0b0d}
-.arena{position:relative;aspect-ratio:4/3;overflow:hidden;isolation:isolate;--z:1.6;--ac:var(--sage);
+.arena{position:relative;aspect-ratio:4/3;overflow:hidden;isolation:isolate;--z:1.6;--cz:1.1;--ac:var(--sage);
   --sk1:#7fb9ea;--sk2:#cfe8f6;--hz:#d9eccf;--g1:#a9d889;--g2:#5fa450;--p1:#c3e89a;--p2:#8cc56c;--p3:#5c9a47}
 /* Én sammenhengende bane sett litt ovenfra: himmelen er bare en myk stripe øverst som glir over i bakken uten skille. */
 .abg{position:absolute;inset:0;z-index:-2;background:
@@ -384,7 +384,7 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .arena[data-wx=hail]::after{background:rgba(200,235,245,.24)}
 
 /* Treneren står på plattformen før første Pokémon sendes ut, og sklir ut til siden. */
-.trn{position:absolute;right:13%;top:6%;width:27%;aspect-ratio:1;transition:transform .5s cubic-bezier(.5,0,.8,.4),opacity .4s .1s}
+.trn{position:absolute;right:11%;top:5%;width:27%;aspect-ratio:1;transition:transform .5s cubic-bezier(.5,0,.8,.4),opacity .4s .1s}
 /* Treneren på banen og i introen står fritt: rammen rundt bildet hører bare til kortene før kampen. */
 .trn .tsb,.bwi .tsb{box-shadow:none!important}
 .trn .tsb{width:100%;height:100%;border-radius:0;background:none}
@@ -392,11 +392,12 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .trn.out{transform:translateX(160%);opacity:0}
 /* Pokémonene står på plattformene i sin egen pikselstørrelse, forstørret likt (som i spillet). */
 .bs{position:absolute;width:0;height:0}
-.bs.foe{right:26%;top:48.5%}
-.bs.me{left:24%;bottom:1%}
+/* Hvor Pokémonene står: midt på hver sin plattform. Stedet følger kameraet (--cz, se .cam): punktet (45 %, 80 %) ligger fast, alt annet skyves ut fra det. */
+.bs{transition:left .9s cubic-bezier(.3,.7,.2,1),top .9s cubic-bezier(.3,.7,.2,1)}
+.bs.foe{left:calc(45% + 29%*var(--cz));top:calc(80% - 31.5%*var(--cz))}
+.bs.me{left:calc(45% - 21%*var(--cz));top:calc(80% + 11.5%*var(--cz))}
 .bs .sprb{position:absolute;left:0;bottom:0;width:0;height:0;display:block}
-.bs .spr{position:absolute;left:0;bottom:0;width:auto;height:auto;max-width:none;image-rendering:pixelated;transform:translateX(-50%) scale(var(--z));transform-origin:50% 100%}
-.bs.me .spr{transform:translateX(-50%) scale(calc(var(--z)*1.3))}
+.bs .spr{position:absolute;left:0;bottom:0;width:auto;height:auto;max-width:none;image-rendering:pixelated;transform:translateX(-50%) scale(calc(var(--z)*var(--k,1)*var(--cz)));transform-origin:50% 100%}
 .bs .sprb.shiny::after{display:none}
 .bs .sprb.noimg::before{position:absolute;left:-34px;bottom:0;width:68px;height:68px;font-size:18px}
 /* Ut av ballen: hvit silhuett som vokser fram og får farge. */
@@ -423,7 +424,10 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 /* Bane fra ressurspakken: ett bilde med bakgrunn og begge plattformene, som i Black 2 og White 2. */
 .arena .scene{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;image-rendering:pixelated;z-index:-2}
 .arena.has-scene .abg,.arena.has-scene .plat{display:none}
-.arena.has-scene .bs.foe{top:54%}
+/* Banebildene fra pakken har plattformene sine ved (73,6 %, 50,5 %) og (32 %, 89,5 %). Din egen står litt bak midten av sin (83,5 %),
+   ellers havner de små helt bak tekstboksen. */
+.arena.has-scene .bs.foe{left:calc(45% + 28.6%*var(--cz));top:calc(80% - 28.5%*var(--cz))}
+.arena.has-scene .bs.me{left:calc(45% - 13%*var(--cz));top:calc(80% + 3.5%*var(--cz))}
 .arena.has-scene .trn{top:11%}
 @keyframes flashA{from{opacity:.85}to{opacity:0}}
 .flashov{position:absolute;inset:0;animation:flashA .25s ease-out forwards}
@@ -435,6 +439,8 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .fxc{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;pointer-events:none}
 /* Banen ligger i en egen boks som kameraet i EBDX-animasjonene flytter og forstørrer. Banebildet er speilet utover kantene (scx),
    for kameraet ser et stykke utenfor det som fyller skjermen i ro. Effektene tegnes på tre lerret: bak, mellom og foran Pokémonene. */
+/* Kameraet: banen forstørres rundt et punkt nede til venstre, så din egen plattform nesten står stille når det trekker seg ut for en stor Pokémon. */
+.cam{position:absolute;inset:0;z-index:-2;transform-origin:45% 80%;transform:scale(var(--cz));transition:transform .9s cubic-bezier(.3,.7,.2,1)}
 .world{position:absolute;inset:0;z-index:-2;transform-origin:0 0}
 .world .scx{position:absolute;left:-100%;top:-100%;width:300%;height:300%;image-rendering:pixelated;z-index:-2}
 .fxc.ebx{image-rendering:auto}
@@ -459,7 +465,7 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .arena.atk .dim{opacity:var(--dim,.5);transition-duration:.16s}
 .arena.atk .trn{filter:brightness(.55)}
 /* Angriperen lyser i typens farge mens den lader og angriper. Målet blir helt hvitt i det øyeblikket treffet står stille. */
-.bs .spr{transition:filter .14s}
+.bs .spr{transition:filter .14s,transform .9s cubic-bezier(.3,.7,.2,1)}
 .bs.cast .spr{filter:drop-shadow(0 0 calc(var(--u,1.5px)*2.5) var(--tc,#fff)) brightness(1.22)}
 .bs.imp .spr{filter:brightness(0) invert(1) drop-shadow(0 0 calc(var(--u,1.5px)*3) #fff)!important;transition:none;animation:none!important}
 .arena.atk #axc{filter:drop-shadow(0 0 calc(var(--u,1.5px)*2.5) color-mix(in srgb,var(--tc,#fff) 80%,transparent)) saturate(1.2) brightness(1.08)}
@@ -478,6 +484,18 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .hpb.pk.foe canvas{width:calc(var(--u,1.5px)*110)}
 .hpb.pk.foe{left:calc(var(--u,1.5px)*-3);top:7%}
 .hpb.pk.me{right:calc(var(--u,1.5px)*-3);bottom:26.5%}
+/* Typemerker ved HP-boksene: til høyre for motstanderens, og som en liten fane over din egen. */
+.tyb{position:absolute;display:flex;gap:calc(var(--u,1.5px)*1.5);pointer-events:none;white-space:nowrap}
+.tyb:empty{display:none}
+.tyb span{font-family:var(--dsf,var(--pix));font-weight:var(--fw,600);font-size:calc(var(--u,1.5px)*8.5*var(--fz,1));line-height:calc(var(--u,1.5px)*8);height:calc(var(--u,1.5px)*8);padding:0 calc(var(--u,1.5px)*2.5);border-radius:calc(var(--u,1.5px)*2);color:#fff;text-transform:uppercase;text-shadow:calc(var(--u,1.5px)*.7) calc(var(--u,1.5px)*.7) 0 rgba(0,0,0,.75);box-shadow:0 0 0 calc(var(--u,1.5px)*.8) rgba(8,8,14,.9)}
+.hpb.pk.foe .tyb{left:calc(var(--u,1.5px)*108);top:calc(var(--u,1.5px)*5)}
+.hpb.pk.me .tyb{right:calc(var(--u,1.5px)*6);bottom:calc(100% - var(--u,1.5px)*3)}
+.hpb:not(.pk) .tyb{position:static;margin-top:5px}
+.hpb:not(.pk) .tyb span{font-family:var(--pix);font-size:9px;line-height:13px;height:13px;padding:0 5px;border-radius:3px;text-shadow:1px 1px 0 rgba(0,0,0,.6);box-shadow:0 0 0 1px rgba(8,8,14,.8)}
+/* Kjønnssymbolet ved navnet. */
+.gx{font-style:normal;font-weight:700;margin-left:.22em;font-family:system-ui,-apple-system,'Segoe UI Symbol',sans-serif}
+.gx.g0{color:#6cb4ff}.gx.g1{color:#ff7d9c}
+.hpn .gx{font-size:13px;text-shadow:none}
 /* Gullramma til toppbossene: selve ramma tegnes i lerretet, her legges gløden rundt. */
 @keyframes goldGlow{0%,100%{filter:drop-shadow(0 0 2px rgba(248,200,48,.55))}50%{filter:drop-shadow(0 0 7px rgba(255,236,150,.95))}}
 .hpb.gold{animation:goldGlow 1.5s ease-in-out infinite}
@@ -623,6 +641,16 @@ button.mvc[aria-pressed="false"]{opacity:.62}
   background:linear-gradient(color-mix(in srgb,var(--c) 70%,#fff) 0 42%,var(--c) 42%);box-shadow:0 0 0 calc(var(--u)*1) color-mix(in srgb,var(--c) 45%,#000);text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 rgba(0,0,0,.5)}
 .bw-m .pp{position:absolute;left:calc(var(--u)*54);right:calc(var(--u)*17);top:calc(var(--u)*23);display:flex;justify-content:space-between;font-size:calc(var(--u)*14*var(--fz));line-height:calc(var(--u)*16);font-weight:var(--fw);white-space:nowrap;text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 rgba(0,0,0,.85)}
 .bw-m .pp em{font-style:normal}
+/* Med effektivitet på angrepene får knappen tre linjer: navn, type og PP, og merkelappen nederst (grønn ring = super effective, oransje trekant = not very effective, grått kryss = no effect). */
+.bw-moves.hfx .bw-m b{top:calc(var(--u)*2.5)}
+.bw-moves.hfx .bw-m .mty{top:calc(var(--u)*19.5)}
+.bw-moves.hfx .bw-m .pp{top:calc(var(--u)*17.5)}
+.bw-m .mfx{position:absolute;left:0;right:0;top:calc(var(--u)*30.5);text-align:center;font-size:calc(var(--u)*10.5*var(--fz));line-height:calc(var(--u)*10);white-space:nowrap;text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 rgba(0,0,0,.85)}
+.bw-m .mfx.s{color:#8dfca0}.bw-m .mfx.w{color:#ffc27a}.bw-m .mfx.n{color:#cfcfda}
+.bw-m .mfx::before{content:'';display:inline-block;box-sizing:border-box;margin-right:calc(var(--u)*2.5);vertical-align:calc(var(--u)*-.6)}
+.bw-m .mfx.s::before{width:calc(var(--u)*6);height:calc(var(--u)*6);border-radius:50%;border:calc(var(--u)*1.5) solid currentColor}
+.bw-m .mfx.w::before{border:calc(var(--u)*3.2) solid transparent;border-top:0;border-bottom:calc(var(--u)*5.6) solid currentColor}
+.bw-m .mfx.n::before{width:calc(var(--u)*6);height:calc(var(--u)*6);background:linear-gradient(45deg,transparent 42%,currentColor 42% 58%,transparent 58%),linear-gradient(-45deg,transparent 42%,currentColor 42% 58%,transparent 58%)}
 /* Øverst står motstanderens lag som små ringer, nederst ditt eget som baller. */
 .mv-foe{position:absolute;left:0;right:0;top:calc(var(--u)*9.5);display:flex;justify-content:center;gap:calc(var(--u)*3)}
 .mv-foe i{width:calc(var(--u)*5);height:calc(var(--u)*5);border-radius:50%;box-shadow:inset 0 0 0 calc(var(--u)*1) #d9d9df,0 0 0 calc(var(--u)*.6) #17171a}
@@ -914,3 +942,10 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 @keyframes lgWait{50%{transform:scale(1.5);opacity:.15}}
 .lgi-skip{position:absolute;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));padding:8px 14px;border-radius:12px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);font-size:13px;font-weight:700;letter-spacing:.04em;box-shadow:0 0 0 1px rgba(255,255,255,.18)}
 .lgi-skip:active{background:rgba(255,255,255,.2)}
+
+/* ---------- Kallenavn, former og låste områder ---------- */
+.pn .nkb{margin-left:8px;width:26px;height:26px;border-radius:50%;border:1px solid var(--line,rgba(255,255,255,.14));background:transparent;color:var(--ink2,#b9b3a8);font-size:13px;line-height:1;vertical-align:middle;cursor:pointer}
+.pn .nkb:active{filter:brightness(1.3)}
+.nkrow{display:flex;gap:8px;align-items:center;margin:2px 0 4px}
+.nkin{flex:1;min-width:0;font:inherit;font-size:17px;font-weight:700;padding:7px 10px;border-radius:10px;border:1px solid var(--line,rgba(255,255,255,.18));background:rgba(0,0,0,.25);color:var(--ink,#f2ede4)}
+.nkin:focus{outline:2px solid var(--sage,#9db89a);outline-offset:1px}

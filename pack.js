@@ -121,16 +121,20 @@ const PACK = (() => {
      som plukker ut sin egen låt i klassens mappe. Finnes ingen der, lånes lagets låt fra en naboklasse, og til slutt en fra klassen.
      I Battle Frontier stiger musikken gjennom runden: trenerlåter først, de store kamplåtene (Elite Four og finalelåta) før bossen. Samme trener får samme låt hver gang,
      men har de flere låter (som Ghetsis), byttes det for hver runde i ligaen. */
+  const SFXCAP = -18;
   const FALL = { evilteam: ['eviladmin'], eviladmin: ['evilteam', 'evilboss'], evilboss: ['evilteam', 'eviladmin'], champ: ['supreme'], supreme: ['champ'], rival: ['champ'] };
   P.trackFor = B => {
     if (!P.ok || !P.man.music) return '';
     /* Låtene til de legendariske brukes bare mot legendariske, uansett hvilke mapper filene ellers ligger i. */
     const tr = B.tr, n = tr.n, leg = tr.kind === 'legend', LF = new Set(P.man.music.filter(x => x.c === 'legend').map(x => x.f)), M = P.man.music.filter(x => leg || !LF.has(x.f)), by = (c, re) => M.filter(x => x.c === c && (!re || re.test(x.t)));
-    let re = null, l = [], h = B.lap || 0; try { if (tr.mre) re = new RegExp(tr.mre); } catch (_) {}
+    /* Søketeksten kan ha flere ledd med «>>» mellom: det første som finnes i pakken, gjelder (så en egen låt kan gå foran en lånt). */
+    let re = null, l = [], h = B.lap || 0;
+    for (const q of String(tr.mre || '').split('>>')) { if (!q) continue; try { const r = new RegExp(q); if (!re) re = r; if (M.some(x => r.test(x.t))) { re = r; break; } } catch (_) {} }
     if (tr.kind === 'legend') { l = by('legend', re); if (!l.length) l = by('legend'); }
     else if (tr.kind === 'brain') { l = by('frontier', re); if (!l.length) l = by('frontier', /Frontier Brain/); }
     else if (tr.boss) { if (re) { l = by(tr.kind, re); for (const c of FALL[tr.kind] || []) if (!l.length) l = by(c, re); } if (!l.length) l = by(tr.kind); }
-    else if (tr.fr) { l = (B.w || 0) >= 4 ? by('frontier', /World Champion/).concat(by('e4')) : by('frontier', /Aether/).concat(by('trainer')); h = (B.w || 0) + (B.round || 0) * 3; }
+    /* Battle Frontier: de første trenerne får trenerlåter, de siste får de store. Alt i Frontier-mappa som ikke er en Brain-låt eller den rolige, hører til de store. */
+    else if (tr.fr) { l = (B.w || 0) >= 4 ? by('frontier').filter(x => !/Frontier Brain|Aether/.test(x.t)).concat(by('e4')) : by('frontier', /Aether/).concat(by('trainer')); h = (B.w || 0) + (B.round || 0) * 3; }
     /* Vanlige trenere bytter mellom trenerlåtene fra kamp til kamp. */
     if (!l.length) { l = by('trainer'); if (l.length) { if (B.pick == null) B.pick = B.mode === 'league' ? (B.rd || 0) + (B.lap || 0) : Math.floor(Math.random() * 97); return l[B.pick % l.length].f; } }
     if (!l.length) return '';
@@ -158,8 +162,15 @@ const PACK = (() => {
   const SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
   let au = null, cur = '', node = null, mode = '', job = 0, sting = null;
   const dec = new Map(), decJob = new Map();
-  const mvol = () => Math.min(1, Math.pow((S.vol == null ? 70 : S.vol) / 100, 1.3) * 0.75);
-  P.unlock = () => { try { ac(); if (!au) { au = new Audio(); au.loop = true; au.preload = 'auto'; } if (mode !== 'el') { au.src = SILENT; au.play().catch(() => {}); } } catch (_) {} };
+  const mvol = () => Math.min(1, Math.pow((S.mvol == null ? 70 : S.mvol) / 100, 1.3) * 0.75);
+  /* Hver låt kan ha en liten justering i manifestet (g, i dB): alle låtene er jevnet til samme lydstyrke, og g retter opp for at bassrike låter
+     ellers høres svakere ut på små høyttalere. k = tonearten ([tonika 0–11 fra C, 0 moll / 1 dur / 2 uviss]), til den innebygde introen. */
+  const ent = path => (P.ok && P.man.music && P.man.music.find(x => x.f === path)) || null;
+  const tgain = path => { const e = ent(path); return e && e.g ? Math.pow(10, e.g / 20) : 1; };
+  P.keyOf = path => { const e = path && ent(path); return e && e.k ? e.k : null; };
+  /* Lydelementet låses opp av et trykk ved å spille et tomt klipp én gang. Klippet må ikke gå i sløyfe: en sløyfe uten lyd i seg spinner
+     i enkelte nettlesere og eter minne. Sløyfa slås først på når en ekte låt spilles gjennom elementet. */
+  P.unlock = () => { try { ac(); if (!au) { au = new Audio(); au.preload = 'auto'; } if (mode !== 'el') { au.loop = false; au.src = SILENT; au.play().catch(() => {}); } } catch (_) {} };
   function decode(path) {
     if (dec.has(path)) return Promise.resolve(dec.get(path));
     if (decJob.has(path)) return decJob.get(path);
@@ -178,7 +189,7 @@ const PACK = (() => {
   function startBuf(d, o) {
     try {
       const a = ac(); if (!a) return false;
-      const s = a.createBufferSource(), g2 = a.createGain(), v = mvol(), t = a.currentTime;
+      const s = a.createBufferSource(), g2 = a.createGain(), v = Math.min(1, mvol() * (o.tg || 1)), t = a.currentTime;
       s.buffer = d; s.loop = o.loop !== false; s.connect(g2); g2.connect(a.destination);
       if (o.fade) { g2.gain.setValueAtTime(Math.max(0.0001, v * (o.from || 0)), t); g2.gain.linearRampToValueAtTime(v, t + o.fade); } else g2.gain.setValueAtTime(v, t);
       s.start(0, Math.max(0, Math.min(d.duration - 0.2, o.at || 0)));
@@ -200,11 +211,11 @@ const PACK = (() => {
     if (!path || !S.sound || S.music === 0) return false;
     const my = job, d = await decode(path);
     if (my !== job) return cur === path;
-    const h = d && startBuf(d, o);
+    const h = d && startBuf(d, Object.assign({ tg: tgain(path) }, o));
     if (h) { node = h; mode = 'wa'; return true; }
     const u = await P.url(path);
     if (my !== job || !u) return false;
-    try { P.unlock(); au.src = u; au.currentTime = 0; au.volume = mvol(); mode = 'el'; await au.play(); return my === job; } catch (_) { if (my === job) mode = ''; return false; }
+    try { P.unlock(); au.loop = true; au.src = u; au.currentTime = 0; au.volume = Math.min(1, mvol() * tgain(path)); mode = 'el'; await au.play(); return my === job; } catch (_) { if (my === job) mode = ''; return false; }
   };
   /* Egen intro til en boss (mappa «Intro» blant sangene): spilles mens bossen viser seg, og tones ut når kamplåta glir inn.
      En introlåt hører til én bestemt boss og brukes bare hos den: navnet på bossen må stå som eget ord i tittelen («Champion Cynthia Encounter»
@@ -215,10 +226,12 @@ const PACK = (() => {
     const re = new RegExp('(^|[^A-Za-z])' + n + '([^A-Za-z]|$)', 'i'), hit = P.man.music.find(x => x.c === 'intro' && re.test(x.t));
     return hit ? hit.f : '';
   };
-  P.sting = async (path, loop) => { const my = job, d = await decode(path); if (!d || my !== job) return false; P.stingOut(0.05); sting = startBuf(d, { loop: !!loop }); return !!sting; };
+  P.sting = async (path, loop) => { const my = job, d = await decode(path); if (!d || my !== job) return false; P.stingOut(0.05); sting = startBuf(d, { loop: !!loop, tg: tgain(path) }); return !!sting; };
   P.stinging = () => !!sting;
   P.stingOut = sec => { if (sting) { fadeOut(sting, sec == null ? 1.2 : sec); sting = null; } };
   P.playing = () => !!cur;
+  /* Musikkskyveren flyttes mens en låt spiller. */
+  P.vol = () => { try { if (node && mode === 'wa') node.g.gain.setTargetAtTime(Math.min(1, mvol() * tgain(cur)), AC.currentTime, 0.05); else if (au && mode === 'el') au.volume = Math.min(1, mvol() * tgain(cur)); } catch (_) {} };
   /* Sekunder siden låta som spiller nå ble startet (til å holde raid-filmene i takt med den), justert for forsinkelsen ut til høyttaleren. −1 hvis ingen låt spiller. */
   P.clock = () => { try { return node && mode === 'wa' && AC.state === 'running' ? AC.currentTime - node.t0 - (AC.outputLatency || AC.baseLatency || 0) : -1; } catch (_) { return -1; } };
   /* Korte lyder (angrep, treff, status) dekodes og spilles gjennom appens vanlige lydutgang, så volumknappen gjelder. Gir false hvis lyden ikke er klar. */
@@ -228,7 +241,9 @@ const PACK = (() => {
     const f = P.sfxPath(name), d = f && bufs.get(f);
     if (!f || !S.sound) return false;
     if (!d) { P.warm(name); return false; }
-    try { const o = out(); if (!o) return false; const s = AC.createBufferSource(), g = AC.createGain(); s.buffer = d; g.gain.value = vol == null ? 0.8 : vol; s.connect(g); g.connect(o); s.start(); return true; } catch (_) { return false; }
+    /* Lydene i pakken er tatt opp mye sterkere enn musikken. Hver lyd får derfor et tak: det sterkeste øyeblikket skal ikke ligge over SFXCAP (LUFS),
+       som er så vidt over musikknivået. Svake lyder løftes ikke, så de stille effektene forblir stille. */
+    try { const o = out(); if (!o) return false; const s = AC.createBufferSource(), g = AC.createGain(), L = loudOf(d); s.buffer = d; g.gain.value = (vol == null ? 0.8 : vol) * (L > SFXCAP ? Math.pow(10, (SFXCAP - L) / 20) : 1); s.connect(g); g.connect(o); s.start(); return true; } catch (_) { return false; }
   };
   /* Gjør klart til en kamp: bane, animasjonsdata, arkene til alle angrepene på begge lag, baller og lyder. Venter høyst noen sekunder. */
   P.prep = async B => {

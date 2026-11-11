@@ -6,7 +6,8 @@
 const TYN = ['Normal', 'Fighting', 'Flying', 'Poison', 'Ground', 'Rock', 'Bug', 'Ghost', 'Steel', 'Fire', 'Water', 'Grass', 'Electric', 'Psychic', 'Ice', 'Dragon', 'Dark', 'Fairy'];
 const TIERS = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
 /* Regioner = generasjoner. c er prisen for å låse opp. */
-const REG = [null, { n: 'Kanto', a: 1, b: 151, c: 0 }, { n: 'Johto', a: 152, b: 251, c: 1200 }, { n: 'Hoenn', a: 252, b: 386, c: 2500 }, { n: 'Sinnoh', a: 387, b: 493, c: 4000 }, { n: 'Unova', a: 494, b: 649, c: 6000 }];
+/* Områdene: a–b = artene som hører til. Et nytt område åpner seg når du er erfaren nok (trenernivå lv) eller har samlet nok arter (dex), det som kommer først. */
+const REG = [null, { n: 'Kanto', a: 1, b: 151, lv: 1, dex: 0 }, { n: 'Johto', a: 152, b: 251, lv: 5, dex: 30 }, { n: 'Hoenn', a: 252, b: 386, lv: 9, dex: 70 }, { n: 'Sinnoh', a: 387, b: 493, lv: 14, dex: 120 }, { n: 'Unova', a: 494, b: 649, lv: 19, dex: 180 }];
 /* Fagene ligger i lagringen (S.fag), så hver spiller har sine egne: n = navn, c = farge, ty = typer som dukker opp oftere,
    t = planlagte timer, b = minutter gjort før appen, d = eksamensdato, ms = milepæler hentet. Økter kan også føres på faste ekstra-valg (EXTRA). */
 const EXTRA = { sok: { n: 'Job apps', c: '#D4BC8E', ty: [2, 9] }, annet: { n: 'Other', c: '#AFA89E', ty: [] } };
@@ -79,9 +80,27 @@ const natUp = n => NST[Math.floor(n / 5)], natDn = n => NST[n % 5];
 /* Mega-former (og de to urformene): [art, tillegg i navnet, type 1, type 2, basestats, bildenummer hos PokeAPI]. De ligger utenfor Pokédexen:
    en Pokémon er Mega når den har feltet mega (plassen i lista + 1). Mega-former dukker aldri opp i vanlige møter. */
 const MEGA = [[3, '', 11, 3, [80, 100, 123, 122, 120, 80], 10033], [6, 'X', 9, 15, [78, 130, 111, 130, 85, 100], 10034], [6, 'Y', 9, 2, [78, 104, 78, 159, 115, 100], 10035], [9, '', 10, -1, [79, 103, 120, 135, 115, 78], 10036], [15, '', 6, 3, [65, 150, 40, 15, 80, 145], 10090], [18, '', 0, 2, [83, 80, 80, 135, 80, 121], 10073], [26, 'X', 12, -1, [60, 135, 95, 90, 95, 110], 10304], [26, 'Y', 12, -1, [60, 100, 55, 160, 80, 130], 10305], [36, '', 17, 2, [95, 80, 93, 135, 110, 70], 10278], [65, '', 13, -1, [55, 50, 65, 175, 105, 150], 10037], [71, '', 11, 3, [80, 125, 85, 135, 95, 70], 10279], [80, '', 10, 13, [95, 75, 180, 130, 80, 30], 10071], [94, '', 7, 3, [60, 65, 80, 170, 95, 130], 10038], [115, '', 0, -1, [105, 125, 100, 60, 100, 100], 10039], [121, '', 10, 13, [60, 100, 105, 130, 105, 120], 10280], [127, '', 6, 2, [65, 155, 120, 65, 90, 105], 10040], [130, '', 10, 16, [95, 155, 109, 70, 130, 81], 10041], [142, '', 5, 2, [80, 135, 85, 70, 95, 150], 10042], [149, '', 15, 2, [91, 124, 115, 145, 125, 100], 10281], [150, 'X', 13, 1, [106, 190, 100, 154, 100, 130], 10043], [150, 'Y', 13, -1, [106, 150, 70, 194, 120, 140], 10044], [154, '', 11, 17, [80, 92, 115, 143, 115, 80], 10282], [160, '', 10, 15, [85, 160, 125, 89, 93, 78], 10283], [181, '', 12, 15, [90, 95, 105, 165, 110, 45], 10045], [208, '', 8, 4, [75, 125, 230, 55, 95, 30], 10072], [212, '', 6, 8, [70, 150, 140, 65, 100, 75], 10046], [214, '', 6, 1, [80, 185, 115, 40, 105, 75], 10047], [227, '', 8, 2, [65, 140, 110, 40, 100, 110], 10284], [229, '', 16, 9, [75, 90, 90, 140, 90, 115], 10048], [248, '', 5, 16, [100, 164, 150, 95, 120, 71], 10049], [254, '', 11, 15, [70, 110, 75, 145, 85, 145], 10065], [257, '', 9, 1, [80, 160, 80, 130, 80, 100], 10050], [260, '', 10, 4, [100, 150, 110, 95, 110, 70], 10064], [282, '', 13, 17, [68, 85, 65, 165, 135, 100], 10051], [302, '', 16, 7, [50, 85, 125, 85, 115, 20], 10066], [303, '', 8, 17, [50, 105, 125, 55, 95, 50], 10052], [306, '', 8, -1, [70, 140, 230, 60, 80, 50], 10053], [308, '', 1, 13, [60, 100, 85, 80, 85, 100], 10054], [310, '', 12, -1, [70, 75, 80, 135, 80, 135], 10055], [319, '', 10, 16, [70, 140, 70, 110, 65, 105], 10070], [323, '', 9, 4, [70, 120, 100, 145, 105, 20], 10087], [334, '', 15, 17, [75, 110, 110, 110, 105, 80], 10067], [354, '', 7, -1, [64, 165, 75, 93, 83, 75], 10056], [358, '', 13, 8, [75, 50, 110, 135, 120, 65], 10306], [359, '', 16, -1, [65, 150, 60, 115, 60, 115], 10057], [359, 'Z', 16, 7, [65, 154, 60, 75, 60, 151], 10307], [362, '', 14, -1, [80, 120, 80, 120, 80, 100], 10074], [373, '', 15, 2, [95, 145, 130, 120, 90, 120], 10089], [376, '', 8, 13, [80, 145, 150, 105, 110, 110], 10076], [380, '', 15, 13, [80, 100, 120, 140, 150, 110], 10062], [381, '', 15, 13, [80, 130, 100, 160, 120, 110], 10063], [382, 'Primal', 10, -1, [100, 150, 90, 180, 160, 90], 10077], [383, 'Primal', 4, 9, [100, 180, 160, 150, 90, 90], 10078], [384, '', 15, 2, [105, 180, 100, 180, 100, 115], 10079], [398, '', 1, 2, [85, 140, 100, 60, 90, 110], 10308], [428, '', 0, 1, [65, 136, 94, 54, 96, 135], 10088], [445, '', 15, 4, [108, 170, 115, 120, 95, 92], 10058], [445, 'Z', 15, -1, [108, 130, 85, 141, 85, 151], 10309], [448, '', 1, 8, [70, 145, 88, 140, 70, 112], 10059], [448, 'Z', 1, 8, [70, 100, 70, 164, 70, 151], 10310], [460, '', 11, 14, [90, 132, 105, 132, 105, 30], 10060], [475, '', 13, 1, [68, 165, 95, 65, 115, 110], 10068], [478, '', 14, 7, [70, 80, 70, 140, 100, 120], 10285], [485, '', 9, 8, [91, 120, 106, 175, 141, 67], 10311], [491, '', 16, -1, [70, 120, 130, 165, 130, 85], 10312], [500, '', 9, 1, [110, 148, 75, 110, 110, 75], 10286], [530, '', 4, 8, [110, 165, 100, 65, 65, 103], 10287], [531, '', 0, 17, [103, 60, 126, 80, 126, 50], 10069], [545, '', 6, 3, [60, 140, 149, 75, 99, 62], 10288], [560, '', 16, 1, [65, 130, 135, 55, 135, 68], 10289], [604, '', 12, -1, [85, 145, 80, 135, 90, 80], 10290], [609, '', 7, 9, [60, 75, 110, 175, 110, 90], 10291], [623, '', 4, 7, [89, 159, 105, 70, 105, 55], 10313]];
+/* Giratina i Origin Forme ligger i samme liste (den er en form, ikke en Mega): [.., bildenummer, 1 = har animert bilde fra Black/White, høyde i dm]. */
+MEGA.push([487, 'Origin', 7, 15, [150, 120, 100, 120, 100, 90], 10007, 1, 69]);
+const ORIGIN = MEGA.length;
+/* Formen en art har når den dukker opp (Giratina kommer i Origin Forme og kan byttes på kortet). */
+const defForm = id => id === 487 ? ORIGIN : 0;
 const megaOf = m => m && m.mega ? MEGA[m.mega - 1] : null;
+const isMega = m => { const g = megaOf(m); return !!g && g[1] !== 'Origin'; };
+/* Høyden i Pokédexen (meter), til størrelsen i kamp. */
+const HT = '070a14060b11050a1003070b03060a030b0f0307030c14230408060a04080d05090e060d060b050a081005080c030a0a0f0207040a0811050a0713060a0d090d0f080f10070a110910040a0e0a110c10030a080e120b11090c030f0d100f580a10040d050c0414040a0f0e0c060c0a130b0a16040c060d080b0d0f0e0b0d0f0e09411903030a080908040a050d12151110141228161404090c12050911060b17081207100a0e050b12050c0303030306020f06080e0404080c0b0406080803080c040e090a051407050d0f060c0f0b5c060e0512060f0906120708040b060609091511060e12050b060e0c070e0406070c0f131514060c1434260605091104091304070f050a040503060a070c050c0f050a0d0307060c0408100508040c080e14050808060a0f0a17020a060b0506040915060d060f040407060304110812149107130507090b070b14040d040b0d1b0a0c0409060b050f0a0f070f063e030a060b081014060c06070f080b0e0411120a06060b0f060c101112130e142d23460311040b1605090c04081103060c050a030a05090e02090910050d020509030c04070b040503090c040c040c0909050a02040a050d050606050a070e1306070c0814080d070d0e040c0a0a160b0c11181412100f130a08141909100e160d03030303362a11252d0f04030f022004060821050a1005080f050b04090c040b060b060a060a060b03060c0810040911040903070b060c0e05080f0d0e03050c040c190307050b0a070a0f060d0a030e060b0e0511070c050e06130710040504070f03060a050d040b0d061304050a02060c160c0108060a030606020c15050a03060a060a12051a0b040807090e100a1c051010050f050c0e03080e120b101513140f0f201d0f1e0e060f';
+const htOf = (id, mega) => { const g = mega ? MEGA[mega - 1] : null; return (g && g[7] ? g[7] : parseInt(HT.substr((id - 1) * 2, 2), 16) || 10) / 10; };
+/* Kjønn: GR er andelen hunner i åttedeler per art (9 = uten kjønn). m.g: 0 = hann, 1 = hunn, 2 = uten kjønn. */
+const GR = '1111111114444444444444444444888000666666444444444444444442244422222244444444444499444444444444444449944440044444848444499448224044491111911111199944499111111111444444444444661144444444444444444441144494444444664444444444464444444444944008228899944499911111111144444444444444444444444444444449444226466444444444440844444444444444444444449944449911114444444444444444444416444999999809999911111111144444444444411114801844444444444444664449944844444111444444444444494442214114490448999999499899999911111111144444441111114444444444444442224440044444444884444444444444411114411666664444444444444444444444999444444444444494444449944400884444444999009909999';
+const rollG = (id, r) => { const q = +GR[id - 1]; return q === 9 || isNaN(q) ? 2 : (r == null ? Math.random() : r) * 8 < q ? 1 : 0; };
+const GSYM = ['♂', '♀', ''];
 const megaBst = k => MEGA[k][4].reduce((a, c) => a + c, 0);
-const mName = m => { const g = megaOf(m), n = (m.sh === 2 ? 'Dark ' : '') + D(m.id)[0]; return g ? (g[1] === 'Primal' ? 'Primal ' + n : 'Mega ' + n + (g[1] ? ' ' + g[1] : '')) : n; };
+/* Artsnavnet med form (Dark, Mega, Primal). mName gir kallenavnet hvis Pokémonen har fått et. */
+const spName = m => { const g = megaOf(m), n = (m.sh === 2 ? 'Dark ' : '') + D(m.id)[0]; return g ? (g[1] === 'Primal' ? 'Primal ' + n : g[1] === 'Origin' ? n : 'Mega ' + n + (g[1] ? ' ' + g[1] : '')) : n; };
+const mName = m => m.nn || spName(m);
+/* Kallenavn: bokstaver, tall og noen få tegn (de som finnes i skrifta på HP-boksene), høyst 12. Tomt navn fjerner kallenavnet. */
+const cleanNick = s => String(s || '').replace(/[^A-Za-z0-9 .\-?]/g, '').replace(/\s+/g, ' ').trim().slice(0, 12);
+function setNick(m, s) { const n = cleanNick(s); if (n && n !== D(m.id)[0]) m.nn = n; else delete m.nn; save(); return m.nn || ''; }
 const mTypes = m => { const g = megaOf(m); return g ? [g[2], g[3]] : [D(m.id)[1], D(m.id)[2]]; };
 function statsOf(m) {
   const b = m.mega ? MEGA[m.mega - 1][4] : BST[m.id - 1], up = natUp(m.nat), dn = natDn(m.nat);
@@ -108,6 +127,8 @@ function judge(m) {
 const rollIv = egg => Array.from({ length: 6 }, () => egg ? Math.max(rnd(32), rnd(32)) : rnd(32));
 function ensure(m) {
   if (!m.iv) m.iv = rollIv(); if (!m.ev) m.ev = [0, 0, 0, 0, 0, 0]; if (m.nat == null) m.nat = rnd(25); if (!m.nm) m.nm = [];
+  /* Kjønnet til dem som fantes før kjønn ble innført, følger av nummeret og fangsttidspunktet, så det blir likt på alle enheter. */
+  if (m.g == null) m.g = rollG(m.id, m.u ? (((m.u * 2654435761 + (m.at || 0) % 100003 * 40503) >>> 0) % 1000) / 1000 : null);
   if (!m.mv || !m.mv.length) m.mv = defaultMoves(m.id, m.lv);
   return m;
 }
@@ -127,10 +148,12 @@ function learnUp(m, l0) {
   }
   return out;
 }
-const hasNews = m => !!(m.nw || (m.nm && m.nm.length));
+/* Utropstegnet: noe nytt som ikke er sett ennå. Angrep som venter på svar, teller bare til kortet er åpnet (m.ns = hvor mange av dem som er sett). */
+const hasNews = m => !!(m.nw || (m.nm && m.nm.length > (m.ns || 0)));
+const seeNews = m => { const n = (m.nm || []).length; if (m.nw || (m.ns || 0) !== n) { m.nw = 0; m.ns = n; save(true); return true; } return false; };
 /* Svar på «vil lære»: forget = angrepet som byttes ut, eller null for å la være. */
 function resolveMove(m, mv, forget) {
-  m.nm = (m.nm || []).filter(x => x !== mv);
+  m.nm = (m.nm || []).filter(x => x !== mv); if (m.ns > m.nm.length) m.ns = m.nm.length;
   if (forget != null) { const i = m.mv.indexOf(forget); if (i >= 0) m.mv[i] = mv; }
   save();
 }
@@ -152,13 +175,15 @@ function wildLv(id, t) {
 const KEY = 'fokusdex.v1';
 function fresh() {
   return {
-    v: 1, mig: 5, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
+    v: 1, mig: 6, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
     items: { poke: 15, great: 0, ultra: 0, candy: 0, stone: 0, incense: 0, potion: 0, super: 0, hyper: 0, maxp: 0, heal: 0, revive: 0, maxrev: 0 }, charm: 0,
     mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, routes: [1], eggs: [], pend: [], incOn: 0,
     log: {}, fm: {},
     fag: {}, extra: ['annet'],
-    last: { fag: 'annet', min: 60 }, cap: 360, sound: 0, cries: 1, vol: 70, cvol: 80, timer: null,
-    lad: { n: 0, lap: 0, best: 0, day: '', lost: '', next: null, seen: [] }, fac: { run: null, best: 0, lost: '' }, raid: null, boost: null, bfast: 0, music: 1, av: ''
+    last: { fag: 'annet', min: 60 }, cap: 360, sound: 0, cries: 1, vol: 70, cvol: 70, mvol: 70, timer: null,
+    lad: { n: 0, lap: 0, best: 0, day: '', lost: '', next: null, seen: [] }, fac: { run: null, best: 0, lost: '' }, raid: null, boost: null, bfast: 0, music: 1, av: '',
+    /* diff: vanskelighetsgrad (0 Easy, 1 Normal, 2 Hard). hfx/hty: vis effektivitet på angrepene og typer i kamp. */
+    diff: 1, hfx: 1, hty: 1
   };
 }
 let S = fresh();
@@ -174,8 +199,10 @@ function adopt(o) {
   if (!o.mig || o.mig < 3) migrate3();
   if (!o.mig || o.mig < 4) migrate4();
   if (!o.mig || o.mig < 5) migrate5();
+  if (!o.mig || o.mig < 6) migrate6(o);
   S.routes = (S.routes || []).filter(r => S.regions.includes(r)); if (!S.routes.length) S.routes = [S.regions.includes(S.region) ? S.region : S.regions[0]];
   S.mons.forEach(ensure);
+  unlockRegions();
   buildFags();
 }
 /* Versjon 2 (stats og angrep): ingen eid Pokémon er høyere enn nivået starteren ville hatt med all XP-en din, og ventende møter får nye nivåer. */
@@ -202,6 +229,13 @@ function migrate4() {
 function migrate5() {
   const L = S.lad, n = Math.max(0, Math.min(17, L.n || 0)); L.n = Math.floor(n / 3) * 2 + (n % 3 === 2 ? 1 : 0); L.next = null;
   S.mig = 5;
+}
+/* Versjon 6: musikken har fått sin egen volumknapp (den fulgte effektene før), og skrikene er jevnet ut og stilt inn på nytt, så den knappen starter på midten igjen. */
+function migrate6(o) {
+  S.mvol = o.vol == null ? 70 : o.vol; S.cvol = 70;
+  /* De som spilte før vanskelighetsgraden kom, spilte på det som nå heter Hard. */
+  if (o.diff == null && (o.started || (o.mons || []).length)) S.diff = 2;
+  S.mig = 6;
 }
 function load() {
   try { const o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (o && o.v === 1) adopt(o); } catch (_) {}
@@ -240,10 +274,11 @@ function streak() {
 const CHARM = { n: 5, m: 8 };
 const shinyOdds = () => (1 / 150) * (1 + Math.min(streak(), 10) * 0.15) * (S.charm > 0 ? CHARM.m : 1);
 
-function addMon(id, lv, sh, egg) {
-  const m = { u: S.uid++, id, lv, xp: xpAt(lv), sh: sh === 2 ? 2 : sh ? 1 : 0, fav: 0, at: Date.now(), iv: rollIv(egg), ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: defaultMoves(id, lv) };
+function addMon(id, lv, sh, egg, g) {
+  const m = { u: S.uid++, id, lv, xp: xpAt(lv), sh: sh === 2 ? 2 : sh ? 1 : 0, fav: 0, at: Date.now(), iv: rollIv(egg), ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: defaultMoves(id, lv), g: g == null ? rollG(id) : g };
+  if (defForm(id)) m.mega = defForm(id);
   S.mons.push(m);
-  S.seen[id] = 1; S.caught[id] = 1;
+  S.seen[id] = 1; S.caught[id] = 1; unlockRegions();
   if (S.party.length < 6) S.party.push(m.u);
   return m;
 }
@@ -277,7 +312,7 @@ function genEnc(o = {}) {
   let x = Math.random() * tot, id = pool[pool.length - 1][0];
   for (const [i, w] of pool) { x -= w; if (x <= 0) { id = i; break; } }
   const lv = o.egg ? 1 : wildLv(id, tierOf(id));
-  return { id, lv, sh: Math.random() < shinyOdds() * (o.egg ? 4 : 1) ? 1 : 0, t: tierOf(id), tr: isLeg(id) ? 4 : 3 };
+  return { id, lv, sh: Math.random() < shinyOdds() * (o.egg ? 4 : 1) ? 1 : 0, t: tierOf(id), tr: isLeg(id) ? 4 : 3, g: rollG(id) };
 }
 /* Sjansen for fangst. zone: 0 = bom, 1 = grønn sone, 2 = gull. */
 const catchP = (id, ball, zone) => Math.min(0.97, Math.pow(D(id)[3] / 255, 0.45) * BALLM[ball] * [0.5, 1, 1.6][zone]);
@@ -289,7 +324,7 @@ function throwBall(e, ball, zone) {
   const p = catchP(e.id, ball, zone), ok = Math.random() < p;
   S.seen[e.id] = 1;
   let mon = null, isNew = false;
-  if (ok) { isNew = !S.caught[e.id]; mon = addMon(e.id, e.lv, e.sh); dropPend(e); }
+  if (ok) { isNew = !S.caught[e.id]; mon = addMon(e.id, e.lv, e.sh, 0, e.g); dropPend(e); }
   else if (e.tr <= 0) dropPend(e);
   save();
   return { ok, p, mon, isNew, fled: !ok && e.tr <= 0 };
@@ -327,6 +362,8 @@ function grant(fag, min, full, planned) {
   });
   for (const q of QUESTS) if (day.m - min < q.m && day.m >= q.m) { q.give(); R.gifts.push(`Daily goal, ${q.n}: ${q.r}`); }
   R.tl1 = tlv();
+  for (const n of unlockRegions()) R.gifts.push(`New area: ${n} is open. Its Pokémon now show up in your encounters.`);
+  S.nreg = [];
   for (let l = R.tl0 + 1; l <= R.tl1; l++) {
     S.items.poke += 5; let g = '5 Poké Balls';
     if (l === 3) { S.items.great += 3; g += ' and 3 Great Balls (now in the shop)'; }
@@ -335,7 +372,7 @@ function grant(fag, min, full, planned) {
   }
   if (S.eggs.length) {
     const e = S.eggs[0]; e.got += min;
-    if (e.got >= e.need) { S.eggs.shift(); const en = genEnc({ egg: 1 }); const isNew = !S.caught[en.id]; const m = addMon(en.id, 1, en.sh, 1); R.hatch.push({ u: m.u, isNew }); }
+    if (e.got >= e.need) { S.eggs.shift(); const en = genEnc({ egg: 1 }); const isNew = !S.caught[en.id]; const m = addMon(en.id, 1, en.sh, 1, en.g); R.hatch.push({ u: m.u, isNew }); }
   }
   const encs = [];
   let n = Math.floor(okMin / 20) + (full && planned >= 25 && okMin >= planned ? 1 : 0), luck = Math.min(1.5, planned / 60);
@@ -407,7 +444,16 @@ function buy(k) {
   else S.items[k]++;
   S.coins -= it.p; save(); return true;
 }
-function buyRegion(r) { const g = REG[r]; if (!g || S.regions.includes(r) || S.coins < g.c) return false; S.coins -= g.c; S.regions.push(r); S.regions.sort(); S.region = r; S.routes.push(r); S.routes.sort(); save(); return true; }
+/* Områdene åpnes av trenernivå eller antall arter fanget (REG). Nye områder slås på med en gang. Gir navnene på dem som ble åpnet nå;
+   de legges også i S.nreg, så skjermen kan si fra én gang. */
+const dexAll = () => Object.keys(S.caught || {}).length;
+const regReady = r => { const g = REG[r]; return !!g && (tlv() >= g.lv || dexAll() >= g.dex); };
+function unlockRegions() {
+  const out = [];
+  for (let r = 2; r < REG.length; r++) if (!S.regions.includes(r) && regReady(r)) { S.regions.push(r); S.regions.sort(); if (!S.routes.includes(r)) { S.routes.push(r); S.routes.sort(); } out.push(REG[r].n); }
+  if (out.length) S.nreg = (S.nreg || []).concat(out);
+  return out;
+}
 /* Slår en rute av eller på. Minst én må stå på. */
 function toggleRoute(r) {
   if (!S.regions.includes(r)) return;

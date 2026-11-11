@@ -13,7 +13,7 @@ const TIER = k => k === 'supreme' || k === 'legend' ? 'ultra' : k === 'champ' ? 
 const RARE = { evilboss: 'rare boss', champ: 'very rare boss', supreme: 'ultra rare boss', legend: 'legendary' };
 const kst = tr => tr.cc ? ` style="--cc:${tr.cc}"` : '';
 /* Hva hver klasse gir (vises før kampen) og hva den er (vises i demoen). */
-const REW = { trainer: 'coins, sometimes Poké Balls, a Potion or an encounter', gym: 'Rare Candy, a Super Potion and an encounter of their type', evilteam: 'Great Balls, stolen coins and an encounter', eviladmin: 'Ultra Balls, two encounters, maybe an evolution stone',
+const REW = { trainer: 'coins and a ball, sometimes a Potion, an encounter or a Rare Candy', gym: 'Rare Candy, Great Balls, a Super Potion and an encounter of their type', evilteam: 'Great Balls, stolen coins and an encounter', eviladmin: 'Ultra Balls, two encounters, maybe an evolution stone',
   e4: 'Rare Candy, a Hyper Potion and two rare encounters', rival: '2 Rare Candy, a Revive, an Egg and two encounters', evilboss: '3 Rare Candy, three rare encounters, maybe a pseudo-legendary', champ: '4 Rare Candy, a Max Revive and a pseudo-legendary encounter',
   supreme: 'a legendary and a pseudo-legendary encounter, 6 Rare Candy and a Shiny Charm' };
 const LABD = { trainer: 'Regular trainers', gym: 'Gym bosses', evilteam: 'Grunts and members', eviladmin: 'Second in command of the evil teams', e4: 'The Pokémon League', rival: 'Rivals', evilboss: 'Leaders of the evil teams', champ: 'Regional champions', supreme: 'Iconic, extreme boss battles' };
@@ -76,7 +76,7 @@ const BSFX = {
   heal: () => [659, 784, 988, 1319].forEach((f, i) => tone(f, i * 0.06, 0.1, 0.03, 'triangle')),
   ball: () => { noise(0, 0.1, 0.05, 1500, 3500); tone(700, 0.05, 0.12, 0.04, 'triangle', 1400); },
   recall: () => { tone(1200, 0, 0.18, 0.04, 'triangle', 400); },
-  vs: () => { noise(0, 0.5, 0.08, 300, 4000); tone(110, 0, 0.5, 0.07, 'sawtooth', 440); tone(880, 0.5, 0.25, 0.06, 'square'); },
+  vs: key => { const r = keyRoot(key, 55) * 2; noise(0, 0.5, 0.08, 300, 4000); tone(r, 0, 0.5, 0.07, 'sawtooth', r * 4); tone(r * 8, 0.5, 0.25, 0.06, 'square'); },
   ace: () => { noise(0, 0.9, 0.09, 200, 5000); tone(80, 0, 0.9, 0.08, 'sawtooth', 640); [392, 523, 659, 784, 1047].forEach((f, i) => tone(f, 0.5 + i * 0.07, 0.2, 0.05, 'square')); },
   win: () => [523, 523, 523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.11, 0.16, 0.05, 'triangle')),
   lose: () => [392, 370, 349, 330, 262].forEach((f, i) => tone(f, i * 0.2, 0.3, 0.05, 'triangle'))
@@ -85,10 +85,14 @@ const BSFX = {
    et kor som stiger, et sus som bygger seg opp, og et drønn i det bossen viser seg. Da toner kamplåta inn over etterklangen.
    kind: 'evil' (mørk og skjev, med hjerteslag), 'champ' (staselig) eller 'ultra' (størst, med fanfare). T = sekunder fram til drønnet.
    bare = bare drønnet (når pakken har sin egen intro til bossen). Gir en funksjon som stopper lyden. */
-function epicIntro(kind, T, bare) {
+/* Grunntonen til introen: tonikaen i kamplåta som følger (tonearten står i pakken), lagt nede i bassen (55–104 Hz). Uten kjent toneart brukes def. */
+const keyRoot = (key, def) => key ? 55 * Math.pow(2, ((key[0] + 3) % 12) / 12) : def;
+/* key = tonearten til kamplåta ([tonika, 0 moll / 1 dur / 2 uviss]): introen går i samme toneart, så drønnet glir rett over i låta.
+   Er den ikke sikkert i moll, spilles akkordene uten ters (bare grunntone og kvint), som passer til begge. */
+function epicIntro(kind, T, bare, key) {
   const m = S.sound ? out() : null; if (!m) return () => {};
   try {
-    const a = AC, t0 = a.currentTime + 0.04, tE = t0 + T, bus = a.createGain(), cmp = a.createDynamicsCompressor(), evil = kind === 'evil', ultra = kind === 'ultra', root = evil ? 61.74 : 73.42;
+    const a = AC, t0 = a.currentTime + 0.04, tE = t0 + T, bus = a.createGain(), cmp = a.createDynamicsCompressor(), evil = kind === 'evil', ultra = kind === 'ultra', root = keyRoot(key, evil ? 61.74 : 73.42), th = !key || key[1] === 0;
     bus.gain.value = 0.9; bus.connect(cmp); cmp.connect(m);
     const osc = (type, f, t1, t2, dest) => { const o = a.createOscillator(), g = a.createGain(); o.type = type; o.frequency.setValueAtTime(f, t1); g.gain.setValueAtTime(0.0001, t1); o.connect(g); g.connect(dest || bus); o.start(t1); o.stop(t2 + 0.1); return { o, g }; };
     const nb = a.createBuffer(1, a.sampleRate, a.sampleRate), ch = nb.getChannelData(0); for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
@@ -98,7 +102,7 @@ function epicIntro(kind, T, bare) {
       const lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 0.8; lp.frequency.setValueAtTime(180, t0); lp.frequency.exponentialRampToValueAtTime(evil ? 1500 : 2600, tE); lp.connect(bus);
       for (const [mul, det, v] of [[1, 0, 0.1], [2, 6, 0.08], [evil ? 2.828 : 3, -5, 0.05], [4, 3, 0.03]]) { const x = osc('sawtooth', root * mul, t0, tE, lp); x.o.detune.value = det; x.g.gain.exponentialRampToValueAtTime(v * 0.25, t0 + T * 0.3); x.g.gain.exponentialRampToValueAtTime(v, tE - 0.05); x.g.gain.exponentialRampToValueAtTime(0.0001, tE + 0.08); }
       /* Koret: en akkord som toner inn. Mesterne løftes en tone mot slutten, de onde synker i en skjev klang. */
-      (evil ? [1, 1.0595, 1.4142, 2] : ultra ? [1, 1.189, 1.498, 2, 2.378] : [1, 1.189, 1.498, 2]).forEach((r, i) => {
+      (evil ? [1, 1.0595, 1.4142, 2] : ultra ? (th ? [1, 1.189, 1.498, 2, 2.378] : [1, 1.498, 2, 2.997, 4]) : th ? [1, 1.189, 1.498, 2] : [1, 1.498, 2, 2.997]).forEach((r, i) => {
         const f = root * 4 * r, x = osc('triangle', f, t0 + T * 0.22, tE), lfo = a.createOscillator(), lg = a.createGain();
         lfo.frequency.value = 5 + i * 0.4; lg.gain.value = 3 + i; lfo.connect(lg); lg.connect(x.o.frequency); lfo.start(t0); lfo.stop(tE + 0.2);
         x.o.frequency.setValueAtTime(f, tE - T * 0.24); x.o.frequency.exponentialRampToValueAtTime(f * (evil ? 0.944 : 1.1225), tE - 0.02);
@@ -111,12 +115,12 @@ function epicIntro(kind, T, bare) {
       const hits = evil ? [0, 0.07, 0.3, 0.37, 0.56, 0.63, 0.76, 0.81, 0.87, 0.91, 0.95, 0.98] : [0, 0.2, 0.4, 0.55, 0.66, 0.75, 0.82, 0.87, 0.91, 0.94, 0.965, 0.985];
       hits.forEach((f, i) => drum(t0 + T * f, 0.1 + 0.2 * (i / hits.length)));
       /* Fanfaren til de aller største: en stigende arpeggio like før drønnet. */
-      if (ultra) [1, 1.189, 1.498, 2, 2.378, 2.997, 4].forEach((r, i) => { const t = tE - 0.64 + i * 0.085, x = osc('square', root * 8 * r, t, t + 0.2); x.g.gain.exponentialRampToValueAtTime(0.028, t + 0.01); x.g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18); });
+      if (ultra) (th ? [1, 1.189, 1.498, 2, 2.378, 2.997, 4] : [1, 1.335, 1.498, 2, 2.67, 2.997, 4]).forEach((r, i) => { const t = tE - 0.64 + i * 0.085, x = osc('square', root * 8 * r, t, t + 0.2); x.g.gain.exponentialRampToValueAtTime(0.028, t + 0.01); x.g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18); });
     }
     /* Drønnet: dyp tromme, messing som faller, et smell og en cymbal som klinger ut. */
     const bo = osc('sine', 150, tE, tE + 1.6); bo.o.frequency.exponentialRampToValueAtTime(34, tE + 0.9); bo.g.gain.exponentialRampToValueAtTime(0.36, tE + 0.02); bo.g.gain.exponentialRampToValueAtTime(0.0001, tE + 1.5);
     const bl = a.createBiquadFilter(); bl.type = 'lowpass'; bl.frequency.setValueAtTime(1800, tE); bl.frequency.exponentialRampToValueAtTime(260, tE + 1.8); bl.connect(bus);
-    for (const [mul, v] of [[1, 0.09], [2, 0.08], [3, 0.055], [evil ? 2.828 : 2.378, 0.05], [4, 0.035]]) { const x = osc('sawtooth', root * mul, tE, tE + 2.4, bl); x.o.frequency.exponentialRampToValueAtTime(root * mul * 0.985, tE + 2); x.g.gain.exponentialRampToValueAtTime(v, tE + 0.03); x.g.gain.exponentialRampToValueAtTime(v * 0.5, tE + 0.7); x.g.gain.exponentialRampToValueAtTime(0.0001, tE + 2.3); }
+    for (const [mul, v] of [[1, 0.09], [2, 0.08], [3, 0.055], [evil ? 2.828 : th ? 2.378 : 6, evil || th ? 0.05 : 0.02], [4, 0.035]]) { const x = osc('sawtooth', root * mul, tE, tE + 2.4, bl); x.o.frequency.exponentialRampToValueAtTime(root * mul * 0.985, tE + 2); x.g.gain.exponentialRampToValueAtTime(v, tE + 0.03); x.g.gain.exponentialRampToValueAtTime(v * 0.5, tE + 0.7); x.g.gain.exponentialRampToValueAtTime(0.0001, tE + 2.3); }
     const cr = hiss('lowpass', 2600, 300, tE, tE + 0.5); cr.gain.exponentialRampToValueAtTime(0.2, tE + 0.01); cr.gain.exponentialRampToValueAtTime(0.0001, tE + 0.45);
     const cy = hiss('highpass', 5200, 7000, tE, tE + 2); cy.gain.exponentialRampToValueAtTime(0.07, tE + 0.02); cy.gain.exponentialRampToValueAtTime(0.0001, tE + 1.9);
     return () => { try { const t = a.currentTime; bus.gain.cancelScheduledValues(t); bus.gain.setValueAtTime(bus.gain.value, t); bus.gain.linearRampToValueAtTime(0.0001, t + 0.15); } catch (_) {} };
@@ -135,12 +139,14 @@ function music(k) {
   MUS.k = k; MUS.step = 0; MUS.t = AC.currentTime + 0.06;
   MUS.id = setInterval(() => {
     const T = TUNE[MUS.k], spb = 60 / T.bpm / 4, f = n => 440 * Math.pow(2, (n - 69) / 12);
+    /* Den innebygde musikken går gjennom effektutgangen, men skal følge musikkskyveren: forskjellen mellom de to skyverne legges på her. */
+    const mk = Math.min(4, Math.pow((S.mvol == null ? 70 : S.mvol) / 100, 1.6) / Math.max(0.01, Math.pow((S.vol == null ? 70 : S.vol) / 100, 1.6)));
     while (MUS.t < AC.currentTime + 0.2) {
       const s = MUS.step, at = Math.max(0, MUS.t - AC.currentTime), b = T.bass[s % T.bass.length], l = T.lead[s % T.lead.length];
-      if (b) tone(f(b), at, spb * 0.9, 0.035, 'triangle');
-      if (l) tone(f(l), at, spb * 0.75, 0.016, 'square');
-      if (T.hi && l) tone(f(l + 12), at, spb * 0.4, 0.007, 'square');
-      if (s % 2 === 0) noise(at, 0.03, s % 8 === 4 ? 0.02 : 0.008, 6000, 5000);
+      if (b) tone(f(b), at, spb * 0.9, 0.035 * mk, 'triangle');
+      if (l) tone(f(l), at, spb * 0.75, 0.016 * mk, 'square');
+      if (T.hi && l) tone(f(l + 12), at, spb * 0.4, 0.007 * mk, 'square');
+      if (s % 2 === 0) noise(at, 0.03, (s % 8 === 4 ? 0.02 : 0.008) * mk, 6000, 5000);
       MUS.t += spb; MUS.step++;
     }
   }, 50);
@@ -163,16 +169,16 @@ const leagueTag = () => { const L = S.lad; return `${L.lap ? 'Lap ' + (L.lap + 1
 function raidCard() {
   const R = S.raid; if (!R || !LEG[R.id]) return '';
   const L = raidInfo(R), open = raidOpen();
-  return `<div class="card k-ultra raidc" style="--cc:${L.cc}"><div class="pre-foe"><span class="raid-sp">${spr(R.id, { ani: 1, sh: R.dk ? 2 : 0 })}</span><div class="sp"><div class="sm">Legendary raid${R.tries ? ' · attempt ' + (R.tries + 1) : ''}</div><b class="bossn" style="font-size:19px">${esc(R.dk ? L.n : D(R.id)[0])}</b><div class="sm tn" style="margin-top:4px">Lv ${R.lv} · ${TYN[D(R.id)[1]]}${D(R.id)[2] >= 0 ? ' / ' + TYN[D(R.id)[2]] : ''} · your own team of six</div></div></div>
+  return `<div class="card k-ultra raidc" style="--cc:${L.cc}"><div class="pre-foe"><span class="raid-sp">${spr(R.id, { ani: 1, sh: R.dk ? 2 : 0, mega: defForm(R.id) })}</span><div class="sp"><div class="sm">Legendary raid${R.tries ? ' · attempt ' + (R.tries + 1) : ''}</div><b class="bossn" style="font-size:19px">${esc(R.dk ? L.n : D(R.id)[0])}</b><div class="sm tn" style="margin-top:4px">Lv ${R.lv} · ${TYN[D(R.id)[1]]}${D(R.id)[2] >= 0 ? ' / ' + TYN[D(R.id)[2]] : ''} · your own team of six</div></div></div>
     <button type="button" class="btn gold wide" data-a="raid" style="margin-top:10px"${open ? '' : ' disabled'}>${open ? 'Challenge it' : 'Again tomorrow'}</button></div>`;
 }
 function raidScreen() {
   const R = S.raid; if (!R) return render();
   const L = raidInfo(R), party = S.party.map(monBy).filter(Boolean), lead = BT.lead && party.some(m => m.u === BT.lead) ? BT.lead : party[0] && party[0].u;
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Legendary raid</span></div>
-    <div class="card k-ultra raidc" style="--cc:${L.cc}"><div class="pre-foe"><span class="raid-sp">${spr(R.id, { ani: 1, sh: R.dk ? 2 : 0 })}</span><div class="sp"><div class="sm">${R.dk ? 'Shadow Pokémon · the rarest of all' : L.t === 4 ? 'The Original One' : L.t === 3 ? 'Mythical Pokémon' : 'Legendary Pokémon'}</div><b class="bossn" style="font-size:21px">${esc(R.dk ? L.n : D(R.id)[0])}</b><div class="sm tn" style="margin-top:4px">Lv ${R.lv} · far more HP than a normal Pokémon</div></div></div>
+    <div class="card k-ultra raidc" style="--cc:${L.cc}"><div class="pre-foe"><span class="raid-sp">${spr(R.id, { ani: 1, sh: R.dk ? 2 : 0, mega: defForm(R.id) })}</span><div class="sp"><div class="sm">${R.dk ? 'Shadow Pokémon · the rarest of all' : L.t === 4 ? 'The Original One' : L.t === 3 ? 'Mythical Pokémon' : 'Legendary Pokémon'}</div><b class="bossn" style="font-size:21px">${esc(R.dk ? L.n : D(R.id)[0])}</b><div class="sm tn" style="margin-top:4px">Lv ${R.lv} · far more HP than a normal Pokémon</div></div></div>
       <p class="sm" style="margin-top:10px">One Pokémon against your whole team, with the Bag. Win and it waits in the grass for you to catch, with ${nb(RAIDCOIN[L.t - 1])} coins and 3 Rare Candy. Lose and it stays: you can try again tomorrow.</p></div>
-    <div><div class="lab">Your team · tap the one that leads</div><div class="lineup">${party.map(m => `<button type="button" data-a="rlead" data-u="${m.u}" class="${m.u === lead ? 'lead' : ''}">${spr(m.id, { sh: m.sh })}<span class="sp"><b>${esc(D(m.id)[0])}</b><br><span class="sm tn">Lv ${m.lv}</span></span>${m.u === lead ? '<span class="pill">Leads</span>' : ''}</button>`).join('')}</div></div>
+    <div><div class="lab">Your team · tap the one that leads</div><div class="lineup">${party.map(m => `<button type="button" data-a="rlead" data-u="${m.u}" class="${m.u === lead ? 'lead' : ''}">${spr(m.id, { sh: m.sh, mega: m.mega })}<span class="sp"><b>${esc(mName(m))}</b><br><span class="sm tn">Lv ${m.lv}</span></span>${m.u === lead ? '<span class="pill">Leads</span>' : ''}</button>`).join('')}</div></div>
     <div class="acts"><button type="button" class="btn gold" data-a="raidgo"${raidOpen() && party.length ? '' : ' disabled'}>${raidOpen() ? 'Start the raid' : 'Again tomorrow'}</button></div>`, 'tint', L.cc);
 }
 /* Filmen når en legendarisk Pokémon viser seg (raid.js og raidf.js). Hver av de store har sin egen, lagt på slagene i låta si, og trioene og de mindre har
@@ -213,7 +219,7 @@ function ladderCard() {
   if (!L.day) return `<div class="card stack"><div class="row" style="justify-content:space-between"><b>Battles</b><span class="pill tn">Lap ${L.lap + 1}</span></div>${row}${prog}
     <p class="sm">Two ways to battle once you are done studying: the League (your own team, XP and Rare Candy) and the Battle Frontier (rental Pokémon at Lv ${FACLV}, items and encounters). Today's bonus is on the ${bo.mode === 'league' ? 'League' : 'Battle Frontier'}.</p>
     <button type="button" class="btn wide" data-a="bdone">Done for today · open battles</button>${lab}</div>${charm}`;
-  const mult = `<p class="sm tn">Rewards ×${sm} from ${hrs(ladMin())} h of focus${L.day !== dayKey() ? ' that day' : ' today'}. Five hours gives ×2.</p>`;
+  const mult = `<p class="sm tn">Rewards ×${sm} from ${hrs(ladMin())} h of focus${L.day !== dayKey() ? ' that day' : ' today'}. Your goal of ${hrs(goalMin())} h gives ×${goalTop().toFixed(1)}.${firstWin() ? ' Your first win today pays double coins.' : ''}</p><p class="sm tn">Difficulty: ${diff().n} · coins ×${diff().coin}, XP ×${diff().xp}. Change it under Profile.</p>`;
   return `<div class="card stack"><div class="row" style="justify-content:space-between"><b>Trainer League</b>${tag('league')}</div>${row}${prog}
       ${ladLost() ? '<p class="sm">Two losses today. The League opens again after your next day of focus, and you keep your place and the XP.</p>' : `<p class="sm">${bo.mode === 'league' ? '+30% XP and better odds for Rare Candy today. ' : ''}A trainer, then a boss, through the nine classes. XP for the whole team after each battle. ${ladFails() ? 'You have used your rematch: one more loss closes the League for the day.' : 'You get one rematch a day: the second loss closes the League.'}</p><button type="button" class="go${tr.boss ? ' gold' : ''}" data-a="bpre">Battle</button>`}</div>
     <div class="card stack"><div class="row" style="justify-content:space-between"><b>Battle Frontier</b>${tag('factory')}</div>${fac}
@@ -224,8 +230,8 @@ function preBattle() {
   const t = nextTrainer(), tr = trainerInfo(t), p = leaguePlan(t), tier = TIER(tr.kind), team = S.party.map(monBy).filter(Boolean);
   if (!S.party.includes(BT.lead)) BT.lead = S.party[0];
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">${esc(leagueTag())}</span></div>
-    <div class="card k-${tier}"${kst(tr)}><div class="pre-foe">${tsprite(tr.img)}<div class="sp"><div class="sm">${tr.boss ? `Class ${tr.ci} of 9 · ${esc(tr.cn)}${tr.ultra ? ' · ' + RARE[tr.kind] : ''}${t.sup ? ' · surprise' : ''}` : 'Trainer'}</div><b class="${tr.boss ? 'bossn' : ''}" style="font-size:19px">${esc(who(tr))}</b><div class="sm tn" style="margin-top:4px">${p.n} Pokémon · around Lv ${p.lv}</div><div class="sm" style="margin-top:4px">Gives ${REW[t.k]}.</div></div></div></div>
-    <div><div class="lab">Your team · tap the one that leads</div><div class="lineup">${team.map(m => `<button type="button" data-a="blead" data-u="${m.u}" class="${m.u === BT.lead ? 'lead' : ''}">${spr(m.id, { sh: m.sh })}<span class="sp"><b>${esc(D(m.id)[0])}</b><br><span class="sm tn">Lv ${m.lv} · ${m.mv.map(x => esc(MOVES[x][0])).join(', ')}</span></span>${hasNews(m) ? '<span class="bang">!</span>' : ''}${m.u === BT.lead ? '<span class="pill">Leads</span>' : ''}</button>`).join('')}</div></div>
+    <div class="card k-${tier}"${kst(tr)}><div class="pre-foe">${tsprite(tr.img)}<div class="sp"><div class="sm">${tr.boss ? `Class ${tr.ci} of 9 · ${esc(tr.cn)}${tr.ultra ? ' · ' + RARE[tr.kind] : ''}${t.sup ? ' · surprise' : ''}` : 'Trainer'}</div><b class="${tr.boss ? 'bossn' : ''}" style="font-size:19px">${esc(who(tr))}</b><div class="sm tn" style="margin-top:4px">${p.n} Pokémon · around Lv ${p.lv}</div><div class="sm" style="margin-top:4px">Gives ${REW[t.k]}.</div><div class="sm tn" style="margin-top:4px;color:var(--gold)">About ${nb(leagueCoins(p.st, t.lap))} coins${firstWin() ? ' · first win today, double' : ''} · ${diff().n}</div></div></div></div>
+    <div><div class="lab">Your team · tap the one that leads</div><div class="lineup">${team.map(m => `<button type="button" data-a="blead" data-u="${m.u}" class="${m.u === BT.lead ? 'lead' : ''}">${spr(m.id, { sh: m.sh, mega: m.mega })}<span class="sp"><b>${esc(mName(m))}</b><br><span class="sm tn">Lv ${m.lv} · ${m.mv.map(x => esc(MOVES[x][0])).join(', ')}</span></span>${hasNews(m) ? '<span class="bang">!</span>' : ''}${m.u === BT.lead ? '<span class="pill">Leads</span>' : ''}</button>`).join('')}</div></div>
     <div class="acts"><button type="button" class="btn gold" data-a="bgo">Start battle</button><button type="button" class="btn nf" data-a="bteam">Edit team</button></div>`, 'tint', `var(--t${tr.ty})`);
 }
 
@@ -239,7 +245,7 @@ const teamOf = side => side === 'me' ? BT.B.me : BT.B.foe;
 function boxEl(side) {
   const B = BT.B, v = BT.v[side], team = teamOf(side), b = team[v.i], f = v.hp / b.max;
   const xa = xpAt(b.lv), xb = xpAt(b.lv + 1), xf = b.src.xp != null ? Math.max(0, Math.min(1, (b.src.xp - xa) / (xb - xa))) : 0;
-  return `<div class="hpn"><b>${esc(b.short || b.name)}</b>${v.st ? `<i class="st-${v.st}">${STAG[v.st]}</i>` : ''}<span class="blv tn"><small>Lv</small>${b.lv}</span></div>
+  return `<div class="hpn"><b>${esc(b.short || b.name)}${gs(b)}</b>${v.st ? `<i class="st-${v.st}">${STAG[v.st]}</i>` : ''}<span class="blv tn"><small>Lv</small>${b.lv}</span></div>
     <div class="hpr"><em>HP</em><div class="hpbar"><b></b><i style="width:${(f * 100).toFixed(1)}%;background:${hpCol(f)}"></i></div></div>
     <div class="hpf"><span class="dots">${team.map((x, i) => `<i class="${x.out && !(i === v.i && v.hp > 0) ? 'out' : ''}"></i>`).join('')}</span>${side === 'me' ? `<span class="hpnum tn">${v.hp}/${b.max}</span>` : ''}</div>
     ${side === 'me' && B.mode === 'league' ? `<div class="xpr"><em>EXP</em><div class="xpbar"><i style="width:${Math.round(xf * 100)}%"></i></div></div>` : ''}`;
@@ -291,6 +297,8 @@ function hudDraw(side) {
   /* Navnet med spillets bokstaver. Er det for langt, står bokstavene én piksel tettere. */
   const gl = [...(b.short || b.name)].map(ch => ch === ' ' ? 4 : R['n' + ch] ? 'n' + ch : 2), wid = gl.reduce((a, q) => a + (q > 0 ? q : R[q][4]), 0), tight = wid > 62 ? 1 : 0;
   let x = me ? 10 : 14; for (const q of gl) x += q > 0 ? q : put(q, x, py - 9) - tight;
+  /* Kjønnssymbolet rett etter navnet, som i spillene (Nidoran har det alt i navnet). */
+  if (b.g < 2 && !((b.id === 29 || b.id === 32) && !b.src.nn)) put(b.g ? 'female' : 'male', Math.min(x + 1, (me ? 74 : 78) - 8), py - 10);
   put('lv', me ? 74 : 78, py - 7); x = me ? 82 : 86; for (const ch of String(b.lv)) x += put('l' + ch, x, py - 9);
   if (v.st && R['st_' + v.st]) put('st_' + v.st, me ? 15 : 4, py + 3);
   if (me) {
@@ -305,6 +313,18 @@ function hudDraw(side) {
   team.forEach((q, i) => { const out = q.out && !(i === v.i && hp > 0); g.fillStyle = '#101014'; g.fillRect(x0, y0, 4, 4); g.fillStyle = out ? '#5a5a66' : '#f05a4e'; g.fillRect(x0 + 1, y0 + 1, 2, 1); g.fillStyle = out ? '#3c3c46' : '#fff'; g.fillRect(x0 + 1, y0 + 2, 2, 1); x0 += 5; });
   return true;
 }
+/* Hvor godt et angrep virker mot den som står ute hos motstanderen, etter typene (som i de nyere spillene). Vanlig effekt gir ingen merkelapp.
+   Angrep med fast skade og statusangrep merkes bare når typen gjør dem virkningsløse. Kan slås av i innstillingene. */
+function fxTag(B, m) {
+  const foe = B.foe[B.b]; if (S.hfx === 0 || !foe || foe.hp <= 0 || !m || m[4] == null) return '';
+  const e = typeEff(m[1], foe), tag = (c, t) => `<span class="mfx ${c}">${t}</span>`;
+  if (m[4] === 0) return m[0] === 'Thunder Wave' && e === 0 ? tag('n', 'No effect') : '';
+  if (e === 0) return tag('n', 'No effect');
+  if ((typeof FIXED !== 'undefined' && FIXED[m[0]]) || m[6] === 9) return '';
+  return e > 1 ? tag('s', 'Super effective') : e < 1 ? tag('w', 'Not very effective') : '';
+}
+/* Typene til den som står ute, som små merker ved HP-boksen (kan slås av i innstillingene). */
+const tyBadge = b => S.hty === 0 || !b ? '' : b.ty.filter((t, i) => t >= 0 && b.ty.indexOf(t) === i).map(t => `<span style="background:var(--t${t})">${TYN[t]}</span>`).join('');
 function paintBox(side) {
   const el = $('#b-' + side); if (!el) return;
   const rk = hudRing(side), gold = rk ? ' ' + rk : '';
@@ -312,11 +332,24 @@ function paintBox(side) {
     if (!el.firstElementChild || el.firstElementChild.tagName !== 'CANVAS') { el.className = 'hpb pk ' + side + gold; el.innerHTML = `<canvas width="${(side === 'me' ? 113 : 104) + 2 * HUDM}" height="${(side === 'me' ? 33 : 28) + 2 * HUDM}"></canvas>`; }
     hudDraw(side);
   } else { el.className = 'hpb ' + side + gold; el.innerHTML = boxEl(side); }
+  let tb = el.querySelector('.tyb'); if (!tb) { tb = document.createElement('div'); tb.className = 'tyb'; el.appendChild(tb); }
+  const th = tyBadge(teamOf(side)[BT.v[side].i]); if (tb.dataset.h !== th) { tb.dataset.h = th; tb.innerHTML = th; }
   el.hidden = false;
+}
+/* Størrelsen i kamp følger høyden i Pokédexen: de små litt mindre, de store tydelig større (Joltik 0,84 · 1 m = 1 · Charizard 1,1 · Lugia 1,3 · Wailord 1,42).
+   Din egen står nærmest kameraet og er større enn motstanderen. De legendariske i raid får litt ekstra. */
+const hK = h => Math.max(0.84, Math.min(1.42, 1 + (h < 1 ? 0.1 : 0.13) * Math.log2(h)));
+const sprK = (side, b) => { const k = hK(htOf(b.id, b.mega)); return side === 'me' ? 1.38 * Math.max(0.92, k) : (BT.B && BT.B.raid ? 1.1 : 1) * k; };
+/* Kameraet står til vanlig litt nærmere enn selve banebildet (--cz 1,10). Når en stor Pokémon står ute, trekker det seg ut (ned mot 1,0),
+   så den får plass og ruver over plattformen sin. Plattformene og begge Pokémonene følger med (se .cam og .bs i stilarket). */
+function camFit() {
+  const ar = $('#arena'); if (!BT.B || !ar) return;
+  const h = Math.max(...['me', 'foe'].map(s => { const v = BT.v[s], b = v && teamOf(s)[v.i]; return b && v.hp > 0 ? htOf(b.id, b.mega) : 0; }));
+  ar.style.setProperty('--cz', (h <= 1.6 ? 1.1 : h >= 4 ? 1 : 1.1 - 0.1 * (h - 1.6) / 2.4).toFixed(3));
 }
 function paintSprite(side, cls) {
   const b = teamOf(side)[BT.v[side].i], el = $('#s-' + side);
-  if (el) { el.className = 'bs ' + side + ' ' + (cls || ''); el.innerHTML = spr(b.id, { ani: 1, sh: b.sh, back: side === 'me', mega: b.mega }); }
+  if (el) { el.className = 'bs ' + side + ' ' + (cls || ''); el.style.setProperty('--k', sprK(side, b).toFixed(3)); el.innerHTML = spr(b.id, { ani: 1, sh: b.sh, back: side === 'me', mega: b.mega }); camFit(); }
 }
 /* HP-linja glir mot det nye tallet, og tallet teller med. Farten følger treffet: et supereffektivt treff får linja til å rase ned,
    et vanlig går jevnt, og et lite effektivt siger sakte. Bak linja står en lys rest av det som ble slått bort et øyeblikk før den synker etter,
@@ -359,7 +392,7 @@ function drawBattle() {
   const B = BT.B, tr = B.tr, tier = TIER(tr.kind), scene = PACK.now(PACK.sceneFor(B));
   ov(`<div class="btop k-${tier}"${kst(tr)}><span class="pill tn">${esc(battleTag(B))}</span><span class="btn-n"><b class="${tr.boss ? 'bossn' : ''}">${esc(who(tr))}</b></span></div>
     <div class="bscreen t-${tier}"${kst(tr)}><div class="arena a-${tr.arena} v${tr.v} t-${tier} i${tr.int}${tr.th ? ' th-' + tr.th : ''}${scene ? ' has-scene' : ''}" id="arena" style="--ac:var(--t${tr.ty});--cc:${tr.cc || 'var(--t' + tr.ty + ')'}">
-      <div class="world" id="world">${scene ? `<img class="scene" alt="" src="${scene}">` : ''}<div class="abg"></div><canvas class="fxc bgc" id="bgc" width="256" height="192"></canvas><canvas class="fxc amc" id="amc" width="512" height="384"></canvas><div class="plat pf"></div><div class="plat pm"></div></div><div class="dim"></div>
+      <div class="cam" id="cam"><div class="world" id="world">${scene ? `<img class="scene" alt="" src="${scene}">` : ''}<div class="abg"></div><canvas class="fxc bgc" id="bgc" width="256" height="192"></canvas><canvas class="fxc amc" id="amc" width="512" height="384"></canvas><div class="plat pf"></div><div class="plat pm"></div></div></div><div class="dim"></div>
       ${tr.wild ? '' : `<div class="trn" id="trn">${tsprite(tr.img)}</div>`}
       <div class="bs foe gone" id="s-foe"></div><div class="bs me gone" id="s-me"></div>
       <canvas class="fxc" id="fxc" width="256" height="192"></canvas><canvas class="fxc" id="axc" width="512" height="384"></canvas><div class="fx" id="fx"></div>
@@ -418,7 +451,7 @@ const RET = '<span class="ret"><svg viewBox="0 0 18 12" aria-hidden="true"><path
 function partyPanel(b, i, act, ok, cur) {
   const row = b.hp <= 0 ? 1 : cur ? 2 : 0, col = i ? 2 : 0, f = Math.max(0, b.hp / b.max);
   return `<button type="button" class="bw-p ${i % 2 ? 'r' : 'l'} s${row}${PACK.menu ? '' : ' np'}" data-a="${act}" data-k="${i}" style="--row:${Math.floor(i / 2)};${PACK.menu ? `--bg:url(${PACK.menu['p' + row + col]});--bgs:url(${PACK.menu['p' + row + (col + 1)]})` : ''}"${ok ? '' : ' disabled'}>
-    <span class="ic">${spr(b.id, { sh: b.sh, mega: b.mega })}</span><b class="nm">${esc(b.short || b.name)}${b.mega ? ' <u>M</u>' : ''}</b><span class="plv tn">Lv${b.lv}</span>${b.status ? `<i class="st st-${b.status}">${STAG[b.status]}</i>` : ''}
+    <span class="ic">${spr(b.id, { sh: b.sh, mega: b.mega })}</span><b class="nm">${esc(b.short || b.name)}${gs(b)}${isMega(b) ? ' <u>M</u>' : ''}</b><span class="plv tn">Lv${b.lv}</span>${b.status ? `<i class="st st-${b.status}">${STAG[b.status]}</i>` : ''}
     <span class="hpl"><em>HP</em><span><i style="width:${(f * 100).toFixed(1)}%;background:${hpCol(f)}"></i></span></span><span class="hpn tn">${b.hp <= 0 ? 'FNT' : b.hp + '/' + b.max}</span></button>`;
 }
 function drawMenu() {
@@ -432,8 +465,8 @@ function drawMenu() {
   }
   if (BT.menu === 'moves') {
     const any = me.mv.some((x, k) => moveOk(B, k)), fv = BT.v.foe;
-    const mvb = (k, m, pp, ok) => `<button type="button" class="bw-m" data-a="bmove" data-k="${k}" style="--c:var(--b${m[1]})"${ok ? '' : ' disabled'}>${MFR}<b>${esc(m[0])}</b><span class="mty">${TYN[m[1]]}</span><span class="pp tn">${pp}</span></button>`;
-    el.innerHTML = `<div class="bw bw-moves bmv">${MVBG}<span class="mv-foe">${B.foe.map((b, i) => `<i class="${b.hp <= 0 ? 'out' : i === fv.i ? 'on' : ''}"></i>`).join('')}</span>
+    const mvb = (k, m, pp, ok) => `<button type="button" class="bw-m" data-a="bmove" data-k="${k}" style="--c:var(--b${m[1]})"${ok ? '' : ' disabled'}>${MFR}<b>${esc(m[0])}</b><span class="mty">${TYN[m[1]]}</span><span class="pp tn">${pp}</span>${k >= 0 ? fxTag(B, m) : ''}</button>`;
+    el.innerHTML = `<div class="bw bw-moves bmv${S.hfx === 0 ? '' : ' hfx'}">${MVBG}<span class="mv-foe">${B.foe.map((b, i) => `<i class="${b.hp <= 0 ? 'out' : i === fv.i ? 'on' : ''}"></i>`).join('')}</span>
       ${any ? me.mv.map((x, k) => mvb(k, mvEff(B, me, MOVES[x.i]), `<em>PP</em>${x.pp}/${x.max}`, moveOk(B, k))).join('') : mvb(-1, ['Struggle', 0], '<em>No PP left</em>', true)}
       <span class="mv-balls">${Array.from({ length: 6 }, (_, i) => { const b = B.me[i]; return `<i class="${!b ? 'no' : b.hp <= 0 ? 'out' : b.status ? 'st' : ''}${i === B.a ? ' cur' : ''}"></i>`; }).join('')}</span>${cancel()}</div>`;
     return;
@@ -758,7 +791,7 @@ async function bossIntro(B, o = {}) {
     <div class="bwi-s"><div class="bwi-bg"></div><canvas class="bwi-cv" id="bwicv" width="256" height="192"></canvas><div class="bwi-em"></div>
       ${clip ? `<div class="bwi-pre"><span>${esc(RARE[tr.kind])}</span><b>${esc(evil ? tr.title : tr.cn)}</b></div><div class="bwi-sil">${tsprite(tr.img, 'big')}<i class="vb a"></i><i class="vb b"></i><i class="orb"></i><div class="nm"><span>${esc(tr.title)}</span><b>${esc(tr.n)}</b></div></div>` : ''}
       <div class="bwi-bar foe"><div class="bwi-bb"></div>${tsprite(tr.img, 'big')}<div class="bwi-n"><span>${esc(tr.title)}</span><b>${esc(tr.n)}</b></div></div>
-      <div class="bwi-bar me${S.av ? ' av' : ''}"><div class="bwi-bb"></div>${S.av ? tsprite(S.av, 'big') : ''}${spr(lead.id, { ani: 1, sh: lead.sh, back: 1 })}<div class="bwi-n"><span>${esc(battleTag(B))}</span><b>You</b></div></div>
+      <div class="bwi-bar me${S.av ? ' av' : ''}"><div class="bwi-bb"></div>${S.av ? tsprite(S.av, 'big') : ''}${spr(lead.id, { ani: 1, sh: lead.sh, mega: lead.mega, back: 1 })}<div class="bwi-n"><span>${esc(battleTag(B))}</span><b>You</b></div></div>
       <div class="bwi-bolt"></div><div class="bwi-vs"><b>VS</b></div><div class="bwi-cls">${esc(tr.cn)}</div><div class="bwi-go">Press to enter</div><div class="bwi-fl"></div>
     </div></div>`, 'battle vsov');
   const root = $('#bwi'), st = root.querySelector('.bwi-s'), on = c => { if (root.isConnected) root.classList.add(c); }, gone = () => BT.B !== B || !root.isConnected;
@@ -771,7 +804,7 @@ async function bossIntro(B, o = {}) {
     /* Temaet til bossen spiller i bakgrunnen av klippet (aske og rød puls, snø, bobler, gull …). */
     if (!calm()) { FX.hooks.glitch = ms => { st.classList.add('glitch'); setTimeout(() => st.classList.remove('glitch'), ms); }; FX.show($('#bwicv'), tr.int, tr.ty, tr); }
     /* Introen: bossens egen fra pakken hvis den finnes, ellers den innebygde episke. Drønnet faller i det bossen viser seg (c3), og da glir kamplåta inn. */
-    const d1 = evil ? 1900 : 1600, d2 = evil ? 2100 : tr.gold ? 1900 : 1600, it = PACK.introFor(B), stop = epicIntro(evil ? 'evil' : tr.gold ? 'ultra' : 'champ', (d1 + d2) * sp / 1000, !!it), quit = () => { stop(); PACK.stingOut(0.2); };
+    const d1 = evil ? 1900 : 1600, d2 = evil ? 2100 : tr.gold ? 1900 : 1600, it = PACK.introFor(B), stop = epicIntro(evil ? 'evil' : tr.gold ? 'ultra' : 'champ', (d1 + d2) * sp / 1000, !!it, PACK.keyOf(PACK.trackFor(B))), quit = () => { stop(); PACK.stingOut(0.2); };
     /* Har bossen sin egen introlåt, spiller den gjennom hele introen og helt til spilleren trykker seg inn i kampen. Kamplåta starter først da. */
     if (it) PACK.sting(it, true);
     on('c1'); buzz(evil ? [90, 150, 90] : [40, 40, 40]);
@@ -782,7 +815,7 @@ async function bossIntro(B, o = {}) {
     on('c4'); await T(240); if (gone()) return;
   }
   on('s1'); await T(330); on('s2'); await T(380); if (gone()) return;
-  on('s3'); if (!clip) battleMusic(B); BSFX.vs(); buzz([60, 40, 60, 40, 200]);
+  on('s3'); if (!clip) battleMusic(B); BSFX.vs(PACK.keyOf(PACK.trackFor(B))); buzz([60, 40, 60, 40, 200]);
   await T(520); on('s4');
   if (quick) { await Promise.race([Promise.all([o.until, T(640)]), new Promise(r => setTimeout(r, 12000))]); if (gone()) return; on('s5'); await T(260); return; }
   await T(clip ? 1100 : 800); if (gone()) return PACK.stingOut(0.2);
@@ -850,7 +883,7 @@ function overview() {
   /* Laget: XP-linja fylles opp etter kampen, og nye nivåer og angrep vises her. */
   const team = fac || lab || raid ? '' : `<div class="card stack">${B.me.map(b => {
     const m = b.src, u = res.ups.find(x => x.u === m.u), l = first && u ? u.l0 : m.lv, x = first && u ? u.x0 : m.xp, f = Math.max(0, Math.min(1, (x - xpAt(l)) / (xpAt(l + 1) - xpAt(l))));
-    return `<div class="hofr${u && u.l1 > u.l0 && !first ? ' lvup' : ''}" data-row="${m.u}">${spr(b.id, { sh: b.sh, s: '48px' })}<div class="sp"><div class="row" style="justify-content:space-between"><b>${esc(b.name)}</b><b class="sm tn lvt">${u && u.l1 > u.l0 && !first ? `Lv ${u.l0} → ${u.l1}` : 'Lv ' + l}</b></div>
+    return `<div class="hofr${u && u.l1 > u.l0 && !first ? ' lvup' : ''}" data-row="${m.u}">${spr(b.id, { sh: b.sh, mega: b.mega, s: '48px' })}<div class="sp"><div class="row" style="justify-content:space-between"><b>${esc(b.name)}</b><b class="sm tn lvt">${u && u.l1 > u.l0 && !first ? `Lv ${u.l0} → ${u.l1}` : 'Lv ' + l}</b></div>
       <div class="xpbar" style="margin-top:6px;height:6px"><i style="width:${Math.round(f * 100)}%"></i></div>
       <div class="sm tn" style="margin-top:4px">${u ? '+' + nb(u.xp) + ' XP' : 'No XP this time'}${b.hp <= 0 ? ' · fainted' : ''}${u && (u.learned || []).length ? ' · learned ' + esc(u.learned.join(', ')) : ''}</div>
       ${(m.nm || []).length ? `<button type="button" class="newmv" data-a="blearn" data-u="${m.u}" style="margin-top:6px;width:100%;text-align:left"><span class="bang">!</span><span class="sm" style="color:var(--ink)">Wants to learn <b>${esc(MOVES[m.nm[0]][0])}</b>${m.nm.length > 1 ? ' +' + (m.nm.length - 1) : ''}</span></button>` : ''}</div></div>`; }).join('')}</div>`;
@@ -877,7 +910,7 @@ function overview() {
     : res.win ? (res.lapDone ? `Lap cleared. Lap ${L.lap + 1} begins, with stronger trainers, bigger teams and better rewards.` : 'Next: ' + esc(leagueTag()) + (L.n % 2 === 1 ? ' · a boss' : '')) : `${res.gone ? esc(tr.n) + ' moves on: rare bosses give you one chance.' + (res.lapDone ? ` Lap ${L.lap + 1} begins without the prize.` : '') : esc(tr.n) + ' waits for you.'} ${res.left ? 'You can lose once more today.' : 'The League opens again after your next day of focus.'}`;
   const open = lab ? true : raid ? false : fac ? facOpen() && !!R : ladderOpen();
   ov(`<div class="hof"><div class="hof-h"><span>${res.win ? 'VICTORY' : 'DEFEAT'}</span><span class="tn">${esc(battleTag(B))}</span></div>
-      <div class="hof-stage">${B.me.map((b, i) => `<span style="--i:${i};--n:${B.me.length}" class="${b.hp <= 0 ? 'ko' : ''}">${spr(b.id, { ani: 1, sh: b.sh })}</span>`).join('')}</div>
+      <div class="hof-stage">${B.me.map((b, i) => `<span style="--i:${i};--n:${B.me.length}" class="${b.hp <= 0 ? 'ko' : ''}">${spr(b.id, { ani: 1, sh: b.sh, mega: b.mega })}</span>`).join('')}</div>
       <p class="hof-t">${res.win ? `You beat ${nm}.` : lab ? `${nm} won this time.` : fac ? `${nm} stopped your run.` : `${nm} won this time. You keep your place and the XP.`}</p></div>
     ${team}${rew}${extra}${res.raid && S.raid ? `<div class="card k-ultra raidc"><div class="sm">A legendary Pokémon has appeared</div><b class="bossn" style="font-size:19px">${esc(S.raid.dk ? DARK.n : D(S.raid.id)[0])} · Lv ${S.raid.lv}</b><p class="sm" style="margin-top:4px">Beat it and it waits in the grass for you to catch. It is far stronger than anything in the League.</p><button type="button" class="btn gold wide" data-a="raid" style="margin-top:8px">See the raid</button></div>` : ''}
     <div class="card"><span class="sm" style="color:var(--ink)">${next}</span></div>
@@ -992,8 +1025,8 @@ const BA = {
   bforfeit: el => { if (BT.busy) return; if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.innerHTML = MFR + '<span>TAP AGAIN</span><b>to give up</b>'; return; } BT.B.over = 'loss'; endBattle(); },
   packre: async () => { toast('Looking for your pack…'); const ok = await PACK.init(true); toast(ok ? `Pack found: ${Object.keys(PACK.man.scenes || {}).length} arenas, ${(PACK.man.music || []).length} tracks.` : 'No pack found in your sync repo.'); if (BT.B == null && $('.lablist')) labScreen(); },
   blearn: el => { const m = monBy(+el.dataset.u); if (m) learnSheet(m, 'ov'); },
-  lforget: el => { const L = U.learn, m = monBy(L.u); if (!m) return closeSheet(); const x = m.nm[0], old = +el.dataset.k; resolveMove(m, x, old); sfx.lvl(); toast(`${D(m.id)[0]} forgot ${MOVES[old][0]} and learned ${MOVES[x][0]}.`); learnSheet(m, L.back); },
-  lskip: () => { const L = U.learn, m = monBy(L.u); if (!m) return closeSheet(); const x = m.nm[0]; resolveMove(m, x, null); toast(`${D(m.id)[0]} did not learn ${MOVES[x][0]}.`); learnSheet(m, L.back); },
+  lforget: el => { const L = U.learn, m = monBy(L.u); if (!m) return closeSheet(); const x = m.nm[0], old = +el.dataset.k; resolveMove(m, x, old); sfx.lvl(); toast(`${mName(m)} forgot ${MOVES[old][0]} and learned ${MOVES[x][0]}.`); learnSheet(m, L.back); },
+  lskip: () => { const L = U.learn, m = monBy(L.u); if (!m) return closeSheet(); const x = m.nm[0]; resolveMove(m, x, null); toast(`${mName(m)} did not learn ${MOVES[x][0]}.`); learnSheet(m, L.back); },
   tpick: el => { BT.tp = +el.dataset.k; overview(); },
   tback: () => { BT.tp = null; overview(); },
   tgive: el => { const res = BT.res, x = res.trade[BT.tp], mine = monBy(+el.dataset.k); if (!x || !mine) return; const got = doTrade(x, mine); res.got = `${D(got.id)[0]} · Lv ${got.lv} (for ${D(mine.id)[0]})`; res.trade = null; BT.tp = null; sfx.got(); cry(got.id, 200); overview(); },
