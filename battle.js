@@ -80,16 +80,30 @@ const FOEU = new Set(['Psycho Shift', 'Transform', 'Mimic', 'Sketch', 'Guard Spl
 /* En Pokémon i kamp. src er den eide Pokémonen (eller en generert motstander med samme felter). v = det som nullstilles ved bytte. */
 function bmon(src) {
   const st = statsOf(src);
-  return { src, id: src.id, lv: src.lv, sh: src.sh || 0, name: mName(src), short: src.nn || D(src.id)[0], mega: src.mega || 0, g: src.g == null ? 2 : src.g, st, max: st[0], hp: st[0], mv: src.mv.map(i => ({ i, pp: MOVES[i][18] || 10, max: MOVES[i][18] || 10 })),
+  return { src, id: src.id, lv: src.lv, sh: src.sh || 0, name: mName(src), short: src.nn || D(src.id)[0], mega: src.mega || 0, mg: megaForm(src), g: src.g == null ? 2 : src.g, st, max: st[0], hp: st[0], mv: src.mv.map(i => ({ i, pp: MOVES[i][18] || 10, max: MOVES[i][18] || 10 })),
     sg: Z8(), status: '', slp: 0, tox: 0, ty: mTypes(src), out: 0, v: {} };
 }
 const newSide = () => ({ ref: 0, ls: 0, safe: 0, mist: 0, tail: 0, lucky: 0, spikes: 0, tsp: 0, rock: 0, wish: null });
 /* tr = { n, title, img, ty, kind, skill, boss }. x = ekstra felter for modusen (liga, Battle Frontier eller demo). */
 function mkBattle(me, foe, tr, x) {
-  return Object.assign({ me: me.map(bmon), foe: foe.map(bmon), tr, a: 0, b: 0, turn: 0, over: null, need: 0, kos: [], pay: 0,
+  return Object.assign({ me: me.map(bmon), foe: foe.map(bmon), tr, a: 0, b: 0, turn: 0, over: null, need: 0, kos: [], pay: 0, megaUsed: { me: 0, foe: 0 },
     wx: { k: '', n: 0 }, sd: { me: newSide(), foe: newSide() }, lastM: { me: null, foe: null }, troom: 0, mud: 0, wsp: 0, aiSw: -9 }, x);
 }
 const act = (B, s) => s === 'me' ? B.me[B.a] : B.foe[B.b];
+/* Mega Evolution: den som står inne, bytter til Mega-formen sin (b.mg) før angrepene i runden. Nye basestats (HP-en er den samme), nye typer og
+   nytt bilde; det den har av økte og senkede verdier, følger med. Én per side per kamp, og formen varer kampen ut, også om den byttes ut og inn.
+   how = 'rage' når en legendarisk forvandles i raseri i et raid. */
+const canMega = (B, s) => { const b = act(B, s); return !!b && !!b.mg && !b.mega && !b.tf && b.hp > 0 && !(B.megaUsed && B.megaUsed[s]); };
+function megaEvolve(B, s, ev, how) {
+  if (!canMega(B, s)) return false;
+  const b = act(B, s), k = b.mg, g = MEGA[k - 1], src2 = Object.assign({}, b.src, { mega: k }), st = statsOf(src2), N = how === 'rage' ? b.name : nmOf(s, b), to = megaName(k), primal = g[1] === 'Primal';
+  const put = o => { o.st = [o.st[0]].concat(st.slice(1)); o.ty = [g[2], g[3]]; };
+  put(b); if (b.orig) put(b.orig);
+  b.mega = k; b.name = b.src.nn || to; (B.megaUsed || (B.megaUsed = {}))[s] = 1;
+  ev.push({ t: 'mega', side: s, id: b.id, mega: k, sh: b.sh, primal, txt: primal ? `${N}'s Primal Reversion!` : how === 'rage' ? `${N} is surrounded by a blinding light!` : s === 'me' ? `${N} is reacting to your Mega Ring!` : `${N} is reacting to ${B.tr.n}'s Mega Ring!` },
+    { t: 'msg', s: primal ? `It reverted to its primal form: ${to}!` : `${N} has Mega Evolved into ${to}!` });
+  return true;
+}
 const opp = s => s === 'me' ? 'foe' : 'me';
 let WILD = false;
 const nmOf = (s, b) => s === 'foe' ? `${WILD ? 'The wild' : "The foe's"} ${b.name}` : b.name;
@@ -817,6 +831,9 @@ function runTurn(B, a) {
   if (purM) pur('me', a.k);
   if (a.t === 'switch' && !B.over && B.me[B.a].hp > 0) swapTo(B, 'me', a.i, ev);
   if (fa.t === 'switch' && !B.over && B.foe[B.b].hp > 0) { swapTo(B, 'foe', fa.i, ev); B.aiSw = B.turn; }
+  /* Mega Evolution kommer før angrepene, så farten i denne runden er den nye. Motstanderen gjør det så snart den som kan, skal angripe
+     (ikke de ville i raid: de forvandles i raseri, se raidField). */
+  if (!B.over) { if (a.t === 'move' && a.mega) megaEvolve(B, 'me', ev); if (fa.t === 'move' && !B.tr.wild) megaEvolve(B, 'foe', ev); }
   const q = [];
   if (a.t === 'move' && !purM) q.push(['me', a.k, B.me[B.a]]);
   if (fa.t === 'move' && !purF) q.push(['foe', fa.k, B.foe[B.b]]);

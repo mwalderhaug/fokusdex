@@ -165,7 +165,7 @@ function cry(id, delay = 0, vol = 0.45) {
   }).catch(() => {});
 }
 /* Lyd per type trykk. Handlinger med egen lyd (kast, kjøp, utvikling osv.) får ikke en ekstra. */
-const OWN = new Set(['triv', 'trev', 'mvtog', 'start', 'throw', 'buy', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm']);
+const OWN = new Set(['mgive', 'triv', 'trev', 'mvtog', 'start', 'throw', 'buy', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm']);
 const SND = {
   tab: 'tab', lagv: 'tab', dexr: 'tab',
   fag: 'chip', min: 'chip', reg: 'chip', sort: 'chip', filt: 'chip', sety: 'chip', extog: 'chip',
@@ -334,10 +334,22 @@ function monSheet(m) {
     <div class="stack">
     ${ev.map(o => `<button type="button" class="btn ${o.ok ? 'gold' : ''} wide" data-a="evolve" data-u="${m.u}" data-k="${o.to}"${o.ok ? '' : ' disabled'}>${o.ok ? 'Evolve into ' + esc(D(o.to)[0]) : 'Evolves ' + o.why}</button>`).join('')}
     ${canForm ? `<button type="button" class="btn wide" data-a="form" data-u="${m.u}">Change to ${m.mega === ORIGIN ? 'Altered' : 'Origin'} Forme</button>` : ''}
+    ${megaCard(m)}
     ${lead ? '' : `<button type="button" class="btn sage wide" data-a="lead" data-u="${m.u}">Make partner</button>`}
     <div class="row"><button type="button" class="btn sp" data-a="party" data-u="${m.u}"${(inP && S.party.length < 2) || (!inP && S.party.length >= 6) ? ' disabled' : ''}>${inP ? 'Remove from team' : 'Add to team'}</button><button type="button" class="btn sp" data-a="fav" data-u="${m.u}">${m.fav ? 'Unfavorite' : 'Favorite'}</button></div>
     <button type="button" class="btn wide" data-a="candy" data-u="${m.u}"${S.items.candy > 0 ? '' : ' disabled'}>Use Rare Candy (${S.items.candy})</button>
     <button type="button" class="btn wide danger" data-a="sell" data-u="${m.u}"${S.mons.length > 1 ? '' : ' disabled'}>Sell for ${coinEl(sellValue(m))}</button></div>`);
+}
+/* Mega på kortet: hva arten kan bli, og det som mangler (ring, stein). Med ringen gis steinen her, og de med to former bytter fritt mellom dem. */
+function megaCard(m) {
+  const o = megaOpts(m.id); if (!o.length) return '';
+  const leg = isLeg(m.id), has = leg ? hasStone(m.id) : o.includes(m.ms), cur = o.includes(m.ms) ? m.ms : o[0], pri = MEGA[cur - 1][1] === 'Primal', word = pri ? 'revert to its primal form' : 'Mega Evolve';
+  const g = MEGA[cur - 1], info = `${[g[2], g[3]].filter(t => t >= 0).map(t => TYN[t]).join(' / ')} · base stats +${megaBst(cur - 1) - BST[m.id - 1].reduce((a, b) => a + b, 0)}`;
+  const txt = !S.ring ? (leg ? (has ? 'You have its stone. You also need the Mega Ring: beat a Champion.' : `Its stone is won by beating ${D(m.id)[0]} in a raid, and you need the Mega Ring: beat a Champion.`) : 'You need the Mega Ring first: beat a Champion.')
+    : has ? `It can ${word} once a battle, from the move menu.` : leg ? `Its stone is won by beating ${D(m.id)[0]} in a raid.` : `Give it a Mega Stone and it can ${word} in battle. You have ${S.items.mstone || 0}.`;
+  const btn = !S.ring ? '' : has ? o.filter(k => k !== cur).map(k => `<button type="button" class="btn sm2 wide" data-a="mgive" data-u="${m.u}" data-k="${k}">Switch to ${esc(megaName(k))}</button>`).join('')
+    : leg ? '' : o.map(k => `<button type="button" class="btn sm2 wide gold" data-a="mgive" data-u="${m.u}" data-k="${k}"${S.items.mstone > 0 ? '' : ' disabled'}>Give a Mega Stone · ${esc(megaName(k))}</button>`).join('');
+  return `<div class="card2 mgc${has && S.ring ? ' on' : ''}"><div class="row" style="gap:12px;align-items:center">${spr(m.id, { sh: m.sh, mega: cur, s: '64px' })}<div class="sp"><b>${esc(megaName(cur))}</b><div class="sm tn">${info}</div><div class="sm" style="margin-top:4px">${txt}</div></div></div>${btn}</div>`;
 }
 /* Trening: seks rader med verdi, anlegg (IV) og trening (EV). Den valgte staten får kjøpene under. Etter et kjøp tegnes innholdet om på stedet,
    så arket ikke glir inn på nytt for hvert trykk. */
@@ -399,15 +411,15 @@ function specSheet(id) {
 /* ---------- Butikk ---------- */
 VIEW.butikk = () => {
   const l = tlv(), own = k => k === 'egg' ? S.eggs.length : k === 'incense' ? (S.incOn ? 1 : 0) : S.items[k];
-  const ic = k => SHOP[k].img ? ballEl(k, '30px') : SHOP[k].ic === 'egg' ? '<span class="egg" style="transform:scale(.7)"></span>' : `<span class="${SHOP[k].ic}"></span>`;
+  const ic = k => SHOP[k].img ? ballEl(k, '30px') : SHOP[k].ic === 'egg' ? '<span class="egg" style="transform:scale(.7)"></span>' : `<span class="${SHOP[k].ic}${k === 'mstone' ? ' mg' : ''}"></span>`;
   const full = S.pend.length > PACKMAX;
   return `<div class="row" style="justify-content:space-between"><h1 class="big">Shop</h1>${coinEl(S.coins)}</div>
     <h2 class="h">Encounter packs</h2>
     <div class="packs">${Object.keys(PACKS).map(k => { const P = PACKS[k], lock = P.lv && l < P.lv, can = S.coins >= P.p && !lock && !full;
       return `<button type="button" class="pkb${can ? '' : ' off'}" data-a="pack" data-k="${k}" style="--pc:${P.c}"${can ? '' : ' disabled'}><span class="pk-ic"><i></i></span><b>${P.n}</b><span class="sm">${P.d}</span><span class="pk-p tn">${lock ? 'Trainer level ' + P.lv : coinEl(P.p)}</span></button>`; }).join('')}</div>
     <p class="sm">${full ? 'Catch some of the encounters that are waiting before you open more packs.' : 'Three encounters in every pack, opened on the spot. The last slot is the good one: the dearer the pack, the better the odds of something rare. Pokémon from packs sell for less than wild ones. The greatest legendaries are not in packs; they have to be met in raids.'}</p>
-    ${[0, 1].map(g => `${g ? '<h2 class="h">For battles</h2><p class="sm">Use these from the Bag in League battles. Using one takes your turn, and you can use three per battle.</p>' : ''}<div class="card" style="padding-top:6px;padding-bottom:6px">${Object.keys(SHOP).filter(k => !!SHOP[k].bt === !!g).map(k => { const it = SHOP[k], lock = it.lv && l < it.lv, full = (k === 'egg' && S.eggs.length >= 3) || (k === 'incense' && S.incOn);
-      return `<div class="item"><span class="ic">${ic(k)}</span><div class="sp"><b>${it.n}</b> <span class="sm tn">· own ${own(k)}</span><div class="sm">${it.d}</div></div><button type="button" class="btn sm2 ${S.coins >= it.p && !lock && !full ? 'pri' : ''}" data-a="buy" data-k="${k}"${S.coins < it.p || lock || full ? ' disabled' : ''}>${lock ? 'Level ' + it.lv : full ? 'Full' : nb(it.p)}</button></div>`; }).join('')}</div>`).join('')}
+    ${[0, 1].map(g => `${g ? '<h2 class="h">For battles</h2><p class="sm">Use these from the Bag in League battles. Using one takes your turn, and you can use three per battle.</p>' : ''}<div class="card" style="padding-top:6px;padding-bottom:6px">${Object.keys(SHOP).filter(k => !!SHOP[k].bt === !!g).map(k => { const it = SHOP[k], lock = (it.lv && l < it.lv) || (it.ring && !S.ring), full = (k === 'egg' && S.eggs.length >= 3) || (k === 'incense' && S.incOn);
+      return `<div class="item"><span class="ic">${ic(k)}</span><div class="sp"><b>${it.n}</b> <span class="sm tn">· own ${own(k)}</span><div class="sm">${it.d}</div></div><button type="button" class="btn sm2 ${S.coins >= it.p && !lock && !full ? 'pri' : ''}" data-a="buy" data-k="${k}"${S.coins < it.p || lock || full ? ' disabled' : ''}>${lock ? (it.ring && !S.ring ? 'Mega Ring' : 'Level ' + it.lv) : full ? 'Full' : nb(it.p)}</button></div>`; }).join('')}</div>`).join('')}
     <h2 class="h">Routes</h2>
     <div class="card" style="padding-top:6px;padding-bottom:6px">${[1, 2, 3, 4, 5].map(r => { const g = REG[r], has = S.regions.includes(r);
       return `<div class="item"><span class="ic"><span class="map"></span></span><div class="sp"><b>${g.n}</b><div class="sm tn">${g.b - g.a + 1} species · ${dexCount(r)} caught</div>${has ? '' : `<div class="sm tn" style="margin-top:4px">Opens at trainer level ${g.lv} (you are ${tlv()}) or ${g.dex} species caught (you have ${dexAll()})</div><div class="bar" style="margin-top:6px"><i style="width:${Math.round(Math.min(1, Math.max((tlv() - 1) / Math.max(1, g.lv - 1), dexAll() / g.dex)) * 100)}%"></i></div>`}</div>${has ? `<button type="button" class="btn sm2${S.routes.includes(r) ? ' sage' : ''}" data-a="reg" data-k="${r}">${S.routes.includes(r) ? 'On' : 'Off'}</button>` : '<span class="pill">Locked</span>'}</div>`; }).join('')}</div>
@@ -699,6 +711,7 @@ const A = {
   mvtog: el => { const x = +el.dataset.k, s = U.mvsel, i = s.indexOf(x); if (i >= 0) s.splice(i, 1); else if (s.length < 4) s.push(x); else { $('#mv-err').textContent = 'Four is the limit. Tap one to remove it first.'; return; } movePick(monBy(U.mvu)); },
   mvsave: el => { const m = monBy(+el.dataset.u); if (!U.mvsel.length) { $('#mv-err').textContent = 'Keep at least one move.'; return; } m.mv = U.mvsel.slice(); save(); monSheet(m); toast('Moves saved.'); },
   candy: el => { const m = monBy(+el.dataset.u); if (useCandy(m)) { sfx.coin(); render(); monSheet(m); } },
+  mgive: el => { const m = monBy(+el.dataset.u), k = +el.dataset.k; if (!m) return; const had = megaOpts(m.id).includes(m.ms) || isLeg(m.id); if (bondMega(m, k)) { sfx.evo(); render(); monSheet(m); toast(had ? `${megaName(k)} it is.` : `${mName(m)} now holds a Mega Stone.`); } },
   train: el => { const m = monBy(+el.dataset.u); if (!m) return; U.tru = m.u; U.tri = null; trainSheet(m); },
   trsel: el => { const m = monBy(U.tru); if (!m) return; U.tri = +el.dataset.k; trainSheet(m); },
   trback: () => { const m = monBy(U.tru); if (m) monSheet(m); else closeSheet(); },

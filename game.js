@@ -43,6 +43,7 @@ const SHOP = {
   maxrev: { n: 'Max Revive', p: 300, d: 'Brings back a fainted Pokémon with all its HP', img: 'max-revive', bc: '#e3c577', bt: 1 },
   incense: { n: 'Incense', p: 80, d: 'Next session: one extra encounter and rarer finds', ic: 'smoke' },
   candy: { n: 'Rare Candy', p: 150, d: 'One level up for one Pokémon', ic: 'candy' },
+  mstone: { n: 'Mega Stone', p: 3000, d: 'Give it to one Pokémon that has a Mega form. It can then Mega Evolve once a battle', ic: 'gem', ring: 1 },
   stone: { n: 'Evolution Stone', p: 300, d: 'For those that do not evolve by level alone', ic: 'gem' },
   egg: { n: 'Egg', p: 250, d: 'Hatches after 120 focus minutes. Can be from any region', ic: 'egg' }
 };
@@ -113,6 +114,30 @@ const ORIGIN = MEGA.length;
 const defForm = id => id === 487 ? ORIGIN : 0;
 const megaOf = m => m && m.mega ? MEGA[m.mega - 1] : null;
 const isMega = m => { const g = megaOf(m); return !!g && g[1] !== 'Origin'; };
+/* Mega Evolution i kamp. megaOpts = formene en art har (plass i MEGA + 1; Charizard og Mewtwo har to). En egen Pokémon kan mega-utvikle seg når
+   du har Mega Ring (S.ring, fra den første Champion du slår) og den har fått en Mega Stone (m.ms = formen; S.items.mstone er steinene du har).
+   De legendariske bruker ikke vanlige steiner: deres vinnes ved å slå dem i raid (S.lst[art] = 1), og gjelder alle du eier av arten.
+   Motstandere og raid-bosser bærer formen sin i ms. Én Mega per side per kamp; formen varer kampen ut. */
+const megaOpts = id => MEGA.reduce((a, g, k) => { if (g[0] === id && g[1] !== 'Origin') a.push(k + 1); return a; }, []);
+const megaName = k => spName({ id: MEGA[k - 1][0], mega: k });
+const hasStone = id => !!(S.lst && S.lst[id]);
+function megaForm(src) {
+  if (!src || src.mega) return 0;
+  const o = megaOpts(src.id); if (!o.length) return 0;
+  if (!src.u) return o.includes(src.ms) ? src.ms : 0;
+  if (!S.ring) return 0;
+  if (isLeg(src.id)) return hasStone(src.id) ? (o.includes(src.ms) ? src.ms : o[0]) : 0;
+  return o.includes(src.ms) ? src.ms : 0;
+}
+/* Gir en Mega Stone til en av dine (bruker opp steinen), eller bytter form på en som alt har en (gratis). Legendariske bytter bare form. */
+function bondMega(m, k) {
+  const o = megaOpts(m.id); if (!S.ring || !o.includes(k)) return false;
+  if (isLeg(m.id)) { if (!hasStone(m.id)) return false; m.ms = k; save(); return true; }
+  if (!o.includes(m.ms)) { if (!(S.items.mstone > 0)) return false; S.items.mstone--; }
+  m.ms = k; save(); return true;
+}
+/* Når en Pokémon forlater deg (salg, bytte), får du steinen dens tilbake. */
+function unbond(m) { if (m && m.ms && !isLeg(m.id) && megaOpts(m.id).includes(m.ms)) { S.items.mstone = (S.items.mstone || 0) + 1; m.ms = 0; return true; } return false; }
 /* Høyden i Pokédexen (meter), til størrelsen i kamp. */
 const HT = '070a14060b11050a1003070b03060a030b0f0307030c14230408060a04080d05090e060d060b050a081005080c030a0a0f0207040a0811050a0713060a0d090d0f080f10070a110910040a0e0a110c10030a080e120b11090c030f0d100f580a10040d050c0414040a0f0e0c060c0a130b0a16040c060d080b0d0f0e0b0d0f0e09411903030a080908040a050d12151110141228161404090c12050911060b17081207100a0e050b12050c0303030306020f06080e0404080c0b0406080803080c040e090a051407050d0f060c0f0b5c060e0512060f0906120708040b060609091511060e12050b060e0c070e0406070c0f131514060c1434260605091104091304070f050a040503060a070c050c0f050a0d0307060c0408100508040c080e14050808060a0f0a17020a060b0506040915060d060f040407060304110812149107130507090b070b14040d040b0d1b0a0c0409060b050f0a0f070f063e030a060b081014060c06070f080b0e0411120a06060b0f060c101112130e142d23460311040b1605090c04081103060c050a030a05090e02090910050d020509030c04070b040503090c040c040c0909050a02040a050d050606050a070e1306070c0814080d070d0e040c0a0a160b0c11181412100f130a08141909100e160d03030303362a11252d0f04030f022004060821050a1005080f050b04090c040b060b060a060a060b03060c0810040911040903070b060c0e05080f0d0e03050c040c190307050b0a070a0f060d0a030e060b0e0511070c050e06130710040504070f03060a050d040b0d061304050a02060c160c0108060a030606020c15050a03060a060a12051a0b040807090e100a1c051010050f050c0e03080e120b101513140f0f201d0f1e0e060f';
 const htOf = (id, mega) => { const g = mega ? MEGA[mega - 1] : null; return (g && g[7] ? g[7] : parseInt(HT.substr((id - 1) * 2, 2), 16) || 10) / 10; };
@@ -216,7 +241,7 @@ const KEY = 'fokusdex.v1';
 function fresh() {
   return {
     v: 1, mig: 6, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
-    items: { poke: 15, great: 0, ultra: 0, candy: 0, stone: 0, incense: 0, potion: 0, super: 0, hyper: 0, maxp: 0, heal: 0, revive: 0, maxrev: 0 }, charm: 0,
+    items: { poke: 15, great: 0, ultra: 0, candy: 0, stone: 0, mstone: 0, incense: 0, potion: 0, super: 0, hyper: 0, maxp: 0, heal: 0, revive: 0, maxrev: 0 }, charm: 0, ring: 0, lst: {},
     mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, routes: [1], eggs: [], pend: [], incOn: 0,
     log: {}, fm: {},
     fag: {}, extra: ['annet'],
@@ -474,7 +499,7 @@ const PKSELL = 0.3;
 const sellValue = m => Math.round(SELL[tierOf(m.id)] * (1 + m.lv / 20) * (m.sh ? 5 : 1) * (m.pk ? PKSELL : 1));
 function sell(m) {
   if (S.mons.length <= 1) return 0;
-  const v = sellValue(m);
+  const v = sellValue(m); unbond(m);
   S.mons = S.mons.filter(x => x !== m); S.party = S.party.filter(u => u !== m.u);
   if (!S.party.length && S.mons.length) S.party.push(S.mons[0].u);
   S.coins += v; return v;
@@ -483,7 +508,7 @@ function sell(m) {
 function dupes() {
   const best = {};
   for (const m of S.mons) { const b = best[m.id]; if (!b || m.sh > b.sh || (m.sh === b.sh && m.lv > b.lv)) best[m.id] = m; }
-  return S.mons.filter(m => best[m.id] !== m && !m.fav && !m.sh && !S.party.includes(m.u));
+  return S.mons.filter(m => best[m.id] !== m && !m.fav && !m.sh && !m.ms && !evSum(m) && !S.party.includes(m.u));
 }
 function setPartner(m) { S.party = [m.u, ...S.party.filter(u => u !== m.u)].slice(0, 6); save(); }
 function toggleParty(m) {
@@ -494,7 +519,7 @@ function toggleParty(m) {
 function useCandy(m) { if (!(S.items.candy > 0) || m.lv >= 100) return false; S.items.candy--; m.lv++; m.xp = Math.max(m.xp, xpAt(m.lv)); learnUp(m, m.lv - 1); save(); return true; }
 function buy(k) {
   const it = SHOP[k];
-  if (!it || S.coins < it.p || (it.lv && tlv() < it.lv)) return false;
+  if (!it || S.coins < it.p || (it.lv && tlv() < it.lv) || (it.ring && !S.ring)) return false;
   if (k === 'egg') { if (S.eggs.length >= 3) return false; S.eggs.push({ need: 120, got: 0 }); }
   else if (k === 'incense') { if (S.incOn) return false; S.incOn = 1; }
   else S.items[k]++;

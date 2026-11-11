@@ -192,7 +192,22 @@ function regTeam(theme, n, base, st, flat) {
 /* Boss: de n − 1 første fra laget, og esset til slutt på høyeste nivå. flat = alle på samme nivå (Battle Frontier). */
 function bossTeam(d, n, base, st, flat) {
   const ids = d[4].slice(1, n).concat(d[4][0]);
-  return ids.map((id, k) => { const ace = k === ids.length - 1, lv = flat ? base : Math.max(3, Math.min(100, base + (ace ? 1 : -1 - rnd(2)))); return foeMon(fitForm(id, lv, st.slack || 0), lv, st); });
+  const team = ids.map((id, k) => { const ace = k === ids.length - 1, lv = flat ? base : Math.max(3, Math.min(100, base + (ace ? 1 : -1 - rnd(2)))); return foeMon(fitForm(id, lv, st.slack || 0), lv, st); });
+  /* Mega: Champion og Supreme Boss (klasse 8 og 9) bærer Mega Ring på Normal og Hard. Esset får steinen hvis arten har en Mega-form, ellers den
+     sterkeste av de andre som har det. Den mega-utvikler seg første gang den angriper. */
+  if (megaCls(st)) {
+    const c = team.map((m, k) => k).filter(k => megaOpts(team[k].id).length);
+    if (c.length) { const k = c.includes(team.length - 1) ? team.length - 1 : c.sort((a, b) => bstSum(team[b].id) - bstSum(team[a].id))[0], o = megaOpts(team[k].id); team[k].ms = o[rnd(o.length)]; }
+  }
+  return team;
+}
+const megaCls = st => !!st && (st.i >= 8 || !!st.mg) && (S.diff == null ? 2 : S.diff) >= 1;
+/* Mega Ring: den første Champion (eller Supreme Boss) du slår, i ligaen, Frontier eller turneringen. Den første steinen følger med. */
+const MSTONE = [0.25, 0.6, 1];
+function ringAward(ci, res) {
+  if (ci < 8 || S.ring) return;
+  S.ring = 1; S.items.mstone = (S.items.mstone || 0) + 1; res.ring = 1;
+  res.perks.push('You earned the Mega Ring, and a Mega Stone to go with it.');
 }
 /* Det en kamp trenger å vite om treneren. k = klassen, i = hvem i klassen. int = hvor mye show kampen får (0 til 8, følger klassen).
    ultra = de sjeldne (klasse 7 til 9), gold = bare klasse 9. sc/th/cc = egen bane, eget tema og egen farge (mesterne har hver sin). */
@@ -268,6 +283,7 @@ const giveCharm = res => { S.charm = (S.charm || 0) + CHARM.n; res.perks.push(`S
    klasse 7 gir sjeldne møter og av og til et pseudo-legendarisk, klasse 8 alltid et pseudo-legendarisk, klasse 9 et legendarisk, et pseudo-legendarisk og en Shiny Charm. */
 function rareLoot(ci, res, give, ty) {
   const hit = p => Math.random() < p, enc = o => pushEnc(res, genEnc(o));
+  if (hit(MSTONE[ci - 7] || 0)) give('mstone', 1);
   if (ci === 7) { give('candy', 3); give('ultra', 2); give('stone', 1); give('maxp', 1); give('revive', 1); enc({ ty, min: 3, luck: 2 }); enc({ min: 3, luck: 2 }); enc({ min: 2, luck: 1.5 }); if (hit(0.35)) enc({ ids: PSEUDO }); }
   if (ci === 8) { give('candy', 4); give('ultra', 3); give('stone', 1); give('maxrev', 1); enc({ ty, min: 3, luck: 2 }); enc({ min: 3, luck: 2 }); enc({ min: 2, luck: 1.5 }); enc({ ids: PSEUDO }); if (hit(0.25)) giveCharm(res); }
   if (ci === 9) { give('candy', 6); give('ultra', 5); give('stone', 2); give('maxrev', 2); enc({ leg: 1 }); enc({ ids: PSEUDO }); enc({ ty, min: 3, luck: 2 }); enc({ min: 3, luck: 2 }); giveCharm(res); }
@@ -295,7 +311,7 @@ function finishLeague(B) {
     const bm = B.boost.mode === 'league', give = (it, n) => { if (n > 0) { S.items[it] += n; res.items.push(`${n} × ${SHOP[it].n}`); } };
     const fw = firstWin(); res.coins = Math.round(st.coin * (B.dc || 1) * B.sm * (1 + Math.min(1, 0.2 * B.lap)) * (fw ? 2 : 1)) + B.pay; S.coins += res.coins;
     if (fw) { L.fw = L.day || dayKey(); res.perks.push('First win of the day: double coins.'); }
-    classLoot(B, res, give);
+    classLoot(B, res, give); ringAward(clsI(k), res);
     if (bm && B.tr.boss && Math.random() < 0.5) give('candy', 1);
     /* Byttetilbud: tilfeldig, ikke hver gang (rivaler tilbyr oftest). Den du får, er på ditt nivå og i den formen nivået tillater. */
     if (B.tr.boss && k !== 'evilteam' && Math.random() < (k === 'rival' ? 0.6 : 0.3)) {
@@ -316,7 +332,7 @@ function finishLeague(B) {
 }
 /* Bytte etter en boss: du gir fra deg en fra laget og får en av deres. Sier du nei, får du et møte i stedet. */
 function doTrade(x, mine) {
-  const i = S.party.indexOf(mine.u);
+  const i = S.party.indexOf(mine.u); unbond(mine);
   S.mons = S.mons.filter(m => m !== mine); S.party = S.party.filter(u => u !== mine.u);
   const m = addMon(x.id, x.lv, 0, 0, x.g); m.iv = x.iv; m.nat = x.nat;
   S.party = S.party.filter(u => u !== m.u); S.party.splice(i < 0 ? S.party.length : i, 0, m.u);
@@ -365,7 +381,7 @@ function facFoe() {
     /* Bossen vokser med rundene: i første runde er laget dårligere oppdrettet og de som utvikler seg sent, står i en tidligere form.
        De sjeldne (u = 1 til 3 for klasse 7 til 9) ligger alltid et hakk eller mer over, så de sjeldneste er vanskeligst også her. */
     const r = Math.min(4, R.round), u = ultra ? TCL[k].i - 6 : 0;
-    const st = { iv: Math.min(31, (u ? 10 + 4 * u : k === 'brain' ? 0 : 4) + 6 * r), ev: (u ? 8 + 8 * u : 0) + 8 * (r - 1), q: k === 'brain' && r < 3 ? 1 : 2, slack: u >= 3 ? 99 : [0, 6, 14, 99][Math.min(3, r - 1 + u)] };
+    const st = { iv: Math.min(31, (u ? 10 + 4 * u : k === 'brain' ? 0 : 4) + 6 * r), ev: (u ? 8 + 8 * u : 0) + 8 * (r - 1), q: k === 'brain' && r < 3 ? 1 : 2, slack: u >= 3 ? 99 : [0, 6, 14, 99][Math.min(3, r - 1 + u)], mg: TCL[k].i >= 8 };
     const dd = diff(); st.iv = Math.round(st.iv * dd.iv); st.ev = Math.round(st.ev * dd.ev);
     f = { boss: 1, k, i, sk: Math.min(1, [0.76, 0.86, 0.94, 1][r - 1] - (k === 'brain' ? 0.06 : 0) + 0.06 * u), team: bossTeam(POOL[k][i], 4, FACLV, st, true), hint: POOL[k][i][3] };
   } else {
@@ -404,7 +420,7 @@ function finishFactory(B) {
     if (r >= 3 && roll(0.12)) pushEnc(res, genEnc({ leg: 1 }));
     /* Sjelden boss: klassens egen belønning på toppen, som i ligaen. */
     { const bonus = Math.round(FACROUND(r) * sm * (B.dc || 1)); res.coins += bonus; S.coins += bonus; res.perks.push(`Round ${r} cleared: ${bonus.toLocaleString('en-US')} coins on top.`); }
-    if (B.tr.ultra) { const c = B.tr.ci, extra = Math.round([600, 1000, 2000][c - 7] * sm * (B.dc || 1)); res.coins += extra; S.coins += extra; rareLoot(c, res, give, [B.tr.ty]); res.note = `${B.tr.cn}: extra rewards.`; }
+    if (B.tr.ultra) { const c = B.tr.ci, extra = Math.round([600, 1000, 2000][c - 7] * sm * (B.dc || 1)); res.coins += extra; S.coins += extra; rareLoot(c, res, give, [B.tr.ty]); ringAward(c, res); res.note = `${B.tr.cn}: extra rewards.`; }
     res.roundDone = true; if (Math.random() < RAIDFAC) raidSpawn(res); R.round++; R.w = 0; R.team = null; R.offer = facOffer(R.round); R.open = 0;
   } else res.swap = B.foe.map(f => f.src);
   R.foe = null;
@@ -425,7 +441,7 @@ const PWTN = 3, PWTCOIN = [200, 400, 800], PWTCANDY = 2, ROUNDN = ['Quarter-fina
 const aN = s => (/^[AEIOU]/i.test(s) ? 'an ' : 'a ') + s;
 const gymCup = (n, re) => ({ n, f: 1, pk: 'great', rounds: [['gym', re], ['gym', re], ['gym', re]] });
 const CUPS = [
-  { n: 'Champions Cup', f: 2.2, pk: 'ultra', rounds: [['champ'], ['champ'], ['supreme']] },
+  { n: 'Champions Cup', f: 2.2, pk: 'ultra', ms: 1, rounds: [['champ'], ['champ'], ['supreme']] },
   gymCup('Kanto Leaders Cup', /^Kanto/), gymCup('Johto Leaders Cup', /^Johto/), gymCup('Hoenn Leaders Cup', /^Hoenn/), gymCup('Sinnoh Leaders Cup', /^Sinnoh/), gymCup('Unova Leaders Cup', /^B2 W2/),
   { n: 'Elite Four Cup', f: 1.5, pk: 'ultra', rounds: [['e4'], ['e4'], ['champ']] }
 ];
@@ -460,11 +476,12 @@ function finishPwt(B) {
   if (!R) return res;
   const c = CUPS[R.wd];
   if (!win) { P.run = null; res.note = `You are out of the ${c.n}. A new cup opens after your next day of focus.`; save(); return res; }
-  res.coins = Math.round(PWTCOIN[R.r] * c.f * B.sm * (B.dc || 1)); S.coins += res.coins;
+  res.coins = Math.round(PWTCOIN[R.r] * c.f * B.sm * (B.dc || 1)); S.coins += res.coins; ringAward(clsI(B.k), res);
   R.r++; R.foe = null;
   if (R.r >= PWTN) {
     res.done = true; P.won = (P.won || 0) + 1; P.cups[c.n] = (P.cups[c.n] || 0) + 1; P.run = null;
     S.items.candy = (S.items.candy || 0) + PWTCANDY; res.items.push(`${PWTCANDY} × Rare Candy`);
+    if (c.ms) { S.items.mstone = (S.items.mstone || 0) + c.ms; res.items.push(`${c.ms} × Mega Stone`); }
     const PK = PACKS[c.pk]; PK.slots.forEach(sl => pushEnc(res, genEnc({ min: sl.min || 0, luck: sl.luck || 0, shm: PK.shm })));
     res.perks.push(`Champion of the ${c.n}! That is trophy number ${P.won}.`); res.note = `The prize is ${aN(PK.n)}: three encounters are waiting in the grass.`;
   }
@@ -478,7 +495,7 @@ function labBattle(k, rent, pi) {
   let me, foes, tr;
   if (rent) {
     const used = new Set(); me = Array.from({ length: 4 }, () => facMon(2, used, 0));
-    const st = { iv: ULTRA.has(k) ? 31 : 22, ev: ULTRA.has(k) ? 60 : 24, q: 2, slack: 99 };
+    const st = { iv: ULTRA.has(k) ? 31 : 22, ev: ULTRA.has(k) ? 60 : 24, q: 2, slack: 99, mg: c.i >= 8 };
     foes = k === 'trainer' ? Array.from({ length: 4 }, () => facMon(2, used, -20)) : k === 'evilteam' ? regTeam(d[4], 4, FACLV, Object.assign({}, c, st), true) : bossTeam(d, 4, FACLV, st, true);
     tr = trainerOf(k, i, { fr: 1, arena: k === 'trainer' ? 'factory' : 'hall' });
   } else {
@@ -486,8 +503,12 @@ function labBattle(k, rent, pi) {
     me = S.party.map(monBy).filter(Boolean); foes = foeTeam(k, d, st.mons, base, st); tr = trainerOf(k, i);
     if (k === 'trainer') tr.skill = st.sk;
   }
-  return mkBattle(me, foes, tr, { mode: 'lab', st: c, k, rd, n: 0, lap: 0, ti: i, rent: rent ? 1 : 0, bag: rent ? 0 : BAGN, xm: 1, sm: 1, boost: { mode: '', m: 1, xp: 1 } });
+  const B = mkBattle(me, foes, tr, { mode: 'lab', st: c, k, rd, n: 0, lap: 0, ti: i, rent: rent ? 1 : 0, bag: rent ? 0 : BAGN, xm: 1, sm: 1, boost: { mode: '', m: 1, xp: 1 } });
+  labMega(B);
+  return B;
 }
+/* I demoen kan alle dine som har en Mega-form, prøve den, også uten Mega Ring og stein. */
+function labMega(B) { B.me.forEach(b => { if (!b.mg && !b.mega) { const o = megaOpts(b.id); if (o.length) b.mg = o.includes(b.src.ms) ? b.src.ms : o[0]; } }); }
 /* ---------- Legendariske kamper ----------
    Når en runde i ligaen eller i Battle Frontier er fullført, viser en legendarisk Pokémon seg. Den er på et høyt nivå og har flere ganger så mye HP
    som vanlig, så den er umulig i starten. Slår du den, venter den i gresset, og da kan du prøve å fange den.
@@ -565,7 +586,7 @@ const domKey = tr => tr.dk ? 'dark' : tr.lbg === 'flame' ? 'magma' : tr.lbg, rai
 function raidField(B, ev) {
   const D0 = raidDom(B.tr), f = B.foe[B.b], b = B.me[B.a]; if (!D0 || B.over || f.hp <= 0) return;
   const N = nmOf('me', b), F = f.name;
-  if (!B.rage && f.hp <= f.max / 2) { B.rage = 1; ev.push({ t: 'env', k: 'rage', s: `${F} is enraged!` }); changeStats(B, 'foe', D0.up, ev); }
+  if (!B.rage && f.hp <= f.max / 2) { B.rage = 1; ev.push({ t: 'env', k: 'rage', s: `${F} is enraged!` }); if (!megaEvolve(B, 'foe', ev, 'rage')) changeStats(B, 'foe', D0.up, ev); }
   if (b.hp <= 0 || b.v.away) return;
   B.fld = (B.fld || 0) + 1;
   if (B.fld < (B.rage ? RAIDEV2 : RAIDEV)) return;
@@ -579,6 +600,10 @@ function raidField(B, ev) {
   }
   if (D0.k !== 'chip' && b.hp > 0 && !B.over) changeStats(B, 'me', [[D0.st, -1]], ev, true);
 }
+/* Formen en legendarisk forvandles til når den blir rasende i et raid (0 = ingen). Mewtwo har Dark Mewtwo som sin andre form og forvandles ikke. */
+const raidMega = R => R.dk || R.id === 150 ? 0 : megaOpts(R.id)[0] || 0;
+/* Steinen til en legendarisk (Blue Orb, Red Orb, eller Mega-steinen dens). */
+const legStone = id => id === 382 ? 'the Blue Orb' : id === 383 ? 'the Red Orb' : `${D(id)[0]}'s Mega Stone`;
 function legTr(id, dk) {
   const L = dk ? DARK : LEG[id], d = D(id);
   return { n: dk ? L.n : d[0], img: '', title: raidTitle(id, dk), ty: d[1], kind: 'legend', ci: 10, cn: 'Legendary raid', skill: 1, boss: true, ultra: true, gold: L.t === 4, int: 8,
@@ -600,9 +625,9 @@ function raidBattle(lead, demo) {
   const R = demo === 'dk' ? { id: 150, dk: 1, lv: raidLvFor(5) } : demo ? { id: demo, lv: raidLvFor(LEG[demo].t) } : S.raid, L = raidInfo(R), party = S.party.map(monBy).filter(Boolean);
   party.sort((a, b) => (b.u === lead) - (a.u === lead));
   /* Vanskelighetsgraden senker nivået og HP-en til den legendariske (Hard = som før). */
-  const dd = diff(), lv = Math.max(10, Math.round(R.lv * dd.rlv)), e = Math.round((R.dk ? 100 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : 0, g: rollG(R.id), mega: defForm(R.id), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: raidMoves(R.id, lv) };
+  const dd = diff(), lv = Math.max(10, Math.round(R.lv * dd.rlv)), e = Math.round((R.dk ? 100 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : 0, g: rollG(R.id), mega: defForm(R.id), ms: raidMega(R), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: raidMoves(R.id, lv) };
   const B = mkBattle(party, [foe], legTr(R.id, R.dk), { mode: demo ? 'lab' : 'raid', raid: 1, st: TCL.supreme, k: 'legend', rd: 0, n: 0, lap: 0, ti: 0, bag: bagN(), xm: 3 * dd.xp, sm: 1, dc: dd.coin, boost: { mode: '', m: 1, xp: 1 } });
-  B.tr.skill = dd.sk;
+  B.tr.skill = dd.sk; if (demo) labMega(B);
   const f = B.foe[0]; f.max = f.hp = Math.round(f.max * RAIDHP[L.t - 1] * dd.rhp); if (R.dk) f.short = 'D.Mewtwo';
   return B;
 }
@@ -614,6 +639,9 @@ function finishRaid(B) {
     const c = RAIDCANDY[t - 1]; S.items.candy = (S.items.candy || 0) + c; res.items.push(`${c} × Rare Candy`);
     if (t >= 2) { const n = t >= 4 ? 3 : 1; S.items.ultra = (S.items.ultra || 0) + n + 1; res.items.push(`${n + 1} × Ultra Ball`); }
     if (t >= 4) giveCharm(res);
+    /* Mega: en vanlig stein fra de store (noen ganger fra de vanlige legendariske), og den legendariskes egen stein første gang den slås. */
+    if (t >= 2 || Math.random() < 0.25) { S.items.mstone = (S.items.mstone || 0) + 1; res.items.push('1 × Mega Stone'); }
+    if (megaOpts(id).length && !hasStone(id)) { (S.lst || (S.lst = {}))[id] = 1; res.items.push(legStone(id).replace(/^the /, '')); res.perks.push(`You found ${legStone(id)}. Every ${D(id)[0]} you own can now ${id === 382 || id === 383 ? 'revert to its primal form' : 'Mega Evolve'} in battle${S.ring ? '' : ', once you have the Mega Ring'}.`); }
     if (id === 150 && !B.tr.dk && R && !hasDark() && Math.random() < DARKP) {
       /* Den reiser seg igjen. Belønningen for Mewtwo er gitt; r1 husker den til oppsummeringen etter runde to. */
       S.raid = { id: 150, dk: 1, lv: raidLvFor(5), day: '', tries: R.tries || 0, won1: 1, r1: `${res.coins.toLocaleString('en-US')} coins, ${res.items.join(', ')}` };
