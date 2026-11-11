@@ -136,6 +136,91 @@ function dayBoost() {
   return { mode: (h >>> 3) % 2 ? 'league' : 'factory', m: 1.5, xp: 1.3 };
 }
 
+/* ---------- Special events ----------
+   Noen kampdager er spesielle. Hva som skjer, avgjøres i det kampene åpnes («Done for today») og vises ikke før da. Alt er fordeler: ingen event
+   gjør noe vanskeligere, og en dag uten event er en helt vanlig dag. Dagene telles i kampdager, ikke i kalenderdager, så en dag uten studering
+   bruker ikke opp noe. S.evt = { day, k, ty, stars } gjelder kampdagen day (k = '' når dagen er vanlig), S.evg = kampdager siden sist.
+   surge:  alle på din side som har en Mega-form, starter kampen i den (uten ring og stein).
+   type:   dagens type får +15 % i alle verdier, og møtene du vinner er oftere av den typen.
+   stars:  tre av dine egne som ikke står på laget, står i rampelyset: de kjemper på lagets nivå med +20 % i alle verdier.
+   little: de som ennå kan utvikle seg, får +35 % i alle verdier.
+   gold:   alle kamper gir 1,5 ganger så mange mynter. wind: ett forsøk til i ligaen og ett løp til i Frontier.
+   lucky:  fem ganger så stor sjanse for shiny på alt du vinner eller åpner, og hver boss gir ett møte ekstra. camp: trening koster 40 % mindre. */
+const EVENTS = {
+  surge: { n: 'Mega Surge', c: '#b9a5e8', c2: '#7fd4f5', ic: 'M', s: 'Mega forms for free', d: 'Every Pokémon on your side that has a Mega form starts each battle Mega Evolved. No ring and no stones needed, and your own Mega is still yours to use.' },
+  type: { n: 'Festival', c: '#a6c59c', c2: '#e3c577', ic: '✦', s: '+15 % in every stat', d: '' },
+  stars: { n: 'Spotlight', c: '#e3c577', c2: '#f1ede6', ic: '★', s: 'Three of yours shine', d: "Three Pokémon from your box are in the spotlight. Put them on the team: they fight at your team's level with +20 % in every stat, and keep the XP they earn." },
+  little: { n: 'Little League', c: '#a6c59c', c2: '#7fa8e6', ic: '◔', s: '+35 % for the small ones', d: 'Your Pokémon that can still evolve get +35 % in every stat today.' },
+  gold: { n: 'Gold Rush', c: '#e3c577', c2: '#d98f7e', ic: '◎', s: 'Coins ×1.5', d: 'Every battle pays one and a half times the coins today, raids included.' },
+  wind: { n: 'Second Wind', c: '#7fa8e6', c2: '#a6c59c', ic: '↻', s: 'One more attempt', d: 'One more attempt in the League and one more run in the Frontier today.' },
+  lucky: { n: 'Lucky Day', c: '#e3a8cb', c2: '#e3c577', ic: '✧', s: 'Shiny odds ×5', d: 'Shiny odds are five times as high on every encounter you win or open today, and every boss gives one encounter more.' },
+  camp: { n: 'Training Camp', c: '#d98f7e', c2: '#e3c577', ic: '▲', s: 'Training −40 %', d: 'Training points and Hyper Training cost 40 % less today.' }
+};
+const EVGAP = [0, 0.35, 0.65, 1], EVSTAT = { type: 1.15, stars: 1.2, little: 1.35 }, EVCOIN = 1.5, EVSHINY = 5, EVCAMP = 0.6;
+const evNow = () => { const e = S.evt; return e && e.k && EVENTS[e.k] && !!S.lad.day && e.day === S.lad.day ? e : null; };
+const evIs = k => { const e = evNow(); return !!e && e.k === k; };
+const evCoin = () => evIs('gold') ? EVCOIN : 1, evShiny = () => evIs('lucky') ? EVSHINY : 1, evPrice = () => evIs('camp') ? EVCAMP : 1;
+const evSm = () => Math.round(studyMult() * evCoin() * 10) / 10;
+const ladLives = () => LIVES + (evIs('wind') ? 1 : 0), facLives = () => FACLIVES + (evIs('wind') ? 1 : 0);
+const canEvolve = id => !!(EVO[id] || []).length;
+/* Navn, farger og tekst for dagens event (typefestivalen tar farge og navn fra typen). */
+function evInfo(e) {
+  const E = EVENTS[e.k];
+  if (e.k === 'type') return Object.assign({}, E, { n: `${TYN[e.ty]} Festival`, c: `var(--t${e.ty})`, d: `Your ${TYN[e.ty]}-type Pokémon get +15 % in every stat today, and the encounters you win are more often ${TYN[e.ty]} types.` });
+  return E;
+}
+/* Fordelen en av dine får i dag: m = ganger i alle verdier (1 = ingen), mega = formen den starter i, lv = nivået den kjemper på. */
+function evBoost(src, e) {
+  e = e || evNow(); const o = { m: 1, mega: 0, lv: 0 }; if (!e || !src) return o;
+  const ty = mTypes(src);
+  if (e.k === 'type' && ty.includes(e.ty)) o.m = EVSTAT.type;
+  else if (e.k === 'stars' && src.u && (e.stars || []).includes(src.u)) { o.m = EVSTAT.stars; const L = Math.round(leagueLv()); if (src.lv < L) o.lv = L; }
+  else if (e.k === 'little' && canEvolve(src.id)) o.m = EVSTAT.little;
+  else if (e.k === 'surge' && !src.mega) { const k = megaOpts(src.id); if (k.length) o.mega = k.includes(src.ms) ? src.ms : k[0]; }
+  return o;
+}
+/* De som står i rampelyset kjemper på lagets nivå: kampen får en kopi med det nivået. XP-en går likevel til den ekte (grantXp slår opp på u). */
+const evSrc = m => { const b = evBoost(m); return b.lv ? Object.assign({}, m, { lv: b.lv, mv: m.mv }) : m; };
+/* Legger dagens fordeler på laget ditt i en kamp som nettopp er laget. Motstanderne røres aldri. evb = merket på kampskjermen. */
+function evApply(B) {
+  const e = evNow(); if (!e || !B || B.mode === 'lab') return B;
+  B.ev = e.k;
+  for (const b of B.me) {
+    const o = evBoost(b.src, e);
+    if (o.mega && !b.mega) { const st = statsOf(Object.assign({}, b.src, { mega: o.mega })), g = MEGA[o.mega - 1]; b.st = [b.st[0]].concat(st.slice(1)); b.ty = [g[2], g[3]]; b.mega = o.mega; b.mg = 0; b.name = b.src.nn || megaName(o.mega); b.evb = 'surge'; }
+    if (o.m > 1) { b.st = b.st.map(v => Math.max(1, Math.round(v * o.m))); b.max = b.hp = b.st[0]; b.evb = e.k; }
+  }
+  return B;
+}
+/* En linje i oppsummeringen når dagens event ga noe ekstra i denne kampen. */
+const evPerk = res => { if (evIs('gold') && res.coins > 0) res.perks.push('Gold Rush: one and a half times the coins.'); };
+const pickW = W => { const ks = Object.keys(W).filter(k => W[k] > 0); let x = Math.random() * ks.reduce((s, k) => s + W[k], 0); for (const k of ks) { x -= W[k]; if (x <= 0) return k; } return ks[ks.length - 1]; };
+/* Tre fra boksen til rampelyset: helst slike som kan brukes (ferdig utviklet eller sterke nok), og aldri to av samme art. */
+function pickStars() {
+  const out = S.mons.filter(m => !S.party.includes(m.u)), good = out.filter(m => !canEvolve(m.id) || bstSum(m.id) >= 420);
+  const pool = (good.length >= 3 ? good : out.length >= 3 ? out : S.mons).slice().sort(() => Math.random() - 0.5), seen = new Set(), res = [];
+  for (const m of pool) { if (seen.has(m.id)) continue; seen.add(m.id); res.push(m.u); if (res.length === 3) break; }
+  return res;
+}
+/* Trekker dagens event første gang kampene åpnes den dagen. Den aller første gangen er det alltid et event; siden blir sjansen større for hver
+   vanlig kampdag (EVGAP), og aldri to dager på rad. Bare eventer som gir deg noe, er med i trekningen. */
+function evRoll() {
+  const day = S.lad.day; if (!day) return null;
+  if (S.evt && S.evt.day === day) return evNow();
+  const first = !S.evt, gap = S.evg || 0;
+  if (!first && !(Math.random() < EVGAP[Math.min(3, gap)])) { S.evt = { day, k: '' }; S.evg = gap + 1; return null; }
+  const megaN = S.mons.filter(m => !m.mega && megaOpts(m.id).length).length, lit = S.mons.filter(m => canEvolve(m.id)).length, tyc = {};
+  S.mons.forEach(m => mTypes(m).forEach(t => { if (t >= 0) tyc[t] = (tyc[t] || 0) + 1; }));
+  const tys = Object.keys(tyc).map(Number).filter(t => tyc[t] >= 2 && t !== S.evlt);
+  const W = { surge: megaN ? 1.3 : 0, type: tys.length ? 1.6 : 0, stars: S.mons.length >= 8 ? 1.2 : 0, little: lit >= 2 ? 1 : 0, gold: 1.2, wind: 1, lucky: 1, camp: 0.8 };
+  if (S.evl) W[S.evl] = 0;
+  const k = first && megaN ? 'surge' : pickW(W), e = { day, k };
+  if (k === 'type') { e.ty = tys[rnd(tys.length)]; S.evlt = e.ty; }
+  if (k === 'stars') e.stars = pickStars();
+  S.evt = e; S.evl = k; S.evg = 0; S.evn = (S.evn || 0) + 1;
+  return e;
+}
+
 /* ---------- Lagbygging ---------- */
 /* Går ned til en tidligere form hvis nivået er for lavt for arten (slack = hvor mye for tidlig bosser får utvikle). */
 function fitForm(id, lv, slack) { while (stageOf(id) > 0 && lv < reqLv(id) - slack && !(D(D(id)[4])[6] & 4)) id = D(id)[4]; return id; }
@@ -247,14 +332,14 @@ function leaguePlan(t) {
 }
 /* Myntene en seier gir akkurat nå: klassens sats × vanskelighetsgrad × studiebonus × runde, og dobbelt for dagens første seier. */
 function leagueCoins(st, lap) {
-  return Math.round(st.coin * diff().coin * studyMult() * (1 + Math.min(1, 0.2 * (lap || 0))) * (firstWin() ? 2 : 1));
+  return Math.round(st.coin * diff().coin * evSm() * (1 + Math.min(1, 0.2 * (lap || 0))) * (firstWin() ? 2 : 1));
 }
 /* lead = den som skal gå ut først (velges på oppstillingen før kampen). Resten følger rekkefølgen på laget. */
 function newBattle(lead) {
   const t = nextTrainer(), p = leaguePlan(t), d = POOL[t.k][t.i], tr = trainerInfo(t);
   tr.skill = p.st.sk;
   const party = S.party.map(monBy).filter(Boolean); party.sort((a, b) => (b.u === lead) - (a.u === lead));
-  return mkBattle(party, foeTeam(t.k, d, p.n, p.lv, p.st), tr, { mode: 'league', st: p.st, k: t.k, rd: p.ri.rd, n: t.n, lap: t.lap, ti: t.i, bag: bagN(), xm: xpMult() * diff().xp, sm: studyMult(), dc: diff().coin, boost: dayBoost() });
+  return evApply(mkBattle(party.map(evSrc), foeTeam(t.k, d, p.n, p.lv, p.st), tr, { mode: 'league', st: p.st, k: t.k, rd: p.ri.rd, n: t.n, lap: t.lap, ti: t.i, bag: bagN(), xm: xpMult() * diff().xp, sm: evSm(), dc: diff().coin, boost: dayBoost() }));
 }
 /* XP til hele laget etter kampen. Alle får like mye, uansett hvem som kjempet. Sterkere motstandere og høyere klasse gir mer, og de som ligger
    under motstanderens nivå får mer enn de som ligger over (som i Black og White). Ligaen tar aldri slutt, så andelen er satt slik at en bossseier
@@ -270,7 +355,7 @@ function battleXp(B) {
 function grantXp(B, res) {
   const xs = battleXp(B);
   B.me.forEach((b, i) => {
-    const m = b.src, x = xs[i]; if (!x || !m.u) return;
+    const m = b.src.u ? monBy(b.src.u) || b.src : b.src, x = xs[i]; if (!x || !m.u) return;
     const l0 = m.lv, x0 = m.xp; m.xp += x; m.lv = lvOf(m.xp);
     res.ups.push(Object.assign({ u: m.u, xp: x, l0, l1: m.lv, x0 }, m.lv > l0 ? learnUp(m, l0) : {}));
   });
@@ -311,7 +396,8 @@ function finishLeague(B) {
     const bm = B.boost.mode === 'league', give = (it, n) => { if (n > 0) { S.items[it] += n; res.items.push(`${n} × ${SHOP[it].n}`); } };
     const fw = firstWin(); res.coins = Math.round(st.coin * (B.dc || 1) * B.sm * (1 + Math.min(1, 0.2 * B.lap)) * (fw ? 2 : 1)) + B.pay; S.coins += res.coins;
     if (fw) { L.fw = L.day || dayKey(); res.perks.push('First win of the day: double coins.'); }
-    classLoot(B, res, give); ringAward(clsI(k), res);
+    classLoot(B, res, give); ringAward(clsI(k), res); evPerk(res);
+    if (evIs('lucky') && B.tr.boss) { pushEnc(res, genEnc({ ty: [B.tr.ty], min: 2, luck: 1.5 })); res.perks.push('Lucky Day: one more encounter.'); }
     if (bm && B.tr.boss && Math.random() < 0.5) give('candy', 1);
     /* Byttetilbud: tilfeldig, ikke hver gang (rivaler tilbyr oftest). Den du får, er på ditt nivå og i den formen nivået tillater. */
     if (B.tr.boss && k !== 'evilteam' && Math.random() < (k === 'rival' ? 0.6 : 0.3)) {
@@ -322,7 +408,7 @@ function finishLeague(B) {
     L.best = (L.best || 0) + 1; (L.seen = L.seen || []).push(k + B.ti); L.next = null;
     if (++L.n >= LAPN) { L.lap++; L.n = 0; L.seen = []; res.lapDone = true; raidSpawn(res); }
   } else {
-    const d = L.day || dayKey(), n = ladFails() + 1; L.tries = { d, n }; if (n >= LIVES) L.lost = d; res.left = Math.max(0, LIVES - n);
+    const d = L.day || dayKey(), n = ladFails() + 1; L.tries = { d, n }; if (n >= ladLives()) L.lost = d; res.left = Math.max(0, ladLives() - n);
     /* De sjeldne bossene gir deg bare én sjanse. Taper du mot den som avslutter runden, drar den videre og neste runde begynner uten belønningen.
        Taper du mot en som dukket opp overraskende midt i runden, står den vanlige bossen der neste gang. */
     if (B.tr.ultra) { L.next = null; res.gone = true; if (rungInfo(L.n, L.lap).k === 'ultra') { L.lap++; L.n = 0; L.seen = []; res.lapDone = true; raidSpawn(res); } } else if (L.next) L.next.fail = d;
@@ -399,17 +485,17 @@ function facInfo(f) {
 }
 function facBattle() {
   const R = S.fac.run, f = facFoe();
-  return mkBattle(R.team, f.team, facInfo(f), { mode: 'fac', round: R.round, w: R.w, k: f.boss ? f.k : 'trainer', sm: studyMult(), dc: diff().coin, boost: dayBoost() });
+  return evApply(mkBattle(R.team, f.team, facInfo(f), { mode: 'fac', round: R.round, w: R.w, k: f.boss ? f.k : 'trainer', sm: evSm(), dc: diff().coin, boost: dayBoost() }));
 }
 /* Frontier gir gjenstander, møter og mynter, ikke XP (Pokémonene er leid). Et tap avslutter løpet; etter FACLIVES tap er Frontier stengt for dagen.
    En ferdig runde (sju seire) gir en egen myntpremie. */
 function finishFactory(B) {
   const R = S.fac.run, win = B.over === 'win', res = { mode: 'fac', win, ups: [], items: [], encs: [], coins: 0, round: R.round, w: R.w, swap: null, roundDone: false, streak: R.streak, perks: [], note: '' };
-  if (!win) { const d = S.lad.day || dayKey(), n = facFails() + 1; S.fac.best = Math.max(S.fac.best || 0, R.streak); S.fac.tries = { d, n }; if (n >= FACLIVES) S.fac.lost = d; res.left = Math.max(0, FACLIVES - n); S.fac.run = null; save(); return res; }
+  if (!win) { const d = S.lad.day || dayKey(), n = facFails() + 1; S.fac.best = Math.max(S.fac.best || 0, R.streak); S.fac.tries = { d, n }; if (n >= facLives()) S.fac.lost = d; res.left = Math.max(0, facLives() - n); S.fac.run = null; save(); return res; }
   const sm = B.sm, bm = B.boost.mode === 'factory' ? B.boost.m : 1, r = R.round, roll = p => Math.random() < p * bm;
   const give = (it, n) => { if (n > 0) { S.items[it] += n; res.items.push(`${n} × ${SHOP[it].n}`); } };
   R.w++; R.streak++; res.w = R.w; res.streak = R.streak; S.fac.best = Math.max(S.fac.best || 0, R.streak);
-  res.coins = Math.round((20 + 8 * R.w + 15 * (r - 1)) * sm * (B.dc || 1)) + B.pay; S.coins += res.coins;
+  res.coins = Math.round((20 + 8 * R.w + 15 * (r - 1)) * sm * (B.dc || 1)) + B.pay; S.coins += res.coins; evPerk(res);
   if (roll(0.4)) give(r >= 3 ? 'ultra' : r >= 2 ? 'great' : 'poke', r >= 2 ? 1 : 2);
   if (R.w === 3) pushEnc(res, genEnc({ min: 1, luck: 1 }));
   if (R.w === 5) { give('great', 2); if (!S.incOn) { S.incOn = 1; res.items.push('Incense for your next session'); } if (roll(0.5)) pushEnc(res, genEnc({ min: 2, luck: 1.2 })); }
@@ -452,7 +538,7 @@ const pwtRun = () => { const P = pwt(); if (P.run && P.run.day !== S.lad.day) { 
 const pwtOpen = () => !!S.lad.day && (!!pwtRun() || pwt().day !== S.lad.day);
 const pwtLv = () => Math.max(10, Math.min(100, Math.round(leagueLv())));
 const pwtSize = () => Math.max(1, Math.min(PWTN, S.party.map(monBy).filter(Boolean).length));
-const pwtCoins = (c, r) => Math.round(PWTCOIN[r] * c.f * studyMult() * diff().coin);
+const pwtCoins = (c, r) => Math.round(PWTCOIN[r] * c.f * evSm() * diff().coin);
 function pwtStart() {
   const P = pwt(), c = cupNow(), opp = [];
   c.rounds.forEach(([k, re]) => { let l = POOL[k].map((_, i) => i).filter(i => (!re || re.test(POOL[k][i][5] || '')) && !opp.some(o => o[0] === k && o[1] === i)); if (!l.length) l = POOL[k].map((_, i) => i); opp.push([k, l[rnd(l.length)]]); });
@@ -469,14 +555,14 @@ function pwtFoe() {
 /* us = de du har valgt (u), den første går ut først. Dine spiller på cupens nivå i denne kampen, uten at de egentlige nivåene røres. */
 function pwtBattle(us) {
   const R = pwtRun(), f = pwtFoe(), mine = us.map(monBy).filter(Boolean).slice(0, R.n).map(m => Object.assign({}, m, { lv: R.lv }));
-  return mkBattle(mine, f.team, f.tr, { mode: 'pwt', st: f.st, k: f.k, r: R.r, cup: f.c.n, bag: 0, xm: 0, sm: studyMult(), dc: diff().coin, boost: { mode: '', m: 1, xp: 1 } });
+  return evApply(mkBattle(mine, f.team, f.tr, { mode: 'pwt', st: f.st, k: f.k, r: R.r, cup: f.c.n, bag: 0, xm: 0, sm: evSm(), dc: diff().coin, boost: { mode: '', m: 1, xp: 1 } }));
 }
 function finishPwt(B) {
   const P = pwt(), R = pwtRun(), win = B.over === 'win', res = { mode: 'pwt', win, ups: [], items: [], encs: [], coins: 0, trade: null, perks: [], note: '', r: B.r, cup: B.cup, done: false };
   if (!R) return res;
   const c = CUPS[R.wd];
   if (!win) { P.run = null; res.note = `You are out of the ${c.n}. A new cup opens after your next day of focus.`; save(); return res; }
-  res.coins = Math.round(PWTCOIN[R.r] * c.f * B.sm * (B.dc || 1)); S.coins += res.coins; ringAward(clsI(B.k), res);
+  res.coins = Math.round(PWTCOIN[R.r] * c.f * B.sm * (B.dc || 1)); S.coins += res.coins; ringAward(clsI(B.k), res); evPerk(res);
   R.r++; R.foe = null;
   if (R.r >= PWTN) {
     res.done = true; P.won = (P.won || 0) + 1; P.cups[c.n] = (P.cups[c.n] || 0) + 1; P.run = null;
@@ -626,8 +712,8 @@ function raidBattle(lead, demo) {
   party.sort((a, b) => (b.u === lead) - (a.u === lead));
   /* Vanskelighetsgraden senker nivået og HP-en til den legendariske (Hard = som før). */
   const dd = diff(), lv = Math.max(10, Math.round(R.lv * dd.rlv)), e = Math.round((R.dk ? 100 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : 0, g: rollG(R.id), mega: defForm(R.id), ms: raidMega(R), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: raidMoves(R.id, lv) };
-  const B = mkBattle(party, [foe], legTr(R.id, R.dk), { mode: demo ? 'lab' : 'raid', raid: 1, st: TCL.supreme, k: 'legend', rd: 0, n: 0, lap: 0, ti: 0, bag: bagN(), xm: 3 * dd.xp, sm: 1, dc: dd.coin, boost: { mode: '', m: 1, xp: 1 } });
-  B.tr.skill = dd.sk; if (demo) labMega(B);
+  const B = mkBattle(demo ? party : party.map(evSrc), [foe], legTr(R.id, R.dk), { mode: demo ? 'lab' : 'raid', raid: 1, st: TCL.supreme, k: 'legend', rd: 0, n: 0, lap: 0, ti: 0, bag: bagN(), xm: 3 * dd.xp, sm: 1, dc: dd.coin, boost: { mode: '', m: 1, xp: 1 } });
+  B.tr.skill = dd.sk; if (demo) labMega(B); else evApply(B);
   const f = B.foe[0]; f.max = f.hp = Math.round(f.max * RAIDHP[L.t - 1] * dd.rhp); if (R.dk) f.short = 'D.Mewtwo';
   return B;
 }
@@ -635,7 +721,7 @@ function finishRaid(B) {
   const win = B.over === 'win', id = B.tr.leg, R = S.raid, nm = B.tr.n, t = B.tr.lt, res = { mode: 'raid', win, ups: [], items: [], encs: [], coins: 0, trade: null, perks: [], note: '', kind: 'legend', leg: id };
   if (win) {
     grantXp(B, res);
-    res.coins = Math.round(RAIDCOIN[t - 1] * (B.dc || 1)); S.coins += res.coins;
+    res.coins = Math.round(RAIDCOIN[t - 1] * (B.dc || 1) * evCoin()); S.coins += res.coins; evPerk(res);
     const c = RAIDCANDY[t - 1]; S.items.candy = (S.items.candy || 0) + c; res.items.push(`${c} × Rare Candy`);
     if (t >= 2) { const n = t >= 4 ? 3 : 1; S.items.ultra = (S.items.ultra || 0) + n + 1; res.items.push(`${n + 1} × Ultra Ball`); }
     if (t >= 4) giveCharm(res);

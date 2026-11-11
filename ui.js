@@ -126,6 +126,7 @@ const sfx = {
   ball: () => { tone(1400, 0, 0.015, 0.025); tone(700, 0.02, 0.04, 0.025, 'triangle'); },
   start: () => [392, 523, 659].forEach((f, i) => tone(f, i * 0.09, 0.12)),
   done: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, 0.2, 0.06, 'triangle')),
+  event: () => { [392, 523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, i * 0.09, 0.22, 0.05, 'triangle')); tone(1568, 0.58, 0.5, 0.04, 'square'); tone(784, 0.58, 0.6, 0.04, 'triangle'); },
   found: () => { tone(880, 0, 0.07); tone(1175, 0.08, 0.09); },
   appear: () => { for (let i = 0; i < 10; i++) tone(i % 2 ? 330 + i * 40 : 1320 - i * 60, i * 0.035, 0.04, 0.03); noise(0.35, 0.3, 0.025, 600, 3000); },
   thr: () => { noise(0, 0.28, 0.05, 3500, 500); tone(600, 0.05, 0.22, 0.02, 'triangle', 220); },
@@ -198,7 +199,12 @@ function render() {
   if (!S.started) { $('#nav').hidden = true; $('#main').innerHTML = ''; return intro(); }
   $('#nav').hidden = false;
   renderNav();
-  $('#main').innerHTML = `<div class="wrap">${VIEW[U.tab]()}</div>`;
+  /* På en eventdag får forsiden eventets farger og en annen oppstilling (se VIEW.fokus). Dagens event trekkes her hvis kampene alt står åpne. */
+  if (U.tab === 'fokus' && S.lad.day && S.lad.day === dayKey() && !(S.evt && S.evt.day === S.lad.day) && typeof evRoll === 'function') { evRoll(); save(true); }
+  const E = U.tab === 'fokus' && S.party.length && typeof evNow === 'function' ? evNow() : null, EI = E ? evInfo(E) : null;
+  $('#main').innerHTML = `<div class="wrap${E ? ' evpage ev-' + E.k : ''}"${E ? ` style="--ec:${EI.c};--ec2:${EI.c2 || EI.c}"` : ''}>${VIEW[U.tab]()}</div>`;
+  /* Ble eventet trukket uten at «Done for today» ble trykket nå (kampene sto alt åpne), vises avsløringen første gang forsiden er fri. */
+  if (E && !E.seen && $('#ov').hidden && $('#sheet').hidden && typeof evReveal === 'function') { E.seen = 1; save(true); setTimeout(() => { if ($('#ov').hidden && $('#sheet').hidden && evNow() === E) evReveal(E, 1); }, 400); }
   /* Et område som nettopp ble åpnet (av nivå eller antall arter), sies fra om én gang. */
   if (S.nreg && S.nreg.length) { const l = S.nreg; S.nreg = []; save(true); setTimeout(() => toast(`New area: ${l.join(' and ')} ${l.length > 1 ? 'are' : 'is'} open. See Shop · Routes.`), 400); }
 }
@@ -246,7 +252,7 @@ VIEW.fokus = () => {
   const w = rateOf(fag), em = Math.round(min * w), subj = Object.keys(FAGS).filter(isSubj), oth = Object.keys(FAGS).filter(k => !isSubj(k)), chip = k => `<button type="button" class="chip" data-a="fag" data-k="${k}" aria-pressed="${fag === k}">${esc(F(k).n)}</button>`;
   const n = Math.floor(Math.min(em, left) / 20) + (min * w >= 25 && left >= em ? 1 : 0) + (S.incOn ? 1 : 0);
   const rested = !(S.log[dayKey()] || {}).s, dx = (S.log[dayKey()] || {}).x || 0;
-  let h = topBar();
+  const top = topBar(); let h = '';
   if (p) {
     const ev = evoOpts(p), nx = ev.find(x => !x.ok), rdy = ev.find(x => x.ok), a = xpAt(p.lv), b = xpAt(p.lv + 1);
     h += `<button type="button" class="card partner" data-a="mon" data-u="${p.u}" style="--tc:var(--t${D(p.id)[1]});text-align:left;width:100%">${spr(p.id, { ani: 1, sh: p.sh, mega: p.mega })}
@@ -266,8 +272,9 @@ VIEW.fokus = () => {
     <div class="quests">${QUESTS.map(q => `<span class="${td >= q.m ? 'on' : ''}"><b>${td >= q.m ? '✓ ' : ''}${q.n}</b>${q.r}</span>`).join('')}</div>
     ${S.eggs.length ? `<div class="row" style="margin-top:14px"><span class="egg"></span><div class="sp"><div class="row sm tn" style="justify-content:space-between"><span>Egg${S.eggs.length > 1 ? ' (' + S.eggs.length + ')' : ''}</span><span>${S.eggs[0].need - S.eggs[0].got} min left</span></div><div class="bar gold" style="margin-top:5px"><i style="width:${Math.round(S.eggs[0].got / S.eggs[0].need * 100)}%"></i></div></div></div>` : ''}
     ${S.incOn ? '<p class="sm" style="margin-top:10px">Incense is lit for your next session.</p>' : ''}${S.boost ? `<p class="sm" style="margin-top:10px;color:var(--gold)">Boss perk: ${S.boost.m}× coins for your next ${S.boost.n} session${S.boost.n > 1 ? 's' : ''}.</p>` : ''}</div>`;
-  if (S.party.length) h += raidCard() + ladderCard();
-  return h;
+  /* En vanlig dag ligger kampene nederst. På en eventdag står eventet og kampene øverst, og det som har med studeringen å gjøre, under. */
+  const battles = S.party.length ? raidCard() + ladderCard() : '', E = battles && typeof evNow === 'function' ? evNow() : null;
+  return E ? `${top}${evHero(E)}${battles}<div class="evsep"><span>Study</span></div>${h}` : top + h + battles;
 };
 
 /* ---------- Laget ---------- */
@@ -279,19 +286,19 @@ VIEW.lag = () => {
       if (!m) return `<button type="button" class="tcard empty" data-a="lagv" data-k="boks"><span class="plus">+</span><span class="sm">Empty slot. Pick one from the box.</span></button>`;
       const a = xpAt(m.lv), b = xpAt(m.lv + 1), rdy = evoOpts(m).some(x => x.ok);
       return `<button type="button" class="tcard${i ? '' : ' lead'}" data-a="mon" data-u="${m.u}" style="--tc:var(--t${D(m.id)[1]})">${hasNews(m) ? '<span class="bang abs" title="New move">!</span>' : ''}${spr(m.id, { ani: !i, sh: m.sh, mega: m.mega, s: i ? '60px' : '84px' })}
-        <span class="sp"><span class="row" style="gap:6px"><b class="tn-n">${esc(mName(m))}${gs(m)}</b>${i ? '' : '<span class="pill" style="background:var(--sage);color:#152013">Partner</span>'}${rdy ? '<span class="pill" style="color:var(--gold)">Can evolve</span>' : ''}</span>
+        <span class="sp"><span class="row" style="gap:6px"><b class="tn-n">${esc(mName(m))}${gs(m)}</b>${i ? '' : '<span class="pill" style="background:var(--sage);color:#152013">Partner</span>'}${typeof evTag === 'function' ? evTag(m) : ''}${rdy ? '<span class="pill" style="color:var(--gold)">Can evolve</span>' : ''}</span>
         <span class="row sm tn" style="justify-content:space-between;margin-top:5px"><span>Level ${m.lv} · ${i ? '30% XP' : 'all XP'}</span><span>${rdy ? '' : (evoOpts(m)[0] || {}).s ? 'evolves ' + evoOpts(m).map(x => x.s).filter((x, k, a) => a.indexOf(x) === k).join(' / ') : 'fully evolved'}</span></span>
         <span class="bar" style="margin-top:5px"><i style="width:${Math.round((m.xp - a) / (b - a) * 100)}%;background:var(--tc)"></i></span></span></button>`;
     }).join('');
     return `${head}<div class="stack">${rows}</div><p class="sm">Your partner sits in the timer and gets all XP from sessions. In battles the whole team gets XP afterwards. Tap a Pokémon to switch partner, change moves, rename it, evolve it or remove it. ! means a new move you have not looked at yet.</p>`;
   }
   const sorts = { ny: (a, b) => b.at - a.at, niva: (a, b) => b.lv - a.lv, sjelden: (a, b) => tierOf(b.id) - tierOf(a.id) || b.sh - a.sh || a.id - b.id, nr: (a, b) => a.id - b.id || b.lv - a.lv };
-  const list = S.mons.slice().sort(sorts[U.sort]), du = dupes(), val = du.reduce((s, m) => s + sellValue(m), 0);
+  const list = S.mons.slice().sort(sorts[U.sort]), du = dupes(), val = du.reduce((s, m) => s + sellValue(m), 0), evb = typeof evNow === 'function' ? evNow() : null;
   return `${head}
     <div class="chips">${[['ny', 'Newest'], ['niva', 'Level'], ['sjelden', 'Rarity'], ['nr', 'Number']].map(([k, n]) => `<button type="button" class="chip" data-a="sort" data-k="${k}" aria-pressed="${U.sort === k}">${n}</button>`).join('')}</div>
     ${du.length ? `<button type="button" class="btn wide" data-a="selldupes">Sell ${du.length} ${du.length === 1 ? 'duplicate' : 'duplicates'} for ${coinEl(val)}</button>` : ''}
-    <div class="grid box">${list.map(m => { const t = tierOf(m.id); return `<button type="button" class="cell nm r${t}${t >= 2 ? ' rr' : ''}${S.party.includes(m.u) ? ' inp' : ''}" data-a="mon" data-u="${m.u}" aria-label="${esc(mName(m))}, level ${m.lv}">${spr(m.id, { sh: m.sh, mega: m.mega, lazy: 1 })}<span class="nx">${esc(mName(m))}</span><span class="l tn">${m.lv}</span>${m.fav ? '<span class="c">★</span>' : ''}${hasNews(m) ? '<span class="bang">!</span>' : ''}</button>`; }).join('')}</div>
-    <p class="sm">Green dot = in team. Colored frame = rare or better. ! = a new move to look at.</p>`;
+    <div class="grid box">${list.map(m => { const t = tierOf(m.id); const eb = evb ? evBoost(m, evb) : null; return `<button type="button" class="cell nm r${t}${t >= 2 ? ' rr' : ''}${S.party.includes(m.u) ? ' inp' : ''}${eb && (eb.m > 1 || eb.mega) ? ' evc' : ''}" data-a="mon" data-u="${m.u}" aria-label="${esc(mName(m))}, level ${m.lv}">${spr(m.id, { sh: m.sh, mega: m.mega, lazy: 1 })}<span class="nx">${esc(mName(m))}</span><span class="l tn">${m.lv}</span>${m.fav ? '<span class="c">★</span>' : ''}${hasNews(m) ? '<span class="bang">!</span>' : ''}</button>`; }).join('')}</div>
+    <p class="sm">Green dot = in team. Colored frame = rare or better. ! = a new move to look at.${evb && (evb.k === 'surge' || EVSTAT[evb.k]) ? ` A glowing corner = gets today's ${esc(evInfo(evb).n)} bonus.` : ''}</p>`;
 };
 /* Sekskanten: hver akse viser staten målt mot en sterk art (base 130) på samme nivå. */
 function hexEl(m) {
@@ -363,14 +370,14 @@ function trainSheet(m) {
   const a = Math.min(10, room), b = evCan(m, i, EVMAX);
   const hp = typeof hpType === 'function' && m.mv.some(x => MOVES[x][0] === 'Hidden Power') ? [hpType(m.iv), hpType(m.iv.map((v, k) => k === i ? 31 : v))] : null;
   const rows = SN.map((n, k) => `<button type="button" class="trr" data-a="trsel" data-k="${k}" aria-pressed="${k === i}"><b style="${natc(k)}">${n}</b><span class="tn v">${st[k]}</span><span class="tb g"><i style="width:${Math.round(m.iv[k] / 31 * 100)}%"></i></span><span class="tn n">${m.iv[k]}</span><span class="tb"><i style="width:${Math.round(m.ev[k] / EVMAX * 100)}%"></i></span><span class="tn n">${m.ev[k]}</span></button>`).join('');
-  const evb = shed ? '' : room ? `<div class="trb">${m.ev[i] ? `<button type="button" class="btn sm2" data-a="trclr">Clear</button>` : ''}<button type="button" class="btn sm2 pri" data-a="trev" data-n="${a}"${S.coins >= a * EVP ? '' : ' disabled'}>+${a} ${coinEl(a * EVP)}</button>${b > a ? `<button type="button" class="btn sm2 pri" data-a="trev" data-n="${b}">+${b} ${coinEl(b * EVP)}</button>` : ''}</div>`
+  const evb = shed ? '' : room ? `<div class="trb">${m.ev[i] ? `<button type="button" class="btn sm2" data-a="trclr">Clear</button>` : ''}<button type="button" class="btn sm2 pri" data-a="trev" data-n="${a}"${S.coins >= evPriceOf(a) ? '' : ' disabled'}>+${a} ${coinEl(evPriceOf(a))}</button>${b > a ? `<button type="button" class="btn sm2 pri" data-a="trev" data-n="${b}">+${b} ${coinEl(evPriceOf(b))}</button>` : ''}</div>`
     : `<div class="trb fix">${m.ev[i] ? `<button type="button" class="btn sm2" data-a="trclr">Clear</button>` : ''}<span class="sm" style="align-self:center">${m.ev[i] >= EVMAX ? 'Fully trained.' : 'All 510 points are placed. Clear a stat to move them.'}</span></div>`;
   const html = `<div class="trs"><div class="trh"><span></span><span></span><span>Potential · of 31</span><span>Training · of ${EVMAX}</span></div>${rows}</div>
     <div class="card2 trx"><div class="row" style="justify-content:space-between"><b>${SN[i]}</b><span class="sm tn" style="${natc(i)}">${st[i]}${up !== dn && i === up ? ' · nature +10 %' : up !== dn && i === dn ? ' · nature −10 %' : ''}</span></div>
       ${shed ? '<p class="sm">Shedinja always has 1 HP, so there is nothing to train here.</p>' : `<div class="trl"><span class="sm">Potential <b class="tn">${m.iv[i]}</b> of 31${dIv > 0 ? `<br>+${dIv} at Lv ${m.lv}` : ''}</span>${ic > 0 ? `<button type="button" class="btn sm2 gold" data-a="triv"${S.coins >= ic ? '' : ' disabled'}>Hyper Train ${coinEl(ic)}</button>` : '<span class="pill" style="color:var(--gold)">At its best</span>'}</div>
       <div class="sm">Training <b class="tn">${m.ev[i]}</b> of ${EVMAX} · ${VIT[i]}${dEv > 0 ? ` · up to +${dEv} at Lv ${m.lv}` : ''}</div>${evb}`}
       ${hp && hp[0] !== hp[1] && ic > 0 ? `<p class="sm">Hidden Power follows potential: it would change from ${TYN[hp[0]]} to ${TYN[hp[1]]}.</p>` : ''}</div>
-    <p class="sm"><b class="tn">${free}</b> of ${EVTOT} training points are free. Focus sessions train your partner too, a point every two minutes.</p>
+    <p class="sm">${trainCut() < 1 ? `<b style="color:var(--gold)">Training Camp: everything here costs ${Math.round((1 - trainCut()) * 100)} % less today.</b> ` : ''}<b class="tn">${free}</b> of ${EVTOT} training points are free. Focus sessions train your partner too, a point every two minutes.</p>
     <button type="button" class="btn wide" data-a="trback">Back</button>`;
   const host = $('#trd');
   if (host && +host.dataset.u === m.u) { host.innerHTML = html; $('#trc').innerHTML = coinEl(S.coins); }

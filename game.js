@@ -191,10 +191,11 @@ const VIT = ['HP Up', 'Protein', 'Iron', 'Calcium', 'Zinc', 'Carbos'];
 const evSum = m => m.ev.reduce((a, b) => a + b, 0);
 const evRoom = (m, i) => Math.max(0, Math.min(EVMAX - m.ev[i], EVTOT - evSum(m)));
 /* Så mange poeng et ønske om n faktisk gir: aldri mer enn det er plass til og råd til. */
-const evCan = (m, i, n) => Math.max(0, Math.min(n, evRoom(m, i), Math.floor(S.coins / EVP)));
-function buyEv(m, i, n) { n = evCan(m, i, n); if (!(n > 0)) return 0; m.ev[i] += n; S.coins -= n * EVP; save(); return n; }
+const trainCut = () => typeof evPrice === 'function' ? evPrice() : 1, evPriceOf = n => Math.ceil(n * EVP * trainCut());
+const evCan = (m, i, n) => { n = Math.max(0, Math.min(n, evRoom(m, i))); while (n > 0 && evPriceOf(n) > S.coins) n--; return n; };
+function buyEv(m, i, n) { n = evCan(m, i, n); if (!(n > 0)) return 0; m.ev[i] += n; S.coins -= evPriceOf(n); save(); return n; }
 function clearEv(m, i) { const n = m.ev[i]; if (n) { m.ev[i] = 0; save(); } return n; }
-const ivCost = (m, i) => (31 - m.iv[i]) * IVP;
+const ivCost = (m, i) => Math.ceil((31 - m.iv[i]) * IVP * trainCut());
 function buyIv(m, i) { const c = ivCost(m, i); if (!(c > 0) || S.coins < c) return 0; m.iv[i] = 31; S.coins -= c; save(); return c; }
 /* EV-er fra økter legges først i den staten som alt er mest trent, og ellers i artens beste stat (maks 252 per stat, 510 totalt). For en Pokémon
    som bare er trent av økter, er det samme rekkefølge som før; har du selv kjøpt trening i en stat, fortsetter øktene der. */
@@ -351,7 +352,8 @@ function addMon(id, lv, sh, egg, g) {
 /* ---------- Møter ---------- */
 /* o: fag (typebias), luck 0–2 (lengre økt og lokkeduft gir mer sjeldent), min (laveste sjeldenhet), leg (legendarisk), egg. */
 function genEnc(o = {}) {
-  const bias = o.ty || F(o.fag).ty || [], L = o.luck || 0, pool = [], P = refLv();
+  const fest = typeof evNow === 'function' && evNow() && evNow().k === 'type' ? [evNow().ty] : [];
+  const bias = (o.ty || F(o.fag).ty || []).concat(fest), L = o.luck || 0, pool = [], P = refLv();
   let tot = 0;
   const push = (id, w) => { pool.push([id, w]); tot += w; };
   if (o.egg) {
@@ -377,7 +379,7 @@ function genEnc(o = {}) {
   let x = Math.random() * tot, id = pool[pool.length - 1][0];
   for (const [i, w] of pool) { x -= w; if (x <= 0) { id = i; break; } }
   const lv = o.egg ? 1 : wildLv(id, tierOf(id));
-  return { id, lv, sh: Math.random() < shinyOdds() * (o.egg ? 4 : 1) * (o.shm || 1) ? 1 : 0, t: tierOf(id), tr: isLeg(id) ? 4 : 3, g: rollG(id) };
+  return { id, lv, sh: Math.random() < shinyOdds() * (o.egg ? 4 : 1) * (o.shm || 1) * (typeof evShiny === 'function' ? evShiny() : 1) ? 1 : 0, t: tierOf(id), tr: isLeg(id) ? 4 : 3, g: rollG(id) };
 }
 /* Sjansen for fangst. zone: 0 = bom, 1 = grønn sone, 2 = gull. */
 const catchP = (id, ball, zone) => Math.min(0.97, Math.pow(D(id)[3] / 255, 0.45) * BALLM[ball] * [0.5, 1, 1.6][zone]);

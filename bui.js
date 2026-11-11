@@ -183,7 +183,7 @@ function raidScreen() {
       <p class="sm" style="margin-top:10px">One Pokémon against your whole team, with the Bag. Its level was set by your team when it appeared, so training before you try again helps.</p>
       ${dom ? `<p class="sm" style="margin-top:6px"><b>${dom.n}.</b> The place fights with it: every third turn ${dom.d}. Below half HP it becomes enraged, grows stronger, and it happens every second turn.</p>` : ''}
       <p class="sm" style="margin-top:6px">Win: it waits in the grass for you to catch, with ${nb(Math.round(RAIDCOIN[t - 1] * diff().coin))} coins, ${RAIDCANDY[t - 1]} Rare Candy and a lot of XP for the whole team. Lose: ${left > 1 ? `it stays, and you have ${left - 1} more ${left - 1 === 1 ? 'attempt' : 'attempts'}, one a day.` : 'this is your last attempt before it moves on.'}</p></div>
-    <div><div class="lab">Your team · tap the one that leads</div><div class="lineup">${party.map(m => `<button type="button" data-a="rlead" data-u="${m.u}" class="${m.u === lead ? 'lead' : ''}">${spr(m.id, { sh: m.sh, mega: m.mega })}<span class="sp"><b>${esc(mName(m))}</b><br><span class="sm tn">Lv ${m.lv}</span></span>${m.u === lead ? '<span class="pill">Leads</span>' : ''}</button>`).join('')}</div></div>
+    <div><div class="lab">Your team · tap the one that leads</div><div class="lineup">${party.map(m => `<button type="button" data-a="rlead" data-u="${m.u}" class="${m.u === lead ? 'lead' : ''}">${spr(m.id, { sh: m.sh, mega: m.mega })}<span class="sp"><b>${esc(mName(m))}</b><br><span class="sm tn">Lv ${m.lv}</span> ${evTag(m)}</span>${m.u === lead ? '<span class="pill">Leads</span>' : ''}</button>`).join('')}</div></div>
     <div class="acts"><button type="button" class="btn gold" data-a="raidgo"${raidOpen() && party.length ? '' : ' disabled'}>${raidOpen() ? 'Start the raid' : 'Again tomorrow'}</button></div>`, 'tint', L.cc);
 }
 /* ---------- Rundt de legendariske i kampen (bildene ligger i raidx.js, reglene for stedet i league.js) ---------- */
@@ -263,8 +263,33 @@ async function legendIntro(B) {
   if (!started && !PACK.playing() && !MUS.id) battleMusic(B);
   root.classList.add('d'); await T(240);
 }
+/* Dagens event: dine egne som får noe ut av det (laget først, så de sterkeste i boksen). */
+function evWho(e, n) {
+  const l = S.mons.map(m => ({ m, b: evBoost(m, e), on: S.party.includes(m.u) })).filter(x => x.b.m > 1 || x.b.mega);
+  return l.sort((a, b) => (b.on - a.on) || b.m.lv - a.m.lv).slice(0, n || 6);
+}
+const evTag = m => { const b = evBoost(m); return b.mega ? '<span class="pill mgp">Mega today</span>' : b.m > 1 ? `<span class="pill evp">+${Math.round((b.m - 1) * 100)} %${b.lv ? ' · Lv ' + b.lv : ''}</span>` : ''; };
+const evMon = x => `<button type="button" class="evm${x.on ? ' on' : ''}" data-a="mon" data-u="${x.m.u}">${spr(x.m.id, { sh: x.m.sh, mega: x.b.mega || x.m.mega, s: '52px' })}<b>${esc(mName(x.m))}</b><span class="sm tn">${x.b.mega ? 'Mega' : '+' + Math.round((x.b.m - 1) * 100) + ' %'}${x.b.lv ? ' · Lv ' + x.b.lv : ''}</span><span class="sm">${x.on ? 'on the team' : 'in the box'}</span></button>`;
+/* Det store feltet øverst på forsiden en eventdag: hva som gjelder i dag, og hvem av dine som har glede av det. */
+function evHero(e) {
+  const I = evInfo(e), who = evWho(e), stat = e.k === 'surge' || EVSTAT[e.k];
+  return `<div class="card evhero"><div class="evh-bg"><i></i><i></i><i></i></div>
+    <div class="evh-top"><span class="evh-ic">${I.ic}</span><div class="sp"><div class="evh-k">Special event · today only</div><b class="evh-n">${esc(I.n)}</b><div class="evh-s">${esc(I.s)}</div></div></div>
+    <p class="sm evh-d">${esc(I.d)}</p>
+    ${stat ? (who.length ? `<div class="evms">${who.map(evMon).join('')}</div>${who.some(x => !x.on) ? '<button type="button" class="btn sm2 wide" data-a="tab" data-k="lag">Change your team</button>' : ''}` : '<p class="sm">None of your Pokémon qualify today. It costs you nothing: everything else is as usual.</p>') : ''}
+    ${e.k === 'camp' ? '<button type="button" class="btn sm2 wide" data-a="tab" data-k="lag">Open your team to train</button>' : e.k === 'lucky' ? '<button type="button" class="btn sm2 wide" data-a="tab" data-k="butikk">Packs are in the Shop</button>' : ''}</div>`;
+}
+/* Avsløringen: vises én gang, i det kampene åpnes på en eventdag. */
+function evReveal(e, quiet) {
+  const I = evInfo(e), who = evWho(e, 6);
+  sfx.event(); if (!quiet) buzz([40, 60, 40, 60, 180]);
+  ov(`<div class="evrev"><div class="evr-rays"></div><div class="evr-ic">${I.ic}</div><div class="evr-k">Special event</div><h1 class="evr-n">${esc(I.n)}</h1><p class="evr-s">${esc(I.s)}</p>
+      <p class="evr-d">${esc(I.d)}</p>${who.length ? `<div class="evms">${who.map(evMon).join('')}</div>` : ''}
+      <p class="sm" style="text-align:center">Only today, and only good news: nothing gets harder, and nothing is lost if you sit it out.</p></div>
+    <div class="acts"><button type="button" class="btn gold" data-a="home">Open battles</button></div>`, 'tint evov', I.c);
+}
 function ladderCard() {
-  const L = S.lad, t = nextTrainer(), tr = trainerInfo(t), sm = studyMult(), bo = dayBoost(), tier = TIER(tr.kind), R = S.fac.run;
+  const L = S.lad, t = nextTrainer(), tr = trainerInfo(t), sm = evSm(), bo = dayBoost(), tier = TIER(tr.kind), R = S.fac.run;
   /* En runde: seks par med en trener og en boss. Den siste bossen er en av de sjeldne. */
   const prog = `<div class="lgp" aria-hidden="true">${Array.from({ length: LAPN }, (_, n) => `<i class="${n < L.n ? 'on' : n === L.n ? 'cur' : ''}${n % 2 === 0 && n ? ' gap' : ''}${n % 2 === 1 ? ' bo' : ''}${n === LAPN - 1 ? ' ul' : ''}"></i>`).join('')}</div>`;
   const row = `<div class="lrow k-${tier}"${kst(tr)}>${tsprite(tr.img, 'sm')}<div class="sp"><div class="sm tn">${esc(leagueTag())}${tr.boss ? ` · class ${tr.ci} of 9${tr.ultra ? ' · ' + RARE[tr.kind] : ''}` : ''}</div><b class="${tr.boss ? 'bossn' : ''}">${esc(who(tr))}</b></div></div>`;
@@ -282,11 +307,11 @@ function ladderCard() {
   if (!L.day) return `<div class="card stack"><div class="row" style="justify-content:space-between"><b>Battles</b><span class="pill tn">Lap ${L.lap + 1}</span></div>${row}${prog}
     <p class="sm">Three ways to battle once you are done studying: the League (your own team, XP and Rare Candy), the Battle Frontier (rental Pokémon at Lv ${FACLV}, items and encounters) and the World Tournament (a daily cup, three on three, for coins and a pack of encounters). Today's bonus is on the ${bo.mode === 'league' ? 'League' : 'Battle Frontier'}.</p>
     <button type="button" class="btn wide" data-a="bdone">Done for today · open battles</button>${lab}${rules}</div>${charm}`;
-  const mult = `<p class="sm tn">Rewards ×${sm} from ${hrs(ladMin())} h of focus${L.day !== dayKey() ? ' that day' : ' today'}. Your goal of ${hrs(goalMin())} h gives ×${goalTop().toFixed(1)}.${firstWin() ? ' Your first win today pays double coins.' : ''}</p><p class="sm tn">Difficulty: ${diff().n} · coins ×${diff().coin}, XP ×${diff().xp}. Change it under Profile.</p>`;
-  return `<div class="card stack"><div class="row" style="justify-content:space-between"><b>Trainer League</b><span class="row" style="gap:8px">${tag('league')}${pips(LIVES, ladFails())}</span></div>${row}${prog}
-      ${ladLost() ? '<p class="sm">You lost today. The League opens again after your next day of focus, and you keep your place and the XP.</p>' : `<p class="sm">${bo.mode === 'league' ? '+30% XP and better odds for Rare Candy today. ' : ''}A trainer, then a boss, through the nine classes. XP for the whole team after each battle. One loss closes the League for the day, so a boss you cannot beat is a project for tomorrow.</p><button type="button" class="go${tr.boss ? ' gold' : ''}" data-a="bpre">Battle</button>`}</div>
-    <div class="card stack"><div class="row" style="justify-content:space-between"><b>Battle Frontier</b><span class="row" style="gap:8px">${tag('factory')}${pips(FACLIVES, facFails())}</span></div>${fac}
-      ${facLost() ? '<p class="sm">Both runs are used. The Frontier opens again after your next day of focus.</p>' : `<p class="sm">${bo.mode === 'factory' ? '1.5× luck on items, encounters and rare bosses today. ' : ''}Six trainers, then a boss. No XP and no Bag here: you win coins, items and encounters. A loss ends the run, and you have ${FACLIVES - facFails() === 1 ? 'one run left today' : 'two runs a day'}.</p><button type="button" class="btn wide gold" data-a="fenter">${R ? 'Continue the run' : 'Enter the Frontier'}</button>`}</div>${cupc}${mult}${charm}${lab}${rules}`;
+  const mult = `<p class="sm tn">Rewards ×${sm} from ${hrs(ladMin())} h of focus${L.day !== dayKey() ? ' that day' : ' today'}${evIs('gold') ? `, the Gold Rush included (×${studyMult()} without it)` : ''}. Your goal of ${hrs(goalMin())} h gives ×${goalTop().toFixed(1)}.${firstWin() ? ' Your first win today pays double coins.' : ''}</p><p class="sm tn">Difficulty: ${diff().n} · coins ×${diff().coin}, XP ×${diff().xp}. Change it under Profile.</p>`;
+  return `<div class="card stack"><div class="row" style="justify-content:space-between"><b>Trainer League</b><span class="row" style="gap:8px">${tag('league')}${pips(ladLives(), ladFails())}</span></div>${row}${prog}
+      ${ladLost() ? '<p class="sm">You lost today. The League opens again after your next day of focus, and you keep your place and the XP.</p>' : `<p class="sm">${bo.mode === 'league' ? '+30% XP and better odds for Rare Candy today. ' : ''}A trainer, then a boss, through the nine classes. XP for the whole team after each battle. ${ladLives() - ladFails() > 1 ? 'Second Wind: you can lose once today and still go on.' : 'One loss closes the League for the day, so a boss you cannot beat is a project for tomorrow.'}</p><button type="button" class="go${tr.boss ? ' gold' : ''}" data-a="bpre">Battle</button>`}</div>
+    <div class="card stack"><div class="row" style="justify-content:space-between"><b>Battle Frontier</b><span class="row" style="gap:8px">${tag('factory')}${pips(facLives(), facFails())}</span></div>${fac}
+      ${facLost() ? '<p class="sm">Your runs for today are used. The Frontier opens again after your next day of focus.</p>' : `<p class="sm">${bo.mode === 'factory' ? '1.5× luck on items, encounters and rare bosses today. ' : ''}Six trainers, then a boss. No XP and no Bag here: you win coins, items and encounters. A loss ends the run, and you have ${facLives() - facFails() === 1 ? 'one run left today' : (facLives() - facFails()) + ' runs left today'}.</p><button type="button" class="btn wide gold" data-a="fenter">${R ? 'Continue the run' : 'Enter the Frontier'}</button>`}</div>${cupc}${mult}${charm}${lab}${rules}`;
 }
 /* Oppstilling før en ligakamp: hvem du møter, hva de gir, og hvem av dine som går ut først. */
 function preBattle() {
@@ -294,7 +319,7 @@ function preBattle() {
   if (!S.party.includes(BT.lead)) BT.lead = S.party[0];
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">${esc(leagueTag())}</span></div>
     <div class="card k-${tier}"${kst(tr)}><div class="pre-foe">${tsprite(tr.img)}<div class="sp"><div class="sm">${tr.boss ? `Class ${tr.ci} of 9 · ${esc(tr.cn)}${tr.ultra ? ' · ' + RARE[tr.kind] : ''}${t.sup ? ' · surprise' : ''}` : 'Trainer'}</div><b class="${tr.boss ? 'bossn' : ''}" style="font-size:19px">${esc(who(tr))}</b><div class="sm tn" style="margin-top:4px">${p.n} Pokémon · around Lv ${p.lv}</div><div class="sm" style="margin-top:4px">Gives ${REW[t.k]}.</div>${megaCls(p.st) ? '<div class="sm" style="margin-top:4px"><span class="pill mgp">Mega Ring</span> One of the team can Mega Evolve.</div>' : ''}<div class="sm tn" style="margin-top:4px;color:var(--gold)">About ${nb(leagueCoins(p.st, t.lap))} coins${firstWin() ? ' · first win today, double' : ''} · ${diff().n}</div></div></div></div>
-    <div><div class="lab">Your team · tap the one that leads</div><div class="lineup">${team.map(m => `<button type="button" data-a="blead" data-u="${m.u}" class="${m.u === BT.lead ? 'lead' : ''}">${spr(m.id, { sh: m.sh, mega: m.mega })}<span class="sp"><b>${esc(mName(m))}</b><br><span class="sm tn">Lv ${m.lv} · ${m.mv.map(x => esc(MOVES[x][0])).join(', ')}</span></span>${hasNews(m) ? '<span class="bang">!</span>' : ''}${m.u === BT.lead ? '<span class="pill">Leads</span>' : ''}</button>`).join('')}</div></div>
+    <div><div class="lab">Your team · tap the one that leads</div><div class="lineup">${team.map(m => `<button type="button" data-a="blead" data-u="${m.u}" class="${m.u === BT.lead ? 'lead' : ''}">${spr(m.id, { sh: m.sh, mega: m.mega })}<span class="sp"><b>${esc(mName(m))}</b><br><span class="sm tn">Lv ${m.lv} · ${m.mv.map(x => esc(MOVES[x][0])).join(', ')}</span> ${evTag(m)}</span>${hasNews(m) ? '<span class="bang">!</span>' : ''}${m.u === BT.lead ? '<span class="pill">Leads</span>' : ''}</button>`).join('')}</div></div>
     <div class="acts"><button type="button" class="btn gold" data-a="bgo">Start battle</button><button type="button" class="btn nf" data-a="bteam">Edit team</button></div>`, 'tint', `var(--t${tr.ty})`);
 }
 
@@ -396,7 +421,7 @@ function paintBox(side) {
     hudDraw(side);
   } else { el.className = 'hpb ' + side + gold; el.innerHTML = boxEl(side); }
   let tb = el.querySelector('.tyb'); if (!tb) { tb = document.createElement('div'); tb.className = 'tyb'; el.appendChild(tb); }
-  const cur = teamOf(side)[BT.v[side].i], th = tyBadge(cur) + (isMega(cur) ? `<span class="mgt">${megaOf(cur)[1] === 'Primal' ? 'Primal' : 'Mega'}</span>` : ''); if (tb.dataset.h !== th) { tb.dataset.h = th; tb.innerHTML = th; }
+  const cur = teamOf(side)[BT.v[side].i], th = tyBadge(cur) + (isMega(cur) ? `<span class="mgt">${megaOf(cur)[1] === 'Primal' ? 'Primal' : 'Mega'}</span>` : '') + (cur.evb && cur.evb !== 'surge' ? '<span class="evt">Event</span>' : ''); if (tb.dataset.h !== th) { tb.dataset.h = th; tb.innerHTML = th; }
   el.hidden = false;
 }
 /* Størrelsen i kamp følger høyden i Pokédexen: de små litt mindre, de store tydelig større (Joltik 0,84 · 1 m = 1 · Charizard 1,1 · Lugia 1,3 · Wailord 1,42).
@@ -501,7 +526,7 @@ function drawBattle() {
   const airId = tr.wild ? (tr.dk ? 'dk' + tr.leg : tr.leg) : tr.kind === 'supreme' && B.mode !== 'fac' ? 's:' + tr.n : 0, ainf = airId && typeof CINE !== 'undefined' ? CINE.info(airId) : null, own = !!(tr.wild && ainf && ainf.bg);
   /* Med eget sted står de to som i trenerkampene (oppstillingen til banebildene), og plattformene tegnes sammen med stedet. */
   const scene = own ? '' : PACK.now(PACK.sceneFor(B));
-  ov(`<div class="btop k-${tier}"${kst(tr)}><span class="pill tn">${esc(B.raid && raidDom(tr) ? raidDom(tr).n : battleTag(B))}</span><span class="btn-n"><b class="${tr.boss ? 'bossn' : ''}">${esc(who(tr))}</b></span></div>
+  ov(`<div class="btop k-${tier}"${kst(tr)}><span class="pill tn">${esc(B.raid && raidDom(tr) ? raidDom(tr).n : battleTag(B))}</span><span class="btn-n"><b class="${tr.boss ? 'bossn' : ''}">${esc(who(tr))}</b></span>${B.ev && evNow() ? `<span class="pill evp" style="--ec:${evInfo(evNow()).c}">${esc(evInfo(evNow()).n)}</span>` : ''}</div>
     <div class="bscreen t-${tier}"${kst(tr)}><div class="arena a-${tr.arena} v${tr.v} t-${tier} i${tr.int}${tr.th ? ' th-' + tr.th : ''}${scene || own ? ' has-scene' : ''}${tr.wild ? ' rv' : ''}" id="arena" style="--ac:var(--t${tr.ty});--cc:${tr.cc || 'var(--t' + tr.ty + ')'}">
       <div class="cam" id="cam"><div class="world" id="world">${scene ? `<img class="scene" alt="" src="${scene}">` : ''}<div class="abg"></div>${own ? '<canvas class="fxc bgc evc" id="evc" width="512" height="384"></canvas>' : ''}<canvas class="fxc bgc" id="bgc" width="256" height="192"></canvas><canvas class="fxc amc" id="amc" width="512" height="384"></canvas><div class="plat pf"></div><div class="plat pm"></div></div></div><div class="dim"></div>
       ${tr.wild ? '' : `<div class="trn" id="trn">${tsprite(tr.img)}</div>`}
@@ -1092,7 +1117,7 @@ function pwtScreen() {
       <div class="pre-foe">${tsprite(tr.img)}<div class="sp"><div class="sm">${ROUNDN[R.r]} · ${esc(tr.cn)}</div><b class="bossn" style="font-size:19px">${esc(who(tr))}</b><div class="sm tn" style="margin-top:4px">${R.n} Pokémon at Lv ${R.flv || R.lv} · yours play at Lv ${R.lv}</div></div></div>
       <div class="pvs">${f.team.map(x => `<div class="pv">${spr(x.id, { ani: 1, mega: x.mega })}<b>${esc(D(x.id)[0])}</b><span class="row" style="gap:4px;justify-content:center;flex-wrap:wrap">${tyEl(x)}${x.ms ? '<span class="pill mgp">Mega Stone</span>' : ''}</span></div>`).join('')}</div>
       <p class="sm">Win this round: ${nb(pwtCoins(c, R.r))} coins.${R.r === PWTN - 1 ? ` Win the cup: a trophy, ${PWTCANDY} Rare Candy and ${aN(PACKS[c.pk].n)}.` : ''} No Bag, and one loss ends the cup.</p></div>
-    <div><div class="lab">Your team · pick ${R.n}, the first one leads</div><div class="lineup">${party.map(m => { const i = sel.indexOf(m.u); return `<button type="button" data-a="wsel" data-u="${m.u}" class="${i >= 0 ? 'lead' : ''}">${spr(m.id, { sh: m.sh, mega: m.mega })}<span class="sp"><b>${esc(mName(m))}</b><br><span class="sm tn">${m.lv === R.lv ? 'Lv ' + m.lv : `Lv ${m.lv} → ${R.lv}`}</span> ${tyEl(m)}</span>${i >= 0 ? `<span class="pill">${i + 1}</span>` : ''}</button>`; }).join('')}</div></div>
+    <div><div class="lab">Your team · pick ${R.n}, the first one leads</div><div class="lineup">${party.map(m => { const i = sel.indexOf(m.u); return `<button type="button" data-a="wsel" data-u="${m.u}" class="${i >= 0 ? 'lead' : ''}">${spr(m.id, { sh: m.sh, mega: m.mega })}<span class="sp"><b>${esc(mName(m))}</b><br><span class="sm tn">${m.lv === R.lv ? 'Lv ' + m.lv : `Lv ${m.lv} → ${R.lv}`}</span> ${tyEl(m)} ${evTag(m)}</span>${i >= 0 ? `<span class="pill">${i + 1}</span>` : ''}</button>`; }).join('')}</div></div>
     <div class="acts"><button type="button" class="btn gold" data-a="wgo"${sel.length === R.n ? '' : ' disabled'}>${sel.length === R.n ? 'Start the ' + ROUNDN[R.r].toLowerCase() : `Pick ${R.n - sel.length} more`}</button></div>`, 'tint', `var(--t${tr.ty})`);
 }
 /* Reglene samlet: hva som gir hva, og når det skjer. Tallene hentes fra de samme tabellene som spillet bruker. */
@@ -1117,6 +1142,8 @@ function rulesSheet() {
       ${row('Coins', RAIDCOIN.map(nb).join(' · '))}${row('Rare Candy', RAIDCANDY.join(' · '))}
       <p class="sm">The five steps are: legendary, the great ones, mythical, Arceus and Deoxys, and Dark Mewtwo. A win also gives a lot of XP, and the legendary waits in the grass to be caught.</p>
       <p class="sm"><b>Dark Mewtwo</b> has no raid of its own. Beat Mewtwo, and there is a ${Math.round(DARKP * 100)} % chance that it rises again as Dark Mewtwo. You keep what Mewtwo gave, your team is restored, and you fight once more, right away.</p></div>
+    <div class="card stack"><b>Special events</b><p class="sm">Some battle days are special. You find out which when you open the battles, and the screen changes with it. An event only ever helps: nothing gets harder, and a day you sit out costs nothing. They are counted in battle days, come about every third one, and never two days running.</p>
+      ${Object.keys(EVENTS).map(k => row(k === 'type' ? 'Type Festival' : EVENTS[k].n, k === 'surge' ? 'your Pokémon with a Mega form start in it' : k === 'type' ? 'one type gets +15 % in every stat' : k === 'stars' ? 'three from your box: team level and +20 %' : k === 'little' ? '+35 % for those that can still evolve' : k === 'gold' ? 'coins ×1.5 from every battle' : k === 'wind' ? 'one more attempt in League and Frontier' : k === 'lucky' ? 'shiny odds ×5, one more encounter from bosses' : 'training costs 40 % less')).join('')}</div>
     <div class="card stack"><b>Mega Evolution</b><p class="sm">The first Champion or Supreme Boss you beat gives you the Mega Ring and a Mega Stone. A Pokémon that has a Mega form and holds a stone can Mega Evolve from the move menu: once a battle for your team, before it attacks, and it stays that way until the battle is over. Its HP is the same, its other stats and sometimes its types change. Stones are given on the Pokémon's card, and you get the stone back if you sell or trade it.</p>
       ${row('Mega Stone', `${nb(SHOP.mstone.p)} coins in the Shop, with the ring`)}${row('Won from', `Supreme Boss: always · Champion: ${Math.round(MSTONE[1] * 100)} % · Evil Leader: ${Math.round(MSTONE[0] * 100)} %<br>the Champions Cup · raids against the great ones`)}${row('Opponents', 'Champions and Supreme Bosses, on Normal and Hard')}
       <p class="sm"><b>Legendaries</b> do not use ordinary stones. Rayquaza, Kyogre, Groudon, Latias, Latios, Heatran and Darkrai change form when they become enraged in a raid, and Mewtwo may rise again as Dark Mewtwo. Beat one, and you have its stone: every one of that species you own can then do the same.</p></div>
@@ -1188,7 +1215,7 @@ const BA = {
   btarget: el => { if (BT.busy) return; const B = BT.B, k = BT.item, i = +el.dataset.k; if (!(B.bag > 0) || !itemOk(B, k, i)) return; if (B.mode !== 'lab') { if (!(S.items[k] > 0)) return; S.items[k]--; save(true); } BT.menu = 'main'; playEv(runTurn(B, { t: 'item', k, i })); },
   labmode: el => { BT.labRent = el.dataset.k === '1'; labScreen(); },
   labgo: el => { if (!BT.labRent && !S.party.map(monBy).filter(Boolean).length) return toast('You need a Pokémon in your team, or pick Rentals.'); PACK.unlock(); sfx.start(); BT.busy = false; startBattle(labBattle(el.dataset.k, !!BT.labRent)); },
-  bdone: () => { S.lad.day = dayKey(); save(); sfx.ok(); render(); toast('Battles are open. Fight now or later tonight.'); },
+  bdone: () => { S.lad.day = dayKey(); const had = !!(S.evt && S.evt.day === S.lad.day), e = evRoll(); if (e && !had) e.seen = 1; save(); render(); if (e && !had) evReveal(e); else { sfx.ok(); toast('Battles are open. Fight now or later tonight.'); } },
   bpre: () => { if (!ladderOpen()) { closeOv(); return render(); } BT.B = null; BT.busy = false; preBattle(); },
   blead: el => { BT.lead = +el.dataset.u; preBattle(); },
   bteam: () => { closeOv(); U.tab = 'lag'; U.lag = 'lag'; render(); },

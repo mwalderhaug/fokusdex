@@ -197,6 +197,57 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 /* Mega: kortet på Pokémonen og merket på motstandere som bærer stein. */
 .mgc{gap:10px;padding:12px 14px 14px;box-shadow:0 0 0 1px var(--line)}
 .mgc.on{box-shadow:0 0 0 1.5px #b9a5e8}
+/* ---------- Special events ----------
+   En eventdag får forsiden eventets farger (--ec, --ec2): et lys øverst, et stort felt som sier hva som gjelder, og kampene rett under det.
+   Fargene er dempet som resten av appen; det som skiller dagen fra andre, er lyset, oppstillingen og det som beveger seg i feltet. */
+.wrap.evpage{position:relative}
+.wrap.evpage::before{content:"";position:absolute;left:-20px;right:-20px;top:-24px;height:560px;background:radial-gradient(120% 68% at 50% 0,color-mix(in srgb,var(--ec) 26%,transparent),transparent 72%),radial-gradient(60% 40% at 92% 34%,color-mix(in srgb,var(--ec2) 14%,transparent),transparent 70%);pointer-events:none;z-index:0}
+.wrap.evpage>*{position:relative;z-index:1}
+.wrap.evpage .card{box-shadow:0 0 0 1px color-mix(in srgb,var(--ec) 30%,var(--line))}
+.wrap.evpage .go,.wrap.evpage .btn.gold{background:linear-gradient(120deg,var(--ec),color-mix(in srgb,var(--ec2) 65%,var(--ec)));color:#17130f}
+.wrap.evpage .pips i.on{background:var(--ec)}
+.wrap.evpage .modec .ficon{background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--ec) 30%,#2c313a) 0 6px,#2c313a 6px 12px);color:var(--ec)}
+.evsep{display:flex;align-items:center;gap:12px;margin-top:6px;color:var(--ink2);font-size:12px;font-weight:750;letter-spacing:.08em;text-transform:uppercase}
+.evsep::before,.evsep::after{content:"";flex:1;height:1px;background:var(--line)}
+.card.evhero{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:12px;padding:20px 18px 18px;background:color-mix(in srgb,var(--ec) 9%,var(--card));box-shadow:0 0 0 1.5px color-mix(in srgb,var(--ec) 58%,transparent)}
+.evh-bg{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.evh-bg i{position:absolute;width:260px;height:260px;border-radius:50%;filter:blur(46px);opacity:.32;background:var(--ec);animation:evDrift 14s ease-in-out infinite alternate}
+.evh-bg i:nth-child(1){left:-90px;top:-120px}
+.evh-bg i:nth-child(2){right:-110px;top:-40px;background:var(--ec2);animation-duration:18s;animation-delay:-6s}
+.evh-bg i:nth-child(3){left:30%;bottom:-190px;opacity:.18;animation-duration:22s;animation-delay:-11s}
+@keyframes evDrift{from{transform:translate(0,0) scale(1)}to{transform:translate(36px,24px) scale(1.18)}}
+.evhero>*:not(.evh-bg){position:relative}
+.evh-top{display:flex;align-items:center;gap:14px}
+.evh-ic{flex:none;width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#17130f;background:radial-gradient(circle at 34% 30%,#fff,var(--ec) 62%);box-shadow:0 0 0 5px color-mix(in srgb,var(--ec) 22%,transparent),0 0 28px color-mix(in srgb,var(--ec) 55%,transparent);animation:evPulse 2.6s ease-in-out infinite}
+@keyframes evPulse{50%{box-shadow:0 0 0 9px color-mix(in srgb,var(--ec) 10%,transparent),0 0 40px color-mix(in srgb,var(--ec) 70%,transparent)}}
+.evh-k{font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ec)}
+.evh-n{display:block;font-size:26px;font-weight:850;letter-spacing:-.03em;line-height:1.1}
+.evh-s{font-size:13.5px;font-weight:700;color:var(--ink2);margin-top:2px}
+.evh-d{color:var(--ink)}
+.evms{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.evm{display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 4px 9px;border-radius:16px;background:rgba(0,0,0,.22);box-shadow:0 0 0 1px var(--line);text-align:center;min-width:0}
+.evm.on{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--ec) 70%,transparent)}
+.evm .sprb{--s:52px}
+.evm b{font-size:12.5px;font-weight:750;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.evm .sm{font-size:11px}
+.pill.evp{background:color-mix(in srgb,var(--ec,var(--gold)) 80%,#fff);color:#17130f}
+.tyb span.evt{background:var(--gold);color:#17130f;text-shadow:none}
+.cell.evc::after{content:"";position:absolute;right:0;top:0;width:0;height:0;border:9px solid transparent;border-top-color:var(--gold);border-right-color:var(--gold);border-radius:0 16px 0 0;filter:drop-shadow(0 0 4px var(--gold))}
+.cell.nm.evc .l{right:13px}
+/* Avsløringen i det kampene åpnes. */
+.ov.evov{overflow:hidden;--ec:var(--tc);--ec2:var(--tc)}
+.evrev{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;position:relative;padding:10px 0;min-height:0}
+.evr-rays{position:absolute;left:50%;top:24%;width:150vmax;height:150vmax;margin:-75vmax 0 0 -75vmax;background:repeating-conic-gradient(color-mix(in srgb,var(--tc) 15%,transparent) 0 6deg,transparent 6deg 18deg);-webkit-mask:radial-gradient(circle,#000 0,transparent 44%);mask:radial-gradient(circle,#000 0,transparent 44%);animation:evSpin 44s linear infinite;pointer-events:none}
+@keyframes evSpin{to{transform:rotate(360deg)}}
+.evr-ic{position:relative;width:104px;height:104px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:900;color:#17130f;background:radial-gradient(circle at 34% 30%,#fff,var(--tc) 62%);box-shadow:0 0 0 8px color-mix(in srgb,var(--tc) 20%,transparent),0 0 60px color-mix(in srgb,var(--tc) 60%,transparent);animation:evPop .7s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes evPop{from{transform:scale(.2);opacity:0}}
+.evr-k{position:relative;font-size:12.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--tc);margin-top:8px}
+.evr-n{position:relative;font-size:40px;font-weight:880;letter-spacing:-.04em;line-height:1.05}
+.evr-s{position:relative;font-size:16px;font-weight:750;color:var(--ink2)}
+.evr-d{position:relative;max-width:340px;margin-top:6px}
+.evrev .evms{position:relative;width:100%;margin-top:8px}
+.evrev>p.sm{position:relative}
+@media (prefers-reduced-motion:reduce){.evh-bg i,.evh-ic,.evr-rays,.evr-ic{animation:none}}
 .mgring{box-shadow:0 0 0 1.5px #b9a5e8;background:linear-gradient(120deg,rgba(255,138,138,.10),rgba(127,212,245,.10) 60%,rgba(195,163,255,.12)),var(--card)}
 .pill.mgp{background:linear-gradient(100deg,#ff8a8a,#ffe08a 30%,#9af0a8 52%,#7fd4f5 74%,#c3a3ff);color:#17130f}
 .candy{width:18px;height:18px;border-radius:50%;background:var(--blue);box-shadow:-9px 0 0 -5px var(--blue),9px 0 0 -5px var(--blue)}
