@@ -50,19 +50,32 @@ const SHOP = {
 const BALLM = { poke: 1, great: 1.5, ultra: 2.2 };
 /* Encounter-pakker: kjøpes for mynter og åpnes med en gang, som å åpne en kortpakke. Tre møter i hver, og den siste plassen er den gode:
    jo dyrere pakke, jo bedre sjanser (min = laveste sjeldenhet, ps/leg = sjansen for en pseudo-legendarisk eller en legendarisk i den plassen,
-   shm = så mye likere er en shiny). lv = trenernivået pakken krever. De legendariske i pakkene er de vanlige (fugler, hunder, Regi-ene …):
-   de største må du møte i raid. */
+   shm = så mye likere er en shiny). lv = trenernivået pakken krever. Alle pakker har en liten sjanse for en legendarisk, som et lodd: hvem som helst
+   av dem du ikke eier, i områdene dine. Vekten per art (PKLEGW, etter sjeldenhet): vanlige 1, mytiske 1,3, de største 0,25, Arceus og Deoxys 0,1 –
+   så de mytiske kommer litt oftere, og de aller største er sjeldne her og kommer heller i raid. Kortet viser ikke hvem det er (myst = 1):
+   det får du vite i gresset, i introen. */
+const PKLEGW = [0, 1, 0.25, 1.3, 0.1];
+/* Et legendarisk møte utenom raid (pakker, økter, merker og bosser): samme trekning overalt. Har du alle i områdene dine, kan det bli en du har fra før. */
+function legEnc(shm) {
+  const all = typeof LEG === 'undefined' ? [] : Object.keys(LEG).map(Number).filter(id => (PKLEGW[LEG[id].t] || 0) > 0 && S.regions.includes(regOf(id)));
+  const fresh = all.filter(id => !S.mons.some(m => m.id === id) && !S.pend.some(e => e.id === id)), ids = fresh.length ? fresh : all;
+  if (!ids.length) return Object.assign(genEnc({ leg: 1, shm }), { myst: 1 });
+  let tot = 0; const w = ids.map(id => { const x = PKLEGW[LEG[id].t]; tot += x; return x; });
+  let x = Math.random() * tot, id = ids[ids.length - 1];
+  for (let i = 0; i < ids.length; i++) { x -= w[i]; if (x <= 0) { id = ids[i]; break; } }
+  return Object.assign(genEnc({ ids: [id], shm }), { myst: 1 });
+}
 const PACKS = {
-  poke: { n: 'Poké Pack', p: 250, c: '#d98f7e', d: 'One of the three is uncommon or better.', slots: [{ luck: 0 }, { luck: 0.5 }, { min: 1, luck: 0 }], shm: 1 },
-  great: { n: 'Great Pack', p: 700, c: '#7fa8e6', d: 'One is rare or better, one uncommon or better.', slots: [{ luck: 0.5 }, { min: 1, luck: 0.5 }, { min: 2, luck: 0.6 }], shm: 1.5, lv: 3 },
+  poke: { n: 'Poké Pack', p: 250, c: '#d98f7e', d: 'One of the three is uncommon or better. 0.2% legendary.', slots: [{ luck: 0 }, { luck: 0.5 }, { min: 1, luck: 0, leg: 0.002 }], shm: 1 },
+  great: { n: 'Great Pack', p: 700, c: '#7fa8e6', d: 'One is rare or better, one uncommon or better. 0.6% legendary.', slots: [{ luck: 0.5 }, { min: 1, luck: 0.5 }, { min: 2, luck: 0.6, leg: 0.006 }], shm: 1.5, lv: 3 },
   ultra: { n: 'Ultra Pack', p: 1800, c: '#e3c577', d: 'One is epic. 12% pseudo-legendary, 1.5% legendary. Shiny odds ×2.5.', slots: [{ min: 1, luck: 1.5 }, { min: 2, luck: 1.5 }, { min: 3, luck: 2, ps: 0.12, leg: 0.015 }], shm: 2.5, lv: 5 },
   master: { n: 'Master Pack', p: 6000, c: '#b295e6', d: 'Rare, epic and a top slot: 35% pseudo-legendary, 8% legendary. Shiny odds ×5.', slots: [{ min: 2, luck: 2 }, { min: 3, luck: 2 }, { min: 3, luck: 2, ps: 0.35, leg: 0.08 }], shm: 5, lv: 8 }
 };
 const PACKMAX = 24;
 function openPack(k) {
   const P = PACKS[k]; if (!P || S.coins < P.p || (P.lv && tlv() < P.lv) || S.pend.length > PACKMAX) return null;
-  const pseudo = [147, 246, 371, 374, 443, 633], legs = typeof LEG !== 'undefined' ? Object.keys(LEG).map(Number).filter(id => LEG[id].t === 1 && S.regions.includes(regOf(id)) && !S.mons.some(m => m.id === id)) : [];
-  const out = P.slots.map(sl => { const r = Math.random(); return r < (sl.leg || 0) && legs.length ? genEnc({ ids: legs, shm: P.shm }) : r < (sl.leg || 0) + (sl.ps || 0) ? genEnc({ ids: pseudo, shm: P.shm }) : genEnc({ min: sl.min || 0, luck: sl.luck || 0, shm: P.shm }); });
+  const pseudo = [147, 246, 371, 374, 443, 633];
+  const out = P.slots.map(sl => { const r = Math.random(), lg = r < (sl.leg || 0) ? legEnc(P.shm) : null; return lg || (r < (sl.leg || 0) + (sl.ps || 0) ? genEnc({ ids: pseudo, shm: P.shm }) : genEnc({ min: sl.min || 0, luck: sl.luck || 0, shm: P.shm })); });
   out.forEach(e => { e.pk = 1; });
   S.coins -= P.p; S.pend.push(...out); S.packs = (S.packs || 0) + 1; save();
   return out;
@@ -461,15 +474,15 @@ function grant(fag, real, full, plan) {
   n = Math.min(n, 6);
   /* Hvert vanlig møte kan en sjelden gang være legendarisk: 0,5 % i en kort økt, opp mot 1 % i en lang, litt mer med dager på rad. */
   const legP = 0.005 * (1 + luck * 0.5) + Math.min(streak(), 10) * 0.0003;
-  for (let i = 0; i < n; i++) encs.push(Math.random() < legP ? genEnc({ leg: 1 }) : genEnc({ fag, luck }));
-  if (full && planned >= 45 && okMin >= planned && Math.random() < Math.min(0.04, 0.01 + 0.005 * streak())) { encs.push(genEnc({ leg: 1 })); R.gifts.push('Something legendary is stirring in the grass.'); }
+  for (let i = 0; i < n; i++) encs.push(Math.random() < legP ? legEnc() : genEnc({ fag, luck }));
+  if (full && planned >= 45 && okMin >= planned && Math.random() < Math.min(0.04, 0.01 + 0.005 * streak())) { encs.push(legEnc()); R.gifts.push('Something legendary is stirring in the grass.'); }
   const fg = S.fag[fag];
   if (fg) {
     const reach = Math.min(4, Math.floor(fagMin(fag) / (fg.t * 60) * 4));
     while (fg.ms < reach) {
       fg.ms++;
       if (fg.ms < 4) { encs.push(genEnc({ fag, min: 3, luck: 1.5 })); R.gifts.push(`${F(fag).n}: ${fg.ms * 25}% of the plan is done. An epic encounter is waiting.`); }
-      else { encs.push(genEnc({ leg: 1 })); R.gifts.push(`The ${F(fag).n} badge is yours. A legendary encounter is waiting.`); }
+      else { encs.push(legEnc()); R.gifts.push(`The ${F(fag).n} badge is yours. A legendary encounter is waiting.`); }
     }
   }
   R.enc = encs.length;

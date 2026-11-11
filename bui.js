@@ -172,19 +172,31 @@ const leagueTag = () => { const L = S.lad; return `${L.lap ? 'Lap ' + (L.lap + 1
 function raidCard() {
   const R = S.raid; if (!R || !LEG[R.id]) return '';
   const V = raidShow(R), L = V.L, open = raidOpen();
+  /* Hvem det er, er hemmelig til du har stått foran den (R.seen settes når kampen starter og filmen går). */
+  if (!R.seen) return `<div class="card k-ultra raidc myst"><div class="pre-foe"><span class="raid-sp qm" aria-hidden="true"><i>?</i></span><div class="sp"><div class="sm">Legendary raid · attempt 1 of ${RAIDTRIES}</div><b class="bossn" style="font-size:19px">A legendary Pokémon</b><div class="sm tn" style="margin-top:4px">Lv ${V.lv} · who it is stays secret until you face it</div></div></div>
+    <button type="button" class="btn gold wide" data-a="raid" style="margin-top:10px"${open ? '' : ' disabled'}>${open ? 'Challenge it' : 'Again tomorrow'}</button></div>`;
   return `<div class="card k-ultra raidc" style="--cc:${L.cc}"><div class="pre-foe"><span class="raid-sp">${spr(R.id, { ani: 1, sh: V.sh, mega: defForm(R.id) })}</span><div class="sp"><div class="sm">Legendary raid · attempt ${(R.tries || 0) + 1} of ${RAIDTRIES}</div><b class="bossn" style="font-size:19px">${esc(V.n)}</b><div class="sm tn" style="margin-top:4px">Lv ${V.lv} · ${TYN[D(R.id)[1]]}${D(R.id)[2] >= 0 ? ' / ' + TYN[D(R.id)[2]] : ''} · your own team of six</div></div></div>
     <button type="button" class="btn gold wide" data-a="raid" style="margin-top:10px"${open ? '' : ' disabled'}>${open ? 'Challenge it' : 'Again tomorrow'}</button></div>`;
 }
 function raidScreen() {
   const R = S.raid; if (!R) return render();
   const V = raidShow(R), L = V.L, t = L.t, dom = raidDom({ dk: V.sh === 2, lbg: L.bg }), left = RAIDTRIES - (R.tries || 0), party = S.party.map(monBy).filter(Boolean), lead = BT.lead && party.some(m => m.u === BT.lead) ? BT.lead : party[0] && party[0].u;
+  const team = `<div><div class="lab">Your team · tap the one that leads</div><div class="lineup">${party.map(m => `<button type="button" data-a="rlead" data-u="${m.u}" class="${m.u === lead ? 'lead' : ''}">${spr(m.id, { sh: m.sh, mega: m.mega })}<span class="sp"><b>${esc(mName(m))}</b><br><span class="sm tn">Lv ${m.lv}</span> ${evTag(m)}</span>${m.u === lead ? '<span class="pill">Leads</span>' : ''}</button>`).join('')}</div></div>
+    <div class="acts"><button type="button" class="btn gold" data-a="raidgo"${raidOpen() && party.length ? '' : ' disabled'}>${raidOpen() ? 'Start the raid' : 'Again tomorrow'}</button></div>`;
+  const lose = left > 1 ? `it stays, and you have ${left - 1} more ${left - 1 === 1 ? 'attempt' : 'attempts'}, one a day.` : 'this is your last attempt before it moves on.';
+  /* Første forsøk: ingenting om hvem det er. Navn, type, sted og premie ville røpet den. */
+  if (!R.seen) return ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Legendary raid</span></div>
+    <div class="card k-ultra raidc myst"><div class="pre-foe"><span class="raid-sp qm" aria-hidden="true"><i>?</i></span><div class="sp"><div class="sm">Unknown · you find out when you face it</div><b class="bossn" style="font-size:21px">A legendary Pokémon</b><div class="sm tn" style="margin-top:4px">Lv ${V.lv} · ${RAIDHP[0]} to ${RAIDHP[3]}× the HP of a normal Pokémon</div></div></div>
+      <p class="sm" style="margin-top:10px">One Pokémon against your whole team, with the Bag. Its level was set by your team when it appeared, so training before you try again helps.</p>
+      <p class="sm" style="margin-top:6px">Its place fights with it: every third turn something happens on the field, and below half HP it becomes enraged and grows stronger.</p>
+      <p class="sm" style="margin-top:6px">Win: it waits in the grass for you to catch, with ${nb(Math.round(RAIDCOIN[0] * diff().coin))} coins or more, Rare Candy and a lot of XP for the whole team. Lose: ${lose}</p></div>
+    ${team}`, 'tint', 'var(--gold)');
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Legendary raid</span></div>
     <div class="card k-ultra raidc" style="--cc:${L.cc}"><div class="pre-foe"><span class="raid-sp">${spr(R.id, { ani: 1, sh: V.sh, mega: defForm(R.id) })}</span><div class="sp"><div class="sm">${V.sh === 2 ? 'Shadow Pokémon · the rarest of all' : raidTitle(R.id, 0)}</div><b class="bossn" style="font-size:21px">${esc(V.n)}</b><div class="sm tn" style="margin-top:4px">Lv ${V.lv} · ${RAIDHP[t - 1]}× the HP of a normal Pokémon</div></div></div>
       <p class="sm" style="margin-top:10px">One Pokémon against your whole team, with the Bag. Its level was set by your team when it appeared, so training before you try again helps.</p>
       ${dom ? `<p class="sm" style="margin-top:6px"><b>${dom.n}.</b> The place fights with it: every third turn ${dom.d}. Below half HP it becomes enraged, grows stronger, and it happens every second turn.</p>` : ''}
-      <p class="sm" style="margin-top:6px">Win: it waits in the grass for you to catch, with ${nb(Math.round(RAIDCOIN[t - 1] * diff().coin))} coins, ${RAIDCANDY[t - 1]} Rare Candy and a lot of XP for the whole team. Lose: ${left > 1 ? `it stays, and you have ${left - 1} more ${left - 1 === 1 ? 'attempt' : 'attempts'}, one a day.` : 'this is your last attempt before it moves on.'}</p></div>
-    <div><div class="lab">Your team · tap the one that leads</div><div class="lineup">${party.map(m => `<button type="button" data-a="rlead" data-u="${m.u}" class="${m.u === lead ? 'lead' : ''}">${spr(m.id, { sh: m.sh, mega: m.mega })}<span class="sp"><b>${esc(mName(m))}</b><br><span class="sm tn">Lv ${m.lv}</span> ${evTag(m)}</span>${m.u === lead ? '<span class="pill">Leads</span>' : ''}</button>`).join('')}</div></div>
-    <div class="acts"><button type="button" class="btn gold" data-a="raidgo"${raidOpen() && party.length ? '' : ' disabled'}>${raidOpen() ? 'Start the raid' : 'Again tomorrow'}</button></div>`, 'tint', L.cc);
+      <p class="sm" style="margin-top:6px">Win: it waits in the grass for you to catch, with ${nb(Math.round(RAIDCOIN[t - 1] * diff().coin))} coins, ${RAIDCANDY[t - 1]} Rare Candy and a lot of XP for the whole team. Lose: ${lose}</p></div>
+    ${team}`, 'tint', L.cc);
 }
 /* ---------- Rundt de legendariske i kampen (bildene ligger i raidx.js, reglene for stedet i league.js) ---------- */
 /* Hvilken entré den legendariske har, og hvordan figuren kommer inn i det den viser seg. */
@@ -270,48 +282,76 @@ function evWho(e, n) {
 }
 const evTag = m => { const b = evBoost(m); return b.mega ? '<span class="pill mgp">Mega today</span>' : b.m > 1 ? `<span class="pill evp">+${Math.round((b.m - 1) * 100)} %${b.lv ? ' · Lv ' + b.lv : ''}</span>` : ''; };
 const evMon = x => `<button type="button" class="evm${x.on ? ' on' : ''}" data-a="mon" data-u="${x.m.u}">${spr(x.m.id, { sh: x.m.sh, mega: x.b.mega || x.m.mega, s: '52px' })}<b>${esc(mName(x.m))}</b><span class="sm tn">${x.b.mega ? 'Mega' : '+' + Math.round((x.b.m - 1) * 100) + ' %'}${x.b.lv ? ' · Lv ' + x.b.lv : ''}</span><span class="sm">${x.on ? 'on the team' : 'in the box'}</span></button>`;
-/* Det store feltet øverst på forsiden en eventdag: hva som gjelder i dag, og hvem av dine som har glede av det. */
-function evHero(e) {
-  const I = evInfo(e), who = evWho(e), stat = e.k === 'surge' || EVSTAT[e.k];
-  return `<div class="card evhero"><div class="evh-bg"><i></i><i></i><i></i></div>
-    <div class="evh-top"><span class="evh-ic">${I.ic}</span><div class="sp"><div class="evh-k">Special event · today only</div><b class="evh-n">${esc(I.n)}</b><div class="evh-s">${esc(I.s)}</div></div></div>
-    <p class="sm evh-d">${esc(I.d)}</p>
-    ${stat ? (who.length ? `<div class="evms">${who.map(evMon).join('')}</div>${who.some(x => !x.on) ? '<button type="button" class="btn sm2 wide" data-a="tab" data-k="lag">Change your team</button>' : ''}` : '<p class="sm">None of your Pokémon qualify today. It costs you nothing: everything else is as usual.</p>') : ''}
-    ${e.k === 'camp' ? '<button type="button" class="btn sm2 wide" data-a="tab" data-k="lag">Open your team to train</button>' : e.k === 'lucky' ? '<button type="button" class="btn sm2 wide" data-a="tab" data-k="butikk">Packs are in the Shop</button>' : ''}</div>`;
+/* Dagens event som symbol over modusen: ett trykk viser hva det gjør. Nytt (ikke åpnet ennå) pulserer det. */
+function evChip(e) {
+  const I = evInfo(e);
+  return `<button type="button" class="evchip${e.seen ? '' : ' new'}" data-a="evinfo" style="--ec:${I.c};--ec2:${I.c2 || I.c}" aria-label="Special event: ${esc(I.n)}. Tap to see what it does"><span class="evc-ic" aria-hidden="true">${I.ic}</span><span class="sp"><span class="evc-k">Special event · today only</span><b>${esc(I.n)}</b><span class="evc-s">${esc(I.s)}</span></span><span class="evc-go">${e.seen ? 'Details' : 'Tap to see'} ›</span></button>`;
 }
-/* Avsløringen: vises én gang, i det kampene åpnes på en eventdag. */
-function evReveal(e, quiet) {
-  const I = evInfo(e), who = evWho(e, 6);
-  sfx.event(); if (!quiet) buzz([40, 60, 40, 60, 180]);
-  ov(`<div class="evrev"><div class="evr-rays"></div><div class="evr-ic">${I.ic}</div><div class="evr-k">Special event</div><h1 class="evr-n">${esc(I.n)}</h1><p class="evr-s">${esc(I.s)}</p>
-      <p class="evr-d">${esc(I.d)}</p>${who.length ? `<div class="evms">${who.map(evMon).join('')}</div>` : ''}
-      <p class="sm" style="text-align:center">Only today, and only good news: nothing gets harder, and nothing is lost if you sit it out.</p></div>
-    <div class="acts"><button type="button" class="btn gold" data-a="home">Open battles</button></div>`, 'tint evov', I.c);
+/* Hva dagens event gjør, og hvem av dine som har glede av det. Åpnes fra symbolet over modusen og fra regelarket. */
+function evSheet(e) {
+  const I = evInfo(e), who = evWho(e, 6), stat = e.k === 'surge' || EVSTAT[e.k], rent = modeOn('factory') && MODESN < MODES.length && (e.k === 'surge' || e.k === 'type');
+  ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Today only</span></div>
+    <div class="evrev"><div class="evr-rays"></div><div class="evr-ic">${I.ic}</div><div class="evr-k">Special event</div><h1 class="evr-n">${esc(I.n)}</h1><p class="evr-s">${esc(I.s)}</p>
+      <p class="evr-d">${esc(I.d)}</p>${rent ? '<p class="sm" style="position:relative;text-align:center">In the Battle Frontier it counts for the rental Pokémon you pick. Your own get it in raids.</p>' : ''}
+      ${stat ? (who.length ? `<div class="evms">${who.map(evMon).join('')}</div>` : '<p class="sm" style="position:relative;text-align:center">None of your own Pokémon qualify today. It costs you nothing: everything else is as usual.</p>') : ''}
+      <p class="sm" style="text-align:center">Events are only ever for you, never for your opponents. Nothing gets harder, and nothing is lost if you sit it out.</p></div>
+    <div class="acts">${stat && who.some(x => !x.on) || e.k === 'camp' ? `<button type="button" class="btn" data-a="tab" data-k="lag">${e.k === 'camp' ? 'Open your team to train' : 'Change your team'}</button>` : e.k === 'lucky' ? '<button type="button" class="btn" data-a="tab" data-k="butikk">Packs are in the Shop</button>' : ''}<button type="button" class="btn gold" data-a="home">Got it</button></div>`, 'tint evov', I.c);
+}
+/* Det hver modus er, på valgskjermen og i teksten ellers. */
+const MODEIC = { league: 'L', factory: 'F', pwt: 'W' };
+const pipsEl = (n, used) => `<span class="pips" role="img" aria-label="${Math.max(0, n - used)} of ${n} attempts left today">${Array.from({ length: n }, (_, i) => `<i${i < n - used ? ' class="on"' : ''}></i>`).join('')}</span>`;
+/* Valget av dagens modus. Åpnes av «Done for today», og fra kortet på forsiden hvis valget ble utsatt. Først velges et kort, så bekreftes det:
+   valget gjelder hele kampdagen og kan ikke gjøres om. */
+function modeSheet() {
+  if (!S.lad.day || !modePicks()) { closeOv(); return render(); }
+  const bo = dayBoost(), t = nextTrainer(), tr = trainerInfo(t), R = S.fac.run, WR = pwtRun(), wc = WR ? CUPS[WR.wd] : cupNow(), W = pwt(), sel = MODES.includes(BT.msel) ? BT.msel : '';
+  const C = {
+    league: { s: `${leagueTag()} · next: ${who(tr)}`, d: 'Your own team of six. Every win gives the whole team XP, and bosses give Rare Candy and items.', a: 'One loss ends it for the day', n: LIVES, u: ladFails() },
+    factory: { s: R ? `Round ${R.round} · ${R.w}/${FACN} wins · streak ${R.streak}` : `Rental Pokémon at Lv ${FACLV}${S.fac.best ? ' · best streak ' + S.fac.best : ''}`, d: 'Rental Pokémon, so your own team does not matter. You win items, encounters and coins, but no XP.', a: `${FACLIVES} runs · a loss ends a run`, n: FACLIVES, u: facFails() },
+    pwt: { s: `Today: ${wc.n}`, d: `A knockout cup, three rounds, three on three, and a new cup each weekday. Your three play at Lv ${WR ? WR.lv : pwtLv()}. Coins for every round, and the winner takes a trophy and ${aN(PACKS[wc.pk].n)}.`, a: 'One cup · a loss ends it', n: 1, u: W.day === S.lad.day && !WR ? 1 : 0 }
+  };
+  ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Not now</button><span class="pill tn">Choose 1 of ${MODES.length}</span></div>
+    <div><h1 class="big" style="font-size:30px">Today's mode</h1><p class="sm" style="margin-top:6px">Pick one way to battle today. The other two stay closed until your next battle day.</p></div>
+    <div class="mdl">${MODES.map(k => `<button type="button" class="mdc${sel === k ? ' on' : ''}${bo.mode === k ? ' bo' : ''}" data-a="msel" data-k="${k}" aria-pressed="${sel === k}">
+      <span class="mdc-top"><span class="ficon">${MODEIC[k]}</span><span class="sp"><b>${MODEN[k]}</b><span class="sm tn">${esc(C[k].s)}</span></span>${pipsEl(C[k].n, C[k].u)}</span>
+      <span class="sm mdc-d">${esc(C[k].d)}</span>
+      <span class="mdc-f"><span class="pill tn">Coins ×${smFor(k)}</span>${bo.mode === k ? `<span class="bonus">Bonus today · coins ×${DAYCOIN}</span>` : ''}<span class="sm">${esc(C[k].a)}</span></span></button>`).join('')}</div>
+    <p class="sm" style="text-align:center">Coins ×${studyMult()} comes from your ${hrs(ladMin())} h of focus. A special event may show itself once you have chosen.</p>
+    <div class="acts"><button type="button" class="btn gold" id="mgo" data-a="mgo"${sel ? '' : ' disabled'}>${sel ? `Play the ${MODEN[sel]} today` : 'Tap a mode to choose it'}</button></div>`, 'tint modeov', 'var(--gold)');
 }
 function ladderCard() {
-  const L = S.lad, t = nextTrainer(), tr = trainerInfo(t), sm = evSm(), bo = dayBoost(), tier = TIER(tr.kind), R = S.fac.run;
+  const L = S.lad, t = nextTrainer(), tr = trainerInfo(t), bo = dayBoost(), tier = TIER(tr.kind), R = S.fac.run;
   /* En runde: seks par med en trener og en boss. Den siste bossen er en av de sjeldne. */
   const prog = `<div class="lgp" aria-hidden="true">${Array.from({ length: LAPN }, (_, n) => `<i class="${n < L.n ? 'on' : n === L.n ? 'cur' : ''}${n % 2 === 0 && n ? ' gap' : ''}${n % 2 === 1 ? ' bo' : ''}${n === LAPN - 1 ? ' ul' : ''}"></i>`).join('')}</div>`;
   const row = `<div class="lrow k-${tier}"${kst(tr)}>${tsprite(tr.img, 'sm')}<div class="sp"><div class="sm tn">${esc(leagueTag())}${tr.boss ? ` · class ${tr.ci} of 9${tr.ultra ? ' · ' + RARE[tr.kind] : ''}` : ''}</div><b class="${tr.boss ? 'bossn' : ''}">${esc(who(tr))}</b></div></div>`;
   const fac = `<div class="modec"><span class="ficon">F</span><div class="sp"><b>Battle Frontier</b><div class="sm tn">${R ? `Round ${R.round} · ${R.w}/${FACN} wins · streak ${R.streak}` : `Rent 4 of 7 random Pokémon · everything is Lv ${FACLV}${S.fac.best ? ' · best streak ' + S.fac.best : ''}`}</div></div></div>`;
-  const tag = m => bo.mode === m ? `<span class="bonus">Today's bonus</span>` : '';
+  const tag = m => bo.mode === m ? `<span class="bonus">Bonus · coins ×${DAYCOIN}</span>` : '';
   const lab = '<button type="button" class="btn wide nf" data-a="lab">Demo battle · try any class</button>', rules = '<button type="button" class="btn wide nf" data-a="rules">Rules and rewards</button>';
   /* World Tournament: dagens cup. */
   const W = pwt(), WR = pwtRun(), wc = WR ? CUPS[WR.wd] : cupNow();
-  /* Forsøkene som er igjen i dag, som prikker øverst på hvert kort. */
-  const pips = (n, used) => `<span class="pips" role="img" aria-label="${Math.max(0, n - used)} of ${n} attempts left today">${Array.from({ length: n }, (_, i) => `<i${i < n - used ? ' class="on"' : ''}></i>`).join('')}</span>`;
-  const cupc = `<div class="card stack"><div class="row" style="justify-content:space-between"><b>World Tournament</b><span class="row" style="gap:8px"><span class="pill tn">${esc(wc.n)}</span>${L.day ? pips(1, pwtOpen() ? 0 : 1) : ''}</span></div>
-      <div class="modec"><span class="ficon">W</span><div class="sp"><b>${WR ? `${ROUNDN[WR.r]} · round ${WR.r + 1} of ${PWTN}` : 'Three rounds · three on three'}</b><div class="sm tn">Your team plays at Lv ${WR ? WR.lv : pwtLv()}${W.won ? ` · ${W.won} ${W.won === 1 ? 'trophy' : 'trophies'}` : ''}</div></div></div>
-      ${pwtOpen() ? `<p class="sm">A knockout cup that changes with the day of the week. You see the opponent's team before you pick your three. No Bag and no XP: you play for coins, and the winner takes a trophy and ${aN(PACKS[wc.pk].n)}.</p><button type="button" class="btn wide gold" data-a="wenter">${WR ? 'Continue the cup' : 'Enter the cup'}</button>` : '<p class="sm">You have played today\'s cup. A new one opens after your next day of focus.</p>'}</div>`;
   const charm = S.charm > 0 ? `<p class="sm" style="color:var(--gold)">Shiny Charm: ${CHARM.m}× shiny odds for your next ${S.charm} focus session${S.charm > 1 ? 's' : ''}.</p>` : '';
+  const one = MODESN < MODES.length;
   if (!L.day) return `<div class="card stack"><div class="row" style="justify-content:space-between"><b>Battles</b><span class="pill tn">Lap ${L.lap + 1}</span></div>${row}${prog}
-    <p class="sm">Three ways to battle once you are done studying: the League (your own team, XP and Rare Candy), the Battle Frontier (rental Pokémon at Lv ${FACLV}, items and encounters) and the World Tournament (a daily cup, three on three, for coins and a pack of encounters). Today's bonus is on the ${bo.mode === 'league' ? 'League' : 'Battle Frontier'}.</p>
+    <p class="sm">${one ? `When you are done studying, you choose ${MODESN === 1 ? 'one' : MODESN} of three ways to battle for the day` : 'Three ways to battle once you are done studying'}: the League (your own team, XP and Rare Candy), the Battle Frontier (rental Pokémon at Lv ${FACLV}, items and encounters) ${one ? 'or' : 'and'} the World Tournament (a daily cup, three on three, for coins and a pack of encounters).${one ? ' One of them pays bonus coins each day: you see which when you choose.' : ''}</p>
     <button type="button" class="btn wide" data-a="bdone">Done for today · open battles</button>${lab}${rules}</div>${charm}`;
-  const mult = `<p class="sm tn">Rewards ×${sm} from ${hrs(ladMin())} h of focus${L.day !== dayKey() ? ' that day' : ' today'}${evIs('gold') ? `, the Gold Rush included (×${studyMult()} without it)` : ''}. Your goal of ${hrs(goalMin())} h gives ×${goalTop().toFixed(1)}.${firstWin() ? ' Your first win today pays double coins.' : ''}</p><p class="sm tn">Difficulty: ${diff().n} · coins ×${diff().coin}, XP ×${diff().xp}. Change it under Profile.</p>`;
-  return `<div class="card stack"><div class="row" style="justify-content:space-between"><b>Trainer League</b><span class="row" style="gap:8px">${tag('league')}${pips(ladLives(), ladFails())}</span></div>${row}${prog}
-      ${ladLost() ? '<p class="sm">You lost today. The League opens again after your next day of focus, and you keep your place and the XP.</p>' : `<p class="sm">${bo.mode === 'league' ? '+30% XP and better odds for Rare Candy today. ' : ''}A trainer, then a boss, through the nine classes. XP for the whole team after each battle. ${ladLives() - ladFails() > 1 ? 'Second Wind: you can lose once today and still go on.' : 'One loss closes the League for the day, so a boss you cannot beat is a project for tomorrow.'}</p><button type="button" class="go${tr.boss ? ' gold' : ''}" data-a="bpre">Battle</button>`}</div>
-    <div class="card stack"><div class="row" style="justify-content:space-between"><b>Battle Frontier</b><span class="row" style="gap:8px">${tag('factory')}${pips(facLives(), facFails())}</span></div>${fac}
-      ${facLost() ? '<p class="sm">Your runs for today are used. The Frontier opens again after your next day of focus.</p>' : `<p class="sm">${bo.mode === 'factory' ? '1.5× luck on items, encounters and rare bosses today. ' : ''}Six trainers, then a boss. No XP and no Bag here: you win coins, items and encounters. A loss ends the run, and you have ${facLives() - facFails() === 1 ? 'one run left today' : (facLives() - facFails()) + ' runs left today'}.</p><button type="button" class="btn wide gold" data-a="fenter">${R ? 'Continue the run' : 'Enter the Frontier'}</button>`}</div>${cupc}${mult}${charm}${lab}${rules}`;
+  /* Kampene er åpnet, men dagens modus er ikke valgt ennå (valget ble utsatt). */
+  if (modePicks() > 0) return `<div class="card stack modeask"><div class="row" style="justify-content:space-between"><b>Battles are open</b><span class="pill tn">Choose 1 of ${MODES.length}</span></div>
+    <p class="sm">Pick the mode you want to play today: the Trainer League, the Battle Frontier or the World Tournament. The other two stay closed until your next battle day.</p>
+    <button type="button" class="go" data-a="mopen">Choose today's mode</button></div>${charm}${lab}${rules}`;
+  const on = MODES.filter(modeOn), E = evNow(), k1 = on.length === 1 ? on[0] : '', sm = k1 ? smFor(k1) : evSm();
+  const mult = `<p class="sm tn">Coins ×${sm} ${k1 ? `in the ${MODEN[k1]}` : ''}: ×${studyMult()} from ${hrs(ladMin())} h of focus${L.day !== dayKey() ? ' that day' : ' today'}${k1 && bo.mode === k1 ? `, ×${DAYCOIN} for today's bonus mode` : ''}${evIs('gold') ? `, ×${EVCOIN} for the Gold Rush` : ''}. Your goal of ${hrs(goalMin())} h gives ×${goalTop().toFixed(1)} from focus.${firstWin() && modeOn('league') ? ' Your first League win today pays double coins.' : ''}</p><p class="sm tn">Difficulty: ${diff().n} · coins ×${diff().coin}, XP ×${diff().xp}. Change it under Profile.</p>`;
+  const cards = {
+    league: `<div class="card stack" id="mode-league"><div class="row" style="justify-content:space-between"><b>Trainer League</b><span class="row" style="gap:8px">${tag('league')}${pipsEl(ladLives(), ladFails())}</span></div>${row}${prog}
+      ${ladLost() ? '<p class="sm">You lost today. The League opens again after your next day of focus, and you keep your place and the XP.</p>' : `<p class="sm">${bo.mode === 'league' ? '+30% XP and better odds for Rare Candy today. ' : ''}A trainer, then a boss, through the nine classes. XP for the whole team after each battle. ${ladLives() - ladFails() > 1 ? 'Second Wind: you can lose once today and still go on.' : 'One loss closes the League for the day, so a boss you cannot beat is a project for tomorrow.'}</p><button type="button" class="go${tr.boss ? ' gold' : ''}" data-a="bpre">Battle</button>`}</div>`,
+    factory: `<div class="card stack" id="mode-factory"><div class="row" style="justify-content:space-between"><b>Battle Frontier</b><span class="row" style="gap:8px">${tag('factory')}${pipsEl(facLives(), facFails())}</span></div>${fac}
+      ${facLost() ? '<p class="sm">Your runs for today are used. The Frontier opens again after your next day of focus.</p>' : `<p class="sm">${bo.mode === 'factory' ? '1.5× luck on items, encounters and rare bosses today. ' : ''}Six trainers, then a boss. No XP and no Bag here: you win coins, items and encounters. A loss ends the run, and you have ${facLives() - facFails() === 1 ? 'one run left today' : (facLives() - facFails()) + ' runs left today'}.</p><button type="button" class="btn wide gold" data-a="fenter">${R ? 'Continue the run' : 'Enter the Frontier'}</button>`}</div>`,
+    pwt: `<div class="card stack" id="mode-pwt"><div class="row" style="justify-content:space-between"><b>World Tournament</b><span class="row" style="gap:8px">${tag('pwt')}${pipsEl(1, pwtOpen() ? 0 : 1)}</span></div>
+      <div class="modec"><span class="ficon">W</span><div class="sp"><b>${esc(wc.n)}</b><div class="sm tn">${WR ? `${ROUNDN[WR.r]} · round ${WR.r + 1} of ${PWTN}` : 'Three rounds · three on three'} · Lv ${WR ? WR.lv : pwtLv()}${W.won ? ` · ${W.won} ${W.won === 1 ? 'trophy' : 'trophies'}` : ''}</div></div></div>
+      ${pwtOpen() ? `<p class="sm">A knockout cup that changes with the day of the week. You see the opponent's team before you pick your three. No Bag and no XP: you play for coins, and the winner takes a trophy and ${aN(PACKS[wc.pk].n)}.</p><button type="button" class="btn wide gold" data-a="wenter">${WR ? 'Continue the cup' : 'Enter the cup'}</button>` : '<p class="sm">You have played today\'s cup. A new one opens after your next day of focus.</p>'}</div>`
+  };
+  const off = MODES.filter(k => !modeOn(k)).map(k => 'the ' + MODEN[k]);
+  const note = one && k1 ? `<p class="sm tn">Today's mode is the ${MODEN[k1]}. ${off.join(' and ').replace(/^t/, 'T')} open again on your next battle day.</p>` : '';
+  return `${E ? evChip(E) : ''}${on.map(k => cards[k]).join('')}${note}${mult}${charm}${lab}${rules}`;
 }
 /* Oppstilling før en ligakamp: hvem du møter, hva de gir, og hvem av dine som går ut først. */
 function preBattle() {
@@ -1076,7 +1116,7 @@ function overview() {
   ov(`<div class="hof"><div class="hof-h"><span>${res.win ? 'VICTORY' : 'DEFEAT'}</span><span class="tn">${esc(battleTag(B))}</span></div>
       <div class="hof-stage">${B.me.map((b, i) => `<span style="--i:${i};--n:${B.me.length}" class="${b.hp <= 0 ? 'ko' : ''}">${spr(b.id, { ani: 1, sh: b.sh, mega: b.mega })}</span>`).join('')}</div>
       <p class="hof-t">${res.win ? `You beat ${nm}.` : lab ? `${nm} won this time.` : cup ? `${nm} knocked you out of the cup.` : fac ? `${nm} stopped your run.` : `${nm} won this time. You keep your place and the XP.`}</p></div>
-    ${team}${rew}${extra}${res.ring ? `<div class="card mgring"><div class="row" style="gap:12px;align-items:center"><span class="gem mg" style="width:34px;height:34px;flex:none"></span><div class="sp"><div class="sm">A Champion's gift</div><b style="font-size:19px">The Mega Ring</b><p class="sm" style="margin-top:4px">Give your Mega Stone to a Pokémon that has a Mega form, on its card. It can then Mega Evolve once a battle, from the move menu.</p></div></div></div>` : ''}${res.raid && S.raid ? `<div class="card k-ultra raidc"><div class="sm">A legendary Pokémon has appeared</div><b class="bossn" style="font-size:19px">${esc(S.raid.dk ? DARK.n : D(S.raid.id)[0])} · Lv ${S.raid.lv}</b><p class="sm" style="margin-top:4px">Beat it and it waits in the grass for you to catch. It is far stronger than anything in the League.</p><button type="button" class="btn gold wide" data-a="raid" style="margin-top:8px">See the raid</button></div>` : ''}
+    ${team}${rew}${extra}${res.ring ? `<div class="card mgring"><div class="row" style="gap:12px;align-items:center"><span class="gem mg" style="width:34px;height:34px;flex:none"></span><div class="sp"><div class="sm">A Champion's gift</div><b style="font-size:19px">The Mega Ring</b><p class="sm" style="margin-top:4px">Give your Mega Stone to a Pokémon that has a Mega form, on its card. It can then Mega Evolve once a battle, from the move menu.</p></div></div></div>` : ''}${res.raid && S.raid ? `<div class="card k-ultra raidc"><div class="sm">A legendary Pokémon has appeared</div><b class="bossn" style="font-size:19px">${S.raid.seen ? esc(S.raid.dk ? DARK.n : D(S.raid.id)[0]) + ' · ' : ''}Lv ${S.raid.lv}</b><p class="sm" style="margin-top:4px">${S.raid.seen ? '' : 'Who it is stays secret until you face it. '}Beat it and it waits in the grass for you to catch. It is far stronger than anything in the League.</p><button type="button" class="btn gold wide" data-a="raid" style="margin-top:8px">See the raid</button></div>` : ''}
     <div class="card"><span class="sm" style="color:var(--ink)">${next}</span></div>
     <div class="acts">${lab ? '<button type="button" class="btn gold" data-a="lab">Another demo</button><button type="button" class="btn nf" data-a="home">Done</button>' : (res.win || res.left) && open ? `<button type="button" class="btn gold" data-a="${cup ? 'wenter' : fac ? 'fenter' : 'bpre'}">${cup ? 'Next round' : !res.win ? (fac ? 'Start a new run' : res.gone ? 'Next battle' : 'Rematch') : fac && res.roundDone ? 'Pick new rentals' : 'Next battle'}</button><button type="button" class="btn nf" data-a="home">Done</button>` : '<button type="button" class="btn pri" data-a="home">Done</button>'}</div>`, 'tint ovtop', res.win ? 'var(--gold)' : 'var(--red)');
   if (first && !fac && !lab && !raid && !cup) setTimeout(animXp, 500);
@@ -1125,32 +1165,37 @@ function rulesSheet() {
   const d = diff(), g = hrs(goalMin()), pk = k => `${PACKS[k].n} ${nb(PACKS[k].p)}`, row = (a, b) => `<div class="row" style="justify-content:space-between;gap:12px;align-items:flex-start"><span class="sm" style="color:var(--ink);flex:none">${a}</span><span class="sm tn" style="text-align:right">${b}</span></div>`;
   openSheet(`<h2 class="h" style="margin-top:0">Rules and rewards</h2>
     <div class="stack">
+    ${S.lad.day && MODESN < MODES.length && !modePicks() ? `<div class="card stack"><b>Today</b>${row('Mode', modeSt().ks.map(k => MODEN[k]).join(', '))}${row('Bonus coins today', `${MODEN[dayBoost().mode]} · ×${DAYCOIN}`)}${evNow() ? row('Special event', esc(evInfo(evNow()).n) + ' · ' + esc(evInfo(evNow()).s)) + '<button type="button" class="btn sm2 wide" data-a="evinfo">See what today\'s event does</button>' : row('Special event', 'none today')}</div>` : ''}
     <div class="card stack"><b>Focus sessions</b><p class="sm">Your subjects count in full: 10 XP and 3 coins a minute, an encounter every 20 minutes, and every minute moves the battle bonus. Other things you log, such as job applications, music or reading, count at half value, and their hours are kept apart from your subject hours. The first session of the day gives ×1.5.</p>
       ${row('Subjects', 'full value')}${row('Other things', '×' + OTHERW)}</div>
     <div class="card stack"><b>Battle bonus</b><p class="sm">Battles are where most coins come from, and every minute of focus raises today's bonus: from ×0.5 up to ×${goalTop().toFixed(1)} at your goal of ${g} h. It multiplies the coins you win in the League, the Frontier and the Tournament. XP in the League grows the same way, from ×0.8 to ×1.2. Raid rewards are fixed.</p>
       ${row('Right now', '×' + studyMult())}${row('First League win of the day', 'double coins')}${row('Difficulty · ' + d.n, `coins ×${d.coin} · XP ×${d.xp} · Bag ${d.bag}`)}${row('Attempts a day', `League ${LIVES} · Frontier ${FACLIVES} · Tournament 1 · Raid 1`)}</div>
+    ${MODESN < MODES.length ? `<div class="card stack"><b>One mode a day</b><p class="sm">When you press Done for today, you choose ${MODESN === 1 ? 'one' : MODESN} of the three modes for that battle day. The other two stay closed until your next battle day, and the choice cannot be changed. Each day one of the three pays bonus coins: which one is shown when you choose. Raids are separate and always open.</p>
+      ${row('Bonus mode', `coins ×${DAYCOIN}`)}${row('League on its bonus day', '+30 % XP, better odds for Rare Candy')}${row('Frontier on its bonus day', '1.5× luck on items and encounters')}</div>` : ''}
     <div class="card stack"><b>Trainer League</b><p class="sm">Your own team. A trainer, then a boss, twelve battles a lap through the nine classes. The whole team gets XP after every battle, and bosses give Rare Candy and items. One loss closes it for the day, and you keep your place.</p>
       ${row('Coins per win', `${TCL.trainer.coin} for a trainer up to ${TCL.supreme.coin} for a supreme boss`)}</div>
     <div class="card stack"><b>Battle Frontier</b><p class="sm">Rental Pokémon at Lv ${FACLV}. Six trainers and then a boss a round. No XP: you win items, encounters and coins. A loss ends the run, and you can start ${FACLIVES} runs a day.</p>
       ${row('Coins per win', 'about 30 to 80 × bonus')}${row('Round cleared', `${FACROUND(1)} and up × bonus`)}</div>
     <div class="card stack"><b>World Tournament</b><p class="sm">One cup a day, a new one each day of the week. Quarter-final, semi-final and final, three on three. Your three all play at your team's level, whatever level they really are, and the opponents stand at the same level on Hard and a little below it on Normal and Easy. You see the opponent's team before you pick. No Bag, no XP, and one loss ends the cup.</p>
       ${row('Coins per round', PWTCOIN.join(' · ') + ' × cup × bonus')}${row('Leaders cups · Elite Four · Champions', CUPS.slice(1, 2).concat(CUPS[6], CUPS[0]).map(c => '×' + c.f).join(' · '))}${row('Winner', `trophy · ${PWTCANDY} Rare Candy · a pack`)}</div>
-    <div class="card stack"><b>Legendary raids</b><p class="sm">One legendary at a time, against your whole team. You get ${RAIDTRIES} attempts, one a day, then it moves on. Its level follows your team, and it has ${RAIDHP[0]} to ${RAIDHP[4]} times the HP of a normal Pokémon.</p>
+    <div class="card stack"><b>Legendary raids</b><p class="sm">One legendary at a time, against your whole team. Who it is stays secret until you stand in front of it. You get ${RAIDTRIES} attempts, one a day, then it moves on. Its level follows your team, and it has ${RAIDHP[0]} to ${RAIDHP[4]} times the HP of a normal Pokémon.</p>
       ${row('It appears', `at your daily goal: ${Math.round(RAIDGOAL * 100)} %<br>every 7th day in a row: always<br>after a Frontier round: ${Math.round(RAIDFAC * 100)} %`)}
       ${row('Team level needed', `mythical ${RAIDGATE[2]} · the great ones ${RAIDGATE[1]} · Arceus, Deoxys ${RAIDGATE[3]}`)}
       ${row('Its place fights too', `an event every ${RAIDEV}rd turn<br>enraged below half HP`)}
       ${row('Coins', RAIDCOIN.map(nb).join(' · '))}${row('Rare Candy', RAIDCANDY.join(' · '))}
       <p class="sm">The five steps are: legendary, the great ones, mythical, Arceus and Deoxys, and Dark Mewtwo. A win also gives a lot of XP, and the legendary waits in the grass to be caught.</p>
       <p class="sm"><b>Dark Mewtwo</b> has no raid of its own. Beat Mewtwo, and there is a ${Math.round(DARKP * 100)} % chance that it rises again as Dark Mewtwo. You keep what Mewtwo gave, your team is restored, and you fight once more, right away.</p></div>
-    <div class="card stack"><b>Special events</b><p class="sm">Some battle days are special. You find out which when you open the battles, and the screen changes with it. An event only ever helps: nothing gets harder, and a day you sit out costs nothing. They are counted in battle days, come about every third one, and never two days running.</p>
-      ${Object.keys(EVENTS).map(k => row(k === 'type' ? 'Type Festival' : EVENTS[k].n, k === 'surge' ? 'your Pokémon with a Mega form start in it' : k === 'type' ? 'one type gets +15 % in every stat' : k === 'stars' ? 'three from your box: team level and +20 %' : k === 'little' ? '+35 % for those that can still evolve' : k === 'gold' ? 'coins ×1.5 from every battle' : k === 'wind' ? 'one more attempt in League and Frontier' : k === 'lucky' ? 'shiny odds ×5, one more encounter from bosses' : 'training costs 40 % less')).join('')}</div>
+    <div class="card stack"><b>Special events</b><p class="sm">Some battle days are special. You find out once you have chosen today's mode: the event shows as a symbol above it, and a tap tells you what it does. An event is only ever for you, never for your opponents: nothing gets harder, and a day you sit out costs nothing. They are counted in battle days, come about every third one, and never two days running.</p>
+      ${Object.keys(EVENTS).map(k => row(k === 'type' ? 'Type Festival' : EVENTS[k].n, k === 'surge' ? 'your Pokémon with a Mega form start in it' : k === 'type' ? 'one type gets +15 % in every stat' : k === 'stars' ? 'three from your box: team level and +20 %' : k === 'little' ? '+35 % for those that can still evolve' : k === 'gold' ? 'coins ×1.5 from every battle' : k === 'wind' ? 'one more attempt in the League, one more run in the Frontier' : k === 'lucky' ? 'shiny odds ×5, one more encounter from bosses' : 'training costs 40 % less')).join('')}</div>
     <div class="card stack"><b>Mega Evolution</b><p class="sm">The first Champion or Supreme Boss you beat gives you the Mega Ring and a Mega Stone. A Pokémon that has a Mega form and holds a stone can Mega Evolve from the move menu: once a battle for your team, before it attacks, and it stays that way until the battle is over. Its HP is the same, its other stats and sometimes its types change. Stones are given on the Pokémon's card, and you get the stone back if you sell or trade it.</p>
       ${row('Mega Stone', `${nb(SHOP.mstone.p)} coins in the Shop, with the ring`)}${row('Won from', `Supreme Boss: always · Champion: ${Math.round(MSTONE[1] * 100)} % · Evil Leader: ${Math.round(MSTONE[0] * 100)} %<br>the Champions Cup · raids against the great ones`)}${row('Opponents', 'Champions and Supreme Bosses, on Normal and Hard')}
       <p class="sm"><b>Legendaries</b> do not use ordinary stones. Rayquaza, Kyogre, Groudon, Latias, Latios, Heatran and Darkrai change form when they become enraged in a raid, and Mewtwo may rise again as Dark Mewtwo. Beat one, and you have its stone: every one of that species you own can then do the same.</p></div>
     <div class="card stack"><b>Training</b><p class="sm">Every Pokémon has potential it was born with, 0 to 31 in each stat, and training, at most ${EVMAX} in one stat and ${EVTOT} in all. Your partner gains a training point for every two minutes of focus, in the stat it has trained the most. Both can be bought under Train on the Pokémon's card, and both count more the higher its level. Training can be cleared from a stat and placed somewhere else, but the coins are not returned.</p>
       ${row('Training point', `${EVP} coins`)}${row('Hyper Training', `${IVP} coins for each point up to 31`)}${row('One Pokémon, fully trained', `about ${nb(EVTOT * EVP + 93 * IVP)} coins`)}</div>
     <div class="card stack"><b>Encounter packs</b><p class="sm">Three encounters a pack, bought in the Shop. The dearer the pack, the better the last card. Pokémon from packs sell for ${Math.round(PKSELL * 100)} % of the usual price.</p>
-      ${row('Prices', ['poke', 'great', 'ultra', 'master'].map(pk).join('<br>'))}</div>
+      ${row('Prices', ['poke', 'great', 'ultra', 'master'].map(pk).join('<br>'))}
+      ${row('Legendary in the last card', ['poke', 'great', 'ultra', 'master'].map(k => `${PACKS[k].n.replace(' Pack', '')} ${+(PACKS[k].slots[2].leg * 100).toFixed(1)} %`).join(' · '))}
+      <p class="sm">A legendary card does not say who it is: you find out when you meet it in the grass. It can be any legendary you do not own from your areas. Mythical Pokémon come a little more often, and the greatest ones are rare in packs. They are more often met in raids.</p></div>
     </div><button type="button" class="btn wide" data-a="close" style="margin-top:12px">Close</button>`);
 }
 function facScreen() {
@@ -1215,7 +1260,18 @@ const BA = {
   btarget: el => { if (BT.busy) return; const B = BT.B, k = BT.item, i = +el.dataset.k; if (!(B.bag > 0) || !itemOk(B, k, i)) return; if (B.mode !== 'lab') { if (!(S.items[k] > 0)) return; S.items[k]--; save(true); } BT.menu = 'main'; playEv(runTurn(B, { t: 'item', k, i })); },
   labmode: el => { BT.labRent = el.dataset.k === '1'; labScreen(); },
   labgo: el => { if (!BT.labRent && !S.party.map(monBy).filter(Boolean).length) return toast('You need a Pokémon in your team, or pick Rentals.'); PACK.unlock(); sfx.start(); BT.busy = false; startBattle(labBattle(el.dataset.k, !!BT.labRent)); },
-  bdone: () => { S.lad.day = dayKey(); const had = !!(S.evt && S.evt.day === S.lad.day), e = evRoll(); if (e && !had) e.seen = 1; save(); render(); if (e && !had) evReveal(e); else { sfx.ok(); toast('Battles are open. Fight now or later tonight.'); } },
+  bdone: () => { S.lad.day = dayKey(); if (MODESN >= MODES.length) evRoll(); save(); render(); if (modePicks() > 0) { BT.msel = ''; sfx.open(); modeSheet(); } else { sfx.ok(); toast('Battles are open. Fight now or later tonight.'); } },
+  mopen: () => { if (!S.lad.day) return; BT.msel = ''; sfx.open(); modeSheet(); },
+  msel: el => { const k = el.dataset.k; if (!MODES.includes(k)) return; BT.msel = k; document.querySelectorAll('#ov .mdc').forEach(x => { const on = x === el; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); }); const b = $('#mgo'); if (b) { b.disabled = false; b.textContent = `Play the ${MODEN[k]} today`; } sfx.tap(); buzz(12); },
+  /* Valget står for hele kampdagen. Dagens event trekkes i det samme (modePick), og viser seg som et symbol over modusen. */
+  mgo: () => {
+    const k = BT.msel; if (!k || !modePick(k)) { closeOv(); return render(); }
+    BT.msel = ''; closeOv(); render();
+    const e = evNow(), c = $('#mode-' + k), chip = document.querySelector('.evchip');
+    if (e) { sfx.event(); buzz([40, 60, 40, 60, 180]); toast(`Special event: ${evInfo(e).n}. Tap the symbol to see what it does.`); } else { sfx.ok(); buzz(30); toast(`${MODEN[k]} it is. Fight now or later tonight.`); }
+    const to = chip || c; if (to && to.scrollIntoView) to.scrollIntoView({ block: 'start', behavior: calm() ? 'auto' : 'smooth' });
+  },
+  evinfo: () => { const e = evNow(); if (!e) return; closeSheet(); if (!e.seen) { e.seen = 1; save(true); } sfx.open(); evSheet(e); },
   bpre: () => { if (!ladderOpen()) { closeOv(); return render(); } BT.B = null; BT.busy = false; preBattle(); },
   blead: el => { BT.lead = +el.dataset.u; preBattle(); },
   bteam: () => { closeOv(); U.tab = 'lag'; U.lag = 'lag'; render(); },

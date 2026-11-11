@@ -166,7 +166,7 @@ function cry(id, delay = 0, vol = 0.45) {
   }).catch(() => {});
 }
 /* Lyd per type trykk. Handlinger med egen lyd (kast, kjøp, utvikling osv.) får ikke en ekstra. */
-const OWN = new Set(['mgive', 'triv', 'trev', 'mvtog', 'start', 'throw', 'buy', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm']);
+const OWN = new Set(['mgive', 'triv', 'trev', 'mvtog', 'start', 'throw', 'buy', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm', 'mopen', 'msel', 'mgo', 'evinfo']);
 const SND = {
   tab: 'tab', lagv: 'tab', dexr: 'tab',
   fag: 'chip', min: 'chip', reg: 'chip', sort: 'chip', filt: 'chip', sety: 'chip', extog: 'chip',
@@ -199,12 +199,9 @@ function render() {
   if (!S.started) { $('#nav').hidden = true; $('#main').innerHTML = ''; return intro(); }
   $('#nav').hidden = false;
   renderNav();
-  /* På en eventdag får forsiden eventets farger og en annen oppstilling (se VIEW.fokus). Dagens event trekkes her hvis kampene alt står åpne. */
-  if (U.tab === 'fokus' && S.lad.day && S.lad.day === dayKey() && !(S.evt && S.evt.day === S.lad.day) && typeof evRoll === 'function') { evRoll(); save(true); }
+  /* På en eventdag får forsiden eventets farger og en annen oppstilling (se VIEW.fokus). Eventet trekkes når dagens modus velges (modePick). */
   const E = U.tab === 'fokus' && S.party.length && typeof evNow === 'function' ? evNow() : null, EI = E ? evInfo(E) : null;
   $('#main').innerHTML = `<div class="wrap${E ? ' evpage ev-' + E.k : ''}"${E ? ` style="--ec:${EI.c};--ec2:${EI.c2 || EI.c}"` : ''}>${VIEW[U.tab]()}</div>`;
-  /* Ble eventet trukket uten at «Done for today» ble trykket nå (kampene sto alt åpne), vises avsløringen første gang forsiden er fri. */
-  if (E && !E.seen && $('#ov').hidden && $('#sheet').hidden && typeof evReveal === 'function') { E.seen = 1; save(true); setTimeout(() => { if ($('#ov').hidden && $('#sheet').hidden && evNow() === E) evReveal(E, 1); }, 400); }
   /* Et område som nettopp ble åpnet (av nivå eller antall arter), sies fra om én gang. */
   if (S.nreg && S.nreg.length) { const l = S.nreg; S.nreg = []; save(true); setTimeout(() => toast(`New area: ${l.join(' and ')} ${l.length > 1 ? 'are' : 'is'} open. See Shop · Routes.`), 400); }
 }
@@ -274,7 +271,7 @@ VIEW.fokus = () => {
     ${S.incOn ? '<p class="sm" style="margin-top:10px">Incense is lit for your next session.</p>' : ''}${S.boost ? `<p class="sm" style="margin-top:10px;color:var(--gold)">Boss perk: ${S.boost.m}× coins for your next ${S.boost.n} session${S.boost.n > 1 ? 's' : ''}.</p>` : ''}</div>`;
   /* En vanlig dag ligger kampene nederst. På en eventdag står eventet og kampene øverst, og det som har med studeringen å gjøre, under. */
   const battles = S.party.length ? raidCard() + ladderCard() : '', E = battles && typeof evNow === 'function' ? evNow() : null;
-  return E ? `${top}${evHero(E)}${battles}<div class="evsep"><span>Study</span></div>${h}` : top + h + battles;
+  return E ? `${top}${battles}<div class="evsep"><span>Study</span></div>${h}` : top + h + battles;
 };
 
 /* ---------- Laget ---------- */
@@ -529,7 +526,7 @@ function packShow(k, encs) {
   const P = PACKS[k]; U.pk = encs;
   ov(`<div class="pko" id="pko" style="--pc:${P.c}">
     <button type="button" class="pk-pack" data-a="pkopen" aria-label="Open the pack"><span class="pk-ic big"><i></i></span><b>${P.n}</b></button>
-    <div class="pk-cards">${encs.map((e, i) => `<button type="button" class="pk-card r${e.t}${e.sh ? ' shy' : ''}" data-a="pkflip" data-k="${i}" style="--i:${i}" aria-label="Card ${i + 1}"><span class="pk-in"><span class="pk-back"><i></i></span><span class="pk-front">${spr(e.id, { ani: 1, sh: e.sh, mega: defForm(e.id) })}<b>${e.sh ? 'Shiny ' : ''}${esc(D(e.id)[0])}${gs(e)}</b><span class="tier r${e.t}">${TIERS[e.t]}</span><span class="sm tn">Lv ${e.lv}${S.caught[e.id] ? '' : ' · new'}</span></span></span></button>`).join('')}</div>
+    <div class="pk-cards">${encs.map((e, i) => `<button type="button" class="pk-card r${e.t}${e.sh ? ' shy' : ''}" data-a="pkflip" data-k="${i}" style="--i:${i}" aria-label="Card ${i + 1}"><span class="pk-in"><span class="pk-back"><i></i></span>${e.myst ? '<span class="pk-front pkq"><span class="pkq-o" aria-hidden="true"><i>?</i></span><b>? ? ?</b><span class="tier r4">Legendary</span><span class="sm">Who is it? Find out in the grass</span></span>' : `<span class="pk-front">${spr(e.id, { ani: 1, sh: e.sh, mega: defForm(e.id) })}<b>${e.sh ? 'Shiny ' : ''}${esc(D(e.id)[0])}${gs(e)}</b><span class="tier r${e.t}">${TIERS[e.t]}</span><span class="sm tn">Lv ${e.lv}${S.caught[e.id] ? '' : ' · new'}</span></span>`}</span></button>`).join('')}</div>
     <p class="sm" id="pkt" style="text-align:center">Tap the pack to open it</p>
     <div class="acts" id="pka" style="visibility:hidden"><button type="button" class="btn gold" data-a="pkhunt">Catch them now</button><button type="button" class="btn nf" data-a="pkdone">Later</button></div></div>`, 'packov', P.c);
 }
@@ -614,13 +611,29 @@ function showReward(R) {
 /* ---------- Møte og fangst ---------- */
 const E = { e: null, ball: 'poke', c: 50, pos: 50, raf: 0, t0: 0, busy: false, done: null };
 function bestBall() { return ['poke', 'great', 'ultra'].find(k => S.items[k] > 0) || 'poke'; }
+function encQuiet() { if (E.mus) { E.mus = 0; if (typeof stopMusic === 'function') stopMusic(); } }
 function hunt() {
+  encQuiet();
   if (!S.pend.length) { closeOv(); return render(); }
   E.e = S.pend[0]; E.done = null; E.busy = true;
   if (!(S.items[E.ball] > 0)) E.ball = bestBall();
+  if (E.e.myst && typeof legendIntro === 'function' && typeof LEG !== 'undefined' && LEG[E.e.id]) return mystIntro(E.e);
+  delete E.e.myst;
   S.seen[E.e.id] = 1;
   drawEnc(true);
   sfx.appear(); cry(E.e.id, 650);
+  setTimeout(() => { E.busy = false; aim(); }, 1150);
+}
+/* Hvem den legendariske er, vises først her: filmen dens spilles (den samme som i et raid), og så står den i gresset. */
+async function mystIntro(e) {
+  const B = { tr: legTr(e.id), foe: [{ id: e.id, lv: e.lv }], b: 0, mode: 'myst', lap: 0, over: '' };
+  BT.B = B; E.mus = 1;
+  try { PACK.unlock(); await legendIntro(B); } catch (_) {}
+  if (BT.B !== B) { return; }
+  BT.B = null;
+  if (E.e !== e || !S.pend.includes(e)) return;
+  delete e.myst; S.seen[e.id] = 1; save(true);
+  drawEnc(true); buzz([40, 60, 40]);
   setTimeout(() => { E.busy = false; aim(); }, 1150);
 }
 function drawEnc(reveal) {
@@ -695,9 +708,9 @@ const A = {
   pause: () => { togglePause(); paintTimer(); },
   early: () => endTimer(),
   quit: () => { if (!U.quit) { U.quit = 1; $('#t-quit').textContent = 'Tap again to cancel'; setTimeout(() => { U.quit = 0; const b = $('#t-quit'); if (b) b.textContent = 'Cancel'; }, 3000); return; } clearInterval(tick); dropAwake(); S.timer = null; save(true); document.title = 'Fokusdex'; closeOv(); render(); },
-  home: () => { closeOv(); render(); },
+  home: () => { encQuiet(); closeOv(); render(); },
   hunt: () => hunt(),
-  later: () => { cancelAnimationFrame(E.raf); closeOv(); render(); },
+  later: () => { cancelAnimationFrame(E.raf); encQuiet(); closeOv(); render(); },
   skip: () => { if (E.busy) return; cancelAnimationFrame(E.raf); dropPend(E.e); save(); hunt(); },
   toshop: () => { closeOv(); U.tab = 'butikk'; render(); },
   ball: el => { if (E.busy) return; E.ball = el.dataset.k; drawEnc(false); aim(); },
@@ -734,10 +747,10 @@ const A = {
   pkflip: el => {
     if (el.classList.contains('on') || !$('#pko').classList.contains('open')) return;
     const e = U.pk && U.pk[+el.dataset.k]; if (!e) return;
-    el.classList.add('on'); S.seen[e.id] = 1;
-    if (e.t >= 3 || e.sh) { sfx.evo(); buzz([60, 40, 60, 40, 220]); } else if (e.t >= 2) { sfx.got(); buzz(40); } else { sfx.found(); buzz(15); }
-    cry(e.id, 280, 0.35);
-    if (document.querySelectorAll('#pko .pk-card:not(.on)').length === 0) { const best = U.pk.reduce((a, x) => Math.max(a, x.t + (x.sh ? 2 : 0)), 0); $('#pkt').textContent = best >= 4 ? 'What a pull!' : best >= 3 ? 'A great pack.' : 'They are waiting in the grass.'; $('#pka').style.visibility = 'visible'; save(true); }
+    el.classList.add('on'); if (!e.myst) S.seen[e.id] = 1;
+    if (e.myst) { sfx.event(); buzz([80, 50, 80, 50, 80, 50, 320]); } else if (e.t >= 3 || e.sh) { sfx.evo(); buzz([60, 40, 60, 40, 220]); } else if (e.t >= 2) { sfx.got(); buzz(40); } else { sfx.found(); buzz(15); }
+    if (!e.myst) cry(e.id, 280, 0.35);
+    if (document.querySelectorAll('#pko .pk-card:not(.on)').length === 0) { const best = U.pk.reduce((a, x) => Math.max(a, x.t + (x.sh ? 2 : 0)), 0); $('#pkt').textContent = U.pk.some(x => x.myst) ? 'A legendary! Step into the grass to see who it is.' : best >= 4 ? 'What a pull!' : best >= 3 ? 'A great pack.' : 'They are waiting in the grass.'; $('#pka').style.visibility = 'visible'; save(true); }
   },
   pkdone: () => { U.pk = null; closeOv(); render(); },
   pkhunt: () => { U.pk = null; hunt(); },
