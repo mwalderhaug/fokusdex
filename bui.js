@@ -1246,6 +1246,10 @@ function rulesSheet() {
       <p class="sm"><b>Legendaries</b> do not use ordinary stones. Rayquaza, Kyogre, Groudon, Latias, Latios, Heatran and Darkrai change form when they become enraged in a raid, and Mewtwo may rise again as Dark Mewtwo. Beat one, and you have its stone: every one of that species you own can then do the same.</p></div>
     <div class="card stack"><b>Training</b><p class="sm">Every Pokémon has potential it was born with, 0 to 31 in each stat, and training, at most ${EVMAX} in one stat and ${EVTOT} in all. Your partner gains a training point for every two minutes of focus, in the stat it has trained the most. Both can be bought under Train on the Pokémon's card, and both count more the higher its level. Training can be cleared from a stat and placed somewhere else, but the coins are not returned.</p>
       ${row('Training point', `${EVP} coins`)}${row('Hyper Training', `${IVP} coins for each point up to 31`)}${row('One Pokémon, fully trained', `about ${nb(EVTOT * EVP + 93 * IVP)} coins`)}</div>
+    <div class="card stack"><b>Catching</b><p class="sm">Every encounter gives you three throws, four for a legendary. Stop the marker in the green zone for a good throw and in the gold for a perfect one. The dots at the top show what is still waiting, by rarity, and who it is you see when you meet it. A catch shows the Pokémon's potential in stars: it is what Hyper Training can raise later.</p>
+      ${row('New species', NEWCOIN.map((c, i) => `${TIERS[i].toLowerCase()} ${c}`).join(' · ') + ' coins')}
+      ${row('Perfect throw', `+${PERFCOIN} coins`)}${row('Catches in a row', `+${STREAKC} coins each from the third, up to ${STREAKMAX}`)}
+      ${row('Critical capture', 'now and then the ball holds extra well')}</div>
     <div class="card stack"><b>Fair play</b><p class="sm">The game trusts you with the clock and the timer, and closes the shortcuts it can.</p>
       ${row('A battle you leave', 'is saved after every turn and goes on where it was<br>giving up counts as a loss')}
       ${row('The device clock', 'set back or ahead: sessions and battles pause until it is right again')}

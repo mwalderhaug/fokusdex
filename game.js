@@ -462,16 +462,30 @@ function genEnc(o = {}) {
 const catchP = (id, ball, zone) => Math.min(0.97, Math.pow(D(id)[3] / 255, 0.45) * BALLM[ball] * [0.5, 1, 1.6][zone]);
 /* Sonene på timing-måleren i prosent: grønn bredde og gull bredde. Sjeldnere = smalere og raskere. */
 const zones = (e, ball) => ({ g: Math.max(14, 36 - e.t * 5 + (ball === 'great' ? 4 : ball === 'ultra' ? 8 : 0)), au: 7, sp: 0.9 + e.t * 0.22 });
+/* Det en fangst gir utover Pokémonen: mynter for en ny art (NEWCOIN etter sjeldenhet), for et perfekt kast (PERFCOIN), og for flere fangster på rad uten
+   at noen slipper unna (STREAKC per fangst fra den tredje, høyst STREAKMAX). S.cst = rekka akkurat nå.
+   Kritisk fangst: en sjelden gang (critP, litt oftere jo flere arter du har) sitter ballen ekstra godt, og sjansen er CRITM ganger så stor. */
+const NEWCOIN = [15, 30, 60, 120, 300], PERFCOIN = 10, STREAKC = 5, STREAKMAX = 50, CRITM = 2.5;
+const critP = () => Math.min(0.1, 0.03 + Object.keys(S.caught).length * 0.0002);
+/* Hvor godt sjansen står med denne ballen i den grønne sonen: 2 = god, 1 = jevn, 0 = tøff. */
+const oddsOf = (e, ball) => { const p = catchP(e.id, ball, 1); return p >= 0.7 ? 2 : p >= 0.4 ? 1 : 0; };
 function throwBall(e, ball, zone) {
   if (!(S.items[ball] > 0) || e.tr <= 0) return null;
   S.items[ball]--; e.tr--;
-  const p = catchP(e.id, ball, zone), ok = Math.random() < p;
+  const crit = Math.random() < critP(), p = Math.min(0.97, catchP(e.id, ball, zone) * (crit ? CRITM : 1)), ok = Math.random() < p;
   S.seen[e.id] = 1;
-  let mon = null, isNew = false;
-  if (ok) { isNew = !S.caught[e.id]; mon = addMon(e.id, e.lv, e.sh, 0, e.g); if (e.pk) mon.pk = 1; dropPend(e); }
-  else if (e.tr <= 0) dropPend(e);
+  let mon = null, isNew = false; const bonus = { c: 0, why: [] };
+  if (ok) {
+    isNew = !S.caught[e.id]; mon = addMon(e.id, e.lv, e.sh, 0, e.g); if (e.pk) mon.pk = 1; dropPend(e);
+    S.cst = (S.cst || 0) + 1;
+    const add = (n, s) => { if (n > 0) { bonus.c += n; bonus.why.push(`${s} +${n}`); } };
+    if (isNew) add(NEWCOIN[e.t] || 0, 'New species');
+    if (zone === 2) add(PERFCOIN, 'Perfect throw');
+    if (S.cst >= 3) add(Math.min(STREAKMAX, STREAKC * S.cst), `${S.cst} in a row`);
+    S.coins += bonus.c;
+  } else if (e.tr <= 0) { dropPend(e); S.cst = 0; }
   save();
-  return { ok, p, mon, isNew, fled: !ok && e.tr <= 0 };
+  return { ok, p, mon, isNew, fled: !ok && e.tr <= 0, crit: crit && ok, bonus };
 }
 function dropPend(e) { const i = S.pend.indexOf(e); if (i >= 0) S.pend.splice(i, 1); }
 /* Køen av encounters har et tak. De eldste vanlige ryker først; kjøpte (pakker) og legendariske blir aldri kastet. */

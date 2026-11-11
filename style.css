@@ -1183,3 +1183,33 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .honq{width:92px;height:92px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:46px;font-weight:900;color:#2a2109;background:radial-gradient(circle at 34% 30%,#fff6d8,var(--gold) 60%);box-shadow:0 0 0 7px color-mix(in srgb,var(--gold) 20%,transparent),0 0 46px color-mix(in srgb,var(--gold) 45%,transparent)}
 .card.fair{box-shadow:0 0 0 1px color-mix(in srgb,var(--sage) 40%,var(--line))}
 .card.fair.mk{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--red) 55%,transparent)}
+
+/* ---------- Møtet: gress, sjeldenhetsrop, køen som prikker, og kortet etter fangsten ---------- */
+.egrass{position:absolute;left:4%;right:4%;bottom:10%;height:17%;display:flex;align-items:flex-end;justify-content:space-between;pointer-events:none;transition:opacity .25s ease}
+.egrass i{flex:1;margin:0 -1.5%;height:100%;background:linear-gradient(color-mix(in srgb,var(--sage) 85%,#fff),color-mix(in srgb,var(--sage) 42%,#162014));clip-path:polygon(50% 0,92% 100%,8% 100%);transform-origin:50% 100%;opacity:.92}
+.egrass i:nth-child(3n){height:62%}.egrass i:nth-child(3n+1){height:84%}.egrass i:nth-child(5n){height:48%}
+.stage.rev .egrass i{animation:eRustle .5s ease-in-out 2}
+.stage.rev .egrass i:nth-child(3n){animation-delay:.08s}.stage.rev .egrass i:nth-child(3n+1){animation-delay:.16s}
+@keyframes eRustle{0%,100%{transform:rotate(0)}30%{transform:rotate(-16deg)}70%{transform:rotate(14deg)}}
+.stage.in .egrass,.stage.held .egrass,.stage.wob .egrass,.stage.fled .egrass{opacity:0}
+.ecall{position:absolute;left:50%;top:2%;transform:translateX(-50%);padding:4px 14px;border-radius:14px;font-size:13px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;color:#17130f;background:var(--rc);box-shadow:0 0 22px color-mix(in srgb,var(--rc) 70%,transparent);animation:eCall 2.4s ease-out both;pointer-events:none}
+.mid.shy .ecall{background:var(--gold);box-shadow:0 0 22px color-mix(in srgb,var(--gold) 70%,transparent)}
+@keyframes eCall{0%,42%{opacity:0;transform:translateX(-50%) scale(.6)}52%{opacity:1;transform:translateX(-50%) scale(1.18)}62%{transform:translateX(-50%) scale(1)}90%{opacity:1}100%{opacity:0}}
+.encq{display:flex;gap:6px;justify-content:center;margin-top:-6px}
+.encq i{width:9px;height:9px;border-radius:50%;background:var(--rc);opacity:.85}
+.encq i.my{box-shadow:0 0 8px var(--gold)}
+.pill.estk{color:var(--gold)}
+#e-odds b.od2{color:var(--sage)}#e-odds b.od1{color:var(--gold)}#e-odds b.od0{color:var(--red)}
+.ecard{display:flex;flex-direction:column;align-items:center;gap:7px;margin-top:10px;animation:fade .3s ease}
+.ecard-h{font-size:19px;color:var(--sage)}
+.pill.ecrit{background:var(--gold);color:#2a2109}
+.epot{display:flex;align-items:center;gap:10px}
+.epot-s{display:inline-flex;gap:4px}
+.epot-s i{width:17px;height:17px;background:rgba(255,255,255,.14);clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+.epot-s i.on{background:var(--gold);animation:ePot .35s cubic-bezier(.2,1.5,.4,1) backwards}
+@keyframes ePot{from{transform:scale(0) rotate(-40deg);background:#fff}}
+.epot-t{animation:fade .4s ease backwards}
+.ecoin{display:flex;flex-direction:column;align-items:center;gap:1px;animation:fade .4s ease .9s backwards}
+.ecoin b{color:var(--gold);font-size:17px}
+.stage.crit .tball{filter:drop-shadow(0 0 14px var(--gold))}
+@media (prefers-reduced-motion:reduce){.stage.rev .egrass i,.ecall,.epot-s i.on{animation:none}}
