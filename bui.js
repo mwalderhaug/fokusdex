@@ -196,7 +196,7 @@ const teamOf = side => side === 'me' ? BT.B.me : BT.B.foe;
 function boxEl(side) {
   const B = BT.B, v = BT.v[side], team = teamOf(side), b = team[v.i], f = v.hp / b.max;
   const xa = xpAt(b.lv), xb = xpAt(b.lv + 1), xf = b.src.xp != null ? Math.max(0, Math.min(1, (b.src.xp - xa) / (xb - xa))) : 0;
-  return `<div class="hpn"><b>${esc(b.name)}</b>${v.st ? `<i class="st-${v.st}">${STAG[v.st]}</i>` : ''}<span class="blv tn"><small>Lv</small>${b.lv}</span></div>
+  return `<div class="hpn"><b>${esc(b.short || b.name)}</b>${v.st ? `<i class="st-${v.st}">${STAG[v.st]}</i>` : ''}<span class="blv tn"><small>Lv</small>${b.lv}</span></div>
     <div class="hpr"><em>HP</em><div class="hpbar"><b></b><i style="width:${(f * 100).toFixed(1)}%;background:${hpCol(f)}"></i></div></div>
     <div class="hpf"><span class="dots">${team.map((x, i) => `<i class="${x.out && !(i === v.i && v.hp > 0) ? 'out' : ''}"></i>`).join('')}</span>${side === 'me' ? `<span class="hpnum tn">${v.hp}/${b.max}</span>` : ''}</div>
     ${side === 'me' && B.mode === 'league' ? `<div class="xpr"><em>EXP</em><div class="xpbar"><i style="width:${Math.round(xf * 100)}%"></i></div></div>` : ''}`;
@@ -246,7 +246,7 @@ function hudDraw(side) {
   r = R[f > 0.5 ? 'hp_green' : f > 0.2 ? 'hp_yellow' : 'hp_red']; if (w) g.drawImage(H.im, r[0] + 1, r[1] + 1, w, 3, bx, py + 2, w, 3);
   if (wf - w > 0.03 && w < 48) { g.globalAlpha = wf - w; g.drawImage(H.im, r[0] + 1 + Math.min(w, 46), r[1] + 1, 1, 3, bx + w, py + 2, 1, 3); g.globalAlpha = 1; }
   /* Navnet med spillets bokstaver. Er det for langt, står bokstavene én piksel tettere. */
-  const gl = [...b.name].map(ch => ch === ' ' ? 4 : R['n' + ch] ? 'n' + ch : 2), wid = gl.reduce((a, q) => a + (q > 0 ? q : R[q][4]), 0), tight = wid > 62 ? 1 : 0;
+  const gl = [...(b.short || b.name)].map(ch => ch === ' ' ? 4 : R['n' + ch] ? 'n' + ch : 2), wid = gl.reduce((a, q) => a + (q > 0 ? q : R[q][4]), 0), tight = wid > 62 ? 1 : 0;
   let x = me ? 10 : 14; for (const q of gl) x += q > 0 ? q : put(q, x, py - 9) - tight;
   put('lv', me ? 74 : 78, py - 7); x = me ? 82 : 86; for (const ch of String(b.lv)) x += put('l' + ch, x, py - 9);
   if (v.st && R['st_' + v.st]) put('st_' + v.st, me ? 15 : 4, py + 3);
@@ -273,7 +273,7 @@ function paintBox(side) {
 }
 function paintSprite(side, cls) {
   const b = teamOf(side)[BT.v[side].i], el = $('#s-' + side);
-  if (el) { el.className = 'bs ' + side + ' ' + (cls || ''); el.innerHTML = spr(b.id, { ani: 1, sh: b.sh, back: side === 'me' }); }
+  if (el) { el.className = 'bs ' + side + ' ' + (cls || ''); el.innerHTML = spr(b.id, { ani: 1, sh: b.sh, back: side === 'me', mega: b.mega }); }
 }
 /* HP-linja glir mot det nye tallet, og tallet teller med. Farten følger treffet: et supereffektivt treff får linja til å rase ned,
    et vanlig går jevnt, og et lite effektivt siger sakte. Bak linja står en lys rest av det som ble slått bort et øyeblikk før den synker etter,
@@ -359,7 +359,7 @@ const mim = k => PACK.menu && PACK.menu[k] ? `background-image:url(${PACK.menu[k
 function partyPanel(b, i, act, ok, cur) {
   const row = b.hp <= 0 ? 1 : cur ? 2 : 0, col = i ? 2 : 0, f = Math.max(0, b.hp / b.max);
   return `<button type="button" class="bw-p ${i % 2 ? 'r' : 'l'} s${row}${PACK.menu ? '' : ' np'}" data-a="${act}" data-k="${i}" style="--row:${Math.floor(i / 2)};${PACK.menu ? `--bg:url(${PACK.menu['p' + row + col]});--bgs:url(${PACK.menu['p' + row + (col + 1)]})` : ''}"${ok ? '' : ' disabled'}>
-    <span class="ic">${spr(b.id, { sh: b.sh })}</span><b class="nm">${esc(b.name)}</b><span class="plv tn">Lv${b.lv}</span>${b.status ? `<i class="st st-${b.status}">${STAG[b.status]}</i>` : ''}
+    <span class="ic">${spr(b.id, { sh: b.sh, mega: b.mega })}</span><b class="nm">${esc(b.short || b.name)}${b.mega ? ' <u>M</u>' : ''}</b><span class="plv tn">Lv${b.lv}</span>${b.status ? `<i class="st st-${b.status}">${STAG[b.status]}</i>` : ''}
     <span class="hpl"><em>HP</em><span><i style="width:${(f * 100).toFixed(1)}%;background:${hpCol(f)}"></i></span></span><span class="hpn tn">${b.hp <= 0 ? 'FNT' : b.hp + '/' + b.max}</span></button>`;
 }
 function drawMenu() {
@@ -721,7 +721,8 @@ function endBattle() {
 
 /* ---------- Etter kampen ---------- */
 const encLine = res => res.encs.length ? `<div class="row" style="justify-content:space-between"><span>Encounters</span><b>${res.encs.length} waiting in the grass${res.encs.some(e => e.t >= 4) ? ' · legendary' : res.encs.some(e => e.t >= 3) ? ' · epic' : ''}</b></div>` : '';
-const monCard = (x, a, k, on) => `<button type="button" data-a="${a}" data-k="${k}" aria-pressed="${!!on}" style="--tc:var(--t${D(x.id)[1]})">${spr(x.id, { ani: 1 })}<b>${esc(D(x.id)[0])}</b><span class="sm tn">Lv ${x.lv}${x.iv ? ' · ' + judge(x).t : ''}</span><span class="row" style="gap:4px;justify-content:center;flex-wrap:wrap">${types(x.id)}</span>${x.mv ? `<span class="mvl">${x.mv.map(i => esc(MOVES[i][0])).join(' · ')}</span>` : ''}</button>`;
+const tyEl = x => mTypes(x).filter(t => t >= 0).map(t => `<span class="ty" style="background:var(--t${t})">${TYN[t]}</span>`).join(' ');
+const monCard = (x, a, k, on) => `<button type="button" data-a="${a}" data-k="${k}" aria-pressed="${!!on}" class="${x.mega ? 'mega' : ''}" style="--tc:var(--t${mTypes(x)[0]})">${spr(x.id, { ani: 1, mega: x.mega })}<b>${esc(mName(x))}</b><span class="sm tn">Lv ${x.lv}${x.iv ? ' · ' + judge(x).t : ''}</span><span class="row" style="gap:4px;justify-content:center;flex-wrap:wrap">${tyEl(x)}</span>${x.mv ? `<span class="mvl">${x.mv.map(i => esc(MOVES[i][0])).join(' · ')}</span>` : ''}</button>`;
 function overview() {
   const B = BT.B, res = BT.res, tr = B.tr, fac = res.mode === 'fac', lab = res.mode === 'lab', first = !res.shown, nm = esc(who(tr));
   /* Laget: XP-linja fylles opp etter kampen, og nye nivåer og angrep vises her. */
@@ -790,6 +791,7 @@ function learnSheet(m, back) {
 /* ---------- Battle Frontier ---------- */
 function facScreen() {
   const R = S.fac.run; if (!R) return;
+  if (R.offer && R.open != null && (R.open < 7 || !BT.fpick)) return facDraw(R);
   if (R.offer) {
     const sel = BT.fsel;
     return ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Battle Frontier · Round ${R.round}</span></div>
@@ -800,8 +802,28 @@ function facScreen() {
   const f = facFoe(), tr = facInfo(f), tier = TIER(tr.kind);
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Round ${R.round} · battle ${R.w + 1} of ${FACN}</span></div>
     <div class="card k-${tier}"${kst(tr)}><div class="pre-foe">${tsprite(tr.img)}<div class="sp"><div class="sm">${f.boss ? (tr.ultra ? `${esc(RARE[tr.kind][0].toUpperCase() + RARE[tr.kind].slice(1))} · ${esc(tr.cn)} · extra rewards` : `Boss · ${esc(tr.cn)} · last battle of the round`) : 'Battle Frontier'}</div><b class="${f.boss ? 'bossn' : ''}" style="font-size:19px">${esc(who(tr))}</b><div class="sm tn" style="margin-top:4px">4 Pokémon at Lv ${FACLV} · favours ${TYN[f.hint]} types</div></div></div></div>
-    <div><div class="lab">Your rentals · tap the one that leads</div><div class="lineup">${R.team.map((m, i) => `<button type="button" data-a="flead" data-k="${i}" class="${i ? '' : 'lead'}">${spr(m.id)}<span class="sp"><b>${esc(D(m.id)[0])}</b><br><span class="sm tn">${m.mv.map(x => esc(MOVES[x][0])).join(', ')}</span></span>${i ? '' : '<span class="pill">Leads</span>'}</button>`).join('')}</div></div>
+    <div><div class="lab">Your rentals · tap the one that leads</div><div class="lineup">${R.team.map((m, i) => `<button type="button" data-a="flead" data-k="${i}" class="${i ? '' : 'lead'}">${spr(m.id, { mega: m.mega })}<span class="sp"><b>${esc(mName(m))}</b><br><span class="sm tn">${m.mv.map(x => esc(MOVES[x][0])).join(', ')}</span></span>${i ? '' : '<span class="pill">Leads</span>'}</button>`).join('')}</div></div>
     <div class="acts"><button type="button" class="btn gold" data-a="fgo">Start battle</button></div>`, 'tint', 'var(--t8)');
+}
+
+/* Battle Frontier: leie-Pokémonene trekkes én og én. Hver ball må åpnes og Pokémonen ses over (typer, verdier, angrep) før den neste kan åpnes.
+   De som er åpnet, kan ses på igjen. Når alle sju er åpnet, velges laget. En Mega får sin egen fanfare. */
+const STN6 = ['HP', 'Attack', 'Defense', 'Sp. Atk', 'Sp. Def', 'Speed'];
+function sumCard(m, fresh) {
+  const g = megaOf(m), st = statsOf(m), ty = mTypes(m), top = Math.max(...st.slice(1));
+  return `<div class="fsum${g ? ' mega' : ''}${fresh ? ' pop' : ''}" style="--tc:var(--t${ty[0]})">
+    <div class="fs-top">${spr(m.id, { ani: 1, mega: m.mega })}<div class="sp"><b class="fs-n">${esc(mName(m))}</b><div class="sm tn">Lv ${m.lv} · ${NAT[m.nat]} · ${judge(m).t}</div><div class="row" style="gap:4px;margin-top:6px;flex-wrap:wrap">${tyEl(m)}${g ? '<span class="pill megap">MEGA</span>' : ''}</div></div></div>
+    <div class="fs-st">${STN6.map((n, i) => `<div><span>${n}</span><i><b style="width:${Math.min(100, st[i] / 220 * 100).toFixed(0)}%;background:${i && st[i] === top ? 'var(--gold)' : 'var(--tc)'}"></b></i><em class="tn">${st[i]}</em></div>`).join('')}</div>
+    <div class="fs-mv">${m.mv.map(x => { const mv = MOVES[x]; return `<span style="--c:var(--t${mv[1]})"><b>${esc(mv[0])}</b><small>${TYN[mv[1]]}${mv[2] ? ' · ' + mv[2] : ''}</small></span>`; }).join('')}</div></div>`;
+}
+function facDraw(R) {
+  const n = R.open, vi = BT.fview != null && BT.fview < n ? BT.fview : n - 1, cur = vi >= 0 ? R.offer[vi] : null, fresh = !!BT.fnew && vi === n - 1;
+  BT.fnew = false;
+  ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Battle Frontier · Round ${R.round}</span></div>
+    <div><h1 class="big">${n === 0 ? 'Seven Poké Balls.' : n < 7 ? `Pokémon ${vi + 1} of 7` : 'All seven are open.'}</h1><p class="mut" style="margin-top:6px">${n === 0 ? `Open them one at a time. Every rental is fully evolved and at Lv ${FACLV}, and with great luck one of them is a Mega.` : n < 7 ? 'Look it over, then open the next ball. You pick four when all seven are open.' : 'Tap a ball to look again, then pick your four.'}</p></div>
+    <div class="fdr">${R.offer.map((m, i) => i < n ? `<button type="button" class="fdb open${m.mega ? ' mega' : ''}${i === vi ? ' on' : ''}" data-a="fview" data-k="${i}" aria-label="${esc(mName(m))}">${spr(m.id, { mega: m.mega })}</button>` : `<span class="fdb${i === n ? ' next' : ''}">${ballEl(R.round >= 3 ? 'ultra' : R.round === 2 ? 'great' : 'poke')}</span>`).join('')}</div>
+    ${cur ? sumCard(cur, fresh) : `<div class="fsum empty"><p class="mut">Nothing opened yet.</p></div>`}
+    <div class="acts">${n < 7 ? `<button type="button" class="btn gold" data-a="fopen">${n === 0 ? 'Open the first ball' : n === 6 ? 'Open the last ball' : 'Open the next ball'} · ${n}/7</button>` : '<button type="button" class="btn gold" data-a="fteam">Pick your four</button>'}</div>`, 'tint', 'var(--t8)');
 }
 
 /* ---------- Demo ---------- */
@@ -848,8 +870,11 @@ const BA = {
   tgive: el => { const res = BT.res, x = res.trade[BT.tp], mine = monBy(+el.dataset.k); if (!x || !mine) return; const got = doTrade(x, mine); res.got = `${D(got.id)[0]} · Lv ${got.lv} (for ${D(mine.id)[0]})`; res.trade = null; BT.tp = null; sfx.got(); cry(got.id, 200); overview(); },
   tskip: () => { const res = BT.res; pushEnc(res, genEnc({ min: 2, luck: 1.2 })); save(); res.trade = null; sfx.found(); overview(); },
   fenter: () => { if (!facOpen()) { closeOv(); return render(); } if (!S.fac.run) { facStart(); BT.fsel = []; } BT.B = null; BT.busy = false; sfx.open(); facScreen(); },
+  fopen: () => { const R = S.fac.run; if (!R || !R.offer || !(R.open < 7)) return; const m = R.offer[R.open]; R.open++; save(); BT.fview = null; BT.fnew = true; if (m.mega) { sfx.evo(); buzz([60, 40, 60, 40, 260]); } else { sfx.found(); buzz(30); } cry(m.id, 250, 0.35); facScreen(); },
+  fview: el => { BT.fview = +el.dataset.k; facScreen(); },
+  fteam: () => { BT.fpick = true; BT.fsel = []; sfx.open(); facScreen(); },
   fsel: el => { const i = +el.dataset.k, s = BT.fsel, k = s.indexOf(i); if (k >= 0) s.splice(k, 1); else if (s.length < 4) s.push(i); facScreen(); },
-  fpick: () => { if (BT.fsel.length !== 4) return; facPick(BT.fsel.slice()); BT.fsel = []; sfx.ok(); facScreen(); },
+  fpick: () => { if (BT.fsel.length !== 4) return; facPick(BT.fsel.slice()); BT.fsel = []; BT.fpick = false; BT.fview = null; sfx.ok(); facScreen(); },
   flead: el => { const R = S.fac.run, i = +el.dataset.k; if (i > 0) { R.team.unshift(R.team.splice(i, 1)[0]); save(); } facScreen(); },
   fgo: () => { if (!facOpen() || !S.fac.run || !S.fac.run.team) return; PACK.unlock(); sfx.start(); BT.busy = false; startBattle(facBattle()); },
   fswp: el => { BT.fs = +el.dataset.k; overview(); },

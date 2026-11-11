@@ -45,8 +45,8 @@ const FOEU = new Set(['Taunt', 'Encore', 'Disable', 'Mean Look', 'Block', 'Spide
 /* En Pokémon i kamp. src er den eide Pokémonen (eller en generert motstander med samme felter). v = det som nullstilles ved bytte. */
 function bmon(src) {
   const st = statsOf(src);
-  return { src, id: src.id, lv: src.lv, sh: src.sh || 0, name: D(src.id)[0], st, max: st[0], hp: st[0], mv: src.mv.map(i => ({ i, pp: MOVES[i][18] || 10, max: MOVES[i][18] || 10 })),
-    sg: Z8(), status: '', slp: 0, tox: 0, ty: [D(src.id)[1], D(src.id)[2]], out: 0, v: {} };
+  return { src, id: src.id, lv: src.lv, sh: src.sh || 0, name: mName(src), short: D(src.id)[0], mega: src.mega || 0, st, max: st[0], hp: st[0], mv: src.mv.map(i => ({ i, pp: MOVES[i][18] || 10, max: MOVES[i][18] || 10 })),
+    sg: Z8(), status: '', slp: 0, tox: 0, ty: mTypes(src), out: 0, v: {} };
 }
 const newSide = () => ({ ref: 0, ls: 0, safe: 0, mist: 0, tail: 0, lucky: 0, spikes: 0, tsp: 0, rock: 0, wish: null });
 /* tr = { n, title, img, ty, kind, skill, boss }. x = ekstra felter for modusen (liga, Battle Frontier eller demo). */

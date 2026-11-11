@@ -15,7 +15,8 @@ function spr(id, o = {}) {
   const png = `${SPR}pokemon/${o.sh ? 'shiny/' : ''}${id}.png`;
   const gif = `${SPR}pokemon/versions/generation-v/black-white/animated/${o.sh ? 'shiny/' : ''}${id}.gif`;
   const bk = `${SPR}pokemon/versions/generation-v/black-white/animated/back/${o.sh ? 'shiny/' : ''}${id}.gif`, bkp = `${SPR}pokemon/back/${o.sh ? 'shiny/' : ''}${id}.png`;
-  const list = o.back ? [bk, bkp, `https://play.pokemonshowdown.com/sprites/${o.sh ? 'gen5-back-shiny' : 'gen5-back'}/${slug(id)}.png`, png] : o.ani ? [gif, png, sd] : [png, sd];
+  const mg = o.mega ? MEGA[o.mega - 1][5] : 0;
+  const list = mg ? (o.back ? [`${SPR}pokemon/back/${mg}.png`, `${SPR}pokemon/${mg}.png`] : [`${SPR}pokemon/${mg}.png`]) : o.back ? [bk, bkp, `https://play.pokemonshowdown.com/sprites/${o.sh ? 'gen5-back-shiny' : 'gen5-back'}/${slug(id)}.png`, png] : o.ani ? [gif, png, sd] : [png, sd];
   return `<span class="sprb${o.sil ? ' sil' : ''}${o.sh && !o.sil ? ' shiny' : ''}" style="--tc:var(--t${D(id)[1]})${o.s ? ';--s:' + o.s : ''}" data-n="${id}"><img class="spr" alt="${o.sil ? 'Unknown' : esc(D(id)[0])}" ${o.lazy ? 'loading="lazy" ' : ''}src="${list[0]}" data-f="${list.slice(1).join('|')}" onload="this.classList.add('ok')" onerror="sprErr(this)"></span>`;
 }
 window.sprErr = img => {

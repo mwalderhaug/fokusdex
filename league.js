@@ -306,12 +306,25 @@ const FACBST = r => [[380, 500], [420, 530], [450, 560], [480, 600]][Math.min(3,
 /* d flytter styrken opp eller ned: de første motstanderne i en runde er svakere enn det du leier. */
 function facMon(r, used, d) {
   const [a, b] = FACBST(r), pool = [];
-  for (let id = 1; id <= 649; id++) { if (isLeg(id) || used.has(id) || (D(id)[6] & 4)) continue; const s = bstSum(id); if (s >= a + d && s <= b + d && reqLv(id) <= FACLV + 12) pool.push(id); }
+  for (let id = 1; id <= 649; id++) { if (isLeg(id) || used.has(id) || (D(id)[6] & 4) || (EVO[id] && EVO[id].length)) continue; const s = bstSum(id); if (s >= a + d && s <= b + d && reqLv(id) <= FACLV + 12) pool.push(id); }
   const id = pool[rnd(pool.length)]; used.add(id);
   return { id, lv: FACLV, sh: 0, iv: Array.from({ length: 6 }, () => Math.max(0, Math.min(31, 4 * r + Math.round(d / 5) + 6 + rnd(14)))), ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: foeMoves(id, FACLV, 1) };
 }
-function facOffer(r) { const used = new Set(); return Array.from({ length: 7 }, () => facMon(r, used, 0)); }
-function facStart() { S.fac.run = { round: 1, w: 0, streak: 0, offer: facOffer(1), team: null, foe: null }; save(); }
+/* Leie-Pokémon er alltid fullt utviklet. En sjelden gang (MEGAP) er én av de sju en Mega. Den trekkes blant alle Mega-former som ikke er legendariske,
+   og de svakeste kommer klart oftest: Mawile og Beedrill mange ganger så ofte som Garchomp og Salamence. */
+const MEGAP = 0.09;
+function megaPick(used) {
+  const c = MEGA.map((g, k) => k).filter(k => !isLeg(MEGA[k][0]) && MEGA[k][1] !== 'Primal' && !used.has(MEGA[k][0])), w = c.map(k => Math.pow(Math.max(40, 760 - megaBst(k)), 2.2));
+  let r = Math.random() * w.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < c.length; i++) { r -= w[i]; if (r <= 0) return c[i]; }
+  return c[0];
+}
+function facOffer(r) {
+  const used = new Set(), l = Array.from({ length: 7 }, () => facMon(r, used, 0));
+  if (Math.random() < MEGAP) { const k = megaPick(used), g = MEGA[k], i = rnd(7); l[i] = { id: g[0], mega: k + 1, lv: FACLV, sh: 0, iv: l[i].iv, ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: foeMoves(g[0], FACLV, 1) }; }
+  return l;
+}
+function facStart() { S.fac.run = { round: 1, w: 0, streak: 0, offer: facOffer(1), open: 0, team: null, foe: null }; save(); }
 function facPick(idx) { const R = S.fac.run; R.team = idx.map(i => R.offer[i]); R.offer = null; R.foe = null; save(); }
 /* Neste motstander. Den sjuende i hver runde er bossen: oftest en Frontier Brain eller en boss fra klasse 2 til 6,
    og en sjelden gang en toppboss (klasse 7 til 9), som gir mye bedre belønning. Sjansen for toppboss øker med rundene. */
@@ -363,7 +376,7 @@ function finishFactory(B) {
     if (r >= 3 && roll(0.12)) pushEnc(res, genEnc({ leg: 1 }));
     /* Sjelden boss: klassens egen belønning på toppen, som i ligaen. */
     if (B.tr.ultra) { const c = B.tr.ci, extra = Math.round([150, 250, 500][c - 7] * sm); res.coins += extra; S.coins += extra; rareLoot(c, res, give, [B.tr.ty]); res.note = `${B.tr.cn}: extra rewards.`; }
-    res.roundDone = true; R.round++; R.w = 0; R.team = null; R.offer = facOffer(R.round);
+    res.roundDone = true; R.round++; R.w = 0; R.team = null; R.offer = facOffer(R.round); R.open = 0;
   } else res.swap = B.foe.map(f => f.src);
   R.foe = null;
   save();

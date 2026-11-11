@@ -767,3 +767,37 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .card.pick2{display:flex;flex-direction:column;gap:4px;text-align:left;width:100%}
 /* Varselet i demoen når ressurspakken ikke er lastet. */
 .card.nopack{box-shadow:0 0 0 2px color-mix(in srgb,var(--gold) 70%,transparent);background:color-mix(in srgb,var(--gold) 10%,var(--card))}
+/* ---------- Battle Frontier: trekk én og én ---------- */
+.fdr{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.fdb{position:relative;aspect-ratio:1;border-radius:14px;background:var(--card);box-shadow:0 0 0 1px var(--line);display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0}
+.fdb .ball{--s:60%;width:60%;height:auto;opacity:.5}
+.fdb.next{box-shadow:0 0 0 2px var(--gold)}
+.fdb.next .ball{opacity:1;animation:bob .9s ease-in-out infinite}
+.fdb.open .sprb{position:absolute;inset:0;width:auto;height:auto}
+.fdb.open .spr{position:absolute;left:50%;top:50%;width:130%;height:130%;max-width:none;object-fit:contain;transform:translate(-50%,-50%);image-rendering:pixelated}
+.fdb.on{box-shadow:0 0 0 2px var(--ink)}
+.fdb.mega{background:linear-gradient(135deg,#3a2a5a,#5a3a1a);box-shadow:0 0 0 2px var(--gold)}
+.fsum{border-radius:22px;padding:14px 16px;background:linear-gradient(color-mix(in srgb,var(--tc) 22%,var(--card)),var(--card) 62%);box-shadow:0 0 0 1px var(--line);display:flex;flex-direction:column;gap:12px}
+.fsum.empty{min-height:120px;align-items:center;justify-content:center}
+.fsum.pop{animation:fsPop .5s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes fsPop{0%{transform:scale(.6);opacity:0;filter:brightness(3)}60%{filter:brightness(1.6)}100%{transform:none;opacity:1;filter:none}}
+.fsum.mega{box-shadow:0 0 0 2px var(--gold),0 0 30px color-mix(in srgb,var(--gold) 45%,transparent);background:linear-gradient(135deg,#34264f,#4a3418 70%,var(--card))}
+.fsum.mega.pop{animation:fsMega 1.1s cubic-bezier(.2,.9,.3,1.1)}
+@keyframes fsMega{0%{transform:scale(.3) rotate(-6deg);opacity:0;filter:brightness(6) saturate(2)}35%{transform:scale(1.12) rotate(2deg);opacity:1;filter:brightness(3)}55%{transform:scale(.97)}75%{filter:brightness(1.8)}100%{transform:none;filter:none}}
+.megap{background:linear-gradient(90deg,#f8c830,#f06aa8,#6ab0f2);color:#111;font-weight:900}
+.fs-top{display:flex;gap:14px;align-items:center}
+.fs-top .sprb{flex:none;--s:96px}
+.fs-top .spr{image-rendering:pixelated}
+.fs-n{font-size:21px;font-weight:800;line-height:1.1}
+.fs-st{display:flex;flex-direction:column;gap:5px}
+.fs-st div{display:grid;grid-template-columns:64px 1fr 34px;align-items:center;gap:8px;font-size:12px}
+.fs-st span{color:var(--ink2)}
+.fs-st i{height:7px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}
+.fs-st b{display:block;height:100%;border-radius:4px}
+.fs-st em{font-style:normal;text-align:right;font-weight:700}
+.fs-mv{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.fs-mv span{border-radius:10px;padding:6px 9px;background:color-mix(in srgb,var(--c) 26%,var(--card));box-shadow:inset 3px 0 0 var(--c);display:flex;flex-direction:column;min-width:0}
+.fs-mv b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fs-mv small{font-size:10.5px;color:var(--ink2)}
+.rent button.mega{box-shadow:0 0 0 2px var(--gold)}
+.bw-p .nm u{text-decoration:none;font-size:.8em;color:#f8c830}
