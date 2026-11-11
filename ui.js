@@ -339,7 +339,7 @@ VIEW.dex = () => {
   const all = [1, 2, 3, 4, 5].reduce((s, x) => s + dexCount(x), 0);
   return `<div class="row" style="justify-content:space-between"><h1 class="big">Dex</h1><span class="pill tn">${all} of 649</span></div>
     <div class="seg">${[1, 2, 3, 4, 5].map(x => `<button type="button" data-a="dexr" data-k="${x}" aria-pressed="${r === x}">${REG[x].n}</button>`).join('')}</div>
-    <div class="card"><div class="row" style="justify-content:space-between"><b>${g.n}</b><span class="sm tn">${dexCount(r)} of ${g.b - g.a + 1} caught</span></div><div class="bar" style="margin-top:8px"><i style="width:${Math.round(dexCount(r) / (g.b - g.a + 1) * 100)}%"></i></div>${open ? '' : `<p class="sm" style="margin-top:8px">This route is locked. Unlock it in the shop for ${nb(g.c)} coins.</p>`}</div>
+    <div class="card"><div class="row" style="justify-content:space-between"><b>${g.n}</b><span class="sm tn">${dexCount(r)} of ${g.b - g.a + 1} caught</span></div><div class="bar" style="margin-top:8px"><i style="width:${Math.round(dexCount(r) / (g.b - g.a + 1) * 100)}%"></i></div>${open ? '' : `<p class="sm" style="margin-top:8px">This area is locked. It opens at trainer level ${g.lv} or when you have caught ${g.dex} species (you are level ${tlv()} with ${dexAll()}).</p>`}</div>
     <div class="grid">${cells}</div>`;
 };
 function specSheet(id) {
@@ -637,7 +637,6 @@ const A = {
   sell: el => { const m = monBy(+el.dataset.u); if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.innerHTML = 'Tap again to sell'; return; } const v = sell(m); save(); sfx.sell(); closeSheet(); render(); toast(`Sold for ${nb(v)} coins.`); },
   selldupes: el => { const du = dupes(); if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = `Tap again to sell ${du.length}`; return; } let v = 0; du.forEach(m => { v += sell(m); }); save(); sfx.sell(); render(); toast(`${du.length} sold for ${nb(v)} coins.`); },
   buy: el => { if (buy(el.dataset.k)) { sfx.coin(); render(); toast(`${SHOP[el.dataset.k].n} bought.`); } },
-  buyreg: el => { const r = +el.dataset.k; if (buyRegion(r)) { sfx.evo(); render(); toast(`${REG[r].n} is unlocked. You are there now.`); } },
   sound: () => { S.sound = S.sound ? 0 : 1; save(); sfx.tap(); render(); },
   diff: el => { S.diff = +el.dataset.k; save(); render(); toast(`Difficulty: ${diff().n}. It applies from your next battle.`); },
   hfx: () => { S.hfx = S.hfx === 0 ? 1 : 0; save(); render(); },
