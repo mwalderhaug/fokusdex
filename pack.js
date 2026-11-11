@@ -61,7 +61,8 @@ const PACK = (() => {
     const m = P.man, list = [m.hud && m.hud.f, m.vs && m.vs.f, 'ui/ball_pokeball.png', 'ui/ball_pokeball_open.png'].filter(Boolean);
     list.forEach(f => P.url(f)); loadHud(); loadAnims();
     (m.music || []).filter(x => x.c === 'trainer').forEach(x => P.url(x.f));
-    try { if (S.party.length) { const t = nextTrainer(), f = P.trackFor({ tr: trainerInfo(t), lap: t.lap, rd: Math.floor(t.n / 2) }); if (f) P.url(f); } } catch (_) {}
+    /* Bildet og låta til den som venter i ligaen hentes også, og forsiden tegnes på nytt når bildet er klart (bare hvis den står framme). */
+    try { if (S.party.length) { const t = nextTrainer(), tr = trainerInfo(t), f = P.trackFor({ tr, lap: t.lap, rd: Math.floor(t.n / 2), mode: 'league' }), pt = m.trainers && m.trainers[tr.img.split('|')[0]]; if (f) P.url(f); if (pt && !mem.get(pt)) P.url(pt).then(u => { if (u && !S.timer && $('#ov').hidden && U.tab === 'fokus' && $('#sheet').hidden !== false) render(); }); } } catch (_) {}
   }
   let animJob = null;
   const loadAnims = () => P.anims || !P.man.anims ? Promise.resolve() : animJob || (animJob = blob(P.man.anims).then(b => b.text()).then(t => { P.anims = JSON.parse(t); }).catch(() => { animJob = null; }));
@@ -139,6 +140,7 @@ const PACK = (() => {
     if (!(await P.init())) return;
     const jobs = [loadAnims()];
     const tk = P.trackFor(B); if (tk) P.url(tk);
+    const pt = P.man.trainers && P.man.trainers[B.tr.img.split('|')[0]]; if (pt) jobs.push(P.url(pt));
     const sc = P.sceneFor(B); if (sc) jobs.push(P.url(sc));
     jobs.push(loadHud()); if (B.tr.boss) jobs.push(loadVs());
     for (const b of ['pokeball', 'greatball', 'ultraball']) { jobs.push(P.url(`ui/ball_${b}.png`)); jobs.push(P.url(`ui/ball_${b}_open.png`)); }
