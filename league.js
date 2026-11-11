@@ -151,10 +151,47 @@ const modeOn = k => !!S.lad.day && (MODESN >= MODES.length || modeSt().ks.includ
 const modePicks = () => !S.lad.day || MODESN >= MODES.length ? 0 : Math.max(0, MODESN - modeSt().ks.length);
 function modePick(k) {
   const M = modeSt(); if (!S.lad.day || !MODES.includes(k) || M.ks.includes(k) || M.ks.length >= MODESN) return false;
-  M.ks.push(k); evRoll(k); save(); return true;
+  M.ks.push(k); evRoll(k); stamp(); save(); return true;
 }
 /* Myntgangeren i en modus akkurat nå: studiebonusen, dagens event og dagens bonusmodus. */
 const smFor = k => Math.round(studyMult() * evCoin() * (dayBoost().mode === k ? DAYCOIN : 1) * 10) / 10;
+
+/* ---------- Kampen som er i gang ----------
+   Når en kamp starter, står den i lagringen (S.live = { m: modus, d: kampdag, dev: enheten, at, u: sjelden boss }), og selve kampen lagres på enheten
+   etter hver runde (LIVEK). Lukkes appen, fortsetter kampen der den var neste gang. Finnes ikke kampen på enheten lenger, teller den som tapt
+   (liveLoss). En kamp som er i gang på en annen enhet, må gjøres ferdig der eller gis opp her. Demokamper lagres ikke. */
+const LIVEK = 'fokusdex.live';
+const liveMine = () => !!S.live && S.live.dev === devId();
+function liveBegin(B) {
+  if (!B || B.mode === 'lab') return;
+  S.live = { m: B.mode, d: B.mode === 'raid' ? dayKey() : (S.lad.day || dayKey()), dev: devId(), at: Date.now(), u: B.tr && B.tr.ultra ? 1 : 0, n: B.tr ? B.tr.n : '' };
+  stamp(); liveSave(B); save();
+}
+function liveSave(B) { if (!B || B.mode === 'lab' || !liveMine()) return; try { localStorage.setItem(LIVEK, JSON.stringify({ v: 1, at: S.live.at, B: battleSnap(B) })); } catch (_) {} }
+function liveEnd() { if (S.live) { delete S.live; stamp(); } try { localStorage.removeItem(LIVEK); } catch (_) {} }
+/* Kampen som ble forlatt, hvis den finnes på denne enheten og hører til merket i lagringen. */
+function liveLoad() {
+  if (!liveMine()) return null;
+  try { const o = JSON.parse(localStorage.getItem(LIVEK) || 'null'); if (!o || o.v !== 1 || o.at !== S.live.at || !o.B || !Array.isArray(o.B.me) || !o.B.me.length) return null; return battleRestore(o.B); } catch (_) { return null; }
+}
+/* Kampen kan ikke gjøres ferdig (den finnes ikke på enheten, eller den gis opp fra en annen enhet): den teller som tapt, uten XP. */
+function liveLoss() {
+  const L = S.live; if (!L) return '';
+  delete S.live; try { localStorage.removeItem(LIVEK); } catch (_) {}
+  const d = L.d || S.lad.day || dayKey(), used = t => (t && t.d === d ? t.n : 0) + 1; let what = 'battle';
+  if (L.m === 'league') {
+    const n = used(S.lad.tries); S.lad.tries = { d, n }; if (n >= ladLives()) S.lad.lost = d; what = 'League battle';
+    if (L.u) { S.lad.next = null; if (rungInfo(S.lad.n, S.lad.lap).k === 'ultra') { S.lad.lap++; S.lad.n = 0; S.lad.seen = []; } } else if (S.lad.next) S.lad.next.fail = d;
+  } else if (L.m === 'fac') {
+    const R = S.fac.run, n = used(S.fac.tries); if (R) S.fac.best = Math.max(S.fac.best || 0, R.streak || 0); S.fac.tries = { d, n }; if (n >= facLives()) S.fac.lost = d; S.fac.run = null; what = 'Frontier run';
+  } else if (L.m === 'pwt') { pwt().run = null; what = 'cup';
+  } else if (L.m === 'raid') {
+    const R = S.raid; what = 'raid';
+    if (R) { R.day = dayKey(); R.tries = (R.tries || 0) + 1; R.told = 1; if (R.tries >= RAIDTRIES) { S.raid = null; if (R.won1) { S.pend.push(genEnc({ ids: [150] })); } } }
+  }
+  stamp(); save();
+  return what;
+}
 
 /* ---------- Special events ----------
    Noen kampdager er spesielle. Hva som skjer, avgjøres i det kampene åpnes («Done for today») og vises ikke før da. Alt er fordeler: ingen event

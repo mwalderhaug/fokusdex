@@ -1177,3 +1177,9 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .pk-front.pkq .sm{font-size:10.5px;line-height:1.2;padding:0 2px}
 @keyframes qmBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
 @media (prefers-reduced-motion:reduce){.evchip.new,.evchip.new .evc-ic,.raidc.myst .raid-sp.qm,.pk-card.on .pkq-o{animation:none}}
+
+/* ---------- Rent spill: klokkesperren, ærlighetssjekken og merkene på profilen ---------- */
+.card.clk{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--red) 60%,transparent);background:color-mix(in srgb,var(--red) 8%,var(--card))}
+.honq{width:92px;height:92px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:46px;font-weight:900;color:#2a2109;background:radial-gradient(circle at 34% 30%,#fff6d8,var(--gold) 60%);box-shadow:0 0 0 7px color-mix(in srgb,var(--gold) 20%,transparent),0 0 46px color-mix(in srgb,var(--gold) 45%,transparent)}
+.card.fair{box-shadow:0 0 0 1px color-mix(in srgb,var(--sage) 40%,var(--line))}
+.card.fair.mk{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--red) 55%,transparent)}

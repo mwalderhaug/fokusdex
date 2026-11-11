@@ -327,6 +327,63 @@ function save(quiet) {
   if (!quiet && saveHook) saveHook();
 }
 
+/* ---------- Rent spill ----------
+   Appen har ingen tjener, så den som redigerer lagringsfila for hånd, kan gi seg selv hva som helst. Det som stoppes her, er snarveiene i selve appen:
+   KLOKKA: S.tmax er det seneste tidspunktet du har tjent noe (økt, kamp). Står enhetens klokke mer enn CLKSLACK bak det, er den stilt tilbake etter et
+     hopp fram, og økter og kamper står stille til klokka har tatt det igjen: det du lånte av framtiden, betales tilbake. Med nett sjekkes klokka også mot
+     tjenerens (Date-hodet på en HEAD-forespørsel, som service workeren ikke rører): ligger enheten mer enn CLKAHEAD foran, står alt stille til den er rettet.
+     Store avvik (over CLKMARK) gir et merke under Fair play på profilen (S.fair). Merkene gjør ingenting annet enn å stå der.
+   LAGRINGER: en kopi eller en lagring fra en annen enhet tar bare over når den er nyere enn den som er her (canAdopt), og dagens forsøk følger med (carry).
+   KAMPER: en påbegynt kamp er lagret etter hver runde og fortsetter der den var (se league.js: live). Å gå ut er ikke en ny sjanse. */
+const DEVK = 'fokusdex.dev';
+const devId = () => { let d = ''; try { d = localStorage.getItem(DEVK) || ''; if (!d) { d = Math.random().toString(36).slice(2, 10); localStorage.setItem(DEVK, d); } } catch (_) {} return d || 'x'; };
+const CLKSLACK = 20 * 60000, CLKAHEAD = 30 * 60000, CLKMARK = 60 * 60000, NT = { off: null, at: 0 };
+function stamp() { const n = Date.now(); if (!(S.tmax > n)) S.tmax = n; }
+function clockLock() {
+  const n = Date.now();
+  if (S.tmax && n < S.tmax - CLKSLACK) return { k: 'back', ms: S.tmax - n };
+  if (NT.off != null && NT.off > CLKAHEAD) return { k: 'ahead', ms: NT.off };
+  return null;
+}
+function fairMark(k, key) {
+  const F = S.fair || (S.fair = { n: 0, l: [], key: '' });
+  if (key && F.key === key) return false;
+  F.key = key || ''; F.n++; F.l.push({ d: dayKey(), k }); if (F.l.length > 12) F.l.shift();
+  return true;
+}
+/* Kalles ved oppstart, når appen kommer fram igjen og før noe som gir belønning. Gir null når klokka er i orden. */
+function clockCheck() {
+  const L = clockLock(); if (!L) return null;
+  if (L.ms > CLKMARK && fairMark('clock', L.k === 'back' ? 'back:' + S.tmax : 'ahead:' + dayKey())) save(true);
+  return L;
+}
+/* Tjenerens klokke. Svaret kan ha ligget i et mellomlager, så sann tid er et sted mellom Date og Date + Age: bare avvik utenfor det spennet teller. */
+async function netTime() {
+  try {
+    const r = await fetch('./index.html?nt=' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), { method: 'HEAD', cache: 'no-store' });
+    const d = Date.parse(r.headers.get('date') || ''); if (!r.ok || !isFinite(d)) return null;
+    const age = Math.max(0, Math.min(3600, +(r.headers.get('age') || 0) || 0)) * 1000, now = Date.now();
+    NT.off = now > d + age + 2000 ? now - (d + age) : now < d - 2000 ? now - d : 0; NT.at = now;
+    return NT.off;
+  } catch (_) { return null; }
+}
+/* En annen lagring (kopi, synk) kan bare ta over når den er nyere enn spillet på enheten, eller når spillet her ikke er startet. */
+const canAdopt = o => !!o && (!S.started || (o.rev || 0) > (S.rev || 0));
+/* Det som er brukt opp i dag, følger med når en annen lagring tar over: forsøk, dagens modus og event, første seier. p = lagringen som var her. */
+function carry(p) {
+  if (!p || !p.started) return;
+  const ge = (a, b) => (a || '') >= (b || ''), tr = (a, b) => !a ? b : !b ? a : a.d === b.d ? (a.n >= b.n ? a : b) : (a.d > b.d ? a : b);
+  if (p.lad) { S.lad.tries = tr(p.lad.tries, S.lad.tries) || null; if (ge(p.lad.lost, S.lad.lost)) S.lad.lost = p.lad.lost || ''; if (ge(p.lad.fw, S.lad.fw) && p.lad.fw) S.lad.fw = p.lad.fw; }
+  if (p.fac) { S.fac.tries = tr(p.fac.tries, S.fac.tries) || null; if (ge(p.fac.lost, S.fac.lost)) S.fac.lost = p.fac.lost || ''; }
+  if (p.pwt && p.pwt.day && (!S.pwt || ge(p.pwt.day, S.pwt.day))) { if (!S.pwt) S.pwt = { day: '', run: null, won: 0, cups: {} }; if (S.pwt.day !== p.pwt.day) { S.pwt.day = p.pwt.day; S.pwt.run = null; } }
+  if (p.mode && p.mode.day && (!S.mode || ge(p.mode.day, S.mode.day))) S.mode = p.mode;
+  if (p.evt && p.evt.day && (!S.evt || ge(p.evt.day, S.evt.day))) S.evt = p.evt;
+  if (p.raid && S.raid && p.raid.id === S.raid.id && !!p.raid.dk === !!S.raid.dk) { S.raid.tries = Math.max(S.raid.tries || 0, p.raid.tries || 0); if (ge(p.raid.day, S.raid.day)) S.raid.day = p.raid.day || ''; if (p.raid.seen) S.raid.seen = 1; }
+  if (p.tmax > (S.tmax || 0)) S.tmax = p.tmax;
+  if (p.fair && (!S.fair || p.fair.n > S.fair.n)) S.fair = p.fair;
+  if (p.hon && (!S.hon || ge(p.hon.d, S.hon.d))) S.hon = p.hon;
+}
+
 /* ---------- Hjelpere ---------- */
 const pad2 = n => String(n).padStart(2, '0');
 const dayKey = (d = new Date()) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
@@ -339,6 +396,13 @@ const partner = () => monBy(S.party[0]);
 const countOf = id => S.mons.filter(m => m.id === id).length;
 const todayMin = () => (S.log[dayKey()] || { m: 0 }).m;
 const fagMin = f => (S.fag[f] ? S.fag[f].b : 0) + (S.fm[f] || 0);
+const MSGATE = 180, BADGEGATE = 900, STARTCAP = 25 * 60;
+/* Minuttene som må logges i faget før neste belønning kan komme (0 = ingenting står i veien). */
+function fagGate(f) {
+  const g = S.fag[f]; if (!g || g.ms >= 4) return 0;
+  const logged = S.fm[f] || 0, rw = g.rw == null ? Math.min(g.ms, Math.floor(logged / MSGATE)) : g.rw;
+  return Math.max(0, (g.ms === 3 ? BADGEGATE : MSGATE * (rw + 1)) - logged);
+}
 const totalMin = () => Object.values(S.log).reduce((s, d) => s + d.m, 0);
 /* Dager på rad med minst 25 fokusminutter. I dag teller først når den er nådd. */
 function streak() {
@@ -415,7 +479,21 @@ function trimPend(max) { for (let i = 0; S.pend.length > max && i < S.pend.lengt
 
 /* ---------- Fokusøkt ---------- */
 const elapsedMs = t => (t.pausedAt || Date.now()) - t.start - (t.paused || 0);
-function startTimer(fag, min) { S.lad.day = ''; S.timer = { fag, min, start: Date.now(), paused: 0, pausedAt: 0, seen: 0 }; S.last = { fag, min }; save(true); }
+function startTimer(fag, min) { if (!(S.lastEnd && Date.now() - S.lastEnd < RUNGAP)) S.run = 0; S.lad.day = ''; S.timer = { fag, min, start: Date.now(), paused: 0, pausedAt: 0, seen: 0 }; S.last = { fag, min }; save(true); }
+/* ---------- Ærlighetssjekk ----------
+   Appen kan ikke se om du faktisk studerer. Når en økt starter under forhold som ser rare ut, spør den før klokka går:
+   late = midt på natta (HONLATE), long = mer logget i dag enn en lang dag (HONLONG utover dagsmålet), run = HONRUN minutter på rad uten pause (RUNGAP).
+   Hver grunn spørres det om én gang per dag. Svaret lagres bare som et antall (S.hon.n). */
+const HONLATE = [0.5, 5.5], HONLONG = 120, HONRUN = 240, RUNGAP = 5 * 60000;
+function honestWhy() {
+  const d = new Date(), h = d.getHours() + d.getMinutes() / 60, k = dayKey(), a = S.hon && S.hon.d === k ? S.hon.a : {};
+  const real = Object.values((S.log[k] || {}).f || {}).reduce((x, y) => x + y, 0);
+  if (h >= HONLATE[0] && h < HONLATE[1] && !a.late) return 'late';
+  if (real >= Math.max(480, S.cap + HONLONG) && !a.long) return 'long';
+  if (S.lastEnd && Date.now() - S.lastEnd < RUNGAP && (S.run || 0) >= HONRUN && !a.run) return 'run';
+  return '';
+}
+function honestOk(why) { const k = dayKey(); if (!S.hon || S.hon.d !== k) S.hon = { d: k, a: {}, n: (S.hon && S.hon.n) || 0 }; S.hon.a[why] = 1; S.hon.n++; save(true); }
 function togglePause() { const t = S.timer; if (!t) return; if (t.pausedAt) { t.paused += Date.now() - t.pausedAt; t.pausedAt = 0; } else t.pausedAt = Date.now(); save(true); }
 function finishTimer() {
   const t = S.timer; if (!t) return null;
@@ -442,6 +520,7 @@ function grant(fag, real, full, plan) {
   R.sm0 = mulOf(day.m); R.sm1 = mulOf(day.m + min);
   day.m += min; day.s++; day.f[fag] = (day.f[fag] || 0) + real; if (w < 1) day.x = (day.x || 0) + real;
   S.fm[fag] = (S.fm[fag] || 0) + real;
+  stamp(); S.run = (S.run || 0) + real; S.lastEnd = Date.now();
   S.party.forEach((u, i) => {
     const m = monBy(u); if (!m) return;
     const l0 = m.lv; m.xp += Math.round(min * 10 * (i ? 0.3 : 1)); m.lv = lvOf(m.xp);
@@ -478,9 +557,13 @@ function grant(fag, real, full, plan) {
   if (full && planned >= 45 && okMin >= planned && Math.random() < Math.min(0.04, 0.01 + 0.005 * streak())) { encs.push(legEnc()); R.gifts.push('Something legendary is stirring in the grass.'); }
   const fg = S.fag[fag];
   if (fg) {
-    const reach = Math.min(4, Math.floor(fagMin(fag) / (fg.t * 60) * 4));
+    /* Milepælene regnes av hele planen (med timene du hadde fra før), men belønningen krever tid som er logget her: MSGATE minutter for hver
+       belønning i faget, og BADGEGATE i alt for den legendariske. Ellers kunne en liten plan eller «timer gjort fra før» gi dem nesten gratis. */
+    const reach = Math.min(4, Math.floor(fagMin(fag) / (fg.t * 60) * 4)), logged = S.fm[fag] || 0;
+    if (fg.rw == null) fg.rw = Math.min(fg.ms, Math.floor((logged - real) / MSGATE));
     while (fg.ms < reach) {
-      fg.ms++;
+      if (fg.ms === 3 ? logged < BADGEGATE : logged < MSGATE * (fg.rw + 1)) break;
+      fg.ms++; fg.rw++;
       if (fg.ms < 4) { encs.push(genEnc({ fag, min: 3, luck: 1.5 })); R.gifts.push(`${F(fag).n}: ${fg.ms * 25}% of the plan is done. An epic encounter is waiting.`); }
       else { encs.push(legEnc()); R.gifts.push(`The ${F(fag).n} badge is yours. A legendary encounter is waiting.`); }
     }
@@ -563,7 +646,7 @@ function begin(id) {
   S.started = 1;
   let head = 0;
   for (const f in S.fag) { const g = S.fag[f]; head += g.b; g.ms = Math.min(3, Math.floor(g.b / (g.t * 60) * 4)); }
-  const coins = Math.round(head / 60 * 60);
+  const coins = Math.round(Math.min(head, STARTCAP) / 60 * 60);
   S.coins += coins; S.last.fag = Object.keys(S.fag)[0] || 'annet';
   addMon(id, 5, 0); save();
   return coins;
@@ -610,13 +693,13 @@ async function ghProbe() {
 /* use = 'remote': denne enheten tar over lagringen fra GitHub (den lokale legges til side som sikkerhetskopi). use = 'local': denne enheten laster opp sin og erstatter den. */
 const saveScore = o => (o.mons || []).reduce((a, m) => a + m.lv, 0) + (o.xp || 0) / 50 + Object.values(o.log || {}).reduce((a, d) => a + (d.m || 0), 0);
 async function ghLink(use, o) {
-  if (use === 'remote' && o) { try { localStorage.setItem(KEY + '.bak', JSON.stringify(S)); } catch (_) {} adopt(o); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (_) {} }
+  if (use === 'remote' && o) { const p = S; try { localStorage.setItem(KEY + '.bak', JSON.stringify(S)); } catch (_) {} adopt(o); carry(p); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (_) {} }
   else if (o) S.rev = Math.max(S.rev, o.rev || 0) + 1;
   GH.ok = 1; ghStore(); ghState = 'ok';
   if (use !== 'remote') await ghPush();
 }
 async function ghPull() {
-  if (!GH || !GH.ok || ghBusy || S.timer) return;
+  if (!GH || !GH.ok || ghBusy || S.timer || (S.live && S.live.dev === devId())) return;
   ghBusy = true;
   let push = false, adopted = false;
   try {
@@ -626,7 +709,7 @@ async function ghPull() {
     else {
       const j = await r.json(); ghSha = j.sha;
       const o = JSON.parse(b64d(j.content));
-      if (o && o.v === 1 && o.rev > S.rev) { adopt(o); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (_) {} adopted = true; }
+      if (o && o.v === 1 && o.rev > S.rev) { const p = S; adopt(o); carry(p); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (_) {} adopted = true; }
       else if (o && S.rev > o.rev) push = true;
       ghState = 'ok';
     }

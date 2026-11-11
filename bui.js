@@ -940,6 +940,8 @@ async function playOne(B, e) {
 async function playEv(ev) {
   BT.busy = true; drawMenu();
   const B = BT.B;
+  /* Runden er avgjort i det den vises: stillingen lagres nå, så det å lukke appen ikke gir en ny sjanse. */
+  liveSave(B);
   for (let i = 0; i < ev.length; i++) {
     const e = ev[i];
     if (BT.B !== B || !$('#arena')) return;
@@ -1031,6 +1033,12 @@ function packHint() {
 /* Starter en kamp: overgang, treneren på plattformen, ballkast fra begge sider, og så menyen. */
 async function startBattle(B) {
   if (BT.busy && BT.B && !BT.B.over) return;
+  if (B.mode !== 'lab') {
+    /* Klokka må være i orden, og en kamp som er i gang på en annen enhet, må gjøres ferdig der (eller gis opp her) før en ny kan starte. */
+    if (typeof fairGate === 'function' && fairGate()) return;
+    if (S.live && !liveMine()) return liveOther();
+    liveBegin(B);
+  }
   BT.B = B; BT.menu = 'main'; BT.res = null; BT.ty = 0; BT.busy = true;
   BT.v = { me: { i: 0, hp: B.me[0].hp, st: '' }, foe: { i: 0, hp: B.foe[0].hp, st: '' } };
   const prep = PACK.prep(B).catch(() => {});
@@ -1059,12 +1067,58 @@ async function startBattle(B) {
 }
 function endBattle() {
   const B = BT.B; stopMusic(); BT.busy = false;
+  if (B.mode !== 'lab') liveEnd();
   clearInterval(BT.goldT); FX.show(null); if (BT.air) { BT.air(); BT.air = null; }
   const res = BT.res = B.mode === 'fac' ? finishFactory(B) : B.mode === 'lab' ? finishLab(B) : B.mode === 'raid' ? finishRaid(B) : B.mode === 'pwt' ? finishPwt(B) : finishLeague(B);
   BT.tp = null; BT.fs = null;
   if (res.dark && $('#arena')) return darkRise(B);
   if (res.win) BSFX.win(); else BSFX.lose();
   overview();
+}
+/* ---------- En kamp som ble forlatt ----------
+   liveGate kalles ved oppstart. Er det en kamp i gang på denne enheten, er det bare to veier videre: fortsette der den var, eller gi opp (som er et tap). */
+const LIVEN = { league: 'League battle', fac: 'Frontier battle', pwt: 'cup match', raid: 'raid' };
+function liveGate() {
+  if (!S.started || !S.live || !liveMine()) return false;
+  const B = liveLoad(), L = S.live;
+  if (!B) {
+    const w = liveLoss(); render();
+    ov(`<div class="mid"><div><h1 class="big">You left a battle.</h1><p class="mut" style="margin-top:10px">The ${esc(w)}${L.n ? ' against ' + esc(L.n) : ''} was not finished, and it could not be brought back. It counts as a loss.</p></div></div>
+      <div class="acts"><button type="button" class="btn pri" data-a="home">Continue</button></div>`, 'tint', 'var(--red)');
+    return true;
+  }
+  BT.live = B;
+  const f = B.foe[B.b], m = B.me[B.a], left = t => t.filter(x => x.hp > 0).length;
+  ov(`<div class="mid"><div><div class="evr-k" style="color:var(--gold)">Battle in progress</div><h1 class="big" style="margin-top:6px">${esc(who(B.tr))}</h1><p class="mut" style="margin-top:8px">You left in the middle of this ${LIVEN[B.mode] || 'battle'}. It is saved after every turn and goes on where it was.</p></div>
+      <div class="card stack" style="width:100%"><div class="row" style="justify-content:space-between"><span class="row" style="gap:10px">${spr(m.id, { sh: m.sh, mega: m.mega, s: '44px' })}<span><b>${esc(m.name)}</b><br><span class="sm tn">${left(B.me)} of ${B.me.length} left</span></span></span><span class="sm">turn ${B.turn}</span><span class="row" style="gap:10px;text-align:right"><span><b>${esc(f.name)}</b><br><span class="sm tn">${left(B.foe)} of ${B.foe.length} left</span></span>${spr(f.id, { sh: f.sh, mega: f.mega, s: '44px' })}</span></div></div></div>
+    <div class="acts"><button type="button" class="btn gold" data-a="lresume">Continue the battle</button></div>
+    <button type="button" class="btn wide nf" data-a="lgive">Give up · counts as a loss</button>`, 'tint', `var(--t${B.tr.ty})`);
+  return true;
+}
+function liveOther() {
+  const L = S.live;
+  openSheet(`<h2 class="h" style="margin-top:0">A battle is in progress</h2><p class="sm">You started a ${LIVEN[L.m] || 'battle'}${L.n ? ' against ' + esc(L.n) : ''} on another device, and it is not finished. Finish it there first.</p><p class="sm" style="margin-top:8px">If that is not possible, you can give it up here. It then counts as a loss.</p>
+    <button type="button" class="btn wide danger" data-a="lgiveo" style="margin-top:12px">Give it up · counts as a loss</button><button type="button" class="btn wide" data-a="close">Close</button>`);
+}
+/* Tegner kampen slik den sto: de to som er inne, HP, vær og raseri. Ingen intro, og ingen ny utsendelse. */
+async function resumeBattle(B) {
+  BT.B = B; BT.menu = 'main'; BT.res = null; BT.ty = 0; BT.busy = true; BT.live = null;
+  const vis = s => { const i = s === 'me' ? B.a : B.b, b = (s === 'me' ? B.me : B.foe)[i]; return { i, hp: b.hp, st: b.status }; };
+  BT.v = { me: vis('me'), foe: vis('foe') };
+  ov('<div class="mid"><p class="mut">Back to the battle…</p></div>', 'battle');
+  try { await Promise.race([PACK.prep(B), new Promise(r => setTimeout(r, 4000))]); } catch (_) {}
+  if (BT.B !== B) return;
+  drawBattle(); drawMenu(); packHint();
+  if ($('#trn')) $('#trn').classList.add('out');
+  for (const side of ['foe', 'me']) { const b = teamOf(side)[BT.v[side].i], sp = $('#s-' + side); if (b.hp > 0) { paintSprite(side, b.v && b.v.away ? 'away' : ''); if (b.v && b.v.sub && sp) sp.classList.add('subd'); paintBox(side); } }
+  const ar = $('#arena'); if (B.wx && B.wx.k) ar.dataset.wx = B.wx.k;
+  if (B.rage) { ar.classList.add('raging'); if (BT.airO) BT.airO.k = 1.5; }
+  battleMusic(B);
+  await bwait(350); if (BT.B !== B || !$('#arena')) return;
+  if (B.over) return endBattle();
+  BT.busy = false; setText(B.need ? 'Choose your next Pokémon.' : `What will ${B.me[B.a].name} do?`); BT.menu = 'main'; drawMenu();
+  /* Sto en tvungen runde for tur (lading eller hvile), går den av seg selv som ellers. */
+  if (!B.need) { const a = autoAct(B); if (a) { BT.busy = true; await bwait(400); if (BT.B === B) playEv(runTurn(B, a)); } }
 }
 /* Mewtwo er slått, men reiser seg som Dark Mewtwo (finishRaid): en kort overgang på banen, og så runde to. Det er en helt ny kamp, så laget er friskt,
    og filmen til Dark Mewtwo spilles først, som ved et vanlig raid. */
@@ -1192,6 +1246,13 @@ function rulesSheet() {
       <p class="sm"><b>Legendaries</b> do not use ordinary stones. Rayquaza, Kyogre, Groudon, Latias, Latios, Heatran and Darkrai change form when they become enraged in a raid, and Mewtwo may rise again as Dark Mewtwo. Beat one, and you have its stone: every one of that species you own can then do the same.</p></div>
     <div class="card stack"><b>Training</b><p class="sm">Every Pokémon has potential it was born with, 0 to 31 in each stat, and training, at most ${EVMAX} in one stat and ${EVTOT} in all. Your partner gains a training point for every two minutes of focus, in the stat it has trained the most. Both can be bought under Train on the Pokémon's card, and both count more the higher its level. Training can be cleared from a stat and placed somewhere else, but the coins are not returned.</p>
       ${row('Training point', `${EVP} coins`)}${row('Hyper Training', `${IVP} coins for each point up to 31`)}${row('One Pokémon, fully trained', `about ${nb(EVTOT * EVP + 93 * IVP)} coins`)}</div>
+    <div class="card stack"><b>Fair play</b><p class="sm">The game trusts you with the clock and the timer, and closes the shortcuts it can.</p>
+      ${row('A battle you leave', 'is saved after every turn and goes on where it was<br>giving up counts as a loss')}
+      ${row('The device clock', 'set back or ahead: sessions and battles pause until it is right again')}
+      ${row('Backups and sync', 'only a newer save can replace the one on the device')}
+      ${row('Badge rewards', `need ${MSGATE / 60} h logged in the subject each, ${BADGEGATE / 60} h for the legendary`)}
+      ${row('Honest check', 'at night, after a very long day, or after four hours without a break')}
+      <p class="sm">Nothing stops you from leaving the timer on without studying. Cheating is optional, but your integrity pays for it.</p></div>
     <div class="card stack"><b>Encounter packs</b><p class="sm">Three encounters a pack, bought in the Shop. The dearer the pack, the better the last card. Pokémon from packs sell for ${Math.round(PKSELL * 100)} % of the usual price.</p>
       ${row('Prices', ['poke', 'great', 'ultra', 'master'].map(pk).join('<br>'))}
       ${row('Legendary in the last card', ['poke', 'great', 'ultra', 'master'].map(k => `${PACKS[k].n.replace(' Pack', '')} ${+(PACKS[k].slots[2].leg * 100).toFixed(1)} %`).join(' · '))}
@@ -1260,8 +1321,11 @@ const BA = {
   btarget: el => { if (BT.busy) return; const B = BT.B, k = BT.item, i = +el.dataset.k; if (!(B.bag > 0) || !itemOk(B, k, i)) return; if (B.mode !== 'lab') { if (!(S.items[k] > 0)) return; S.items[k]--; save(true); } BT.menu = 'main'; playEv(runTurn(B, { t: 'item', k, i })); },
   labmode: el => { BT.labRent = el.dataset.k === '1'; labScreen(); },
   labgo: el => { if (!BT.labRent && !S.party.map(monBy).filter(Boolean).length) return toast('You need a Pokémon in your team, or pick Rentals.'); PACK.unlock(); sfx.start(); BT.busy = false; startBattle(labBattle(el.dataset.k, !!BT.labRent)); },
-  bdone: () => { S.lad.day = dayKey(); if (MODESN >= MODES.length) evRoll(); save(); render(); if (modePicks() > 0) { BT.msel = ''; sfx.open(); modeSheet(); } else { sfx.ok(); toast('Battles are open. Fight now or later tonight.'); } },
+  bdone: () => { if (typeof fairGate === 'function' && fairGate()) return; S.lad.day = dayKey(); stamp(); if (MODESN >= MODES.length) evRoll(); save(); render(); if (modePicks() > 0) { BT.msel = ''; sfx.open(); modeSheet(); } else { sfx.ok(); toast('Battles are open. Fight now or later tonight.'); } },
   mopen: () => { if (!S.lad.day) return; BT.msel = ''; sfx.open(); modeSheet(); },
+  lresume: () => { const B = BT.live; if (!B) { closeOv(); return render(); } PACK.unlock(); sfx.start(); BT.busy = false; resumeBattle(B); },
+  lgive: el => { if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = 'Tap again to give up'; return; } const B = BT.live; BT.live = null; if (!B) { liveLoss(); closeOv(); return render(); } BT.B = B; BT.busy = false; B.over = 'loss'; endBattle(); },
+  lgiveo: el => { if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = 'Tap again to give it up'; return; } const w = liveLoss(); closeSheet(); closeOv(); render(); toast(`The ${w} counts as a loss.`); },
   msel: el => { const k = el.dataset.k; if (!MODES.includes(k)) return; BT.msel = k; document.querySelectorAll('#ov .mdc').forEach(x => { const on = x === el; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); }); const b = $('#mgo'); if (b) { b.disabled = false; b.textContent = `Play the ${MODEN[k]} today`; } sfx.tap(); buzz(12); },
   /* Valget står for hele kampdagen. Dagens event trekkes i det samme (modePick), og viser seg som et symbol over modusen. */
   mgo: () => {

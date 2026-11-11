@@ -90,6 +90,35 @@ function mkBattle(me, foe, tr, x) {
     wx: { k: '', n: 0 }, sd: { me: newSide(), foe: newSide() }, lastM: { me: null, foe: null }, troom: 0, mud: 0, wsp: 0, aiSw: -9 }, x);
 }
 const act = (B, s) => s === 'me' ? B.me[B.a] : B.foe[B.b];
+/* ---------- En kamp som kan lagres ----------
+   Kampen er vanlige data, men noen ting i den finnes flere steder på én gang: den som holder en annen fast peker på den, køen midt i en runde peker på
+   Pokémonene, og etter Mimic deler det nye og det opprinnelige angrepssettet de samme angrepene (så PP-en følges ad). battleSnap skriver derfor hver
+   delte ting én gang ({ $id, $v }) og viser til den ellers ({ $r }), og battleRestore knytter dem sammen igjen. Dine egne kobles til den ekte Pokémonen
+   (src), så XP og det andre kampen gir, havner riktig. Testet med sim/snap.js: en kamp som lagres og hentes etter hver runde, går nøyaktig som en uavbrutt. */
+function battleSnap(B) {
+  const cnt = new Map(), seen = new Map(); let n = 0;
+  (function walk(x) { if (!x || typeof x !== 'object') return; const c = cnt.get(x) || 0; cnt.set(x, c + 1); if (c) return; if (Array.isArray(x)) x.forEach(walk); else for (const k in x) walk(x[k]); })(B);
+  const body = x => { if (Array.isArray(x)) return x.map(v => { const y = enc(v); return y === undefined ? null : y; }); const o = {}; for (const k in x) { const v = enc(x[k]); if (v !== undefined) o[k] = v; } return o; };
+  const enc = x => {
+    if (x === null || typeof x !== 'object') return typeof x === 'function' ? undefined : x;
+    if (cnt.get(x) > 1) { if (seen.has(x)) return { $r: seen.get(x) }; const id = ++n; seen.set(x, id); return { $id: id, $v: body(x) }; }
+    return body(x);
+  };
+  return enc(B);
+}
+function battleRestore(o) {
+  const ids = {};
+  const fill = (t, v) => { if (Array.isArray(v)) v.forEach(e => t.push(dec(e))); else for (const k in v) t[k] = dec(v[k]); return t; };
+  const dec = x => {
+    if (!x || typeof x !== 'object') return x;
+    if (!Array.isArray(x) && '$r' in x) return ids[x.$r];
+    if (!Array.isArray(x) && '$id' in x) { const t = Array.isArray(x.$v) ? [] : {}; ids[x.$id] = t; return fill(t, x.$v); }
+    return fill(Array.isArray(x) ? [] : {}, x);
+  };
+  const B = dec(o);
+  B.me.forEach(b => { const m = b.src && b.src.u ? monBy(b.src.u) : null; if (m && m.id === b.src.id && m.lv === b.src.lv) b.src = m; });
+  return B;
+}
 /* Mega Evolution: den som står inne, bytter til Mega-formen sin (b.mg) før angrepene i runden. Nye basestats (HP-en er den samme), nye typer og
    nytt bilde; det den har av økte og senkede verdier, følger med. Én per side per kamp, og formen varer kampen ut, også om den byttes ut og inn.
    how = 'rage' når en legendarisk forvandles i raseri i et raid. */

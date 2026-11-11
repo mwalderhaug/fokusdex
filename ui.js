@@ -166,7 +166,7 @@ function cry(id, delay = 0, vol = 0.45) {
   }).catch(() => {});
 }
 /* Lyd per type trykk. Handlinger med egen lyd (kast, kjøp, utvikling osv.) får ikke en ekstra. */
-const OWN = new Set(['mgive', 'triv', 'trev', 'mvtog', 'start', 'throw', 'buy', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm', 'mopen', 'msel', 'mgo', 'evinfo']);
+const OWN = new Set(['mgive', 'triv', 'trev', 'mvtog', 'start', 'throw', 'buy', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'honyes', 'clkagain']);
 const SND = {
   tab: 'tab', lagv: 'tab', dexr: 'tab',
   fag: 'chip', min: 'chip', reg: 'chip', sort: 'chip', filt: 'chip', sety: 'chip', extog: 'chip',
@@ -249,7 +249,7 @@ VIEW.fokus = () => {
   const w = rateOf(fag), em = Math.round(min * w), subj = Object.keys(FAGS).filter(isSubj), oth = Object.keys(FAGS).filter(k => !isSubj(k)), chip = k => `<button type="button" class="chip" data-a="fag" data-k="${k}" aria-pressed="${fag === k}">${esc(F(k).n)}</button>`;
   const n = Math.floor(Math.min(em, left) / 20) + (min * w >= 25 && left >= em ? 1 : 0) + (S.incOn ? 1 : 0);
   const rested = !(S.log[dayKey()] || {}).s, dx = (S.log[dayKey()] || {}).x || 0;
-  const top = topBar(); let h = '';
+  let top = topBar(), h = '';
   if (p) {
     const ev = evoOpts(p), nx = ev.find(x => !x.ok), rdy = ev.find(x => x.ok), a = xpAt(p.lv), b = xpAt(p.lv + 1);
     h += `<button type="button" class="card partner" data-a="mon" data-u="${p.u}" style="--tc:var(--t${D(p.id)[1]});text-align:left;width:100%">${spr(p.id, { ani: 1, sh: p.sh, mega: p.mega })}
@@ -270,6 +270,7 @@ VIEW.fokus = () => {
     ${S.eggs.length ? `<div class="row" style="margin-top:14px"><span class="egg"></span><div class="sp"><div class="row sm tn" style="justify-content:space-between"><span>Egg${S.eggs.length > 1 ? ' (' + S.eggs.length + ')' : ''}</span><span>${S.eggs[0].need - S.eggs[0].got} min left</span></div><div class="bar gold" style="margin-top:5px"><i style="width:${Math.round(S.eggs[0].got / S.eggs[0].need * 100)}%"></i></div></div></div>` : ''}
     ${S.incOn ? '<p class="sm" style="margin-top:10px">Incense is lit for your next session.</p>' : ''}${S.boost ? `<p class="sm" style="margin-top:10px;color:var(--gold)">Boss perk: ${S.boost.m}× coins for your next ${S.boost.n} session${S.boost.n > 1 ? 's' : ''}.</p>` : ''}</div>`;
   /* En vanlig dag ligger kampene nederst. På en eventdag står eventet og kampene øverst, og det som har med studeringen å gjøre, under. */
+  const CL = clockLock(); if (CL) top += clockCard(CL);
   const battles = S.party.length ? raidCard() + ladderCard() : '', E = battles && typeof evNow === 'function' ? evNow() : null;
   return E ? `${top}${battles}<div class="evsep"><span>Study</span></div>${h}` : top + h + battles;
 };
@@ -436,7 +437,7 @@ VIEW.profil = () => {
   const t0 = new Date(), tot = totalMin(), ses = Object.values(S.log).reduce((s, d) => s + d.s, 0);
   const badges = Object.keys(S.fag).map(f => { const g = S.fag[f], m = fagMin(f), pct = Math.min(1, m / (g.t * 60)), dd = g.d ? Math.round((new Date(g.d + 'T00:00') - new Date(t0.getFullYear(), t0.getMonth(), t0.getDate())) / 864e5) : null;
     return `<div class="item" style="--tc:${F(f).c}"><span class="badge${pct >= 1 ? ' on' : ''}">${esc(short(F(f).n))}</span><div class="sp"><div class="row" style="justify-content:space-between"><b>${esc(F(f).n)} badge</b><span class="sm tn">${dd == null ? '' : dd > 0 ? 'exam in ' + dd + ' d' : dd === 0 ? 'exam today' : 'done'}</span></div>
-      <div class="bar" style="margin-top:6px"><i style="width:${Math.round(pct * 100)}%;background:${F(f).c}"></i></div><div class="sm tn" style="margin-top:4px">${hrs(m)} of ${hrs(g.t * 60)} h · next reward at ${Math.min(100, (g.ms + 1) * 25)}%</div></div></div>`; }).join('');
+      <div class="bar" style="margin-top:6px"><i style="width:${Math.round(pct * 100)}%;background:${F(f).c}"></i></div><div class="sm tn" style="margin-top:4px">${hrs(m)} of ${hrs(g.t * 60)} h · ${g.ms >= 4 ? 'badge complete' : `next reward at ${Math.min(100, (g.ms + 1) * 25)}%${fagGate(f) > 0 && pct >= (g.ms + 1) / 4 ? ` · ${hrs(fagGate(f))} h more logged here first` : ''}`}</div></div></div>`; }).join('');
   let hm = '';
   const mon = addDays(t0, -((t0.getDay() + 6) % 7) - 63);
   for (let i = 0; i < 70; i++) { const d = addDays(mon, i), k = dayKey(d), m = (S.log[k] || { m: 0 }).m; hm += `<i class="${m ? (m < 90 ? 'l1' : m < 180 ? 'l2' : m < 270 ? 'l3' : 'l4') : ''}${k === dayKey() ? ' td' : ''}" title="${d.getDate()}.${d.getMonth() + 1}: ${m} min"></i>`; }
@@ -444,11 +445,12 @@ VIEW.profil = () => {
   return `<h1 class="big">Profile</h1>${topBar()}
     <button type="button" class="card avcard" data-a="avatar">${S.av ? tsprite(S.av) : '<span class="tsb"></span>'}<span class="sp"><span class="sm">Your character</span><b>${S.av ? esc(avName()) : 'Pick a character'}</b><span class="sm">${S.av ? 'Tap to change. Shown here and in the intro before boss battles.' : 'Choose who you are: it becomes your profile picture and shows in the intro before boss battles.'}</span></span></button>
     <h2 class="h">Badges</h2><div class="card" style="padding-top:6px;padding-bottom:6px">${badges}</div>
-    <p class="sm">Each badge fills with focus hours in that subject. 25, 50 and 75% give an epic encounter, and a full badge gives a legendary one.</p>
+    <p class="sm">Each badge fills with focus hours in that subject. 25, 50 and 75% give an epic encounter, and a full badge gives a legendary one. A reward needs time logged here in the app: ${MSGATE / 60} hours in the subject for each one, and ${BADGEGATE / 60} hours in all for the legendary.</p>
     <h2 class="h">Stats</h2>
     <div class="gain"><div><span class="sm">${hasS ? 'Subject hours' : 'Total focus'}</span><b class="tn">${hrs(hasS ? sp.subj : tot)} h</b></div><div><span class="sm">Sessions</span><b class="tn">${ses}</b></div><div><span class="sm">Day streak</span><b class="tn">${streak()}</b></div><div><span class="sm">Species caught</span><b class="tn">${all}</b></div></div>
     ${hasS && sp.other ? `<p class="sm">Plus ${hrs(sp.other)} h of other things, which count at half value.</p>` : ''}
     <div class="card"><div class="lab">Last ten weeks</div><div class="hm">${hm}</div></div>
+    ${fairCard()}
     <h2 class="h">Settings</h2>
     <div class="card stack">
       <label class="field">Daily goal<select data-c="cap">${[120, 180, 240, 300, 360, 420, 480].map(c => `<option value="${c}"${S.cap === c ? ' selected' : ''}>${c / 60} hours · battle rewards up to ×${topFor(c).toFixed(1)}</option>`).join('')}</select></label>
@@ -514,6 +516,7 @@ function backupSheet() {
   openSheet(`<h2 class="h">Backup</h2><p class="sm">Copy the text to keep your game safe, or paste a copy to restore it.</p>
     <label class="field">Paste a copy here<input id="bk-in" autocomplete="off"></label>
     <div class="row"><button type="button" class="btn sp" data-a="bkcopy">Copy game</button><button type="button" class="btn sp" data-a="bkload">Restore from copy</button></div>
+    <p class="sm" id="bk-err" style="color:var(--red)"></p>
     ${localStorage.getItem(KEY + '.bak') ? '<button type="button" class="btn wide" data-a="bkold">Bring back the save this device had before sync</button>' : ''}
     <button type="button" class="btn wide danger" data-a="reset">Start over from scratch</button>`);
 }
@@ -606,6 +609,31 @@ function showReward(R) {
   countUp($('#r-xp'), R.xp); countUp($('#r-co'), R.coins);
   if (R.hatch.length) setTimeout(() => { sfx.hatch(); const m = monBy(R.hatch[0].u); if (m) cry(m.id, 500); }, 900);
   else if (R.ups.length) setTimeout(sfx.lvl, 900);
+}
+
+/* ---------- Rent spill: klokka, ærlighetssjekken og merkene ---------- */
+const dur = ms => { const m = Math.max(1, Math.round(ms / 60000)); return m >= 120 ? `${Math.round(m / 60)} hours` : m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} min`; };
+const clockText = L => L.k === 'back'
+  ? `Your device's clock is ${dur(L.ms)} behind the last time you earned something in the game. Sessions and battles are paused until it has caught up, at ${new Date(S.tmax).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}.`
+  : `Your device's clock is about ${dur(L.ms)} ahead of the real time. Sessions and battles are paused until it is right. Set the date and time to automatic, then check again.`;
+const clockCard = L => `<div class="card stack clk"><div class="row" style="justify-content:space-between"><b>Clock check</b><span class="pill tn">Paused</span></div><p class="sm">${clockText(L)}</p>${L.k === 'ahead' ? '<button type="button" class="btn sm2 wide" data-a="clkagain">Check again</button>' : ''}</div>`;
+function clockSheet(L) { openSheet(`<h2 class="h" style="margin-top:0">Clock check</h2><p class="sm">${clockText(L)}</p><p class="sm" style="margin-top:8px">The game counts days and minutes by the clock, so it has to be right. Nothing is lost while you wait.</p>${L.k === 'ahead' ? '<button type="button" class="btn wide" data-a="clkagain" style="margin-top:12px">Check again</button>' : ''}<button type="button" class="btn wide" data-a="close" style="margin-top:8px">Close</button>`); }
+/* Stopper det som gir belønning når klokka ikke stemmer. Gir true når det ble stoppet. */
+function fairGate() { const L = clockCheck(); if (!L) return false; sfx.warn(); clockSheet(L); return true; }
+/* Ærlighetssjekken: appen kan ikke se om du studerer, så den spør når noe ser rart ut. */
+function honestAsk(why) {
+  const d = new Date(), k = dayKey(), real = Object.values((S.log[k] || {}).f || {}).reduce((x, y) => x + y, 0);
+  const q = why === 'late' ? `It is ${pad2(d.getHours())}:${pad2(d.getMinutes())}. Are you really studying right now?` : why === 'long' ? `You have logged ${hrs(real)} hours today. Is this still real study?` : `That is ${hrs(S.run || 0)} hours in a row without a break. Are you still at it?`;
+  sfx.open();
+  ov(`<div class="mid"><div class="honq" aria-hidden="true">?</div><div><div class="evr-k" style="color:var(--gold)">Honest check</div><h1 class="big" style="margin-top:6px;font-size:28px">${q}</h1>
+      <p class="mut" style="margin-top:12px">Cheating is optional, but your integrity pays for it. Be honest with yourself.</p></div></div>
+    <div class="acts"><button type="button" class="btn gold" data-a="honyes" data-k="${why}">I'm honest · I'm grinding school</button></div>
+    <button type="button" class="btn wide nf" data-a="home">Not really · cancel</button>`, 'tint', 'var(--gold)');
+}
+function fairCard() {
+  const F = S.fair, n = F ? F.n : 0, last = n ? F.l[F.l.length - 1] : null, hn = S.hon ? S.hon.n || 0 : 0;
+  return `<h2 class="h">Fair play</h2><div class="card stack fair${n ? ' mk' : ''}"><div class="row" style="justify-content:space-between"><b>${n ? `${n} ${n === 1 ? 'mark' : 'marks'}` : 'Clean'}</b><span class="pill tn">${n ? 'clock changed' : 'no marks'}</span></div>
+    <p class="sm">${n ? `The device clock did not match the game${last ? ' on ' + new Date(last.d + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : ''}. A mark does nothing but stand here.` : 'The clock has matched the game, and nothing has been rolled back.'} ${hn ? `You have answered ${hn} honest ${hn === 1 ? 'check' : 'checks'}.` : ''} Cheating is optional, but your integrity pays for it.</p></div>`;
 }
 
 /* ---------- Møte og fangst ---------- */
@@ -704,7 +732,9 @@ const A = {
   fag: el => { U.fag = el.dataset.k; render(); },
   min: el => { U.min = +el.dataset.k; render(); },
   reg: el => { const r = +el.dataset.k, was = S.routes.includes(r); toggleRoute(r); if (was && S.routes.includes(r)) toast('At least one route has to stay on.'); render(); },
-  start: () => { startTimer(FAGS[U.fag] ? U.fag : curFag(), U.min || S.last.min); sfx.start(); showTimer(); },
+  start: () => { if (fairGate()) return; const why = honestWhy(); if (why) return honestAsk(why); startTimer(FAGS[U.fag] ? U.fag : curFag(), U.min || S.last.min); sfx.start(); showTimer(); },
+  honyes: el => { honestOk(el.dataset.k); closeOv(); startTimer(FAGS[U.fag] ? U.fag : curFag(), U.min || S.last.min); sfx.start(); showTimer(); },
+  clkagain: async el => { el.disabled = true; el.textContent = 'Checking…'; await netTime(); closeSheet(); render(); const L = clockCheck(); if (L) clockSheet(L); else { sfx.ok(); toast('The clock is fine.'); } },
   pause: () => { togglePause(); paintTimer(); },
   early: () => endTimer(),
   quit: () => { if (!U.quit) { U.quit = 1; $('#t-quit').textContent = 'Tap again to cancel'; setTimeout(() => { U.quit = 0; const b = $('#t-quit'); if (b) b.textContent = 'Cancel'; }, 3000); return; } clearInterval(tick); dropAwake(); S.timer = null; save(true); document.title = 'Fokusdex'; closeOv(); render(); },
@@ -796,8 +826,14 @@ const A = {
   syncoff: () => { ghSet('', ''); closeSheet(); render(); toast('Sync turned off.'); },
   backup: () => backupSheet(),
   bkcopy: () => { const txt = b64e(JSON.stringify(S)); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Copied.'), () => { $('#bk-in').value = txt; toast('Copy the text in the field.'); }); },
-  bkload: () => { try { const o = JSON.parse(b64d($('#bk-in').value.trim())); if (!o || o.v !== 1 || !Array.isArray(o.mons)) throw 0; adopt(o); save(); closeSheet(); render(); toast('Game restored.'); } catch (_) { toast('That was not a valid copy.'); } },
-  bkold: el => { if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = 'Tap again: replaces the current game'; return; } try { const o = JSON.parse(localStorage.getItem(KEY + '.bak')); if (!o || o.v !== 1) throw 0; const rev = S.rev; adopt(o); S.rev = Math.max(S.rev, rev); save(); closeSheet(); render(); toast('The earlier save is back.'); } catch (_) { toast('No earlier save found.'); } },
+  bkload: () => {
+    let o = null; try { o = JSON.parse(b64d($('#bk-in').value.trim())); if (!o || o.v !== 1 || !Array.isArray(o.mons)) o = null; } catch (_) { o = null; }
+    if (!o) return toast('That was not a valid copy.');
+    /* En kopi som er eldre enn spillet på enheten, ville rullet tilbake det som har skjedd siden (tap, åpnede pakker, kast). Den tas ikke inn. */
+    if (!canAdopt(o)) { const e = $('#bk-err'); if (e) e.textContent = 'This copy is older than the game on this device, so it cannot replace it. Copies are for moving to a new device, or for getting your game back after losing it.'; return sfx.warn(); }
+    const p = S; adopt(o); carry(p); S.rev = Math.max(S.rev, p.rev || 0); save(); closeSheet(); render(); toast('Game restored.');
+  },
+  bkold: el => { if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = 'Tap again: replaces the current game'; return; } try { const o = JSON.parse(localStorage.getItem(KEY + '.bak')); if (!o || o.v !== 1) throw 0; const rev = S.rev, p = S; adopt(o); carry(p); S.rev = Math.max(S.rev, rev); save(); closeSheet(); render(); toast('The earlier save is back.'); } catch (_) { toast('No earlier save found.'); } },
   reset: el => { if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = 'Tap again: everything is deleted'; return; } S = fresh(); save(); pick = 0; U.step = 1; U.sd = null; closeSheet(); render(); },
   pick: el => { pick = +el.dataset.k; cry(pick, 0, 0.4); intro(); },
 };
@@ -824,6 +860,7 @@ document.addEventListener('keydown', ev => {
 });
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
+  if (Date.now() - NT.at > 600000) netTime().then(() => { if (clockLock() && $('#ov').hidden && $('#sheet').hidden) render(); });
   if (S.timer) { keepAwake(); paintTimer(); } else ghPull();
 });
 
@@ -849,7 +886,9 @@ load(); ghLoad();
 saveHook = ghSoon;
 ghHook = adopted => { const s = $('#gh-s'); if (s) s.textContent = ghState === 'ok' ? 'Sync is on.' : ghState; if (adopted && !S.timer && ($('#ov').hidden || $('#nav').hidden)) { closeOv(); render(); toast('Loaded a newer save from another device.'); } };
 render();
-if (S.started && S.timer) showTimer();
+clockCheck();
+netTime().then(o => { if (o != null && clockCheck() && $('#ov').hidden) render(); });
+if (S.started && S.timer) showTimer(); else if (typeof liveGate === 'function') liveGate();
 ghPull();
 setTimeout(() => PACK.init(), 2500);
 /* Adressen …/#lab åpner demoen direkte. */
