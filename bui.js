@@ -398,7 +398,7 @@ function paintBox(side) {
    Din egen står nærmest kameraet og er større enn motstanderen. De legendariske i raid får litt ekstra. */
 const hK = h => Math.max(0.84, Math.min(1.42, 1 + (h < 1 ? 0.1 : 0.13) * Math.log2(h)));
 /* Din egen står nærmest kameraet og tegnes rundt dobbelt så stor som motstanderen, som i Black og White (høyden teller mindre der, ellers fyller de største hele skjermen). */
-const sprK = (side, b) => { const k = hK(htOf(b.id, b.mega)); return side === 'me' ? Math.min(2.3, 1.9 * Math.pow(k, 0.6)) : (BT.B && BT.B.raid ? 1.1 : 1) * k; };
+const sprK = (side, b) => { const k = hK(htOf(b.id, b.mega)); return side === 'me' ? Math.min(2.3, 1.9 * Math.pow(k, 0.6)) : k; };
 /* Din Pokémon står midt på plattformen sin, som ligger nederst i bildet bak tekstboksen. Er den så liten at den ville forsvunnet bak boksen,
    flyttes den så langt bakover på plattformen at godt over halve kroppen vises (--ly = hvor mye). Regnes ut når bildet er lastet,
    sammen med taket på størrelsen (--k) for begge sider. */
@@ -407,8 +407,11 @@ function seat(side) {
   const set = () => {
     if (!img.naturalHeight || !img.isConnected) return;
     const me = side === 'me', cz = parseFloat(ar.style.getPropertyValue('--cz')) || 1.1, k0 = parseFloat(el.dataset.k) || (me ? 1.9 : 1);
-    /* De aller største holdes innenfor skjermen: bredden og høyden har et tak. */
-    const k = Math.min(k0, (me ? 165 : 150) / (img.naturalWidth * 0.8 * cz), (me ? 140 : 106) / (img.naturalHeight * 0.8 * cz));
+    /* De aller største holdes innenfor skjermen: bredden og høyden har et tak. Motstanderen står nær høyre kant og øverst i bildet,
+       så taket hennes regnes fra der føttene faktisk står: hun skal aldri kuttes av kanten eller toppen. */
+    const u = ar.clientWidth / 256, fx = u ? el.offsetLeft / u : 190, fy = u ? el.offsetTop / u : 95;
+    const mw = me ? 165 : Math.max(60, Math.min(150, 2 * (256 - fx) - 6)), mh = me ? 140 : Math.max(50, Math.min(106, fy - 5));
+    const k = Math.min(k0, mw / (img.naturalWidth * 0.8 * cz), mh / (img.naturalHeight * 0.8 * cz));
     el.style.setProperty('--k', k.toFixed(3));
     if (!me) return;
     const H = img.naturalHeight * 0.8 * k * cz, feet = (0.8 + 0.17 * cz) * 192, want = Math.max(152, 144 + 0.42 * H);
@@ -473,9 +476,10 @@ function drawBattle() {
   const B = BT.B, tr = B.tr, tier = TIER(tr.kind);
   /* De legendariske og klasse 9 har sin egen luft over banen (raidf.js): tåke, lyn, glør, snøstorm … De legendariske har også sitt eget sted bak plattformene (raidx.js). */
   const airId = tr.wild ? (tr.dk ? 'dk' + tr.leg : tr.leg) : tr.kind === 'supreme' && B.mode !== 'fac' ? 's:' + tr.n : 0, ainf = airId && typeof CINE !== 'undefined' ? CINE.info(airId) : null, own = !!(tr.wild && ainf && ainf.bg);
-  const scene = own ? '' : PACK.now(PACK.sceneFor(B)), pl = own && ainf.plat ? `;--p1:${ainf.plat[0]};--p2:${ainf.plat[1]};--p3:${ainf.plat[2]}` : '';
+  /* Med eget sted står de to som i trenerkampene (oppstillingen til banebildene), og plattformene tegnes sammen med stedet. */
+  const scene = own ? '' : PACK.now(PACK.sceneFor(B));
   ov(`<div class="btop k-${tier}"${kst(tr)}><span class="pill tn">${esc(B.raid && raidDom(tr) ? raidDom(tr).n : battleTag(B))}</span><span class="btn-n"><b class="${tr.boss ? 'bossn' : ''}">${esc(who(tr))}</b></span></div>
-    <div class="bscreen t-${tier}"${kst(tr)}><div class="arena a-${tr.arena} v${tr.v} t-${tier} i${tr.int}${tr.th ? ' th-' + tr.th : ''}${scene ? ' has-scene' : ''}" id="arena" style="--ac:var(--t${tr.ty});--cc:${tr.cc || 'var(--t' + tr.ty + ')'}${pl}">
+    <div class="bscreen t-${tier}"${kst(tr)}><div class="arena a-${tr.arena} v${tr.v} t-${tier} i${tr.int}${tr.th ? ' th-' + tr.th : ''}${scene || own ? ' has-scene' : ''}${tr.wild ? ' rv' : ''}" id="arena" style="--ac:var(--t${tr.ty});--cc:${tr.cc || 'var(--t' + tr.ty + ')'}">
       <div class="cam" id="cam"><div class="world" id="world">${scene ? `<img class="scene" alt="" src="${scene}">` : ''}<div class="abg"></div>${own ? '<canvas class="fxc bgc evc" id="evc" width="512" height="384"></canvas>' : ''}<canvas class="fxc bgc" id="bgc" width="256" height="192"></canvas><canvas class="fxc amc" id="amc" width="512" height="384"></canvas><div class="plat pf"></div><div class="plat pm"></div></div></div><div class="dim"></div>
       ${tr.wild ? '' : `<div class="trn" id="trn">${tsprite(tr.img)}</div>`}
       <div class="bs foe gone" id="s-foe"></div><div class="bs me gone" id="s-me"></div>${tr.wild ? '<canvas class="fxc rfx" id="rfx" width="512" height="384"></canvas>' : ''}
@@ -967,9 +971,21 @@ function endBattle() {
   const B = BT.B; stopMusic(); BT.busy = false;
   clearInterval(BT.goldT); FX.show(null); if (BT.air) { BT.air(); BT.air = null; }
   const res = BT.res = B.mode === 'fac' ? finishFactory(B) : B.mode === 'lab' ? finishLab(B) : B.mode === 'raid' ? finishRaid(B) : B.mode === 'pwt' ? finishPwt(B) : finishLeague(B);
-  if (res.win) BSFX.win(); else BSFX.lose();
   BT.tp = null; BT.fs = null;
+  if (res.dark && $('#arena')) return darkRise(B);
+  if (res.win) BSFX.win(); else BSFX.lose();
   overview();
+}
+/* Mewtwo er slått, men reiser seg som Dark Mewtwo (finishRaid): en kort overgang på banen, og så runde to. Det er en helt ny kamp, så laget er friskt,
+   og filmen til Dark Mewtwo spilles først, som ved et vanlig raid. */
+async function darkRise(B) {
+  const ar = $('#arena'), ok = () => BT.B === B && !!$('#arena');
+  BT.busy = true; await bwait(600); if (!ok()) return;
+  await say('Mewtwo is beaten…'); if (!ok()) return;
+  BSFX.dread(); buzz([40, 60, 40, 60, 200]); shake(1100, 3); ar.classList.add('dkrise');
+  await Promise.all([say('…but a shadow closes around it!'), new Promise(r => setTimeout(r, 1400))]); if (!ok()) return;
+  await say('Your team is restored. This is not over.'); if (!ok()) return;
+  BT.busy = false; startBattle(raidBattle(BT.lead));
 }
 
 /* ---------- Etter kampen ---------- */
@@ -1071,7 +1087,10 @@ function rulesSheet() {
       ${row('Team level needed', `mythical ${RAIDGATE[2]} · the great ones ${RAIDGATE[1]} · Arceus, Deoxys ${RAIDGATE[3]}`)}
       ${row('Its place fights too', `an event every ${RAIDEV}rd turn<br>enraged below half HP`)}
       ${row('Coins', RAIDCOIN.map(nb).join(' · '))}${row('Rare Candy', RAIDCANDY.join(' · '))}
-      <p class="sm">The five steps are: legendary, the great ones, mythical, Arceus and Deoxys, and Dark Mewtwo. A win also gives a lot of XP, and the legendary waits in the grass to be caught.</p></div>
+      <p class="sm">The five steps are: legendary, the great ones, mythical, Arceus and Deoxys, and Dark Mewtwo. A win also gives a lot of XP, and the legendary waits in the grass to be caught.</p>
+      <p class="sm"><b>Dark Mewtwo</b> has no raid of its own. Beat Mewtwo, and there is a ${Math.round(DARKP * 100)} % chance that it rises again as Dark Mewtwo. You keep what Mewtwo gave, your team is restored, and you fight once more, right away.</p></div>
+    <div class="card stack"><b>Training</b><p class="sm">Every Pokémon has potential it was born with, 0 to 31 in each stat, and training, at most ${EVMAX} in one stat and ${EVTOT} in all. Your partner gains a training point for every two minutes of focus, in the stat it has trained the most. Both can be bought under Train on the Pokémon's card, and both count more the higher its level. Training can be cleared from a stat and placed somewhere else, but the coins are not returned.</p>
+      ${row('Training point', `${EVP} coins`)}${row('Hyper Training', `${IVP} coins for each point up to 31`)}${row('One Pokémon, fully trained', `about ${nb(EVTOT * EVP + 93 * IVP)} coins`)}</div>
     <div class="card stack"><b>Encounter packs</b><p class="sm">Three encounters a pack, bought in the Shop. The dearer the pack, the better the last card. Pokémon from packs sell for ${Math.round(PKSELL * 100)} % of the usual price.</p>
       ${row('Prices', ['poke', 'great', 'ultra', 'master'].map(pk).join('<br>'))}</div>
     </div><button type="button" class="btn wide" data-a="close" style="margin-top:12px">Close</button>`);

@@ -209,8 +209,14 @@
       im('speed', 256, 192, { s: 1.15, a: 0.35 * (1 - coil), add: 1, r: PI / 2 });
       /* Skydekket vi brøt gjennom synker under oss. */
       const cy2 = 330 + seg(t, 5.24, 7.2) * 150; strip('fog', cy2, t * 40, { s: 1.4, a: 0.9 }) || rect(0, cy2 + 40, W, 200, '#d8f0e8', 0.6);
-      /* Den stuper forbi: først langt borte, så tett på. */
-      for (const [t0, d, s, fx, x0, y0, x1, y1] of [[5.3, 1.0, 2.6, 0, 620, -80, -140, 330], [6.47, 0.95, 4.6, 1, -260, 40, 800, 300]]) { const k = seg(t, t0, t0 + d); if (k > 0 && k < 1) for (let j = 3; j >= 0; j--) { const kk = c01(k - j * 0.03); im('em_rayfly', mix(x0, x1, kk), mix(y0, y1, kk) + sin(kk * 6) * 20, { s, a: j ? 0.25 : 1, px: 1, flip: fx, add: j ? 1 : 0 }) || spr(mix(x0, x1, kk), mix(y0, y1, kk) + sin(kk * 6) * 20, s * 0.9, { a: j ? 0.25 : 1, flip: !fx, add: j ? 1 : 0 }); } }
+      /* Den stuper forbi langt borte: hele kroppen, på skrå ned gjennom bildet (bildet følger sin egen lengderetning, så den bukter seg fram). */
+      { const k = seg(t, 5.3, 6.4); if (k > 0 && k < 1) for (let j = 4; j >= 0; j--) { const kk = c01(k - j * 0.035), d = mix(-560, 560, kk), sw = sin(kk * 9) * 14, x = 256 - 0.54 * d + 0.84 * sw, y = 192 + 0.84 * d + 0.54 * sw; im('em_raylong', x, y, { s: 2.8 + kk, a: j ? 0.22 : 1, px: 1, add: j ? 1 : 0 }) || spr(x, y, 1.7, { a: j ? 0.22 : 1, add: j ? 1 : 0 }); } }
+      /* Så kommer den rett mot oss: hodet inn fra øvre høyre hjørne, og et kast mot kameraet til gapet fyller bildet.
+         Bildet av den slutter ved kanten øverst (der kroppen fortsetter), så den kanten holdes hele tiden utenfor. ax, ay = der gapet er på skjermen. */
+      if (t >= 6.47 && t < 7.69) { const k1 = eo(seg(t, 6.47, 7.0)), k2 = ei(seg(t, 7.0, 7.62)), s = 3.4 + k2 * 4.1, ax = mix(mix(407, 67, k1), 256, k2), ay = mix(mix(-161, 289, k1), 236, k2) + sin(t * 30) * 3 * k2, x = ax + 51.5 * s, y = ay - 41 * s, tr = 1 - k1 + k2 * 0.3;
+        rays(256, 236, { n: 22, rot: t * 0.7, col: '#eafff0', a: k2 * 0.45, r1: 560, wid: 0.2 });
+        for (let j = 2; j >= 0; j--) im('em_rayfly', x + j * 26 * tr, y - j * 30 * tr, { s, a: j ? 0.2 : 1, px: 1, add: j ? 1 : 0 }) || spr(mix(mix(560, 256, k1), 256, k2) + j * 26 * tr, mix(mix(-120, 180, k1), 200, k2) - j * 30 * tr, 2.2 + k2 * 6, { a: j ? 0.2 : 1, add: j ? 1 : 0 });
+        fill('#eafff0', seg(t, 7.5, 7.69) * 0.9); }
       /* Den kveiler seg rundt hele bildet. */
       if (coil > 0) { fill('#022a3a', coil * 0.72); cover('em_raytitle', { z: 1.04 + (t - 7.69) * 0.012, a: coil * (fin ? 0.5 : 1) }) || glow(256, 192, 300, '#18a060', coil); im('em_rayring2', 256, 200, { s: 5.4, a: hit(t, 8.93, 0.8) * 0.5, add: 1, px: 1 });
         dust('spark', { n: 30, seed: 5, cols: ['#ffe86a', '#fff'], a: coil, size: 2 }); }
@@ -219,7 +225,7 @@
         aura(256, y, 3.1, '#b8ffd0', 4 + bt * 3, 0.35 + bt * 0.3); spr(256, y, 3.1); dust('ember', { n: 44, seed: 8, cols: ['#b8ffd0', '#ffe86a', '#fff'], a: 0.9, spd: 1.6, wind: -0.3 });
         wave(10.16, 256, 180, { col: '#d8ffe8', r: 560, d: 0.9, w: 16 }); wave(10.45, 256, 180, { col: '#ffe86a', r: 560, d: 1 }); card(10.9, { col: '#3fe08a' }); }
       wave(5.24, 256, 192, { col: '#fff', r: 560, d: 0.8, w: 14 });
-      P.sh = hit(t, 5.24, 0.9) * 12 + hits(t, [5.6, 6.9], 0.5) * 6 + hit(t, 10.16, 1) * 14 + bt * 2; P.fl = max(hit(t, 5.24, 0.4), hit(t, 10.16, 0.35), seg(t, 12.45, 12.7)); P.fc = '#eafff0'; P.z = 1 + hit(t, 10.16, 0.5) * 0.12; P.rgb = hit(t, 10.16, 0.5) * 5;
+      P.sh = hit(t, 5.24, 0.9) * 12 + hit(t, 5.8, 0.5) * 5 + hit(t, 6.47, 0.4) * 5 + seg(t, 7.0, 7.62) * (1 - seg(t, 7.62, 7.9)) * 10 + hit(t, 10.16, 1) * 14 + bt * 2; P.fl = max(hit(t, 5.24, 0.4), hit(t, 7.69, 0.3) * 0.8, hit(t, 10.16, 0.35), seg(t, 12.45, 12.7)); P.fc = '#eafff0'; P.z = 1 + hit(t, 10.16, 0.5) * 0.12; P.rgb = hit(t, 10.16, 0.5) * 5;
     },
     air(t, k) {
       fill('#06202a', 0.2 * k); fog('', { n: 6, seed: 5, a: 0.7 * k, spd: 30, s: 1.6, y0: -40, y1: 50, col: '#1c2c30' }); for (let i = 0; i < 2; i++) im('streaks', ((t * (620 + i * 200) + i * 300) % 1700) - 480, 90 + i * 150, { s: 1.1, a: 0.4 * k, add: 1, flip: 1 });
@@ -777,8 +783,8 @@
         vig(0.5, '#02030a'); P.sh = hit(t, R, 0.8) * 9 + bt * 2; P.fl = max(hit(t, R, 0.4) * 0.9, seg(t, len - 0.25, len)); P.fc = '#fff'; P.z = 1 + hit(t, R, 0.4) * 0.08; P.zy = cy;
       },
       air(t, k, cc) { MOOD[mood](t, 0.75 * k, cc || K.cur.cc); vig(0.35 * k, '#02030a'); },
-      /* Stedet bak plattformene i kampen: samme sted som i filmen, litt mørkere nederst så plattformene står tydelig. */
-      bg(t, k, cc) { if (bg) { cover(bg, { z: 1.06, py: -0.25 }) || lin(['#0a0e18', '#1a2434', '#0a0e18']); fill(tc, ta + 0.08); if (bg === 'loc_tohjo') falls(t, 268, 159, 40, 268, 0.7, 0); } else calmBg(mood, t, cc || K.cur.cc); lin([[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,.5)']], 1, 200, 384); }
+      /* Stedet i kampen: samme sted som i filmen, som bakvegg over horisonten, med et mørkere gulv foran (plattformene legges på i raidx.js). */
+      bg(t, k, cc) { if (bg) { cover(bg, { z: 1.06, py: -0.25 }) || lin(['#0a0e18', '#1a2434', '#0a0e18']); fill(tc, ta + 0.08); if (bg === 'loc_tohjo') falls(t, 268, 159, 40, 268, 0.7, 0); } else calmBg(mood, t, cc || K.cur.cc); lin([[0, 'rgba(0,0,0,.3)'], [1, 'rgba(0,0,0,.62)']], 1, 146, 384); rect(0, 145, W, 2, '#000', 0.3); }
     };
   };
   const calmCache = {};

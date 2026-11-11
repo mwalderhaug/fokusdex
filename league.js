@@ -502,19 +502,20 @@ const LEG = {}; LEGD.split('|').forEach(r => { const q = r.split(','); LEG[+q[0]
         og hver gang Mewtwo viser seg, er det DARKP sjanse for at den blir til Dark Mewtwo foran øynene dine.
    BELØNNING: mynter (RAIDCOIN × vanskelighetsgrad), Rare Candy (RAIDCANDY), mye XP til hele laget, og den legendariske venter i gresset. */
 const RAIDLV = [60, 72, 66, 85, 92], RAIDHP = [2, 2.7, 2.3, 2.8, 3.8], RAIDCOIN = [1200, 2500, 1800, 5000, 8000], RAIDCANDY = [3, 5, 4, 8, 10], RAIDOFF = [1, 2, 2, 2, 5];
-const RAIDTRIES = 3, RAIDGOAL = 0.3, RAIDFAC = 0.35, MEWP = 0.08, DARKP = 0.25;
-/* De sterkeste viser seg bare for lag som kan gi dem kamp: de mytiske fra lagnivå 25, de største fra 35, og Arceus, Deoxys og Dark Mewtwo fra 45. */
+const RAIDTRIES = 3, RAIDGOAL = 0.3, RAIDFAC = 0.35, MEWP = 0.08, DARKP = 0.3;
+/* De sterkeste viser seg bare for lag som kan gi dem kamp: de mytiske fra lagnivå 25, de største fra 35, og Arceus og Deoxys fra 45. (Dark Mewtwo kommer bare ut av en slått Mewtwo.) */
 const RAIDGATE = [0, 35, 25, 45, 45];
 const raidLvFor = t => Math.max(12, Math.min(RAIDLV[t - 1] + 3 * Math.min(5, S.lad.lap || 0), Math.round(leagueLv()) + RAIDOFF[t - 1]));
 /* Dark Mewtwo (Shadow Mewtwo i Pokkén Tournament, «Dark Mewtwo» på japansk): den sjeldneste og sterkeste av alle. Samme art som Mewtwo, men mørk (sh: 2),
-   på et høyere nivå enn Arceus og med mer HP. Den kommer som et vanlig Mewtwo-raid: først i filmen blir den mørk (S.raid.seen = du har sett det).
-   Slår du den, er det den mørke som venter i gresset. */
+   på et høyere nivå enn Arceus og med mer HP. Den finnes ikke som eget raid: den er RUNDE TO. Slår du Mewtwo i et raid, er det DARKP sjanse for at den
+   reiser seg igjen som Dark Mewtwo (finishRaid). Da har du fått belønningen for Mewtwo, laget ditt er friskt igjen (en ny kamp), og du må slåss en gang til,
+   med en gang. Vinner du, er det den mørke som venter i gresset. Taper du, står den igjen som raid med forsøkene du hadde igjen, og går også de tapt,
+   slipper skyggen taket og den vanlige Mewtwo du slo, venter i gresset. */
 const DARK = { id: 150, t: 5, mre: 'X & Y - Mewtwo>>Mewtwo', sc: 'cave', th: 'evil', cc: '#ff8a2a', bg: 'void', sig: 'rings', n: 'Dark Mewtwo', title: 'Shadow Pokémon' };
 const hasDark = () => S.mons.some(m => m.id === 150 && m.sh === 2);
 const raidInfo = R => R && R.dk ? DARK : R ? LEG[R.id] : null;
-/* Det raidkortet viser før kampen: en Dark Mewtwo du ikke har sett ennå, ser ut som en vanlig Mewtwo. */
-const raidVeil = R => !!(R && R.dk && !R.seen);
-const raidShow = R => raidVeil(R) ? { L: LEG[150], n: D(150)[0], sh: 0, lv: R.lv0 || R.lv } : { L: raidInfo(R), n: R.dk ? DARK.n : D(R.id)[0], sh: R.dk ? 2 : 0, lv: R.lv };
+/* Det raidkortet viser før kampen. */
+const raidShow = R => ({ L: raidInfo(R), n: R.dk ? DARK.n : D(R.id)[0], sh: R.dk ? 2 : 0, lv: R.lv });
 const raidTitle = (id, dk) => dk ? DARK.title : id === 493 ? 'The Original One' : LEG[id].t === 3 || id === 386 ? 'Mythical Pokémon' : 'Legendary Pokémon';
 function raidPick() {
   const p4 = Math.min(0.25, 0.03 + 0.006 * (S.rpity || 0)), r = Math.random(), lv = leagueLv(), all = Object.keys(LEG).map(Number);
@@ -526,13 +527,10 @@ function raidPick() {
 function raidSpawn(res) {
   if (S.raid) return false;
   const lv = leagueLv();
-  let id = !hasDark() && lv >= RAIDGATE[1] && Math.random() < MEWP ? 150 : raidPick();
-  /* Har du alt den vanlige Mewtwo og den ikke er mørk denne gangen, kommer en annen legendarisk i stedet. */
-  const dark = id === 150 && !hasDark() && lv >= RAIDGATE[4] && Math.random() < DARKP;
-  if (id === 150 && !dark && S.mons.some(m => m.id === 150)) id = raidPick();
-  const t = dark ? 5 : LEG[id].t;
+  /* Mewtwo har sin egen trekning (MEWP) helt til du eier Dark Mewtwo, også om du alt har den vanlige: det er bare gjennom den du kan møte den mørke. */
+  const id = !hasDark() && lv >= RAIDGATE[1] && Math.random() < MEWP ? 150 : raidPick(), t = LEG[id].t;
   S.rpity = t >= 4 ? 0 : (S.rpity || 0) + 1;
-  S.raid = { id, lv: raidLvFor(t), day: '', tries: 0 }; if (dark) { S.raid.dk = 1; S.raid.lv0 = raidLvFor(2); }
+  S.raid = { id, lv: raidLvFor(t), day: '', tries: 0 };
   if (res) res.raid = id;
   return true;
 }
@@ -594,7 +592,6 @@ function raidMoves(id, lv) {
 /* demo = arten som skal prøves i demoen (gir ingenting), eller 'dk' for Dark Mewtwo. Ellers den som har vist seg. */
 function raidBattle(lead, demo) {
   const R = demo === 'dk' ? { id: 150, dk: 1, lv: raidLvFor(5) } : demo ? { id: demo, lv: raidLvFor(LEG[demo].t) } : S.raid, L = raidInfo(R), party = S.party.map(monBy).filter(Boolean);
-  if (!demo && R.dk && !R.seen) { R.seen = 1; save(true); }
   party.sort((a, b) => (b.u === lead) - (a.u === lead));
   /* Vanskelighetsgraden senker nivået og HP-en til den legendariske (Hard = som før). */
   const dd = diff(), lv = Math.max(10, Math.round(R.lv * dd.rlv)), e = Math.round((R.dk ? 100 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : 0, g: rollG(R.id), mega: defForm(R.id), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: raidMoves(R.id, lv) };
@@ -611,11 +608,22 @@ function finishRaid(B) {
     const c = RAIDCANDY[t - 1]; S.items.candy = (S.items.candy || 0) + c; res.items.push(`${c} × Rare Candy`);
     if (t >= 2) { const n = t >= 4 ? 3 : 1; S.items.ultra = (S.items.ultra || 0) + n + 1; res.items.push(`${n + 1} × Ultra Ball`); }
     if (t >= 4) giveCharm(res);
-    pushEnc(res, Object.assign(genEnc({ ids: [id] }), B.tr.dk ? { sh: 2 } : {})); S.raid = null; res.note = `${nm} is waiting in the grass. Go and catch it.`;
+    if (id === 150 && !B.tr.dk && R && !hasDark() && Math.random() < DARKP) {
+      /* Den reiser seg igjen. Belønningen for Mewtwo er gitt; r1 husker den til oppsummeringen etter runde to. */
+      S.raid = { id: 150, dk: 1, lv: raidLvFor(5), day: '', tries: R.tries || 0, won1: 1, r1: `${res.coins.toLocaleString('en-US')} coins, ${res.items.join(', ')}` };
+      res.dark = 1; res.note = 'Mewtwo is not finished.';
+    } else {
+      pushEnc(res, Object.assign(genEnc({ ids: [id] }), B.tr.dk ? { sh: 2 } : {})); S.raid = null; res.note = `${nm} is waiting in the grass. Go and catch it.`;
+      if (R && R.r1) res.perks.push(`Mewtwo gave its rewards before it changed: ${R.r1}.`);
+    }
   } else if (R) {
     R.day = dayKey(); R.tries = (R.tries || 0) + 1;
-    if (R.tries >= RAIDTRIES) { S.raid = null; res.note = `${nm} has moved on. Another legendary Pokémon will show itself in time.`; }
-    else res.note = `${nm} stays where it is. You have ${RAIDTRIES - R.tries} ${RAIDTRIES - R.tries === 1 ? 'attempt' : 'attempts'} left, one a day.`;
+    const pre = R.r1 && !R.told ? `Mewtwo's rewards are yours: ${R.r1}. ` : ''; R.told = 1;
+    if (R.tries >= RAIDTRIES) {
+      S.raid = null;
+      if (R.won1) { pushEnc(res, genEnc({ ids: [150] })); res.note = `${pre}The shadow lets go and Dark Mewtwo is gone. The Mewtwo you beat is waiting in the grass.`; }
+      else res.note = `${nm} has moved on. Another legendary Pokémon will show itself in time.`;
+    } else res.note = `${pre}${nm} stays where it is. You have ${RAIDTRIES - R.tries} ${RAIDTRIES - R.tries === 1 ? 'attempt' : 'attempts'} left, one a day.`;
   }
   save(); return res;
 }

@@ -224,9 +224,11 @@
     } });
 
   /* ================= STEDENE =================
-     Stedet tegnes bak plattformene (føttene til den legendariske står rundt 379, 186 og din rundt 123, 372). Horisonten ligger rundt 200. */
+     Stedet tegnes bak de to. Oppstillingen er den samme som i trenerkampene (banebildene i pakken): horisonten høyt i bildet (HZ), plattformen til den
+     legendariske til høyre midt i bildet (FB) og din egen stor nederst til venstre (MB). Plattformene tegnes her, i stedets farger, så begge står midt på hver sin. */
+  const HZ = 146, FB = [374, 191, 140, 30], MB = [206, 392, 224, 104];
   /* Gulvet: fra horisonten og ned, med linjer som løper mot et forsvinningspunkt. */
-  const ground = (yh, c0, c1, line, la, vx) => { const X = K.g, gr = X.createLinearGradient(0, yh, 0, H); gr.addColorStop(0, c0); gr.addColorStop(1, c1); X.fillStyle = gr; X.fillRect(0, yh, W, H - yh); if (!line) return; X.save(); X.globalAlpha = la == null ? 0.35 : la; X.strokeStyle = line; X.lineWidth = 1; X.beginPath(); for (let i = -9; i <= 9; i++) { X.moveTo((vx || 256) + i * 16, yh); X.lineTo((vx || 256) + i * 150, H); } for (let j = 1; j < 7; j++) { const yy = yh + (H - yh) * Math.pow(j / 7, 1.8); X.moveTo(0, yy); X.lineTo(W, yy); } X.stroke(); X.restore(); };
+  const ground = (yh, c0, c1, line, la, vx) => { const X = K.g, gr = X.createLinearGradient(0, yh, 0, H); gr.addColorStop(0, c0); gr.addColorStop(1, c1); X.fillStyle = gr; X.fillRect(0, yh, W, H - yh); if (!line) return; X.save(); X.globalAlpha = la == null ? 0.35 : la; X.strokeStyle = line; X.lineWidth = 1; X.beginPath(); for (let i = -9; i <= 9; i++) { X.moveTo((vx || 256) + i * 16, yh); X.lineTo((vx || 256) + i * 190, H); } for (let j = 1; j < 8; j++) { const yy = yh + (H - yh) * Math.pow(j / 8, 1.8); X.moveTo(0, yy); X.lineTo(W, yy); } X.stroke(); X.restore(); };
   /* En søyle med rifler. Står på yb. br = brukket topp. */
   const column = (x, yb, w, h, c0, c1, br) => {
     const X = K.g, gr = X.createLinearGradient(x - w / 2, 0, x + w / 2, 0); gr.addColorStop(0, c1); gr.addColorStop(0.35, c0); gr.addColorStop(1, c1);
@@ -236,82 +238,96 @@
     rect(x - w * 0.68, yb - 8, w * 1.36, 8, c1); rect(x - w * 0.6, yb - 12, w * 1.2, 5, c0);
     if (!br) { rect(x - w * 0.68, yb - h - 8, w * 1.36, 8, c0); rect(x - w * 0.6, yb - h, w * 1.2, 5, c1); }
   };
-  const F = CINE.FILM, set = (id, plat, use, bg) => { const f = F[id]; if (!f) return; f.bg = bg; f.plat = plat; f.use = (f.use || []).concat((use || []).filter(n => !(f.use || []).includes(n))); };
+  /* En plattform som i trenerkampene: skygge under, mørk kant, en flate som lysner mot midten, og en lys ring. pl = [lys, mellom, mørk]. */
+  const base = (x, y, rx, ry, pl) => {
+    const X = K.g; X.save(); X.translate(x, y); X.scale(1, ry / rx);
+    X.fillStyle = 'rgba(0,0,0,.42)'; X.beginPath(); X.arc(0, rx * 0.12, rx * 1.04, 0, TAU); X.fill();
+    X.fillStyle = pl[2]; X.beginPath(); X.arc(0, 0, rx, 0, TAU); X.fill();
+    const gr = X.createRadialGradient(-rx * 0.12, -rx * 0.3, rx * 0.04, 0, 0, rx * 0.94); gr.addColorStop(0, pl[0]); gr.addColorStop(0.72, pl[1]); gr.addColorStop(1, blend(pl[1], pl[2], 0.55));
+    X.fillStyle = gr; X.beginPath(); X.arc(0, 0, rx * 0.93, 0, TAU); X.fill();
+    X.strokeStyle = 'rgba(255,255,255,.2)'; X.lineWidth = rx * 0.022; X.beginPath(); X.arc(0, 0, rx * 0.7, 0, TAU); X.stroke();
+    X.restore();
+  };
+  /* Plattformfarger ut fra fargen til den legendariske, for stedene som ikke har egne. */
+  const autoPlat = cc => [blend(cc, '#ffffff', 0.45), blend(cc, '#1c2028', 0.5), blend(cc, '#000000', 0.82)];
+  /* De to plattformene, og vignetten ytterst. Tegnes til slutt for alle steder. */
+  const stage = (pl, cc, vg) => { glow(FB[0], FB[1], FB[2] * 1.1, cc, 0.14, 1); base(FB[0], FB[1], FB[2], FB[3], pl); base(MB[0], MB[1], MB[2], MB[3], pl); vig(vg[0], vg[1]); };
+  const F = CINE.FILM, set = (id, plat, use, vg, draw) => { const f = F[id]; if (!f) return; f.plat = plat; f.use = (f.use || []).concat((use || []).filter(n => !(f.use || []).includes(n))); f.bg = (t, k, cc) => { draw(t, k, cc); stage(plat, cc || K.cur.cc || '#ffffff', vg); }; };
 
-  /* Arceus – Opphavets hall, over Spear Pillar: stjernene, hjulet som henger i lufta, lyset ovenfra, og et gulv av lys marmor mellom søylene. */
-  set(493, ['#fff6d0', '#e8cc70', '#8a6a18'], ['space', 'goldvortex'], t => {
+  /* Arceus – Opphavets hall, over Spear Pillar: stjernene, hjulet som stiger bak horisonten, lyset ovenfra, og et gulv av lys marmor mellom søylene. */
+  set(493, ['#fff6d0', '#e8cc70', '#8a6a18'], ['space', 'goldvortex'], [0.35, '#0a0600'], t => {
     im('space', 256, 192) || lin(['#02030c', '#0a1238', '#02030c']); stars({ n: 110, seed: 5, a: 0.9, cols: ['#fff', '#ffe9a8', '#9fd0ff'] });
-    im('goldvortex', 379, 118, { s: 1.1, r: t * 0.05, a: 0.45, add: 'screen' }) || glow(379, 118, 230, '#6a5420', 0.6, 1);
-    rays(379, 112, { n: 16, rot: t * 0.04, col: '#ffe9a8', a: 0.16 + 0.04 * sin(t * 0.8), r1: 420, wid: 0.28 }); wheel(379, 112, 98, 1, t * 0.12, 0.42 + 0.08 * sin(t));
-    ground(198, '#cfc49a', '#4a4230', '#fff6d0', 0.4, 300); rect(0, 196, W, 3, '#fff6d0', 0.9);
-    column(40, 250, 34, 210, '#f4ecd0', '#8a7c50'); column(140, 222, 24, 160, '#e8e0c0', '#807248'); column(222, 206, 16, 118, '#d8d0b0', '#786a44', 1); column(486, 262, 38, 230, '#f4ecd0', '#8a7c50');
-    beam(379, 60, -10, 198, '#ffe9a8', 0.2 + 0.05 * sin(t * 1.3), '#fff');
-    dust('up', { n: 40, seed: 6, cols: ['#ffe9a8', '#fff'], a: 0.7, spd: 0.6 }); vig(0.35, '#0a0600');
+    im('goldvortex', 377, 96, { s: 1.1, r: t * 0.05, a: 0.45, add: 'screen' }) || glow(377, 96, 230, '#6a5420', 0.6, 1);
+    rays(377, 96, { n: 16, rot: t * 0.04, col: '#ffe9a8', a: 0.16 + 0.04 * sin(t * 0.8), r1: 420, wid: 0.28 }); wheel(377, 96, 104, 1, t * 0.12, 0.42 + 0.08 * sin(t));
+    ground(HZ, '#cfc49a', '#4a4230', '#fff6d0', 0.4, 300); rect(0, HZ - 2, W, 3, '#fff6d0', 0.9);
+    column(30, HZ + 70, 38, 240, '#f4ecd0', '#8a7c50'); column(112, HZ + 28, 26, 170, '#e8e0c0', '#807248'); column(178, HZ + 8, 16, 110, '#d8d0b0', '#786a44', 1); column(502, HZ + 86, 40, 260, '#f4ecd0', '#8a7c50');
+    beam(377, 60, -10, HZ, '#ffe9a8', 0.2 + 0.05 * sin(t * 1.3), '#fff'); dust('up', { n: 40, seed: 6, cols: ['#ffe9a8', '#fff'], a: 0.7, spd: 0.6 });
   });
   /* Rayquaza – toppen av Sky Pillar: over skyene, med ozonlaget som et grønt bånd på himmelen og tårnets steinheller under føttene. */
-  set(384, ['#d8d0b0', '#a89c78', '#5a5240'], ['curtainblue', 'curtain1', 'curtain2'], t => {
-    lin(['#020a24', '#0a2c5c', '#2a78a8', '#9fd8e0']); stars({ n: 70, seed: 5, a: 0.6, cols: ['#fff'] }); aurora(t, 0.45);
-    glow(379, 50, 220, '#3fe08a', 0.18 + 0.05 * sin(t * 0.7), 1);
+  set(384, ['#e0d8b8', '#a89c78', '#4a4434'], ['curtainblue', 'curtain1', 'curtain2'], [0.3, '#02081a'], t => {
+    lin(['#020a24', '#0a2c5c', '#2a78a8', '#9fd8e0'], 1, 0, HZ + 10); stars({ n: 70, seed: 5, a: 0.6, cols: ['#fff'], y1: HZ }); aurora(t, 0.45);
+    glow(377, 40, 220, '#3fe08a', 0.18 + 0.05 * sin(t * 0.7), 1);
     /* Skyhavet under oss. */
-    for (let L = 0; L < 3; L++) for (let i = 0; i < 9; i++) { const z = 0.7 + L * 0.3, x = ((rnd(i, 3 + L) * 700 + t * (5 + L * 4)) % 700) - 90; glow(x, 150 + L * 18 + rnd(i, 6 + L) * 14, 70 * z, L === 2 ? '#f4fbff' : '#c8dcea', 0.75); }
-    lin([[0, 'rgba(244,251,255,0)'], [1, '#f4fbff']], 0.85, 160, 208);
-    ground(204, '#b8ae8a', '#4a4434', '#3a3428', 0.5, 220); rect(0, 202, W, 4, '#e8e0c0', 0.9);
-    column(60, 246, 36, 96, '#c8c0a0', '#6a6248', 1); column(470, 232, 30, 150, '#c8c0a0', '#6a6248', 1); column(250, 210, 18, 60, '#b0a888', '#5a5440', 1);
+    for (let L = 0; L < 3; L++) for (let i = 0; i < 9; i++) { const z = 0.7 + L * 0.3, x = ((rnd(i, 3 + L) * 700 + t * (5 + L * 4)) % 700) - 90; glow(x, HZ - 46 + L * 16 + rnd(i, 6 + L) * 12, 60 * z, L === 2 ? '#f4fbff' : '#c8dcea', 0.75); }
+    lin([[0, 'rgba(244,251,255,0)'], [1, '#f4fbff']], 0.85, HZ - 40, HZ + 6);
+    ground(HZ + 4, '#b8ae8a', '#4a4434', '#3a3428', 0.5, 220); rect(0, HZ + 2, W, 4, '#e8e0c0', 0.9);
+    column(40, HZ + 74, 38, 110, '#c8c0a0', '#6a6248', 1); column(150, HZ + 24, 24, 80, '#b8b090', '#5e5844', 1); column(498, HZ + 60, 32, 170, '#c8c0a0', '#6a6248', 1);
     for (let i = 0; i < 5; i++) { const ph = (rnd(i, 7) + t * (0.5 + rnd(i, 8) * 0.4)) % 1; rect(W - ph * (W + 300), 30 + rnd(i, 9) * 300, 120, 1.5, '#fff', 0.35 * sin(ph * PI), 1); }
-    vig(0.3, '#02081a');
   });
-  /* Giratina – Forvrengningsverdenen, med en øy av stein under føttene. */
-  set(487, ['#3a2a55', '#1a1028', '#07040c'], [], t => { gWorld(t); island(379, 190, 150, 70, 5, 0, '#0c0716', '#5a3a72'); island(110, 362, 210, 60, 8, 0, '#0c0716', '#5a3a72'); vig(0.4, '#05010a'); });
+  /* Giratina – Forvrengningsverdenen: de to plattformene ligger på hver sin svevende øy. */
+  set(487, ['#6a4a86', '#22142e', '#07040c'], [], [0.4, '#05010a'], t => { gWorld(t); island(FB[0], FB[1] + 6, FB[2] * 1.08, 84, 5, 0, '#0c0716', '#5a3a72'); island(MB[0], MB[1] - 40, MB[2] * 1.06, 60, 8, 0, '#0c0716', '#5a3a72'); });
   /* Mewtwo – ruinene av laboratoriet: det som er igjen av rommet svever rundt den. */
-  set(150, ['#4a3a6a', '#2a1c4a', '#0e0820'], ['vortex', 'rings'], t => {
-    lin(['#06020e', '#150a2c', '#0a0418']); im('vortex', 379, 130, { s: 1.2, r: t * 0.1, a: 0.6, add: 'screen' }) || glow(379, 130, 240, '#3a1a6a', 0.6, 1); im('rings', 379, 130, { s: 1.3, r: -t * 0.25, a: 0.25, add: 1 });
-    for (let i = 0; i < 9; i++) rect(i * 64 + 10 + (rnd(i, 3) - 0.5) * 20, 20, 2, 110 + rnd(i, 5) * 110, '#2a1c4a', 0.6);
-    ground(200, '#1c1232', '#05030c', '#5a3a9a', 0.3); rect(0, 198, W, 3, '#3a2a6a', 0.9);
-    for (let i = 0; i < 16; i++) { const an = rnd(i, 41) * TAU + t * (0.12 + rnd(i, 42) * 0.15), R = 150 + rnd(i, 43) * 150; mRock(379 + cos(an) * R, 120 + sin(an) * 70 + sin(t * 1.4 + i) * 5, 5 + rnd(i, 44) * 12, i + 50, '#120c20'); }
+  set(150, ['#8a70c0', '#2a1c4a', '#0e0820'], ['vortex', 'rings'], [0.45, '#0a0218'], t => {
+    lin(['#06020e', '#150a2c', '#0a0418']); im('vortex', 377, 96, { s: 1.2, r: t * 0.1, a: 0.6, add: 'screen' }) || glow(377, 96, 240, '#3a1a6a', 0.6, 1); im('rings', 377, 96, { s: 1.3, r: -t * 0.25, a: 0.25, add: 1 });
+    for (let i = 0; i < 9; i++) rect(i * 64 + 10 + (rnd(i, 3) - 0.5) * 20, 10, 2, 70 + rnd(i, 5) * 70, '#2a1c4a', 0.6);
+    ground(HZ, '#1c1232', '#05030c', '#5a3a9a', 0.3); rect(0, HZ - 2, W, 3, '#3a2a6a', 0.9);
+    for (let i = 0; i < 16; i++) { const an = rnd(i, 41) * TAU + t * (0.12 + rnd(i, 42) * 0.15), R2 = 150 + rnd(i, 43) * 150; mRock(377 + cos(an) * R2, 80 + sin(an) * 60 + sin(t * 1.4 + i) * 5, 5 + rnd(i, 44) * 12, i + 50, '#120c20'); }
     /* Den knuste tanken. */
-    for (const [x, h] of [[60, 120], [86, 70], [112, 150]]) { rect(x, 250 - h, 5, h, '#c8fff0', 0.25, 1); } rect(44, 250, 96, 14, '#2a3a44'); rect(44, 250, 96, 4, '#5a7480');
-    glow(92, 240, 80, '#20c0b0', 0.18 + 0.06 * sin(t * 2), 1); dust('ember', { n: 30, seed: 7, cols: ['#c080ff', '#8a5aff'], a: 0.6, spd: 0.7 }); vig(0.45, '#0a0218');
+    for (const [x, h] of [[52, 110], [78, 64], [104, 138]]) rect(x, HZ + 52 - h, 5, h, '#c8fff0', 0.25, 1); rect(36, HZ + 52, 96, 14, '#2a3a44'); rect(36, HZ + 52, 96, 4, '#5a7480');
+    glow(84, HZ + 40, 80, '#20c0b0', 0.18 + 0.06 * sin(t * 2), 1); dust('ember', { n: 30, seed: 7, cols: ['#c080ff', '#8a5aff'], a: 0.6, spd: 0.7 });
   });
   /* Kyogre – havet i uvær. */
-  set(382, ['#7ab0d8', '#3a6a9a', '#12304a'], ['em_cloudL', 'em_cloudR', 'smoke'], t => { storm(t, 0.35, 0.3); sea(t, 196, 9, ['#12304a', '#0e3a6a', '#0a2a50']); lin([[0, 'rgba(2,10,20,0)'], [1, 'rgba(2,10,20,.6)']], 1, 260, 384); const q = floor(t * 0.8), ph = (t * 0.8) % 1; if (ph < 0.18 && rnd(q, 3) > 0.4) { bolt(rnd(q, 1) * W, -10, rnd(q, 2) * W, 190, { seed: q * 3, col: '#9fd0ff', w: 2, a: 1 - ph / 0.18, br: 2 }); fill('#9fd0ff', (0.18 - ph) * 0.8); } });
+  set(382, ['#9ac8e8', '#2a5a8a', '#0a2238'], ['em_cloudL', 'em_cloudR', 'smoke'], [0.35, '#020a14'], t => { storm(t, 0.35, 0.3); sea(t, HZ, 8, ['#12304a', '#0e3a6a', '#0a2a50']); lin([[0, 'rgba(2,10,20,0)'], [1, 'rgba(2,10,20,.6)']], 1, 250, 384); const q = floor(t * 0.8), ph = (t * 0.8) % 1; if (ph < 0.18 && rnd(q, 3) > 0.4) { bolt(rnd(q, 1) * W, -10, rnd(q, 2) * W, HZ, { seed: q * 3, col: '#9fd0ff', w: 2, a: 1 - ph / 0.18, br: 2 }); fill('#9fd0ff', (0.18 - ph) * 0.8); } });
   /* Groudon – magmakammeret. */
-  set(383, ['#6a3a20', '#3a1a0c', '#140602'], ['fireband', 'smoke'], t => {
-    lin(['#0a0200', '#2a0800', '#5a1400', '#1a0400']); im('fireband', 256, 196, { s: 1.4, a: 0.6 + 0.2 * sin(t * 1.3), add: 1 }) || glow(256, 200, 300, '#ff5a14', 0.5, 1);
-    for (let i = 0; i < 9; i++) { const x = i * 70 - 20 + rnd(i, 3) * 30, h = 60 + rnd(i, 4) * 110; poly([[x - 26, 0], [x + 26, 0], [x + 6, h], [x - 4, h * 0.8]], '#120502'); }
-    ground(200, '#3a1206', '#080201'); lava(11, 214, 0.75 + 0.2 * sin(t * 1.7), 0); glow(256, 384, 300, '#ff5a14', 0.3 + 0.08 * sin(t * 2), 1);
-    dust('ember', { n: 50, seed: 4, cols: ['#ff7a2a', '#ffd070'], a: 0.8, spd: 1.2 }); fog('smoke', { n: 4, seed: 5, a: 0.25, spd: 10, s: 2, y0: 20, y1: 150 }); vig(0.45, '#140200');
+  set(383, ['#c07a40', '#4a2010', '#140602'], ['fireband', 'smoke'], [0.45, '#140200'], t => {
+    lin(['#0a0200', '#2a0800', '#5a1400', '#1a0400']); im('fireband', 256, HZ - 4, { s: 1.4, a: 0.6 + 0.2 * sin(t * 1.3), add: 1 }) || glow(256, HZ, 300, '#ff5a14', 0.5, 1);
+    for (let i = 0; i < 9; i++) { const x = i * 70 - 20 + rnd(i, 3) * 30, h = 40 + rnd(i, 4) * 80; poly([[x - 26, 0], [x + 26, 0], [x + 6, h], [x - 4, h * 0.8]], '#120502'); }
+    ground(HZ, '#3a1206', '#080201'); lava(11, HZ + 14, 0.75 + 0.2 * sin(t * 1.7), 0); glow(256, 384, 300, '#ff5a14', 0.3 + 0.08 * sin(t * 2), 1);
+    dust('ember', { n: 50, seed: 4, cols: ['#ff7a2a', '#ffd070'], a: 0.8, spd: 1.2 }); fog('smoke', { n: 4, seed: 5, a: 0.25, spd: 10, s: 2, y0: 10, y1: 110 });
   });
   /* Dialga og Palkia – Spear Pillar: søylene på fjelltoppen, med tiden (urverket) eller rommet (nettet) i himmelen bak. */
-  set(483, ['#b8c8e8', '#6a80b0', '#1e2c50'], ['space'], (t, k, cc) => {
-    im('space', 256, 192) || lin(['#02030c', '#0a1238', '#02030c']); lin([[0, 'rgba(10,30,90,0)'], [1, 'rgba(60,110,220,.5)']], 1, 60, 200); stars({ n: 90, seed: 6, a: 0.8, cols: ['#fff', '#9fd0ff'] });
-    clock(379, 110, 120, t * 0.4, t * 4.8, '#6aa8ff', 0.5); cog(170, 80, 60, 12, t * 0.3, '#6aa8ff', 0.3); cog(96, 150, 34, 8, -t * 0.5, '#6aa8ff', 0.25);
-    ground(200, '#8a98b8', '#1e2438', '#d8e4ff', 0.3); rect(0, 198, W, 3, '#d8e4ff', 0.8);
-    column(34, 252, 34, 220, '#c8d4f0', '#56648a'); column(132, 224, 24, 150, '#b8c4e0', '#4e5c80', 1); column(486, 264, 38, 250, '#c8d4f0', '#56648a'); column(232, 208, 16, 92, '#a8b4d0', '#465478', 1);
-    dust('mote', { n: 30, seed: 8, cols: ['#9fd0ff', '#fff'], a: 0.6 }); vig(0.4, '#02040f');
+  set(483, ['#d0dcf8', '#5a70a8', '#141e3a'], ['space'], [0.4, '#02040f'], t => {
+    im('space', 256, 192) || lin(['#02030c', '#0a1238', '#02030c']); lin([[0, 'rgba(10,30,90,0)'], [1, 'rgba(60,110,220,.5)']], 1, 30, HZ); stars({ n: 90, seed: 6, a: 0.8, cols: ['#fff', '#9fd0ff'] });
+    clock(377, 92, 116, t * 0.4, t * 4.8, '#6aa8ff', 0.5); cog(160, 60, 54, 12, t * 0.3, '#6aa8ff', 0.3); cog(86, 112, 30, 8, -t * 0.5, '#6aa8ff', 0.25);
+    ground(HZ, '#8a98b8', '#1e2438', '#d8e4ff', 0.3); rect(0, HZ - 2, W, 3, '#d8e4ff', 0.8);
+    column(30, HZ + 70, 38, 240, '#c8d4f0', '#56648a'); column(112, HZ + 28, 26, 160, '#b8c4e0', '#4e5c80', 1); column(502, HZ + 86, 40, 260, '#c8d4f0', '#56648a'); column(180, HZ + 8, 16, 84, '#a8b4d0', '#465478', 1);
+    dust('mote', { n: 30, seed: 8, cols: ['#9fd0ff', '#fff'], a: 0.6 });
   });
-  set(484, ['#f0c8e4', '#b070a0', '#4a1c48'], ['space'], t => {
-    pScene(t, 0.5 + 0.2 * sin(t * 0.6)); ground(206, '#6a3a78', '#160820', '#ffc0ea', 0.3); rect(0, 204, W, 3, '#ffc0ea', 0.8);
-    column(34, 252, 34, 220, '#e8c8e8', '#7a4a80'); column(132, 226, 24, 150, '#d8b8d8', '#6e4276', 1); column(486, 264, 38, 250, '#e8c8e8', '#7a4a80'); vig(0.4, '#0a0214');
+  set(484, ['#f8d0ec', '#8a4a80', '#2a0e2a'], ['space'], [0.4, '#0a0214'], t => {
+    pScene(t, 0.5 + 0.2 * sin(t * 0.6)); ground(HZ + 4, '#6a3a78', '#160820', '#ffc0ea', 0.3); rect(0, HZ + 2, W, 3, '#ffc0ea', 0.8);
+    column(30, HZ + 70, 38, 240, '#e8c8e8', '#7a4a80'); column(112, HZ + 28, 26, 160, '#d8b8d8', '#6e4276', 1); column(502, HZ + 86, 40, 260, '#e8c8e8', '#7a4a80');
   });
   /* Lugia – Whirl Islands: hula bak fossen. Ho-Oh – Tin Tower i soloppgangen. */
-  set(249, ['#9ac8e0', '#4a7aa0', '#16304a'], ['loc_tohjo', 'fog'], t => { cover('loc_tohjo', { z: 1.06, py: -0.25 }) || lin(['#041a2a', '#0a3a5a', '#041a2a']); fill('#041a3a', 0.35); falls(t, 268, 159, 40, 268, 0.7, 0); strip('fog', 250, t * 16, { s: 1.3, a: 0.5 }); lin([[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,10,20,.55)']], 1, 200, 384); });
-  set(250, ['#f8d890', '#c88a30', '#5a2c08'], ['skydawn', 'sun', 'rainbow'], t => {
-    lin(['#2a1040', '#b0482a', '#ffb050', '#ffe9a8']); im('skydawn', 256, 130, { s: 1.5, sy: 1.6, a: 0.8 }); im('sun', 379, 150, { s: 0.9, a: 0.7, add: 1, r: t * 0.03 }) || glow(379, 150, 220, '#ffd070', 0.7, 1);
-    im('rainbow', 200, 120, { s: 1.2, a: 0.3 + 0.08 * sin(t * 0.5), add: 1 }); M.pagoda(96, 232, 0.72, '#2a1008'); M.pagoda(20, 220, 0.4, '#3a180c');
-    ground(204, '#8a4a1c', '#1c0a04', '#ffd070', 0.25); rect(0, 202, W, 3, '#ffd070', 0.7); dust('ember', { n: 34, seed: 4, cols: ['#ffd070', '#fff', '#ff9a3a'], a: 0.7, spd: 0.6 }); vig(0.35, '#1a0600');
+  set(249, ['#c8e4f4', '#3a6a90', '#0e2438'], ['loc_tohjo', 'fog'], [0.35, '#020a14'], t => { cover('loc_tohjo', { z: 1.06, py: -0.25 }) || lin(['#041a2a', '#0a3a5a', '#041a2a']); fill('#041a3a', 0.35); falls(t, 268, 159, 20, 230, 0.7, 0); lin([[0, 'rgba(2,14,30,.35)'], [1, 'rgba(0,8,18,.7)']], 1, HZ, 384); rect(0, HZ - 1, W, 2, '#9fd0ff', 0.25); strip('fog', 200, t * 16, { s: 1.3, a: 0.45 }); });
+  set(250, ['#ffe8a8', '#c07a28', '#3a1a04'], ['skydawn', 'sun', 'rainbow'], [0.35, '#1a0600'], t => {
+    lin(['#2a1040', '#b0482a', '#ffb050', '#ffe9a8'], 1, 0, HZ + 10); im('skydawn', 256, 90, { s: 1.5, sy: 1.5, a: 0.8 }); im('sun', 377, 104, { s: 0.9, a: 0.7, add: 1, r: t * 0.03 }) || glow(377, 104, 220, '#ffd070', 0.7, 1);
+    im('rainbow', 200, 84, { s: 1.2, a: 0.3 + 0.08 * sin(t * 0.5), add: 1 }); M.pagoda(90, HZ + 30, 0.66, '#2a1008'); M.pagoda(24, HZ + 14, 0.38, '#3a180c');
+    ground(HZ, '#8a4a1c', '#1c0a04', '#ffd070', 0.25); rect(0, HZ - 2, W, 3, '#ffd070', 0.7); dust('ember', { n: 34, seed: 4, cols: ['#ffd070', '#fff', '#ff9a3a'], a: 0.7, spd: 0.6 });
   });
   /* Deoxys – krateret der meteoren slo ned, under nordlyset. */
-  set(386, ['#6a5a80', '#2e2440', '#0c0816'], ['space', 'curtain1', 'curtain2', 'curtainblue'], t => {
+  set(386, ['#b0a0d0', '#3a2c54', '#0c0816'], ['space', 'curtain1', 'curtain2', 'curtainblue'], [0.4, '#04020c'], t => {
     im('space', 256, 192) || lin(['#02030c', '#0a1238', '#02030c']); stars({ n: 120, seed: 5, a: 0.9, cols: ['#fff', '#ffb0a0', '#9fe8e0'] }); aurora(t, 0.8); helix(t, 60, 0.3); helix(t + 2, 470, 0.3);
-    poly([[0, 204], [90, 180], [180, 198], [260, 186], [330, 200], [430, 178], [W, 200], [W, H], [0, H]], '#0c0816'); ground(206, '#241a38', '#06040c', '#ff7a4a', 0.2);
-    for (let i = 0; i < 3; i++) ring(256, 300, 150 + i * 60, { col: '#ff7a4a', w: 2, a: 0.14, sy: 0.22 });
-    glow(379, 140, 170, '#ff7a4a', 0.12 + 0.05 * sin(t * 1.4), 1); dust('mote', { n: 36, seed: 8, cols: ['#ff7a4a', '#40d0c0', '#fff'], a: 0.7 }); vig(0.4, '#04020c');
+    poly([[0, HZ + 2], [90, HZ - 22], [180, HZ - 4], [260, HZ - 16], [330, HZ - 2], [430, HZ - 24], [W, HZ - 2], [W, H], [0, H]], '#0c0816'); ground(HZ + 4, '#241a38', '#06040c', '#ff7a4a', 0.2);
+    for (let i = 0; i < 3; i++) ring(256, HZ + 130, 170 + i * 70, { col: '#ff7a4a', w: 2, a: 0.14, sy: 0.3 });
+    glow(377, 96, 170, '#ff7a4a', 0.12 + 0.05 * sin(t * 1.4), 1); dust('mote', { n: 36, seed: 8, cols: ['#ff7a4a', '#40d0c0', '#fff'], a: 0.7 });
   });
   /* Reshiram – flammehavet. Zekrom – uværet. Kyurem – isgrotten. Darkrai – nymånenatten. */
-  set(643, ['#f0e0d0', '#c08060', '#4a1c10'], ['curtain1', 'curtain2', 'evilbg'], t => { lin(['#1a0400', '#5a1400', '#c04a14', '#3a0c00']); flames(t, 0.3, 0.8, ['#ff6a1a', '#ffe0b0']); ground(204, '#4a1608', '#0c0200', '#ffb070', 0.25); rect(0, 202, W, 3, '#ffb070', 0.6); dust('ember', { n: 60, seed: 4, cols: ['#ff7a2a', '#ffd070', '#fff'], a: 0.9, spd: 1.5 }); vig(0.4, '#140200'); });
-  set(644, ['#7a8aa8', '#3a4660', '#0e1420'], ['em_cloudL', 'em_cloudR', 'smoke'], (t, k, cc) => { storm(t, 0.5, 0.45); const q = floor(t * 1.1), ph = (t * 1.1) % 1; if (ph < 0.2 && rnd(q, 3) > 0.3) { bolt(rnd(q, 1) * W, -10, rnd(q, 2) * W, 200, { seed: q * 3, col: '#5ac8ff', w: 2.4, a: 1 - ph / 0.2, br: 3 }); fill('#5ac8ff', (0.2 - ph) * 0.9); } ground(204, '#1c2434', '#04060a', '#5ac8ff', 0.25); rect(0, 202, W, 3, '#5ac8ff', 0.5); vig(0.45, '#02040a'); });
-  set(646, ['#e8f8ff', '#9fd0e8', '#3a6a8a'], ['loc_icepath', 'fog'], t => { cover('loc_icepath', { z: 1.06, py: -0.25 }) || lin(['#bfe6ff', '#e8f8ff', '#7ab8e8']); fill('#04122a', 0.42); frost(0.6, 0.5); strip('fog', 250, t * 20, { s: 1.3, a: 0.5 }); lin([[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,10,30,.5)']], 1, 200, 384); });
-  set(491, ['#4a2a4a', '#20101e', '#080408'], ['darkfog', 'smoke'], t => { lin(['#04020a', '#12061c', '#200a20', '#04020a']); stars({ n: 70, seed: 5, a: 0.6, cols: ['#fff', '#ff9ac0'] }); glow(379, 80, 170, '#b03060', 0.25, 1); disc(379, 80, 46, '#f0d8e4', 0.9); disc(396, 72, 42, '#12061c', 1); ground(204, '#160a16', '#020103', '#b03060', 0.2); strip('darkfog', 262, t * 14, { a: 0.5 }) || fog('', { n: 6, seed: 3, a: 0.6, spd: 12, s: 1.5, y0: 280, y1: 400, col: '#07030c' }); vig(0.5, '#0a0008'); });
+  set(643, ['#fff0e0', '#b06a48', '#3a1408'], ['curtain1', 'curtain2', 'evilbg'], [0.4, '#140200'], t => { lin(['#1a0400', '#5a1400', '#c04a14', '#3a0c00']); flames(t, 0.3, 0.8, ['#ff6a1a', '#ffe0b0']); ground(HZ, '#4a1608', '#0c0200', '#ffb070', 0.25); rect(0, HZ - 2, W, 3, '#ffb070', 0.6); dust('ember', { n: 60, seed: 4, cols: ['#ff7a2a', '#ffd070', '#fff'], a: 0.9, spd: 1.5 }); });
+  set(644, ['#a8c8e8', '#34465e', '#0a1018'], ['em_cloudL', 'em_cloudR', 'smoke'], [0.45, '#02040a'], t => { storm(t, 0.5, 0.45); const q = floor(t * 1.1), ph = (t * 1.1) % 1; if (ph < 0.2 && rnd(q, 3) > 0.3) { bolt(rnd(q, 1) * W, -10, rnd(q, 2) * W, HZ, { seed: q * 3, col: '#5ac8ff', w: 2.4, a: 1 - ph / 0.2, br: 3 }); fill('#5ac8ff', (0.2 - ph) * 0.9); } ground(HZ, '#1c2434', '#04060a', '#5ac8ff', 0.25); rect(0, HZ - 2, W, 3, '#5ac8ff', 0.5); });
+  set(646, ['#f0fbff', '#8ab8d0', '#2a4a62'], ['loc_icepath', 'fog'], [0.35, '#020a14'], t => { cover('loc_icepath', { z: 1.06, py: -0.25 }) || lin(['#bfe6ff', '#e8f8ff', '#7ab8e8']); fill('#04122a', 0.42); frost(0.6, 0.5); lin([[0, 'rgba(4,18,42,.3)'], [1, 'rgba(0,8,24,.65)']], 1, HZ, 384); rect(0, HZ - 1, W, 2, '#e8f8ff', 0.3); strip('fog', 200, t * 20, { s: 1.3, a: 0.45 }); });
+  set(491, ['#a05a80', '#2a1226', '#080408'], ['darkfog', 'smoke'], [0.5, '#0a0008'], t => { lin(['#04020a', '#12061c', '#200a20', '#04020a']); stars({ n: 70, seed: 5, a: 0.6, cols: ['#fff', '#ff9ac0'] }); glow(377, 60, 170, '#b03060', 0.25, 1); disc(377, 60, 44, '#f0d8e4', 0.9); disc(394, 52, 40, '#12061c', 1); ground(HZ, '#160a16', '#020103', '#b03060', 0.2); strip('darkfog', 262, t * 14, { a: 0.5 }) || fog('', { n: 6, seed: 3, a: 0.6, spd: 12, s: 1.5, y0: 280, y1: 400, col: '#07030c' }); });
+  /* De rolige (raidf.js) har stedsbildet sitt som bakvegg. De får plattformer i fargen til den legendariske. */
+  const calm0 = CINE.calmFilm; CINE.calmFilm = id => { const f = calm0(id); if (f && f.bg && !f.staged) { f.staged = 1; const b0 = f.bg; f.bg = (t, k, cc) => { const c2 = cc || K.cur.cc || '#ffffff'; b0(t, k, cc); stage(autoPlat(c2), c2, [0.35, '#02030a']); }; } return f; };
 
   /* ================= DARK MEWTWO =================
      Låta er Mewtwo-temaet fra X og Y, og filmen følger den fra første sekund: et støt på 1.07, takter på 1,333 s, to raske slag (7.31, 7.48), fire tunge
@@ -397,11 +413,11 @@
       }
     },
     /* Stedet i kampen: tomrommet under den svarte sola. */
-    plat: ['#3a2030', '#160a12', '#050206'],
+    plat: ['#c0703a', '#2a1218', '#050206'],
     bg(t) {
-      dVoid(t, 0.5); im('evilbg', 256, 192, { a: 0.35 }); blackSun(t, 379, 96, 62, 0.9);
-      ground(200, '#140a10', '#020103', '#ff8a2a', 0.22); rect(0, 198, W, 2, '#ff8a2a', 0.5);
-      DSH.forEach(q => shard(q[0], q[1], q[2], q[3] * 0.6, 1, q[4])); lava(7, 230, 0.5 + 0.2 * sin(t * 2), 3); vig(0.5, '#0a0200');
+      dVoid(t, 0.5); im('evilbg', 256, 192, { a: 0.35 }); blackSun(t, 377, 84, 62, 0.9);
+      ground(HZ, '#140a10', '#020103', '#ff8a2a', 0.22); rect(0, HZ - 2, W, 2, '#ff8a2a', 0.5);
+      DSH.forEach(q => shard(q[0], q[1], q[2], q[3] * 0.55, 1, q[4])); lava(7, HZ + 40, 0.5 + 0.2 * sin(t * 2), 3); stage(this.plat, '#ff8a2a', [0.5, '#0a0200']);
     },
     air(t, k) {
       fill('#08030e', 0.2 * k);

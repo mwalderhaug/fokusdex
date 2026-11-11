@@ -141,7 +141,7 @@ function defaultMoves(id, lv) {
 function nextMove(m) { const l = LEARN[m.id - 1]; for (let i = 0; i < l.length; i += 2) if (l[i] > m.lv && !m.mv.includes(l[i + 1])) return { lv: l[i], mv: l[i + 1] }; return null; }
 function judge(m) {
   const s = m.iv.reduce((a, b) => a + b, 0), best = m.iv.indexOf(Math.max(...m.iv));
-  return { t: s >= 151 ? 'Outstanding' : s >= 121 ? 'Great' : s >= 91 ? 'Above average' : 'Decent', best, sum: s };
+  return { t: s >= 186 ? 'Flawless' : s >= 151 ? 'Outstanding' : s >= 121 ? 'Great' : s >= 91 ? 'Above average' : 'Decent', best, sum: s };
 }
 const rollIv = egg => Array.from({ length: 6 }, () => egg ? Math.max(rnd(32), rnd(32)) : rnd(32));
 function ensure(m) {
@@ -151,11 +151,25 @@ function ensure(m) {
   if (!m.mv || !m.mv.length) m.mv = defaultMoves(m.id, m.lv);
   return m;
 }
-/* EV-er legges i artens beste stat først (maks 252 per stat, 510 totalt). */
+/* Trening for mynter, på kortet til hver Pokémon. Anlegg (IV, 0 til 31 i hver stat) løftes til topps med hypertrening: IVP mynter per poeng som
+   mangler. Treningspoeng (EV, 252 i en stat og 510 til sammen) kjøpes som vitaminer: EVP mynter per poeng. Trening kan fjernes fra en stat
+   uten å få noe igjen, så poengene kan legges et annet sted. */
+const EVP = 10, IVP = 30, EVMAX = 252, EVTOT = 510;
+const VIT = ['HP Up', 'Protein', 'Iron', 'Calcium', 'Zinc', 'Carbos'];
+const evSum = m => m.ev.reduce((a, b) => a + b, 0);
+const evRoom = (m, i) => Math.max(0, Math.min(EVMAX - m.ev[i], EVTOT - evSum(m)));
+/* Så mange poeng et ønske om n faktisk gir: aldri mer enn det er plass til og råd til. */
+const evCan = (m, i, n) => Math.max(0, Math.min(n, evRoom(m, i), Math.floor(S.coins / EVP)));
+function buyEv(m, i, n) { n = evCan(m, i, n); if (!(n > 0)) return 0; m.ev[i] += n; S.coins -= n * EVP; save(); return n; }
+function clearEv(m, i) { const n = m.ev[i]; if (n) { m.ev[i] = 0; save(); } return n; }
+const ivCost = (m, i) => (31 - m.iv[i]) * IVP;
+function buyIv(m, i) { const c = ivCost(m, i); if (!(c > 0) || S.coins < c) return 0; m.iv[i] = 31; S.coins -= c; save(); return c; }
+/* EV-er fra økter legges først i den staten som alt er mest trent, og ellers i artens beste stat (maks 252 per stat, 510 totalt). For en Pokémon
+   som bare er trent av økter, er det samme rekkefølge som før; har du selv kjøpt trening i en stat, fortsetter øktene der. */
 function addEv(m, n) {
-  const order = BST[m.id - 1].map((b, i) => [b, i]).sort((a, b) => b[0] - a[0]).map(x => x[1]);
-  let tot = m.ev.reduce((a, b) => a + b, 0);
-  for (const i of order) { const add = Math.min(n, 252 - m.ev[i], 510 - tot); if (add > 0) { m.ev[i] += add; tot += add; n -= add; } if (n <= 0) break; }
+  const order = BST[m.id - 1].map((b, i) => [m.ev[i] > 0 ? 1000 + m.ev[i] : b, i]).sort((a, b) => b[0] - a[0]).map(x => x[1]);
+  let tot = evSum(m);
+  for (const i of order) { const add = Math.min(n, EVMAX - m.ev[i], EVTOT - tot); if (add > 0) { m.ev[i] += add; tot += add; n -= add; } if (n <= 0) break; }
 }
 /* Etter nivåøkning: nye angrep læres rett inn hvis det er ledig plass. Er alle fire plassene brukt, venter angrepet i m.nm til du har valgt
    om det skal læres (som i spillene). m.nw = 1 gir utropstegnet i lagoversikten til kortet er åpnet. */
