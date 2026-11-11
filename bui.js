@@ -308,7 +308,7 @@ function fxPos(side) {
   return r.width ? { x: (r.left + r.width / 2 - A.left) * k, y: Math.min(184, (r.top + r.height * 0.55 - A.top) * k) } : def;
 }
 /* Spritene forstørres etter bredden på arenaen (spillskjermen er 256 piksler bred). */
-function fitArena() { const a = $('#arena'); if (a) { a.style.setProperty('--z', (a.clientWidth / 256 * 0.8).toFixed(2)); a.style.setProperty('--u', (a.clientWidth / 256).toFixed(3) + 'px'); } }
+function fitArena() { const a = $('#arena'), m = $('#bmenu'); if (a) { a.style.setProperty('--z', (a.clientWidth / 256 * 0.8).toFixed(2)); a.style.setProperty('--u', (a.clientWidth / 256).toFixed(3) + 'px'); if (m) m.style.setProperty('--u', (a.clientWidth / 256).toFixed(3) + 'px'); } }
 window.addEventListener('resize', fitArena);
 function battleTag(B) { return B.mode === 'fac' ? `Frontier · Round ${B.round} · ${B.w + 1}/${FACN}` : B.mode === 'lab' ? `Demo · ${B.tr.cn}` : `${B.lap ? 'Lap ' + (B.lap + 1) + ' · ' : ''}${B.n + 1}/${LAPN} · ${B.tr.cn}`; }
 const calm = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; } };
@@ -351,40 +351,52 @@ async function say(s, hold) {
   await new Promise(r => { const id = setTimeout(r, (S.bfast ? 420 : 950)); BT.tap = () => { clearTimeout(id); r(); }; });
   BT.tap = null; b.classList.remove('wait');
 }
+/* Menyen under banen er bygd som den nederste skjermen i Black og White: den store ballen med FIGHT, og BAG, RUN og POKÉMON under.
+   Angrepene ligger i fire felt i typens farge, og laget i paneler i to kolonner (blå, rød for besvimt, turkis for den som står inne).
+   Bildene kommer fra ressurspakken. Uten den tegnes det samme med farger. Mens noe spilles av, hviler skjermen med ballen alene. */
+const mim = k => PACK.menu && PACK.menu[k] ? `background-image:url(${PACK.menu[k]})` : '';
+/* Ett panel på lagskjermen. act = handlingen når det trykkes, ok = kan velges, cur = står inne i kampen nå. */
+function partyPanel(b, i, act, ok, cur) {
+  const row = b.hp <= 0 ? 1 : cur ? 2 : 0, col = i ? 2 : 0, f = Math.max(0, b.hp / b.max);
+  return `<button type="button" class="bw-p ${i % 2 ? 'r' : 'l'} s${row}${PACK.menu ? '' : ' np'}" data-a="${act}" data-k="${i}" style="--row:${Math.floor(i / 2)};${PACK.menu ? `--bg:url(${PACK.menu['p' + row + col]});--bgs:url(${PACK.menu['p' + row + (col + 1)]})` : ''}"${ok ? '' : ' disabled'}>
+    <span class="ic">${spr(b.id, { sh: b.sh })}</span><b class="nm">${esc(b.name)}</b><span class="plv tn">Lv${b.lv}</span>${b.status ? `<i class="st st-${b.status}">${STAG[b.status]}</i>` : ''}
+    <span class="hpl"><em>HP</em><span><i style="width:${(f * 100).toFixed(1)}%;background:${hpCol(f)}"></i></span></span><span class="hpn tn">${b.hp <= 0 ? 'FNT' : b.hp + '/' + b.max}</span></button>`;
+}
 function drawMenu() {
   const el = $('#bmenu'); if (!el) return;
-  const B = BT.B;
-  if (!B || BT.busy || B.over) { el.innerHTML = ''; return; }
+  const B = BT.B, pk = PACK.menu ? ' pk' : '', bg = mim('pbg'), cancel = (a, t) => `<button type="button" class="bw-cancel bback" data-a="${a || 'bback'}">${t || 'CANCEL'}</button>`;
+  if (!B || BT.busy || B.over) { el.innerHTML = `<div class="bw bw-main bw-idle${pk}" style="${mim('ball')}"></div>`; return; }
   const me = B.me[B.a];
   if (B.need || BT.menu === 'team') {
-    el.innerHTML = `<div class="bsw">${B.me.map((b, i) => `<button type="button" data-a="bsw" data-k="${i}" class="${i === B.a && !B.need ? 'cur' : ''}"${b.hp <= 0 || (i === B.a && !B.need) ? ' disabled' : ''}>${spr(b.id, { sh: b.sh, s: '40px' })}<span class="sp"><span class="bn"><span>${esc(b.name)}${b.status ? ' · ' + STAG[b.status] : ''}</span><span class="tn">Lv ${b.lv}</span></span><div class="hpbar"><i style="width:${Math.round(b.hp / b.max * 100)}%;background:${hpCol(b.hp / b.max)}"></i></div><small class="tn">${b.hp <= 0 ? 'Fainted' : b.hp + '/' + b.max}${i === B.a && !B.need ? ' · in battle' : ''}</small></span></button>`).join('')}</div>${B.need ? '' : '<button type="button" class="bback" data-a="bback">BACK</button>'}`;
+    el.innerHTML = `<div class="bw bw-party bsw${pk}" style="${bg}">${B.me.map((b, i) => partyPanel(b, i, 'bsw', b.hp > 0 && !(i === B.a && !B.need), i === B.a && !B.need)).join('')}<p class="bw-tip">${B.need ? 'Choose a Pokémon.' : 'Switch to which Pokémon?'}</p>${B.need ? '' : cancel()}</div>`;
     return;
   }
   if (BT.menu === 'moves') {
     const any = me.mv.some((x, k) => moveOk(B, k));
-    el.innerHTML = `<div class="bmv">${any ? me.mv.map((x, k) => { const m = MOVES[x.i]; return `<button type="button" data-a="bmove" data-k="${k}" style="--c:var(--b${m[1]})"${moveOk(B, k) ? '' : ' disabled'}><b>${esc(m[0])}</b><span class="mrow"><span class="mty">${TYN[m[1]]}</span><span class="tn">PP ${x.pp}/${x.max}</span></span></button>`; }).join('') : '<button type="button" data-a="bmove" data-k="-1" style="--c:var(--b0)"><b>Struggle</b><span class="mrow"><span class="mty">Normal</span><span>No moves left</span></span></button>'}</div><button type="button" class="bback" data-a="bback">BACK</button>`;
+    el.innerHTML = `<div class="bw bw-moves bmv${pk}" style="${bg}">${any ? me.mv.map((x, k) => { const m = MOVES[x.i]; return `<button type="button" class="bw-m" data-a="bmove" data-k="${k}" style="--c:var(--b${m[1]})"${moveOk(B, k) ? '' : ' disabled'}><b>${esc(m[0])}</b><span class="mty">${TYN[m[1]]}</span><span class="pp tn">PP ${x.pp}/${x.max}</span></button>`; }).join('') : '<button type="button" class="bw-m" data-a="bmove" data-k="-1" style="--c:var(--b0)"><b>Struggle</b><span class="mty">Normal</span><span class="pp">No PP left</span></button>'}${cancel()}</div>`;
     return;
   }
   if (BT.menu === 'pause') {
     const tt = PACK.title();
-    el.innerHTML = `<div class="bsw"><button type="button" class="bback" data-a="bback">RESUME</button><button type="button" class="bback" data-a="bfast">SPEED: ${S.bfast ? 'FAST' : 'NORMAL'}</button><button type="button" class="bback" data-a="bmusic"${S.sound ? '' : ' disabled'}>MUSIC: ${S.music === 0 ? 'OFF' : 'ON'}</button>${tt ? `<p class="sm tn" style="text-align:center">♪ ${esc(tt)}</p>` : ''}<button type="button" class="bback" data-a="bforfeit" style="background:linear-gradient(#b0483c,#7a2a22)">FORFEIT</button></div>`;
+    el.innerHTML = `<div class="bw bw-list bsw${pk}" style="${bg}"><button type="button" class="bw-row" data-a="bfast">SPEED<b>${S.bfast ? 'FAST' : 'NORMAL'}</b></button><button type="button" class="bw-row" data-a="bmusic"${S.sound ? '' : ' disabled'}>MUSIC<b>${S.music === 0 ? 'OFF' : 'ON'}</b></button><button type="button" class="bw-row red" data-a="bforfeit">FORFEIT<b>give up</b></button>${tt ? `<p class="bw-tip">♪ ${esc(tt)}</p>` : ''}${cancel('bback', 'BACK')}</div>`;
     return;
   }
   /* Veska: velg gjenstand, og så hvem den brukes på. Den koster turen din. I demoen er alt gratis, så det kan prøves. */
   const free = B.mode === 'lab', own = k => free ? 1 : S.items[k] || 0;
   if (BT.menu === 'bag') {
     const have = Object.keys(BAG).filter(k => own(k) > 0);
-    el.innerHTML = `<p class="sm tn bagh">Bag · ${B.bag} use${B.bag === 1 ? '' : 's'} left this battle${free ? ' · free in the demo' : ''}</p><div class="bmv bagl">${have.length ? have.map(k => `<button type="button" data-a="bitem" data-k="${k}" style="--c:var(--b${BAG[k].rev ? 12 : BAG[k].cure ? 11 : 13})"${B.me.some((_, i) => itemOk(B, k, i)) ? '' : ' disabled'}><b>${esc(SHOP[k].n)}</b><span class="mrow"><span class="mty">${BAG[k].rev ? 'Revive' : BAG[k].cure ? 'Status' : 'Heal'}</span><span class="tn">${free ? '∞' : '× ' + own(k)}</span></span></button>`).join('') : '<p class="sm" style="grid-column:1/-1;text-align:center;padding:10px">Your Bag is empty. Potions and Revives are sold in the Shop.</p>'}</div><button type="button" class="bback" data-a="bback">BACK</button>`;
+    el.innerHTML = `<div class="bw bw-bag${pk}" style="${bg}"><p class="bw-tip top">Bag · ${B.bag} use${B.bag === 1 ? '' : 's'} left this battle${free ? ' · free in the demo' : ''}</p><div class="bw-items">${have.length ? have.map(k => `<button type="button" class="bw-m it" data-a="bitem" data-k="${k}" style="--c:var(--b${BAG[k].rev ? 12 : BAG[k].cure ? 11 : 13})"${B.me.some((_, i) => itemOk(B, k, i)) ? '' : ' disabled'}><b>${esc(SHOP[k].n)}</b><span class="mty">${BAG[k].rev ? 'Revive' : BAG[k].cure ? 'Status' : 'Heal'}</span><span class="pp tn">${free ? '∞' : '× ' + own(k)}</span></button>`).join('') : '<p class="bw-tip">Your Bag is empty. Potions and Revives are sold in the Shop.</p>'}</div>${cancel()}</div>`;
     return;
   }
   if (BT.menu === 'bagt') {
     const k = BT.item;
-    el.innerHTML = `<p class="sm tn bagh">${esc(SHOP[k].n)} · on who?</p><div class="bsw">${B.me.map((b, i) => `<button type="button" data-a="btarget" data-k="${i}"${itemOk(B, k, i) ? '' : ' disabled'}>${spr(b.id, { sh: b.sh, s: '40px' })}<span class="sp"><span class="bn"><span>${esc(b.name)}${b.status ? ' · ' + STAG[b.status] : ''}</span><span class="tn">Lv ${b.lv}</span></span><div class="hpbar"><i style="width:${Math.round(b.hp / b.max * 100)}%;background:${hpCol(b.hp / b.max)}"></i></div><small class="tn">${b.hp <= 0 ? 'Fainted' : b.hp + '/' + b.max}</small></span></button>`).join('')}</div><button type="button" class="bback" data-a="bbag">BACK</button>`;
+    el.innerHTML = `<div class="bw bw-party bsw${pk}" style="${bg}">${B.me.map((b, i) => partyPanel(b, i, 'btarget', itemOk(B, k, i), i === B.a)).join('')}<p class="bw-tip">${esc(SHOP[k].n)} · on who?</p>${cancel('bbag')}</div>`;
     return;
   }
   const bag = B.bag != null && B.mode !== 'fac' && !(B.mode === 'lab' && B.rent);
-  el.innerHTML = `<div class="bmain${bag ? ' b3' : ''}"><button type="button" class="bm-fight" data-a="bfightm">${BURST}<span>FIGHT</span></button>
-    <button type="button" class="bm-b bm-pk" data-a="bswitch"${B.me.filter(b => b.hp > 0).length > 1 && canSwitch(B) ? '' : ' disabled'}>POKÉMON</button>${bag ? `<button type="button" class="bm-b bm-bag" data-a="bbag"${B.bag > 0 ? '' : ' disabled'}>BAG</button>` : ''}<button type="button" class="bm-b bm-pa" data-a="bpause">PAUSE</button></div>`;
+  el.innerHTML = `<div class="bw bw-main${pk}" style="${mim('ball')}"><button type="button" class="bw-fight bm-fight" data-a="bfightm" aria-label="Fight"><i style="${mim('fight')}"></i><span>FIGHT</span></button>
+    <button type="button" class="bw-b bw-bag bm-bag" data-a="bbag" style="${mim('bag')}"${bag && B.bag > 0 ? '' : ' disabled'}><span>BAG</span></button><button type="button" class="bw-b bw-run bm-pa" data-a="bpause" style="${mim('run')}"><span>RUN</span></button><button type="button" class="bw-b bw-pk bm-pk" data-a="bswitch" style="${mim('pkmn')}"${B.me.filter(b => b.hp > 0).length > 1 && canSwitch(B) ? '' : ' disabled'}><span>POKÉMON</span></button>
+    <span class="bw-balls">${B.me.map(b => `<i class="${b.hp <= 0 ? 'out' : b.status ? 'st' : ''}"></i>`).join('')}</span></div>`;
 }
 /* Ballen kastes inn mot plattformen. Bosser bruker finere baller. */
 function tossBall(side) {
@@ -826,7 +838,7 @@ const BA = {
   bmusic: () => { S.music = S.music === 0 ? 1 : 0; save(true); if (S.music === 0) stopMusic(); else battleMusic(BT.B); drawMenu(); },
   bmove: el => { if (BT.busy || BT.B.over) return; BT.menu = 'main'; playEv(runTurn(BT.B, { t: 'move', k: +el.dataset.k })); },
   bsw: el => { if (BT.busy) return; const B = BT.B, i = +el.dataset.k; BT.menu = 'main'; playEv(B.need ? sendIn(B, i) : runTurn(B, { t: 'switch', i })); },
-  bforfeit: el => { if (BT.busy) return; if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = 'TAP AGAIN TO GIVE UP'; return; } BT.B.over = 'loss'; endBattle(); },
+  bforfeit: el => { if (BT.busy) return; if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.innerHTML = 'TAP AGAIN<b>to give up</b>'; return; } BT.B.over = 'loss'; endBattle(); },
   packre: async () => { toast('Looking for your pack…'); const ok = await PACK.init(true); toast(ok ? `Pack found: ${Object.keys(PACK.man.scenes || {}).length} arenas, ${(PACK.man.music || []).length} tracks.` : 'No pack found in your sync repo.'); if (BT.B == null && $('.lablist')) labScreen(); },
   blearn: el => { const m = monBy(+el.dataset.u); if (m) learnSheet(m, 'ov'); },
   lforget: el => { const L = U.learn, m = monBy(L.u); if (!m) return closeSheet(); const x = m.nm[0], old = +el.dataset.k; resolveMove(m, x, old); sfx.lvl(); toast(`${D(m.id)[0]} forgot ${MOVES[old][0]} and learned ${MOVES[x][0]}.`); learnSheet(m, L.back); },

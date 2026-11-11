@@ -59,7 +59,7 @@ const PACK = (() => {
   /* Rett etter at pakken er funnet, hentes det første kampen trenger i bakgrunnen: HP-boksene, introbildene, ballene, animasjonsdataene og trenerlåtene. */
   function warmUp() {
     const m = P.man, list = [m.hud && m.hud.f, m.vs && m.vs.f, 'ui/ball_pokeball.png', 'ui/ball_pokeball_open.png'].filter(Boolean);
-    list.forEach(f => P.url(f)); loadHud(); loadAnims();
+    list.forEach(f => P.url(f)); loadHud(); loadMenu(); loadAnims();
     (m.music || []).filter(x => x.c === 'trainer').forEach(x => P.url(x.f));
     /* Bildet og låta til den som venter i ligaen hentes også, og forsiden tegnes på nytt når bildet er klart (bare hvis den står framme). */
     try { if (S.party.length) { const t = nextTrainer(), tr = trainerInfo(t), f = P.trackFor({ tr, lap: t.lap, rd: Math.floor(t.n / 2), mode: 'league' }), pt = m.trainers && m.trainers[tr.img.split('|')[0]]; if (f) P.url(f); if (pt && !mem.get(pt)) P.url(pt).then(u => { if (u && !S.timer && $('#ov').hidden && U.tab === 'fokus' && $('#sheet').hidden !== false) render(); }); } } catch (_) {}
@@ -101,7 +101,11 @@ const PACK = (() => {
     return l[h % l.length].f;
   };
   /* HP-boksene (ett ark med boksene, linjene, tallene og bokstavene) og bildene til boss-introen (fargebånd, VS, lyn, stjerner). */
-  P.hud = null; P.vs = null;
+  P.hud = null; P.vs = null; P.menu = null;
+  /* Klipper et ark opp i enkeltbilder etter rutene i manifestet. */
+  const cut = (im, R) => { const o = {}, c = document.createElement('canvas'), g = c.getContext('2d'); for (const k in R) { const r = R[k]; c.width = r[2]; c.height = r[3]; g.clearRect(0, 0, r[2], r[3]); g.drawImage(im, r[0], r[1], r[2], r[3], 0, 0, r[2], r[3]); o[k] = c.toDataURL(); } return o; };
+  /* Kampmenyen og lagskjermen fra Black og White (ballen, FIGHT, BAG, RUN, POKÉMON og panelene). */
+  async function loadMenu() { if (P.menu || !P.man.menu) return; const im = await P.img(P.man.menu.f); if (im && !P.menu) P.menu = cut(im, P.man.menu.r); }
   async function loadHud() { if (P.hud || !P.man.hud) return; const im = await P.img(P.man.hud.f); if (im) P.hud = { im, r: P.man.hud.r }; }
   async function loadVs() {
     if (P.vs || !P.man.vs) return; const im = await P.img(P.man.vs.f); if (!im) return;
@@ -194,7 +198,7 @@ const PACK = (() => {
     const it = B.tr.ultra && B.mode !== 'fac' ? P.introFor(B) : ''; if (it) P.cue(it);
     const pt = P.man.trainers && P.man.trainers[B.tr.img.split('|')[0]]; if (pt) jobs.push(P.url(pt));
     const sc = P.sceneFor(B); if (sc) jobs.push(P.url(sc));
-    jobs.push(loadHud()); if (B.tr.boss) jobs.push(loadVs());
+    jobs.push(loadHud()); jobs.push(loadMenu()); if (B.tr.boss) jobs.push(loadVs());
     for (const b of ['pokeball', 'greatball', 'ultraball']) { jobs.push(P.url(`ui/ball_${b}.png`)); jobs.push(P.url(`ui/ball_${b}_open.png`)); }
     ['Hit Super Effective', 'Hit Normal Damage', 'Hit Weak Not Very Effective', 'Stat Rise Up', 'Stat Fall', 'In-Battle Faint No Health', 'In-Battle Heal HP Restore', 'In-Battle Recall Switch Pokeball', 'Status Burned', 'Status Poisoned', 'Status Paralyzed', 'Status Frozen'].forEach(P.warm);
     const all = B.me.concat(B.foe);

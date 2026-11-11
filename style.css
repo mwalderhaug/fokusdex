@@ -310,7 +310,8 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 /* Kampskjermen. Fargene her er sterkere enn i resten av appen, som på en spillkonsoll. */
 .ov.battle{padding-left:12px;padding-right:12px;--b0:#b9b79a;--b1:#d6553f;--b2:#8aa6ee;--b3:#a95bc2;--b4:#d9b25a;--b5:#b59f55;--b6:#9cba2c;--b7:#6f5fb5;--b8:#9fb0c6;--b9:#f08a3c;--b10:#4f98ee;--b11:#62c356;--b12:#f2cd3a;--b13:#ee5f95;--b14:#6fd2d6;--b15:#6c54ee;--b16:#6b5a50;--b17:#ee92c4;
   --pix:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
-.ov.battle .ovin{gap:10px;max-width:clamp(300px,calc((var(--appH,100dvh) - 330px)*1.333),620px)}
+/* Banen og menyen er to skjermer over hverandre (begge 4:3), som på en DS. Bredden holdes igjen så begge får plass i høyden. */
+.ov.battle .ovin{gap:8px;max-width:clamp(280px,calc((var(--appH,100dvh) - 150px)*.66),600px)}
 .btop{display:flex;align-items:center;gap:10px;min-height:34px}
 .btn-n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px;padding:4px 0}
 /* Skjermen: arenaen og tekstboksen henger sammen som én flate. */
@@ -476,11 +477,6 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .k-champ .tsb{box-shadow:0 0 0 3px var(--cc,var(--violet))}
 .lablist .k-evil .cno{background:#7a0f14;color:#ffd8d2}.lablist .k-champ .cno{background:var(--blue);color:#0c1420}
 /* Veska i kampmenyen */
-.bmain.b3{grid-template-columns:1fr 1fr 1fr}
-.bmain.b3 .bm-fight{grid-column:1/-1}
-.bmain.b3 .bm-b{font-size:13px;letter-spacing:.04em}
-.bm-bag{background:linear-gradient(#f2b45a,#d07a2a)}
-.bagh{text-align:center;margin:2px 0 6px}
 .fxc.bgc{z-index:-1}
 .hpn{display:flex;align-items:baseline;gap:6px;min-width:0}
 .hpn b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13.5px;letter-spacing:.02em}
@@ -510,32 +506,81 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 @keyframes bob{50%{transform:translateY(3px)}}
 .btext.wait i{opacity:1;animation:bob .6s ease-in-out infinite}
 /* Menyen under skjermen: stor rød FIGHT-knapp og fargede valg, og angrep i typens farge. */
-.bmenu{display:flex;flex-direction:column;gap:8px;min-height:190px}
-.bmain{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px;border-radius:18px;background:repeating-linear-gradient(0deg,rgba(255,255,255,.03) 0 2px,transparent 2px 4px),linear-gradient(#2a2c36,#191a21);box-shadow:inset 0 0 0 2px #3a3d4a}
-.bm-fight{position:relative;grid-column:1/3;min-height:104px;width:100%;max-width:460px;justify-self:center;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 4px 0 rgba(0,0,0,.4));transition:transform .1s}
-.bm-fight svg{position:absolute;inset:0;width:100%;height:100%}
-.bm-fight span{position:relative;font-family:var(--pix);font-size:26px;font-weight:900;letter-spacing:.14em;color:#fff;text-shadow:2px 2px 0 #5a0f08,-1px -1px 0 #5a0f08,2px -1px 0 #5a0f08,-1px 2px 0 #5a0f08}
-.bm-fight:active,.bm-b:active{transform:scale(.96)}
-.bm-b{min-height:50px;border-radius:26px;font-family:var(--pix);font-weight:900;font-size:14.5px;letter-spacing:.08em;color:#fff;text-shadow:1px 1px 0 rgba(0,0,0,.5);box-shadow:inset 0 0 0 2px rgba(255,255,255,.35),inset 0 -6px 0 rgba(0,0,0,.2),0 3px 0 rgba(0,0,0,.4);transition:transform .1s}
-.bm-pk{background:linear-gradient(#7ad66a,#3f9f4a)}
-.bm-pa{background:linear-gradient(#6ab0f2,#3a6fd0)}
-.bm-b:disabled{filter:grayscale(.8);opacity:.5}
-.bmv{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.bmv button{position:relative;min-height:64px;border-radius:12px;padding:8px 10px 7px;background:linear-gradient(color-mix(in srgb,var(--c) 38%,#fff),color-mix(in srgb,var(--c) 78%,#fff) 60%,var(--c));box-shadow:inset 0 0 0 2px rgba(255,255,255,.55),0 0 0 2px #1d1d24,0 4px 0 #0c0c10;display:flex;flex-direction:column;justify-content:space-between;gap:5px;min-width:0;transition:transform .1s;color:#1b1b22;font-family:var(--pix)}
-.bmv button:active{transform:scale(.96)}
-.bmv button:disabled{filter:grayscale(.85);opacity:.5}
-.bmv b{font-size:14px;font-weight:900;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.01em}
-.bmv .mrow{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:11.5px;font-weight:800}
-.bmv .mty{background:#22232b;color:#fff;border-radius:9px;padding:2px 8px;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;box-shadow:inset 0 0 0 1px var(--c)}
-.bback{min-height:44px;border-radius:22px;background:linear-gradient(#5b6072,#3a3d4a);color:#fff;font-family:var(--pix);font-weight:800;letter-spacing:.06em;box-shadow:inset 0 0 0 2px rgba(255,255,255,.2),0 3px 0 rgba(0,0,0,.4)}
-.bsw{display:flex;flex-direction:column;gap:6px}
-.bsw button{display:flex;align-items:center;gap:10px;min-height:54px;border-radius:14px;background:linear-gradient(#3d6f52,#2a4d3a);box-shadow:inset 0 0 0 2px rgba(255,255,255,.18),0 3px 0 rgba(0,0,0,.35);padding:4px 12px;text-align:left;color:#fff}
-.bsw button.cur{background:linear-gradient(#4f7fc2,#2f4f8a)}
-.bsw button:disabled{filter:grayscale(.7);opacity:.5}
-.bsw .sp{display:flex;flex-direction:column;gap:4px;min-width:0}
-.bsw .bn{display:flex;justify-content:space-between;gap:8px;font-family:var(--pix);font-weight:800;font-size:13.5px}
-.bsw .hpbar{flex:none}
-.bsw small{font-size:11px;opacity:.85}
+.bmenu{display:block;--u:1.5px}
+/* ---------- Menyen: den nederste skjermen fra Black og White ----------
+   Alt er lagt ut i spillets piksler (256 × 192) og ganget opp med --u, som følger bredden på banen. */
+.bw{position:relative;width:100%;aspect-ratio:4/3;border-radius:16px;overflow:hidden;background:#4a3939 center/100% 100% no-repeat;image-rendering:pixelated;box-shadow:0 0 0 2px #34343c,0 0 0 5px #0b0b0d;font-family:var(--pix);color:#fff;container-type:size}
+.bw button{position:absolute;margin:0;padding:0;border:0;background:none center/100% 100% no-repeat;color:#fff;font-family:var(--pix);image-rendering:pixelated;-webkit-tap-highlight-color:transparent}
+.bw button:disabled{filter:grayscale(.85) brightness(.6)}
+/* Hovedmenyen: ballen fyller skjermen, FIGHT er den røde halvdelen. */
+.bw-main{background-size:100% auto;background-position:50% 16%}
+.bw-main:not(.pk){background:radial-gradient(circle at 50% 46%,transparent 0 60%,#4a3939 60.5%),linear-gradient(#b00021 0 42%,#101010 42% 50%,#dedee7 50%)}
+.bw-idle{filter:brightness(.6) saturate(.7)}
+.bw-fight{left:14%;top:5%;width:72%;height:50%;border-radius:50% 50% 12% 12%/90% 90% 10% 10%}
+.bw-fight i{position:absolute;left:50%;top:50%;width:calc(var(--u)*120);height:calc(var(--u)*34);transform:translate(-50%,-50%);background:center/contain no-repeat;animation:bwPulse 1.4s ease-in-out infinite}
+.bw-fight span{position:relative;top:calc(var(--u)*6);display:inline-block;font-size:calc(var(--u)*30);font-weight:900;letter-spacing:.12em;color:#fff;text-shadow:calc(var(--u)*2) calc(var(--u)*2) 0 #5a0010,calc(var(--u)*-1) calc(var(--u)*-1) 0 #5a0010,calc(var(--u)*1) calc(var(--u)*-1) 0 #5a0010,calc(var(--u)*-1) calc(var(--u)*1) 0 #5a0010;animation:bwPulse 1.4s ease-in-out infinite}
+.bw.pk .bw-b span,.bw-fight i{display:none}
+.bw-fight:active span{transform:scale(.92)}
+@keyframes bwPulse{50%{filter:brightness(1.35)}}
+.bw-b{width:calc(var(--u)*78);height:calc(var(--u)*60);bottom:calc(var(--u)*4)}
+.bw-b:active{transform:scale(.94)}
+.bw-bag{left:calc(var(--u)*6)}
+.bw-pk{right:calc(var(--u)*6)}
+.bw-run{left:50%;margin-left:calc(var(--u)*-38)!important;width:calc(var(--u)*76);height:calc(var(--u)*44);bottom:calc(var(--u)*2)}
+.bw:not(.pk) .bw-b{background:linear-gradient(#3a3a44,#1c1c22);clip-path:polygon(18% 0,82% 0,100% 30%,100% 100%,0 100%,0 30%);font-weight:900;font-size:calc(var(--u)*11)}
+.bw:not(.pk) .bw-bag span{color:#f8b030}.bw:not(.pk) .bw-run span{color:#58a8f8}.bw:not(.pk) .bw-pk span{color:#58d858}
+.bw-balls{position:absolute;left:calc(var(--u)*5);top:calc(var(--u)*5);display:flex;gap:calc(var(--u)*2)}
+.bw-balls i{width:calc(var(--u)*7);height:calc(var(--u)*7);border-radius:50%;background:linear-gradient(#f05a4e 0 46%,#18181c 46% 56%,#fff 56%);box-shadow:0 0 0 calc(var(--u)*1) #18181c}
+.bw-balls i.out{background:#5a5a66}.bw-balls i.st{background:linear-gradient(#f8c830 0 46%,#18181c 46% 56%,#fff 56%)}
+/* Lagskjermen: seks paneler i to kolonner, den høyre litt lavere, som i spillet. */
+.bw-party,.bw-moves,.bw-list,.bw-bag{background-color:#080810}
+.bw:not(.pk).bw-party,.bw:not(.pk).bw-moves,.bw:not(.pk).bw-list,.bw:not(.pk).bw-bag{background:repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px calc(var(--u)*32)),repeating-linear-gradient(0deg,rgba(255,255,255,.05) 0 1px,transparent 1px calc(var(--u)*32)),#0a0c16}
+.bw-p{width:calc(var(--u)*126);height:calc(var(--u)*46);top:calc(var(--u)*(2 + var(--row)*47));background-image:var(--bg)!important;text-align:left}
+.bw-p.l{left:calc(var(--u)*1)}
+.bw-p.r{left:calc(var(--u)*129);top:calc(var(--u)*(9 + var(--row)*47))}
+.bw-p:active:not(:disabled){background-image:var(--bgs)!important}
+.bw .bw-p:disabled{filter:none;opacity:1}
+.bw-p.np{background:linear-gradient(105deg,#3868a8 0 22%,#184878 22.5%)!important;clip-path:polygon(4% 0,100% 0,100% 80%,96% 100%,0 100%,0 20%)}
+.bw-p.np.s1{background:linear-gradient(105deg,#a03038 0 22%,#701820 22.5%)!important}
+.bw-p.np.s2{background:linear-gradient(105deg,#28a890 0 22%,#108070 22.5%)!important}
+.bw-p .ic{position:absolute;left:calc(var(--u)*1);top:calc(var(--u)*3);width:calc(var(--u)*36);height:calc(var(--u)*36);overflow:hidden}
+.bw-p .ic .sprb{position:absolute;inset:0;width:auto;height:auto;display:block}
+.bw-p .ic .spr{position:absolute;left:50%;top:50%;width:calc(var(--u)*46);height:calc(var(--u)*46);object-fit:contain;transform:translate(-50%,-50%);image-rendering:pixelated;max-width:none}
+.bw-p .nm{position:absolute;left:calc(var(--u)*40);top:calc(var(--u)*5);max-width:calc(var(--u)*58);overflow:hidden;font-size:calc(var(--u)*9);font-weight:800;white-space:nowrap;text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 rgba(0,0,0,.6)}
+.bw-p .plv{position:absolute;right:calc(var(--u)*7);top:calc(var(--u)*6.5);font-size:calc(var(--u)*8);font-weight:800;color:#f8e060;text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 rgba(0,0,0,.6)}
+.bw-p .st{position:absolute;left:calc(var(--u)*38);top:calc(var(--u)*31);font-style:normal;font-size:calc(var(--u)*7);font-weight:900;padding:0 calc(var(--u)*3);border-radius:calc(var(--u)*2);background:#a858e8}
+.bw-p .st-brn{background:#f05a30}.bw-p .st-par{background:#e8c020;color:#222}.bw-p .st-slp{background:#8890a0}.bw-p .st-frz{background:#58c8e8;color:#123}
+.bw-p .hpl{position:absolute;left:calc(var(--u)*58);top:calc(var(--u)*22);display:flex;align-items:center;gap:calc(var(--u)*2)}
+.bw-p .hpl em{font-style:normal;font-size:calc(var(--u)*6.5);font-weight:900;color:#f8b030}
+.bw-p .hpl span{display:block;width:calc(var(--u)*44);height:calc(var(--u)*5);background:#202020;box-shadow:0 0 0 calc(var(--u)*1) #f8f8f8;border-radius:calc(var(--u)*1)}
+.bw-p .hpl i{display:block;height:100%}
+.bw-p .hpn{position:absolute;right:calc(var(--u)*8);top:calc(var(--u)*31);font-size:calc(var(--u)*8.5);font-weight:800}
+.bw-tip{position:absolute;left:calc(var(--u)*6);right:calc(var(--u)*92);bottom:calc(var(--u)*6);margin:0;font-size:calc(var(--u)*8);font-weight:700;color:#cfe0ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bw-tip.top{bottom:auto;top:calc(var(--u)*5);right:calc(var(--u)*6);text-align:center}
+.bw-cancel{right:calc(var(--u)*4);bottom:calc(var(--u)*3);width:calc(var(--u)*82);height:calc(var(--u)*22);border-radius:calc(var(--u)*11)!important;background:linear-gradient(#5a86d8,#2c4ea0)!important;box-shadow:inset 0 0 0 calc(var(--u)*1.5) #dce8ff,0 calc(var(--u)*2) 0 rgba(0,0,0,.4);font-size:calc(var(--u)*10);font-weight:900;letter-spacing:.06em}
+.bw-cancel:active{transform:translateY(calc(var(--u)*1))}
+/* Angrepene: fire felt i typens farge, to og to. */
+.bw-m{width:calc(var(--u)*122);height:calc(var(--u)*56);left:calc(var(--u)*4);top:calc(var(--u)*8);border-radius:calc(var(--u)*8)!important;background:linear-gradient(color-mix(in srgb,var(--c) 82%,#fff),var(--c) 46%,color-mix(in srgb,var(--c) 70%,#000))!important;box-shadow:inset 0 0 0 calc(var(--u)*2) rgba(255,255,255,.85),inset 0 0 0 calc(var(--u)*3.5) rgba(0,0,0,.35),0 calc(var(--u)*2) 0 rgba(0,0,0,.45)}
+.bw-m:nth-child(2){left:calc(var(--u)*130)}
+.bw-m:nth-child(3){top:calc(var(--u)*70)}
+.bw-m:nth-child(4){left:calc(var(--u)*130);top:calc(var(--u)*70)}
+.bw-m:active:not(:disabled){transform:scale(.95)}
+.bw-m b{position:absolute;left:0;right:0;top:calc(var(--u)*11);text-align:center;font-size:calc(var(--u)*11.5);font-weight:900;white-space:nowrap;text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 rgba(0,0,0,.55)}
+.bw-m .mty{position:absolute;left:calc(var(--u)*8);bottom:calc(var(--u)*8);font-size:calc(var(--u)*7);font-weight:900;letter-spacing:.06em;text-transform:uppercase;background:rgba(0,0,0,.55);padding:calc(var(--u)*1) calc(var(--u)*5);border-radius:calc(var(--u)*5)}
+.bw-m .pp{position:absolute;right:calc(var(--u)*9);bottom:calc(var(--u)*8);font-size:calc(var(--u)*8.5);font-weight:800;text-shadow:calc(var(--u)*1) calc(var(--u)*1) 0 rgba(0,0,0,.55)}
+/* Veska: samme felt som angrepene, i en liste som kan rulles. */
+.bw-items{position:absolute;left:0;right:0;top:calc(var(--u)*18);bottom:calc(var(--u)*30);overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:calc(var(--u)*5);padding:calc(var(--u)*2) calc(var(--u)*5);align-content:start}
+.bw-items .bw-m{position:relative;left:auto!important;top:auto!important;width:auto;height:calc(var(--u)*40)}
+.bw-items .bw-m b{top:calc(var(--u)*6);font-size:calc(var(--u)*9.5)}
+.bw-items .bw-m .mty,.bw-items .bw-m .pp{bottom:calc(var(--u)*5)}
+.bw-items .bw-tip{position:static;grid-column:1/-1;white-space:normal;text-align:center}
+/* RUN: fart, musikk og å gi opp. */
+.bw-row{left:calc(var(--u)*30);width:calc(var(--u)*196);height:calc(var(--u)*34);top:calc(var(--u)*14);border-radius:calc(var(--u)*8)!important;background:linear-gradient(#3f6fb8,#1f3f80)!important;box-shadow:inset 0 0 0 calc(var(--u)*1.5) #dce8ff,0 calc(var(--u)*2) 0 rgba(0,0,0,.45);font-size:calc(var(--u)*11);font-weight:900;letter-spacing:.06em;text-align:left;padding:0 calc(var(--u)*14)!important}
+.bw-row b{float:right;font-size:calc(var(--u)*9);color:#f8e060}
+.bw-row:nth-child(2){top:calc(var(--u)*56)}
+.bw-row:nth-child(3){top:calc(var(--u)*98)}
+.bw-row.red{background:linear-gradient(#c04848,#7a2222)!important}
+.bw-row:active:not(:disabled){transform:scale(.97)}
 /* Overgangen inn i en vanlig kamp: to blink og svarte felt som lukker seg. */
 @keyframes wipeF{0%,30%,60%{opacity:0}15%,45%{opacity:.9}100%{opacity:0}}
 @keyframes wipeB{from{transform:scaleY(0)}to{transform:scaleY(1)}}
