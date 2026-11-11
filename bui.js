@@ -168,16 +168,17 @@ const leagueTag = () => { const L = S.lad; return `${L.lap ? 'Lap ' + (L.lap + 1
 /* Den legendariske som har vist seg. Én utfordring om dagen til den er slått. */
 function raidCard() {
   const R = S.raid; if (!R || !LEG[R.id]) return '';
-  const L = raidInfo(R), open = raidOpen();
-  return `<div class="card k-ultra raidc" style="--cc:${L.cc}"><div class="pre-foe"><span class="raid-sp">${spr(R.id, { ani: 1, sh: R.dk ? 2 : 0, mega: defForm(R.id) })}</span><div class="sp"><div class="sm">Legendary raid${R.tries ? ' · attempt ' + (R.tries + 1) : ''}</div><b class="bossn" style="font-size:19px">${esc(R.dk ? L.n : D(R.id)[0])}</b><div class="sm tn" style="margin-top:4px">Lv ${R.lv} · ${TYN[D(R.id)[1]]}${D(R.id)[2] >= 0 ? ' / ' + TYN[D(R.id)[2]] : ''} · your own team of six</div></div></div>
+  const V = raidShow(R), L = V.L, open = raidOpen();
+  return `<div class="card k-ultra raidc" style="--cc:${L.cc}"><div class="pre-foe"><span class="raid-sp">${spr(R.id, { ani: 1, sh: V.sh, mega: defForm(R.id) })}</span><div class="sp"><div class="sm">Legendary raid · attempt ${(R.tries || 0) + 1} of ${RAIDTRIES}</div><b class="bossn" style="font-size:19px">${esc(V.n)}</b><div class="sm tn" style="margin-top:4px">Lv ${V.lv} · ${TYN[D(R.id)[1]]}${D(R.id)[2] >= 0 ? ' / ' + TYN[D(R.id)[2]] : ''} · your own team of six</div></div></div>
     <button type="button" class="btn gold wide" data-a="raid" style="margin-top:10px"${open ? '' : ' disabled'}>${open ? 'Challenge it' : 'Again tomorrow'}</button></div>`;
 }
 function raidScreen() {
   const R = S.raid; if (!R) return render();
-  const L = raidInfo(R), party = S.party.map(monBy).filter(Boolean), lead = BT.lead && party.some(m => m.u === BT.lead) ? BT.lead : party[0] && party[0].u;
+  const V = raidShow(R), L = V.L, t = L.t, left = RAIDTRIES - (R.tries || 0), party = S.party.map(monBy).filter(Boolean), lead = BT.lead && party.some(m => m.u === BT.lead) ? BT.lead : party[0] && party[0].u;
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Legendary raid</span></div>
-    <div class="card k-ultra raidc" style="--cc:${L.cc}"><div class="pre-foe"><span class="raid-sp">${spr(R.id, { ani: 1, sh: R.dk ? 2 : 0, mega: defForm(R.id) })}</span><div class="sp"><div class="sm">${R.dk ? 'Shadow Pokémon · the rarest of all' : L.t === 4 ? 'The Original One' : L.t === 3 ? 'Mythical Pokémon' : 'Legendary Pokémon'}</div><b class="bossn" style="font-size:21px">${esc(R.dk ? L.n : D(R.id)[0])}</b><div class="sm tn" style="margin-top:4px">Lv ${R.lv} · far more HP than a normal Pokémon</div></div></div>
-      <p class="sm" style="margin-top:10px">One Pokémon against your whole team, with the Bag. Win and it waits in the grass for you to catch, with ${nb(RAIDCOIN[L.t - 1])} coins and 3 Rare Candy. Lose and it stays: you can try again tomorrow.</p></div>
+    <div class="card k-ultra raidc" style="--cc:${L.cc}"><div class="pre-foe"><span class="raid-sp">${spr(R.id, { ani: 1, sh: V.sh, mega: defForm(R.id) })}</span><div class="sp"><div class="sm">${V.sh === 2 ? 'Shadow Pokémon · the rarest of all' : raidTitle(R.id, 0)}</div><b class="bossn" style="font-size:21px">${esc(V.n)}</b><div class="sm tn" style="margin-top:4px">Lv ${V.lv} · ${RAIDHP[t - 1]}× the HP of a normal Pokémon</div></div></div>
+      <p class="sm" style="margin-top:10px">One Pokémon against your whole team, with the Bag. Its level was set by your team when it appeared, so training before you try again helps.</p>
+      <p class="sm" style="margin-top:6px">Win: it waits in the grass for you to catch, with ${nb(Math.round(RAIDCOIN[t - 1] * diff().coin))} coins, ${RAIDCANDY[t - 1]} Rare Candy and a lot of XP for the whole team. Lose: ${left > 1 ? `it stays, and you have ${left - 1} more ${left - 1 === 1 ? 'attempt' : 'attempts'}, one a day.` : 'this is your last attempt before it moves on.'}</p></div>
     <div><div class="lab">Your team · tap the one that leads</div><div class="lineup">${party.map(m => `<button type="button" data-a="rlead" data-u="${m.u}" class="${m.u === lead ? 'lead' : ''}">${spr(m.id, { sh: m.sh, mega: m.mega })}<span class="sp"><b>${esc(mName(m))}</b><br><span class="sm tn">Lv ${m.lv}</span></span>${m.u === lead ? '<span class="pill">Leads</span>' : ''}</button>`).join('')}</div></div>
     <div class="acts"><button type="button" class="btn gold" data-a="raidgo"${raidOpen() && party.length ? '' : ' disabled'}>${raidOpen() ? 'Start the raid' : 'Again tomorrow'}</button></div>`, 'tint', L.cc);
 }

@@ -256,7 +256,7 @@ function grantXp(B, res) {
     res.ups.push(Object.assign({ u: m.u, xp: x, l0, l1: m.lv, x0 }, m.lv > l0 ? learnUp(m, l0) : {}));
   });
 }
-const pushEnc = (res, e) => { S.pend.push(e); if (S.pend.length > 30) S.pend.splice(0, S.pend.length - 30); res.encs.push(e); };
+const pushEnc = (res, e) => { S.pend.push(e); trimPend(30); res.encs.push(e); };
 /* De pseudo-legendariske (første form): Dratini, Larvitar, Bagon, Beldum, Gible og Deino. */
 const PSEUDO = [147, 246, 371, 374, 443, 633];
 const giveCharm = res => { S.charm = (S.charm || 0) + CHARM.n; res.perks.push(`Shiny Charm: ${CHARM.m}× shiny odds in your next ${S.charm} focus sessions.`); };
@@ -399,7 +399,7 @@ function finishFactory(B) {
     if (r >= 3 && roll(0.12)) pushEnc(res, genEnc({ leg: 1 }));
     /* Sjelden boss: klassens egen belønning på toppen, som i ligaen. */
     if (B.tr.ultra) { const c = B.tr.ci, extra = Math.round([300, 500, 1000][c - 7] * sm * (B.dc || 1)); res.coins += extra; S.coins += extra; rareLoot(c, res, give, [B.tr.ty]); res.note = `${B.tr.cn}: extra rewards.`; }
-    res.roundDone = true; raidSpawn(res); R.round++; R.w = 0; R.team = null; R.offer = facOffer(R.round); R.open = 0;
+    res.roundDone = true; if (Math.random() < RAIDFAC) raidSpawn(res); R.round++; R.w = 0; R.team = null; R.offer = facOffer(R.round); R.open = 0;
   } else res.swap = B.foe.map(f => f.src);
   R.foe = null;
   save();
@@ -429,60 +429,98 @@ function labBattle(k, rent, pi) {
    Når en runde i ligaen eller i Battle Frontier er fullført, viser en legendarisk Pokémon seg. Den er på et høyt nivå og har flere ganger så mye HP
    som vanlig, så den er umulig i starten. Slår du den, venter den i gresset, og da kan du prøve å fange den.
    LEGD: art, trinn (1 legendarisk, 2 de største, 3 mytisk, 4 Arceus), søk etter låta i pakken, bane, tema på banen, farge, scenen i filmsnutten og kjennetegnet der. */
-const LEGD = '144,1,Lugia,snowy_tall_grass,snow,#bfe6ff,ice,|145,1,Raikou,mountain,spark,#ffe14a,bolt,|146,1,Ho-oh,mountain,flame,#ff9a3a,magma,|150,2,Origins>>Mewtwo,cave,shard,#c79bff,void,rings|151,3,Origins>>Mewtwo,tall_grass,petal,#ffb3d9,forest,|243,1,Raikou,mountain,spark,#ffe14a,bolt,|244,1,Entei>>Raikou,cave,flame,#ff7a2a,magma,|245,1,Raikou,shallow_water,bubble,#7ad0ff,sea,|249,2,Lugia,water,bubble,#cfe6ff,sea,whirl|250,2,Ho-oh,mountain,flame,#ffb23a,sky,rainbow|251,3,Ho-oh,pinwheel_road,petal,#9be07a,forest,|377,1,Heatran,cave,shard,#c9a45c,stone,|378,1,Heatran,kyurem_cave,snow,#bfe6ff,ice,|379,1,Heatran,cave,shard,#b4c0d2,stone,|380,1,Rayquaza,mountain,spark,#ff7a8a,sky,|381,1,Rayquaza,mountain,spark,#6aa8ff,sky,|382,2,Kyogre,water,bubble,#3f8cff,sea,glyph|383,2,Kyogre,cave,flame,#ff5a2a,magma,glyph|384,2,Rayquaza,mountain,spark,#3fe08a,sky,streak|385,3,Deoxys,mountain,spark,#ffe680,space,|386,3,Deoxys,black_tower_10,shard,#ff7a4a,space,rings|480,1,Uxie,shallow_water,bubble,#ffe680,sea,|481,1,Uxie,shallow_water,bubble,#ff8ab0,sea,|482,1,Uxie,shallow_water,bubble,#6aa8ff,sea,|483,2,Palkia,black_tower_10,shard,#6aa8ff,time,rings|484,2,Palkia,black_tower_10,shard,#ff8ad0,space,rift|485,1,Heatran,cave,flame,#ff7a2a,magma,|486,1,Heatran,cave,shard,#e8e0c0,stone,|487,2,Giratina,kyurem_cave,evil,#e0b030,void,stripes|488,1,Uxie,mountain,shard,#ffb3ea,space,|490,3,Uxie,water,bubble,#5ad0ff,sea,|491,3,Giratina,kyurem_cave,evil,#b03060,void,|492,3,Uxie,tall_grass,petal,#8be07a,forest,|493,4,Arceus,black_tower_10,,#ffe9a8,origin,wheel|494,3,Reshiram,pwt,flame,#ff9a3a,magma,|638,1,Cobalion,mountain,shard,#6ac0e8,stone,|639,1,Cobalion,cave,shard,#c9a45c,stone,|640,1,Cobalion,pinwheel_road,petal,#8be07a,forest,|641,1,Reshiram,mountain,spark,#8be0a0,sky,|642,1,Reshiram,mountain,spark,#6aa8ff,bolt,|643,2,Reshiram,black_tower_10,flame,#fff2e0,flame,pillar|644,2,Reshiram,black_tower_10,spark,#4ad0ff,bolt,pillar|645,1,Reshiram,cave,shard,#e0903a,stone,|646,2,Reshiram,kyurem_cave,snow,#bfe6ff,ice,pillar|647,3,Cobalion,shallow_water,bubble,#6ac0ff,sea,|648,3,Reshiram,pwt,petal,#9be07a,forest,|649,3,Reshiram,black_tower_3_5,shard,#c79bff,space,';
+const LEGD = '144,1,Lugia,snowy_tall_grass,snow,#bfe6ff,ice,|145,1,Raikou,mountain,spark,#ffe14a,bolt,|146,1,Ho-oh,mountain,flame,#ff9a3a,magma,|150,2,Origins>>Mewtwo,cave,shard,#c79bff,void,rings|151,3,Origins>>Mewtwo,tall_grass,petal,#ffb3d9,forest,|243,1,Raikou,mountain,spark,#ffe14a,bolt,|244,1,Entei>>Raikou,cave,flame,#ff7a2a,magma,|245,1,Raikou,shallow_water,bubble,#7ad0ff,sea,|249,2,Lugia,water,bubble,#cfe6ff,sea,whirl|250,2,Ho-oh,mountain,flame,#ffb23a,sky,rainbow|251,3,Ho-oh,pinwheel_road,petal,#9be07a,forest,|377,1,Heatran,cave,shard,#c9a45c,stone,|378,1,Heatran,kyurem_cave,snow,#bfe6ff,ice,|379,1,Heatran,cave,shard,#b4c0d2,stone,|380,1,Rayquaza,mountain,spark,#ff7a8a,sky,|381,1,Rayquaza,mountain,spark,#6aa8ff,sky,|382,2,Kyogre,water,bubble,#3f8cff,sea,glyph|383,2,Kyogre,cave,flame,#ff5a2a,magma,glyph|384,2,Rayquaza,mountain,spark,#3fe08a,sky,streak|385,3,Deoxys,mountain,spark,#ffe680,space,|386,4,Deoxys,black_tower_10,shard,#ff7a4a,space,rings|480,1,Uxie,shallow_water,bubble,#ffe680,sea,|481,1,Uxie,shallow_water,bubble,#ff8ab0,sea,|482,1,Uxie,shallow_water,bubble,#6aa8ff,sea,|483,2,Palkia,black_tower_10,shard,#6aa8ff,time,rings|484,2,Palkia,black_tower_10,shard,#ff8ad0,space,rift|485,1,Heatran,cave,flame,#ff7a2a,magma,|486,1,Heatran,cave,shard,#e8e0c0,stone,|487,2,Giratina,kyurem_cave,evil,#e0b030,void,stripes|488,1,Uxie,mountain,shard,#ffb3ea,space,|490,3,Uxie,water,bubble,#5ad0ff,sea,|491,3,Giratina,kyurem_cave,evil,#b03060,void,|492,3,Uxie,tall_grass,petal,#8be07a,forest,|493,4,Arceus,black_tower_10,,#ffe9a8,origin,wheel|494,3,Reshiram,pwt,flame,#ff9a3a,magma,|638,1,Cobalion,mountain,shard,#6ac0e8,stone,|639,1,Cobalion,cave,shard,#c9a45c,stone,|640,1,Cobalion,pinwheel_road,petal,#8be07a,forest,|641,1,Reshiram,mountain,spark,#8be0a0,sky,|642,1,Reshiram,mountain,spark,#6aa8ff,bolt,|643,2,Reshiram,black_tower_10,flame,#fff2e0,flame,pillar|644,2,Reshiram,black_tower_10,spark,#4ad0ff,bolt,pillar|645,1,Reshiram,cave,shard,#e0903a,stone,|646,2,Reshiram,kyurem_cave,snow,#bfe6ff,ice,pillar|647,3,Cobalion,shallow_water,bubble,#6ac0ff,sea,|648,3,Reshiram,pwt,petal,#9be07a,forest,|649,3,Reshiram,black_tower_3_5,shard,#c79bff,space,';
 const LEG = {}; LEGD.split('|').forEach(r => { const q = r.split(','); LEG[+q[0]] = { t: +q[1], mre: q[2], sc: q[3], th: q[4], cc: q[5], bg: q[6], sig: q[7] }; });
-const RAIDLV = [60, 72, 66, 85, 92], RAIDHP = [2, 2.6, 2.2, 3.2, 3.6], RAIDCOIN = [800, 1600, 1200, 2500, 5000];
-/* Dark Mewtwo er Mewtwo som er blitt mørk: hver gang Mewtwo viser seg, er det DARKP sjanse for at det er den mørke i stedet.
-   Til du har den mørke, har Mewtwo sin egen trekning (MEWP av raidene), så den faktisk dukker opp: det gir Dark Mewtwo i omtrent 1 av 50 raid. */
-const MEWP = 0.08, DARKP = 0.25;
+/* ---------- Raid-reglene ----------
+   NÅR en legendarisk viser seg: (1) hver gang en runde i ligaen er fullført, (2) når du når dagsmålet ditt (RAIDGOAL sjanse), (3) hver sjuende dag på rad
+   du har studert, og (4) noen ganger etter en fullført runde i Battle Frontier (RAIDFAC). Bare én venter om gangen.
+   HVOR LENGE: du har RAIDTRIES forsøk, ett om dagen. Etter det siste drar den videre, så du aldri blir stående fast mot en du ikke klarer.
+   NIVÅ: settes i det den viser seg, etter laget ditt (snittet av de tre sterkeste + RAIDOFF for sjeldenheten), og aldri over artens toppnivå (RAIDLV).
+        Trener du laget før du prøver igjen, har du altså tatt innpå. Vanskelighetsgraden senker nivå og HP på Easy og Normal.
+        Det som gjør et raid tungt, er ikke nivået, men at den legendariske har flere ganger så mye HP (RAIDHP) og de sterkeste artene i spillet.
+        Stilt inn med simulerte kamper: et jevnt lag uten veske slår de vanlige omtrent annenhver gang på Hard, de største bare av og til.
+   HVEM: oftest en vanlig legendarisk (1), så de mytiske (3) og de største (2). De aller sjeldneste (4: Arceus og Deoxys) starter på 3 %,
+        og sjansen vokser litt for hvert raid uten en av dem (S.rpity), så de kommer før eller siden. Mewtwo har egen trekning (MEWP) til du har den mørke,
+        og hver gang Mewtwo viser seg, er det DARKP sjanse for at den blir til Dark Mewtwo foran øynene dine.
+   BELØNNING: mynter (RAIDCOIN × vanskelighetsgrad), Rare Candy (RAIDCANDY), mye XP til hele laget, og den legendariske venter i gresset. */
+const RAIDLV = [60, 72, 66, 85, 92], RAIDHP = [2.2, 3, 2.6, 3.2, 4.2], RAIDCOIN = [1000, 2000, 1500, 4000, 6000], RAIDCANDY = [3, 5, 4, 8, 10], RAIDOFF = [1, 3, 2, 4, 6];
+const RAIDTRIES = 3, RAIDGOAL = 0.3, RAIDFAC = 0.35, MEWP = 0.08, DARKP = 0.25;
+/* De sterkeste viser seg bare for lag som kan gi dem kamp: de mytiske fra lagnivå 25, de største fra 35, og Arceus, Deoxys og Dark Mewtwo fra 45. */
+const RAIDGATE = [0, 35, 25, 45, 45];
+const raidLvFor = t => Math.max(12, Math.min(RAIDLV[t - 1] + 3 * Math.min(5, S.lad.lap || 0), Math.round(leagueLv()) + RAIDOFF[t - 1]));
 /* Dark Mewtwo (Shadow Mewtwo i Pokkén Tournament, «Dark Mewtwo» på japansk): den sjeldneste og sterkeste av alle. Samme art som Mewtwo, men mørk (sh: 2),
-   på et høyere nivå enn Arceus og med mer HP. Slår du den, er det den mørke som venter i gresset. */
+   på et høyere nivå enn Arceus og med mer HP. Den kommer som et vanlig Mewtwo-raid: først i filmen blir den mørk (S.raid.seen = du har sett det).
+   Slår du den, er det den mørke som venter i gresset. */
 const DARK = { id: 150, t: 5, mre: 'X & Y - Mewtwo>>Mewtwo', sc: 'cave', th: 'evil', cc: '#ff8a2a', bg: 'void', sig: 'rings', n: 'Dark Mewtwo', title: 'Shadow Pokémon' };
 const hasDark = () => S.mons.some(m => m.id === 150 && m.sh === 2);
 const raidInfo = R => R && R.dk ? DARK : R ? LEG[R.id] : null;
-/* Hvem som viser seg: oftest en vanlig legendarisk, sjeldnere en mytisk eller en av de største, og Arceus bare en sjelden gang. De du alt har, kommer ikke igjen. */
+/* Det raidkortet viser før kampen: en Dark Mewtwo du ikke har sett ennå, ser ut som en vanlig Mewtwo. */
+const raidVeil = R => !!(R && R.dk && !R.seen);
+const raidShow = R => raidVeil(R) ? { L: LEG[150], n: D(150)[0], sh: 0, lv: R.lv0 || R.lv } : { L: raidInfo(R), n: R.dk ? DARK.n : D(R.id)[0], sh: R.dk ? 2 : 0, lv: R.lv };
+const raidTitle = (id, dk) => dk ? DARK.title : id === 493 ? 'The Original One' : LEG[id].t === 3 || id === 386 ? 'Mythical Pokémon' : 'Legendary Pokémon';
 function raidPick() {
-  const r = Math.random(), t = r < 0.02 ? 4 : r < 0.2 ? 2 : r < 0.42 ? 3 : 1, all = Object.keys(LEG).map(Number), c = all.filter(id => LEG[id].t === t && !S.mons.some(m => m.id === id));
+  const p4 = Math.min(0.25, 0.03 + 0.006 * (S.rpity || 0)), r = Math.random(), lv = leagueLv(), all = Object.keys(LEG).map(Number);
+  let t = r < p4 ? 4 : r < p4 + 0.18 ? 2 : r < p4 + 0.4 ? 3 : 1;
+  if (t === 4 && lv < RAIDGATE[3]) t = 2; if (t === 2 && lv < RAIDGATE[1]) t = 3; if (t === 3 && lv < RAIDGATE[2]) t = 1;
+  const c = all.filter(id => LEG[id].t === t && !S.mons.some(m => m.id === id));
   const l = c.length ? c : all.filter(id => LEG[id].t === 1); return l[rnd(l.length)];
 }
 function raidSpawn(res) {
-  if (S.raid) return;
-  let id = !hasDark() && Math.random() < MEWP ? 150 : raidPick();
+  if (S.raid) return false;
+  const lv = leagueLv();
+  let id = !hasDark() && lv >= RAIDGATE[1] && Math.random() < MEWP ? 150 : raidPick();
   /* Har du alt den vanlige Mewtwo og den ikke er mørk denne gangen, kommer en annen legendarisk i stedet. */
-  const dark = id === 150 && !hasDark() && Math.random() < DARKP;
+  const dark = id === 150 && !hasDark() && lv >= RAIDGATE[4] && Math.random() < DARKP;
   if (id === 150 && !dark && S.mons.some(m => m.id === 150)) id = raidPick();
-  if (dark) { S.raid = { id: 150, dk: 1, lv: Math.min(100, RAIDLV[4] + 2 * Math.min(4, S.lad.lap || 0)), day: '', tries: 0 }; if (res) res.raid = 150; return; }
-  S.raid = { id, lv: Math.min(100, RAIDLV[LEG[id].t - 1] + 3 * Math.min(5, S.lad.lap || 0)), day: '', tries: 0 }; if (res) res.raid = id;
+  const t = dark ? 5 : LEG[id].t;
+  S.rpity = t >= 4 ? 0 : (S.rpity || 0) + 1;
+  S.raid = { id, lv: raidLvFor(t), day: '', tries: 0 }; if (dark) { S.raid.dk = 1; S.raid.lv0 = raidLvFor(2); }
+  if (res) res.raid = id;
+  return true;
 }
 const raidOpen = () => !!S.raid && !!LEG[S.raid.id] && S.raid.day !== dayKey();
 function legTr(id, dk) {
   const L = dk ? DARK : LEG[id], d = D(id);
-  return { n: dk ? L.n : d[0], img: '', title: dk ? L.title : L.t === 4 ? 'The Original One' : L.t === 3 ? 'Mythical Pokémon' : 'Legendary Pokémon', ty: d[1], kind: 'legend', ci: 10, cn: 'Legendary raid', skill: 1, boss: true, ultra: true, gold: L.t === 4, int: 8,
+  return { n: dk ? L.n : d[0], img: '', title: raidTitle(id, dk), ty: d[1], kind: 'legend', ci: 10, cn: 'Legendary raid', skill: 1, boss: true, ultra: true, gold: L.t === 4, int: 8,
     sc: L.sc, th: L.th, cc: L.cc, arena: 'hall', v: 0, mre: L.mre, wild: 1, leg: id, dk: dk ? 1 : 0, lt: L.t, lbg: L.bg, sig: L.sig };
 }
-/* En legendarisk slår aldri ut seg selv: Explosion, Final Gambit, Memento og lignende byttes ut med det beste den ellers kan. */
-const SELFKO = new Set(['Explosion', 'Self-Destruct', 'Final Gambit', 'Memento', 'Healing Wish', 'Lunar Dance', 'Destiny Bond', 'Perish Song']);
+/* En legendarisk i raid slår aldri ut seg selv: Explosion, Final Gambit, Memento og lignende byttes ut med det beste den ellers kan. */
+/* Den helbreder seg heller ikke: med flere ganger så mye HP som en vanlig Pokémon ville Rest eller Recover gjort kampen håpløs. */
+const SELFKO = new Set(['Explosion', 'Self-Destruct', 'Final Gambit', 'Memento', 'Healing Wish', 'Lunar Dance', 'Destiny Bond', 'Perish Song',
+  'Rest', 'Recover', 'Roost', 'Soft-Boiled', 'Synthesis', 'Moonlight', 'Morning Sun', 'Milk Drink', 'Slack Off', 'Heal Order', 'Wish', 'Swallow', 'Pain Split', 'Leech Seed', 'Ingrain', 'Aqua Ring']);
 function raidMoves(id, lv) {
-  const ok = x => !SELFKO.has(MOVES[x][0]), mv = foeMoves(id, lv, 2).filter(ok);
+  /* Og den bygger seg ikke opp med Cosmic Power, Calm Mind og lignende: den angriper. */
+  const ok = x => { const m = MOVES[x]; return !SELFKO.has(m[0]) && !(m[4] === 0 && m[17] === 1 && m[12].length); }, mv = foeMoves(id, lv, 2).filter(ok);
   for (const x of movesAt(id, lv + 8).filter(x => ok(x) && !DEADMV.has(x) && MOVES[x][4] > 0).sort((a, b) => (MOVES[b][2] || 0) - (MOVES[a][2] || 0))) { if (mv.length >= 4) break; if (!mv.includes(x)) mv.push(x); }
   return mv.length ? mv : defaultMoves(id, lv);
 }
 /* demo = arten som skal prøves i demoen (gir ingenting). Ellers den som har vist seg. */
 /* demo = arten som skal prøves i demoen (gir ingenting), eller 'dk' for Dark Mewtwo. Ellers den som har vist seg. */
 function raidBattle(lead, demo) {
-  const R = demo === 'dk' ? { id: 150, dk: 1, lv: RAIDLV[4] } : demo ? { id: demo, lv: RAIDLV[LEG[demo].t - 1] } : S.raid, L = raidInfo(R), party = S.party.map(monBy).filter(Boolean);
+  const R = demo === 'dk' ? { id: 150, dk: 1, lv: raidLvFor(5) } : demo ? { id: demo, lv: raidLvFor(LEG[demo].t) } : S.raid, L = raidInfo(R), party = S.party.map(monBy).filter(Boolean);
+  if (!demo && R.dk && !R.seen) { R.seen = 1; save(true); }
   party.sort((a, b) => (b.u === lead) - (a.u === lead));
   /* Vanskelighetsgraden senker nivået og HP-en til den legendariske (Hard = som før). */
-  const dd = diff(), lv = Math.max(20, Math.round(R.lv * dd.rlv)), e = Math.round((R.dk ? 100 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : 0, g: rollG(R.id), mega: defForm(R.id), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: raidMoves(R.id, lv) };
-  const B = mkBattle(party, [foe], legTr(R.id, R.dk), { mode: demo ? 'lab' : 'raid', raid: 1, st: TCL.supreme, k: 'legend', rd: 0, n: 0, lap: 0, ti: 0, bag: bagN(), xm: 1, sm: 1, dc: dd.coin, boost: { mode: '', m: 1, xp: 1 } });
+  const dd = diff(), lv = Math.max(10, Math.round(R.lv * dd.rlv)), e = Math.round((R.dk ? 100 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : 0, g: rollG(R.id), mega: defForm(R.id), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: raidMoves(R.id, lv) };
+  const B = mkBattle(party, [foe], legTr(R.id, R.dk), { mode: demo ? 'lab' : 'raid', raid: 1, st: TCL.supreme, k: 'legend', rd: 0, n: 0, lap: 0, ti: 0, bag: bagN(), xm: 3 * dd.xp, sm: 1, dc: dd.coin, boost: { mode: '', m: 1, xp: 1 } });
   B.tr.skill = dd.sk;
   const f = B.foe[0]; f.max = f.hp = Math.round(f.max * RAIDHP[L.t - 1] * dd.rhp); if (R.dk) f.short = 'D.Mewtwo';
   return B;
 }
 function finishRaid(B) {
-  const win = B.over === 'win', id = B.tr.leg, R = S.raid, nm = B.tr.n, res = { mode: 'raid', win, ups: [], items: [], encs: [], coins: 0, trade: null, perks: [], note: '', kind: 'legend', leg: id };
-  if (win) { res.coins = Math.round(RAIDCOIN[B.tr.lt - 1] * (B.dc || 1)); S.coins += res.coins; S.items.candy = (S.items.candy || 0) + 3; res.items.push('3 × Rare Candy'); pushEnc(res, Object.assign(genEnc({ ids: [id] }), B.tr.dk ? { sh: 2 } : {})); S.raid = null; res.note = `${nm} is waiting in the grass. Go and catch it.`; }
-  else if (R) { R.day = dayKey(); R.tries = (R.tries || 0) + 1; res.note = `${nm} stays where it is. You can challenge it again tomorrow.`; }
+  const win = B.over === 'win', id = B.tr.leg, R = S.raid, nm = B.tr.n, t = B.tr.lt, res = { mode: 'raid', win, ups: [], items: [], encs: [], coins: 0, trade: null, perks: [], note: '', kind: 'legend', leg: id };
+  if (win) {
+    grantXp(B, res);
+    res.coins = Math.round(RAIDCOIN[t - 1] * (B.dc || 1)); S.coins += res.coins;
+    const c = RAIDCANDY[t - 1]; S.items.candy = (S.items.candy || 0) + c; res.items.push(`${c} × Rare Candy`);
+    if (t >= 2) { const n = t >= 4 ? 3 : 1; S.items.ultra = (S.items.ultra || 0) + n + 1; res.items.push(`${n + 1} × Ultra Ball`); }
+    if (t >= 4) giveCharm(res);
+    pushEnc(res, Object.assign(genEnc({ ids: [id] }), B.tr.dk ? { sh: 2 } : {})); S.raid = null; res.note = `${nm} is waiting in the grass. Go and catch it.`;
+  } else if (R) {
+    R.day = dayKey(); R.tries = (R.tries || 0) + 1;
+    if (R.tries >= RAIDTRIES) { S.raid = null; res.note = `${nm} has moved on. Another legendary Pokémon will show itself in time.`; }
+    else res.note = `${nm} stays where it is. You have ${RAIDTRIES - R.tries} ${RAIDTRIES - R.tries === 1 ? 'attempt' : 'attempts'} left, one a day.`;
+  }
   save(); return res;
 }
 const finishLab = B => ({ mode: 'lab', win: B.over === 'win', ups: [], items: [], encs: [], coins: 0, trade: null, perks: [], note: '', kind: B.k });

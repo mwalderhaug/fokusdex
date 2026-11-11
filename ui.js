@@ -165,7 +165,7 @@ function cry(id, delay = 0, vol = 0.45) {
   }).catch(() => {});
 }
 /* Lyd per type trykk. Handlinger med egen lyd (kast, kjøp, utvikling osv.) får ikke en ekstra. */
-const OWN = new Set(['mvtog', 'start', 'throw', 'buy', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm']);
+const OWN = new Set(['mvtog', 'start', 'throw', 'buy', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm']);
 const SND = {
   tab: 'tab', lagv: 'tab', dexr: 'tab',
   fag: 'chip', min: 'chip', reg: 'chip', sort: 'chip', filt: 'chip', sety: 'chip',
@@ -372,7 +372,12 @@ function specSheet(id) {
 VIEW.butikk = () => {
   const l = tlv(), own = k => k === 'egg' ? S.eggs.length : k === 'incense' ? (S.incOn ? 1 : 0) : S.items[k];
   const ic = k => SHOP[k].img ? ballEl(k, '30px') : SHOP[k].ic === 'egg' ? '<span class="egg" style="transform:scale(.7)"></span>' : `<span class="${SHOP[k].ic}"></span>`;
+  const full = S.pend.length > PACKMAX;
   return `<div class="row" style="justify-content:space-between"><h1 class="big">Shop</h1>${coinEl(S.coins)}</div>
+    <h2 class="h">Encounter packs</h2>
+    <div class="packs">${Object.keys(PACKS).map(k => { const P = PACKS[k], lock = P.lv && l < P.lv, can = S.coins >= P.p && !lock && !full;
+      return `<button type="button" class="pkb${can ? '' : ' off'}" data-a="pack" data-k="${k}" style="--pc:${P.c}"${can ? '' : ' disabled'}><span class="pk-ic"><i></i></span><b>${P.n}</b><span class="sm">${P.d}</span><span class="pk-p tn">${lock ? 'Trainer level ' + P.lv : coinEl(P.p)}</span></button>`; }).join('')}</div>
+    <p class="sm">${full ? 'Catch some of the encounters that are waiting before you open more packs.' : 'Three encounters in every pack, opened on the spot. The last slot is the good one: the dearer the pack, the better the odds of something rare. Pokémon from packs sell for less than wild ones. The greatest legendaries are not in packs; they have to be met in raids.'}</p>
     ${[0, 1].map(g => `${g ? '<h2 class="h">For battles</h2><p class="sm">Use these from the Bag in League battles. Using one takes your turn, and you can use three per battle.</p>' : ''}<div class="card" style="padding-top:6px;padding-bottom:6px">${Object.keys(SHOP).filter(k => !!SHOP[k].bt === !!g).map(k => { const it = SHOP[k], lock = it.lv && l < it.lv, full = (k === 'egg' && S.eggs.length >= 3) || (k === 'incense' && S.incOn);
       return `<div class="item"><span class="ic">${ic(k)}</span><div class="sp"><b>${it.n}</b> <span class="sm tn">· own ${own(k)}</span><div class="sm">${it.d}</div></div><button type="button" class="btn sm2 ${S.coins >= it.p && !lock && !full ? 'pri' : ''}" data-a="buy" data-k="${k}"${S.coins < it.p || lock || full ? ' disabled' : ''}>${lock ? 'Level ' + it.lv : full ? 'Full' : nb(it.p)}</button></div>`; }).join('')}</div>`).join('')}
     <h2 class="h">Routes</h2>
@@ -468,6 +473,15 @@ function backupSheet() {
 /* ---------- Ark ---------- */
 function openSheet(html) { const w = $('#sheet'); w.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><span class="grab"></span>${html}</div>`; w.hidden = false; }
 function closeSheet() { const w = $('#sheet'); w.hidden = true; w.innerHTML = ''; }
+/* Åpner en encounter-pakke: pakken ristes opp, tre kort kommer ut med baksiden opp, og hvert snus med et trykk. Fargen på kortet røper sjeldenheten først når det snus. */
+function packShow(k, encs) {
+  const P = PACKS[k]; U.pk = encs;
+  ov(`<div class="pko" id="pko" style="--pc:${P.c}">
+    <button type="button" class="pk-pack" data-a="pkopen" aria-label="Open the pack"><span class="pk-ic big"><i></i></span><b>${P.n}</b></button>
+    <div class="pk-cards">${encs.map((e, i) => `<button type="button" class="pk-card r${e.t}${e.sh ? ' shy' : ''}" data-a="pkflip" data-k="${i}" style="--i:${i}" aria-label="Card ${i + 1}"><span class="pk-in"><span class="pk-back"><i></i></span><span class="pk-front">${spr(e.id, { ani: 1, sh: e.sh, mega: defForm(e.id) })}<b>${e.sh ? 'Shiny ' : ''}${esc(D(e.id)[0])}${gs(e)}</b><span class="tier r${e.t}">${TIERS[e.t]}</span><span class="sm tn">Lv ${e.lv}${S.caught[e.id] ? '' : ' · new'}</span></span></span></button>`).join('')}</div>
+    <p class="sm" id="pkt" style="text-align:center">Tap the pack to open it</p>
+    <div class="acts" id="pka" style="visibility:hidden"><button type="button" class="btn gold" data-a="pkhunt">Catch them now</button><button type="button" class="btn nf" data-a="pkdone">Later</button></div></div>`, 'packov', P.c);
+}
 function ov(html, cls, tc) { const o = $('#ov'); o.className = 'ov' + (cls ? ' ' + cls : ''); o.style.setProperty('--tc', tc || 'var(--sage)'); o.innerHTML = `<div class="ovin">${html}</div>`; o.hidden = false; }
 function closeOv() { const o = $('#ov'); o.hidden = true; o.innerHTML = ''; }
 
@@ -656,6 +670,18 @@ const A = {
   sell: el => { const m = monBy(+el.dataset.u); if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.innerHTML = 'Tap again to sell'; return; } const v = sell(m); save(); sfx.sell(); closeSheet(); render(); toast(`Sold for ${nb(v)} coins.`); },
   selldupes: el => { const du = dupes(); if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = `Tap again to sell ${du.length}`; return; } let v = 0; du.forEach(m => { v += sell(m); }); save(); sfx.sell(); render(); toast(`${du.length} sold for ${nb(v)} coins.`); },
   buy: el => { if (buy(el.dataset.k)) { sfx.coin(); render(); toast(`${SHOP[el.dataset.k].n} bought.`); } },
+  pack: el => { const k = el.dataset.k, out = openPack(k); if (!out) return toast(S.pend.length > PACKMAX ? 'Catch some of your waiting encounters first.' : 'Not enough coins.'); sfx.coin(); packShow(k, out); },
+  pkopen: () => { const o = $('#pko'); if (!o || o.classList.contains('open')) return; o.classList.add('open'); sfx.appear(); buzz([30, 40, 30]); $('#pkt').textContent = 'Tap the cards to turn them'; },
+  pkflip: el => {
+    if (el.classList.contains('on') || !$('#pko').classList.contains('open')) return;
+    const e = U.pk && U.pk[+el.dataset.k]; if (!e) return;
+    el.classList.add('on'); S.seen[e.id] = 1;
+    if (e.t >= 3 || e.sh) { sfx.evo(); buzz([60, 40, 60, 40, 220]); } else if (e.t >= 2) { sfx.got(); buzz(40); } else { sfx.found(); buzz(15); }
+    cry(e.id, 280, 0.35);
+    if (document.querySelectorAll('#pko .pk-card:not(.on)').length === 0) { const best = U.pk.reduce((a, x) => Math.max(a, x.t + (x.sh ? 2 : 0)), 0); $('#pkt').textContent = best >= 4 ? 'What a pull!' : best >= 3 ? 'A great pack.' : 'They are waiting in the grass.'; $('#pka').style.visibility = 'visible'; save(true); }
+  },
+  pkdone: () => { U.pk = null; closeOv(); render(); },
+  pkhunt: () => { U.pk = null; hunt(); },
   sound: () => { S.sound = S.sound ? 0 : 1; save(); sfx.tap(); render(); },
   diff: el => { S.diff = +el.dataset.k; save(); render(); toast(`Difficulty: ${diff().n}. It applies from your next battle.`); },
   hfx: () => { S.hfx = S.hfx === 0 ? 1 : 0; save(); render(); },

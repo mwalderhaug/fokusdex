@@ -40,6 +40,25 @@ const SHOP = {
   egg: { n: 'Egg', p: 250, d: 'Hatches after 120 focus minutes. Can be from any region', ic: 'egg' }
 };
 const BALLM = { poke: 1, great: 1.5, ultra: 2.2 };
+/* Encounter-pakker: kjøpes for mynter og åpnes med en gang, som å åpne en kortpakke. Tre møter i hver, og den siste plassen er den gode:
+   jo dyrere pakke, jo bedre sjanser (min = laveste sjeldenhet, ps/leg = sjansen for en pseudo-legendarisk eller en legendarisk i den plassen,
+   shm = så mye likere er en shiny). lv = trenernivået pakken krever. De legendariske i pakkene er de vanlige (fugler, hunder, Regi-ene …):
+   de største må du møte i raid. */
+const PACKS = {
+  poke: { n: 'Poké Pack', p: 250, c: '#d98f7e', d: 'One of the three is uncommon or better.', slots: [{ luck: 0 }, { luck: 0.5 }, { min: 1, luck: 0 }], shm: 1 },
+  great: { n: 'Great Pack', p: 700, c: '#7fa8e6', d: 'One is rare or better, one uncommon or better.', slots: [{ luck: 0.5 }, { min: 1, luck: 0.5 }, { min: 2, luck: 0.6 }], shm: 1.5, lv: 3 },
+  ultra: { n: 'Ultra Pack', p: 1800, c: '#e3c577', d: 'One is epic. 12% pseudo-legendary, 3% legendary. Shiny odds ×2.5.', slots: [{ min: 1, luck: 1.5 }, { min: 2, luck: 1.5 }, { min: 3, luck: 2, ps: 0.12, leg: 0.03 }], shm: 2.5, lv: 5 },
+  master: { n: 'Master Pack', p: 6000, c: '#b295e6', d: 'Rare, epic and a top slot: 35% pseudo-legendary, 15% legendary. Shiny odds ×5.', slots: [{ min: 2, luck: 2 }, { min: 3, luck: 2 }, { min: 3, luck: 2, ps: 0.35, leg: 0.15 }], shm: 5, lv: 8 }
+};
+const PACKMAX = 24;
+function openPack(k) {
+  const P = PACKS[k]; if (!P || S.coins < P.p || (P.lv && tlv() < P.lv) || S.pend.length > PACKMAX) return null;
+  const pseudo = [147, 246, 371, 374, 443, 633], legs = typeof LEG !== 'undefined' ? Object.keys(LEG).map(Number).filter(id => LEG[id].t === 1 && S.regions.includes(regOf(id)) && !S.mons.some(m => m.id === id)) : [];
+  const out = P.slots.map(sl => { const r = Math.random(); return r < (sl.leg || 0) && legs.length ? genEnc({ ids: legs, shm: P.shm }) : r < (sl.leg || 0) + (sl.ps || 0) ? genEnc({ ids: pseudo, shm: P.shm }) : genEnc({ min: sl.min || 0, luck: sl.luck || 0, shm: P.shm }); });
+  out.forEach(e => { e.pk = 1; });
+  S.coins -= P.p; S.pend.push(...out); S.packs = (S.packs || 0) + 1; save();
+  return out;
+}
 /* Salgsverdi: sjeldenhet teller mest, nivå løfter prisen (nivå 20 dobler den). */
 const SELL = [10, 30, 120, 450, 3000];
 const STMULT = [1, 0.22, 0.07];
@@ -312,7 +331,7 @@ function genEnc(o = {}) {
   let x = Math.random() * tot, id = pool[pool.length - 1][0];
   for (const [i, w] of pool) { x -= w; if (x <= 0) { id = i; break; } }
   const lv = o.egg ? 1 : wildLv(id, tierOf(id));
-  return { id, lv, sh: Math.random() < shinyOdds() * (o.egg ? 4 : 1) ? 1 : 0, t: tierOf(id), tr: isLeg(id) ? 4 : 3, g: rollG(id) };
+  return { id, lv, sh: Math.random() < shinyOdds() * (o.egg ? 4 : 1) * (o.shm || 1) ? 1 : 0, t: tierOf(id), tr: isLeg(id) ? 4 : 3, g: rollG(id) };
 }
 /* Sjansen for fangst. zone: 0 = bom, 1 = grønn sone, 2 = gull. */
 const catchP = (id, ball, zone) => Math.min(0.97, Math.pow(D(id)[3] / 255, 0.45) * BALLM[ball] * [0.5, 1, 1.6][zone]);
@@ -324,12 +343,14 @@ function throwBall(e, ball, zone) {
   const p = catchP(e.id, ball, zone), ok = Math.random() < p;
   S.seen[e.id] = 1;
   let mon = null, isNew = false;
-  if (ok) { isNew = !S.caught[e.id]; mon = addMon(e.id, e.lv, e.sh, 0, e.g); dropPend(e); }
+  if (ok) { isNew = !S.caught[e.id]; mon = addMon(e.id, e.lv, e.sh, 0, e.g); if (e.pk) mon.pk = 1; dropPend(e); }
   else if (e.tr <= 0) dropPend(e);
   save();
   return { ok, p, mon, isNew, fled: !ok && e.tr <= 0 };
 }
 function dropPend(e) { const i = S.pend.indexOf(e); if (i >= 0) S.pend.splice(i, 1); }
+/* Køen av encounters har et tak. De eldste vanlige ryker først; kjøpte (pakker) og legendariske blir aldri kastet. */
+function trimPend(max) { for (let i = 0; S.pend.length > max && i < S.pend.length;) { const e = S.pend[i]; if (e.pk || e.t >= 4) i++; else S.pend.splice(i, 1); } }
 
 /* ---------- Fokusøkt ---------- */
 const elapsedMs = t => (t.pausedAt || Date.now()) - t.start - (t.paused || 0);
@@ -364,6 +385,12 @@ function grant(fag, min, full, planned) {
     if (m.lv > l0) R.ups.push(Object.assign({ u, l0, l1: m.lv, evo: evoOpts(m).some(x => x.ok) }, learnUp(m, l0)));
   });
   for (const q of QUESTS) if (day.m - min < q.m && day.m >= q.m) { q.give(); R.gifts.push(`Daily goal, ${q.n}: ${q.r}`); }
+  /* Raid: dagsmålet nådd gir en sjanse for at en legendarisk viser seg, og hver sjuende dag på rad gir en sikker. */
+  if (typeof raidSpawn === 'function' && !S.raid && S.party.length) {
+    const g = goalMin(), st = streak();
+    if (day.s === 1 && day.m >= 25 && st > 0 && st % 7 === 0) { if (raidSpawn()) R.gifts.push(`${st} days in a row: a legendary Pokémon has shown itself. A raid is waiting.`); }
+    else if (day.m - min < g && day.m >= g && Math.random() < RAIDGOAL) { if (raidSpawn()) R.gifts.push('Daily goal reached: a legendary Pokémon has shown itself. A raid is waiting.'); }
+  }
   R.tl1 = tlv();
   for (const n of unlockRegions()) R.gifts.push(`New area: ${n} is open. Its Pokémon now show up in your encounters.`);
   S.nreg = [];
@@ -397,7 +424,7 @@ function grant(fag, min, full, planned) {
   R.enc = encs.length;
   if (S.charm > 0 && n > 0) { S.charm--; R.gifts.push(`Shiny Charm: ${CHARM.m}× shiny odds this session${S.charm ? ` · ${S.charm} more session${S.charm > 1 ? 's' : ''}` : ' · it has now faded'}`); }
   S.pend.push(...encs);
-  if (S.pend.length > 15) S.pend.splice(0, S.pend.length - 15);
+  trimPend(15);
   save();
   return R;
 }
@@ -418,7 +445,9 @@ function evolve(m, to) {
   m.id = to; S.seen[to] = 1; S.caught[to] = 1;
   save(); return true;
 }
-const sellValue = m => Math.round(SELL[tierOf(m.id)] * (1 + m.lv / 20) * (m.sh ? 5 : 1));
+/* Pokémon fra kjøpte pakker selges for 30 %, ellers kunne en pakke kjøpes og selges med fortjeneste. */
+const PKSELL = 0.3;
+const sellValue = m => Math.round(SELL[tierOf(m.id)] * (1 + m.lv / 20) * (m.sh ? 5 : 1) * (m.pk ? PKSELL : 1));
 function sell(m) {
   if (S.mons.length <= 1) return 0;
   const v = sellValue(m);
