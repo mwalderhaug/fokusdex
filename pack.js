@@ -59,15 +59,34 @@ const PACK = (() => {
   /* Rett etter at pakken er funnet, hentes det første kampen trenger i bakgrunnen: HP-boksene, introbildene, ballene, animasjonsdataene og trenerlåtene. */
   function warmUp() {
     const m = P.man, list = [m.hud && m.hud.f, m.vs && m.vs.f, 'ui/ball_pokeball.png', 'ui/ball_pokeball_open.png'].filter(Boolean);
-    list.forEach(f => P.url(f)); loadHud(); loadMenu(); loadAnims();
+    list.forEach(f => P.url(f)); loadHud(); loadMenu(); loadAnims(); loadEbx();
     (m.music || []).filter(x => x.c === 'trainer').forEach(x => P.url(x.f));
     /* Bildet og låta til den som venter i ligaen hentes også, og forsiden tegnes på nytt når bildet er klart (bare hvis den står framme). */
     try { if (S.party.length) { const t = nextTrainer(), tr = trainerInfo(t), f = P.trackFor({ tr, lap: t.lap, rd: Math.floor(t.n / 2), mode: 'league' }), pt = m.trainers && m.trainers[tr.img.split('|')[0]]; if (f) P.url(f); if (pt && !mem.get(pt)) P.url(pt).then(u => { if (u && !S.timer && $('#ov').hidden && U.tab === 'fokus' && $('#sheet').hidden !== false) render(); }); } } catch (_) {}
   }
   let animJob = null;
   const loadAnims = () => P.anims || !P.man.anims ? Promise.resolve() : animJob || (animJob = blob(P.man.anims).then(b => b.text()).then(t => { P.anims = JSON.parse(t); }).catch(() => { animJob = null; }));
+  /* Angrepsanimasjonene fra Elite Battle DX: programmene (som data, se ebx.js) og bildene de bruker. Bildene ligger etter hverandre i samlefiler,
+     og innholdslisten sier hvor hvert av dem ligger. */
+  let ebxJob = null; const ebxBin = new Map();
+  const loadEbx = () => !P.man.ebx || typeof EBX === 'undefined' || EBX.ok ? Promise.resolve() : ebxJob || (ebxJob = blob(P.man.ebx).then(b => b.text()).then(t => {
+    const d = JSON.parse(t); if (!d || !d.anims || !d.img) throw new Error('ebx'); P.ebx = d; EBX.load(d); (d.files || []).forEach(f => { if (!ebxBin.has(f)) ebxBin.set(f, blob(f)); });
+  }).catch(() => { ebxJob = null; }));
+  if (typeof EBXP !== 'undefined') EBXP.source = async name => {
+    const e = P.ebx && P.ebx.img[name], f = e && P.ebx.files[e[2]]; if (!f) return null;
+    if (!ebxBin.has(f)) ebxBin.set(f, blob(f));
+    let b; try { b = await ebxBin.get(f); } catch (_) { ebxBin.delete(f); return null; }
+    const u = URL.createObjectURL(b.slice(e[3], e[3] + e[4], e[5] ? 'image/webp' : 'image/png')), im = new Image();
+    im.src = u; try { await im.decode(); } catch (_) { URL.revokeObjectURL(u); return null; }
+    URL.revokeObjectURL(u); return im;
+  };
+  /* Hvilken EBDX-animasjon et angrep har. Angrep uten sin egen låner en som likner (listen ligger i pakken). '' hvis ingen. */
+  P.ebxFor = m => { if (!P.ebx || S.dx === 0 || typeof EBX === 'undefined' || !EBX.ok) return ''; const n = animId(m), k = P.ebx.map[n] || 'MOVE:' + n; return EBX.has(k) ? k : ''; };
+  P.ebxCommon = k => { const key = 'COMMON:' + String(k).toUpperCase(); return P.ebx && S.dx !== 0 && typeof EBX !== 'undefined' && EBX.has(key) ? key : ''; };
   /* Egne trenerbilder i pakken (manifest.trainers: navn → fil). Gir adressen hvis bildet er hentet, ellers '' mens det hentes til neste gang. */
   P.portrait = name => { const f = P.ok && P.man.trainers && P.man.trainers[name]; if (!f) return ''; const u = mem.get(f); if (!u) P.url(f); return u || ''; };
+  /* Henter flere trenerbilder på en gang (til figurvelgeren). Gir antallet som ble hentet nå. */
+  P.portraits = async names => { if (!P.ok || !P.man.trainers) return 0; const l = names.map(n => P.man.trainers[n]).filter(f => f && !mem.get(f)); await Promise.all(l.map(P.url)); return l.filter(f => mem.get(f)).length; };
   P.title = () => { const x = P.ok && cur && (P.man.music || []).find(m => m.f === cur); return x ? x.t : ''; };
   const animId = m => m[0].toUpperCase().replace(/[^A-Z0-9]/g, '');
   P.animFor = m => P.anims && P.anims.a['Move:' + animId(m)] ? 'Move:' + animId(m) : '';
@@ -115,7 +134,7 @@ const PACK = (() => {
     P.vs = o;
   }
   /* Bildene til boss-introen må være klare før introen starter. Venter høyst et par sekunder. */
-  P.introPrep = async B => { if (!(await P.init())) return; const pt = B && P.man.trainers && P.man.trainers[B.tr.img.split('|')[0]]; await Promise.race([Promise.all([loadVs(), pt ? P.url(pt) : 0]), new Promise(r => setTimeout(r, 2500))]); };
+  P.introPrep = async B => { if (!(await P.init())) return; const T = P.man.trainers || {}, pt = B && T[B.tr.img.split('|')[0]], av = S.av && T[S.av.split('|')[0]]; await Promise.race([Promise.all([loadVs(), pt ? P.url(pt) : 0, av ? P.url(av) : 0]), new Promise(r => setTimeout(r, 2500))]); };
   /* Musikken dekodes og spilles gjennom samme lydutgang som effektene (WebAudio). Det er den veien som virker sikkert på iPhone, der et lydelement
      verken kan dempes eller tones inn. Går ikke dekodingen, brukes et vanlig lydelement som låses opp av trykket som starter kampen.
      Dekodede låter er store, så høyst to ligger i minnet om gangen. */
@@ -179,7 +198,8 @@ const PACK = (() => {
     const hit = by(tr.n.replace(/[^A-Za-z ]/g, '')) || (tr.mre && by(tr.mre)) || by(tr.kind === 'evilboss' ? 'evil|villain|team' : tr.kind === 'champ' ? 'champion' : 'supreme|legend|final|boss');
     return hit ? hit.f : '';
   };
-  P.sting = async path => { const my = job, d = await decode(path); if (!d || my !== job) return false; P.stingOut(0.05); sting = startBuf(d, { loop: false }); return !!sting; };
+  P.sting = async (path, loop) => { const my = job, d = await decode(path); if (!d || my !== job) return false; P.stingOut(0.05); sting = startBuf(d, { loop: !!loop }); return !!sting; };
+  P.stinging = () => !!sting;
   P.stingOut = sec => { if (sting) { fadeOut(sting, sec == null ? 1.2 : sec); sting = null; } };
   P.playing = () => !!cur;
   /* Korte lyder (angrep, treff, status) dekodes og spilles gjennom appens vanlige lydutgang, så volumknappen gjelder. Gir false hvis lyden ikke er klar. */
@@ -194,7 +214,7 @@ const PACK = (() => {
   /* Gjør klart til en kamp: bane, animasjonsdata, arkene til alle angrepene på begge lag, baller og lyder. Venter høyst noen sekunder. */
   P.prep = async B => {
     if (!(await P.init())) return;
-    const jobs = [loadAnims()];
+    const jobs = [loadAnims(), loadEbx()];
     const tk = P.trackFor(B); if (tk) P.cue(tk);
     const it = B.tr.ultra && B.mode !== 'fac' ? P.introFor(B) : ''; if (it) P.cue(it);
     const pt = P.man.trainers && P.man.trainers[B.tr.img.split('|')[0]]; if (pt) jobs.push(P.url(pt));
@@ -205,12 +225,17 @@ const PACK = (() => {
     const all = B.me.concat(B.foe);
     all.forEach(b => b.mv.forEach(x => P.warm(MOVES[x.i][0])));
     await Promise.race([Promise.all(jobs), new Promise(r => setTimeout(r, 7000))]);
+    /* EBDX-animasjonene går foran arkene der de finnes. Bildene til alle angrepene i kampen hentes nå, så ingen animasjon må vente. */
+    const CM = ['StatUp', 'StatDown', 'Sleep', 'Poison', 'Burn', 'Paralysis', 'Frozen', 'Confusion', 'HealthUp', 'LeechSeed'], ex = typeof EBXP !== 'undefined' && P.ebx && EBXP.able(), keys = new Set();
+    if (ex) { CM.forEach(k => keys.add(P.ebxCommon(k))); all.forEach(b => b.mv.forEach(x => keys.add(P.ebxFor(MOVES[x.i])))); keys.delete(''); }
+    const wj = ex ? Promise.all([...keys].map(EBXP.warm)) : null;
     if (P.anims) {
-      const need = new Set(['Common:StatUp', 'Common:StatDown', 'Common:Sleep', 'Common:Poison', 'Common:Burn', 'Common:Paralysis', 'Common:Frozen', 'Common:Confusion', 'Common:HealthUp', 'Common:LeechSeed'].map(sheetOf));
-      all.forEach(b => b.mv.forEach(x => need.add(sheetOf(P.animFor(MOVES[x.i])))));
+      const need = new Set(CM.filter(k => !(ex && P.ebxCommon(k))).map(k => sheetOf('Common:' + k)));
+      all.forEach(b => b.mv.forEach(x => { if (!(ex && P.ebxFor(MOVES[x.i]))) need.add(sheetOf(P.animFor(MOVES[x.i]))); }));
       need.delete('');
       await Promise.race([Promise.all([...need].map(P.img)), new Promise(r => setTimeout(r, 8000))]);
     }
+    if (wj) await Promise.race([wj, new Promise(r => setTimeout(r, 8000))]);
   };
   /* Er animasjonen og arket dens klart til å spilles? */
   P.ready = name => { const a = P.anims && P.anims.a[name], path = a ? sheetOf(name) : ''; if (!a) return false; if (path && !imgs.get(path)) { P.img(path); return false; } return true; };

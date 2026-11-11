@@ -118,7 +118,7 @@ const OWN = new Set(['mvtog', 'start', 'throw', 'buy', 'buyreg', 'evolve', 'sest
 const SND = {
   tab: 'tab', lagv: 'tab', dexr: 'tab',
   fag: 'chip', min: 'chip', reg: 'chip', sort: 'chip', filt: 'chip', sety: 'chip',
-  ball: 'ball', spec: 'open', plan: 'open', sync: 'open', backup: 'open', snext: 'ok', seadd: 'open',
+  ball: 'ball', spec: 'open', plan: 'open', sync: 'open', backup: 'open', snext: 'ok', seadd: 'open', avatar: 'open', avall: 'open', avpick: 'ok',
   close: 'close', home: 'close', later: 'close', sback: 'close', sedel: 'close', skip: 'close', syncoff: 'close', toshop: 'open',
   lead: 'ok', sesave: 'ok', syncsave: 'ok', bkcopy: 'ok', bkload: 'ok', party: 'ok', fav: 'fav',
   quit: 'warn', reset: 'warn', early: 'ok', pause: 'chip'
@@ -151,9 +151,28 @@ function render() {
 const VIEW = {};
 function enter() { const w = $('#main .wrap'); if (w) w.classList.add('enter'); }
 
+/* ---------- Din egen figur ----------
+   Spilleren velger selv hvem de er: en av hovedpersonene fra spillene, eller hvilken som helst trener og boss. Figuren er profilbildet
+   og står på din side i introen før bosskamper. Bildene kommer fra ressurspakken hvis den har dem, ellers fra Showdown (som for motstanderne). */
+const PLAYERS = [['hilbert', 'Hilbert'], ['hilda', 'Hilda'], ['nate', 'Nate'], ['rosa', 'Rosa'], ['ethan', 'Ethan'], ['lyra', 'Lyra'], ['lucas', 'Lucas'], ['dawn', 'Dawn'], ['red', 'Red'], ['leaf', 'Leaf'], ['brendan', 'Brendan'], ['may', 'May']];
+function avOthers() {
+  const seen = new Set(PLAYERS.map(p => p[0])), out = [];
+  for (const k of Object.keys(POOL)) for (const t of POOL[k]) { const key = t[1].split('|')[0]; if (seen.has(key)) continue; seen.add(key); out.push([t[1], t[0] === 'Grunt' ? t[2].replace('Team ', '') + ' Grunt' : t[0]]); }
+  return out;
+}
+const avName = () => { const p = PLAYERS.concat(avOthers()).find(x => x[0] === S.av); return p ? p[1] : ''; };
+function avSheet(all) {
+  const cell = x => `<button type="button" data-a="avpick" data-k="${esc(x[0])}" aria-pressed="${S.av === x[0]}">${tsprite(x[0])}<span>${esc(x[1])}</span></button>`, rest = all ? avOthers() : [];
+  openSheet(`<h2 class="h">Your character</h2><p class="sm">Pick who you are. Your character is your profile picture and stands on your side in the intro before boss battles.</p>
+    <div class="avgrid">${PLAYERS.map(cell).join('')}</div>
+    ${all ? `<div class="lab">Trainers and bosses</div><div class="avgrid">${rest.map(cell).join('')}</div>` : '<button type="button" class="btn wide" data-a="avall">More characters</button>'}
+    ${S.av ? '<button type="button" class="btn wide" data-a="avpick" data-k="">No character</button>' : ''}`);
+  /* Pakkens egne bilder hentes første gang velgeren åpnes, og så tegnes den på nytt med dem. */
+  PACK.portraits(PLAYERS.concat(rest).map(x => x[0].split('|')[0])).then(n => { if (n && $('#sheet .avgrid')) avSheet(all); }).catch(() => {});
+}
 function topBar() {
   const l = tlv(), a = tlvXp(l), b = tlvXp(l + 1), st = streak();
-  return `<div class="top"><div class="lv tn"><small>LVL</small>${l}</div>
+  return `<div class="top">${S.av ? `<button type="button" class="avb" data-a="avatar" aria-label="Change your character">${tsprite(S.av)}<span class="avl tn">${l}</span></button>` : `<div class="lv tn"><small>LVL</small>${l}</div>`}
     <div class="sp"><div class="row" style="justify-content:space-between"><b>Trainer</b>${st >= 2 ? `<span class="pill" style="color:var(--sage)">${st}-day streak</span>` : ''}</div>
     <div class="bar" style="margin-top:7px"><i style="width:${Math.round((S.xp - a) / (b - a) * 100)}%"></i></div>
     <div class="sm tn" style="margin-top:4px">${nb(S.xp - a)} of ${nb(b - a)} XP to level ${l + 1}</div></div>
@@ -307,6 +326,7 @@ VIEW.profil = () => {
   for (let i = 0; i < 70; i++) { const d = addDays(mon, i), k = dayKey(d), m = (S.log[k] || { m: 0 }).m; hm += `<i class="${m ? (m < 90 ? 'l1' : m < 180 ? 'l2' : m < 270 ? 'l3' : 'l4') : ''}${k === dayKey() ? ' td' : ''}" title="${d.getDate()}.${d.getMonth() + 1}: ${m} min"></i>`; }
   const all = [1, 2, 3, 4, 5].reduce((s, x) => s + dexCount(x), 0);
   return `<h1 class="big">Profile</h1>${topBar()}
+    <button type="button" class="card avcard" data-a="avatar">${S.av ? tsprite(S.av) : '<span class="tsb"></span>'}<span class="sp"><span class="sm">Your character</span><b>${S.av ? esc(avName()) : 'Pick a character'}</b><span class="sm">${S.av ? 'Tap to change. Shown here and in the intro before boss battles.' : 'Choose who you are: it becomes your profile picture and shows in the intro before boss battles.'}</span></span></button>
     <h2 class="h">Badges</h2><div class="card" style="padding-top:6px;padding-bottom:6px">${badges}</div>
     <p class="sm">Each badge fills with focus hours in that subject. 25, 50 and 75% give an epic encounter, and a full badge gives a legendary one.</p>
     <h2 class="h">Stats</h2>
@@ -547,6 +567,9 @@ const A = {
   mon: el => { const m = monBy(+el.dataset.u); if (m) { cry(m.id, 0, 0.35); monSheet(m); } },
   spec: el => specSheet(+el.dataset.k),
   close: () => closeSheet(),
+  avatar: () => avSheet(false),
+  avall: () => avSheet(true),
+  avpick: el => { S.av = el.dataset.k || ''; save(); closeSheet(); render(); toast(S.av ? `You are now ${avName()}.` : 'Character removed.'); },
   sort: el => { U.sort = el.dataset.k; render(); },
   dexr: el => { U.dex = +el.dataset.k; render(); },
   lead: el => { const m = monBy(+el.dataset.u); setPartner(m); closeSheet(); render(); toast(`${D(m.id)[0]} is now your partner.`); },

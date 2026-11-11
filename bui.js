@@ -353,7 +353,7 @@ function drawBattle() {
   const B = BT.B, tr = B.tr, tier = TIER(tr.kind), scene = PACK.now(PACK.sceneFor(B));
   ov(`<div class="btop k-${tier}"${kst(tr)}><span class="pill tn">${esc(battleTag(B))}</span><span class="btn-n"><b class="${tr.boss ? 'bossn' : ''}">${esc(who(tr))}</b></span></div>
     <div class="bscreen t-${tier}"${kst(tr)}><div class="arena a-${tr.arena} v${tr.v} t-${tier} i${tr.int}${tr.th ? ' th-' + tr.th : ''}${scene ? ' has-scene' : ''}" id="arena" style="--ac:var(--t${tr.ty});--cc:${tr.cc || 'var(--t' + tr.ty + ')'}">
-      ${scene ? `<img class="scene" alt="" src="${scene}">` : ''}<div class="abg"></div><canvas class="fxc bgc" id="bgc" width="256" height="192"></canvas><div class="plat pf"></div><div class="plat pm"></div><div class="dim"></div>
+      <div class="world" id="world">${scene ? `<img class="scene" alt="" src="${scene}">` : ''}<div class="abg"></div><canvas class="fxc bgc" id="bgc" width="256" height="192"></canvas><div class="plat pf"></div><div class="plat pm"></div></div><div class="dim"></div>
       ${tr.wild ? '' : `<div class="trn" id="trn">${tsprite(tr.img)}</div>`}
       <div class="bs foe gone" id="s-foe"></div><div class="bs me gone" id="s-me"></div>
       <canvas class="fxc" id="fxc" width="256" height="192"></canvas><canvas class="fxc" id="axc" width="512" height="384"></canvas><div class="fx" id="fx"></div>
@@ -361,6 +361,7 @@ function drawBattle() {
     </div><button type="button" class="btext" id="btext" data-a="btap" aria-live="polite"><span id="btx"></span><i></i></button></div>
     <div id="bmenu" class="bmenu"></div>`, 'battle k-' + tier, `var(--t${tr.ty})`);
   FX.attach($('#fxc')); FX.speed = spdF();
+  EBXP.attach($('#arena'));
   BT.sh = null; BT.atk = null;
   FX.hooks.shake = (ms, amp, kind) => shake(ms, amp == null ? 3 : amp, kind);
   /* Bakgrunnsshowet følger klassen og temaet. Rammene som beveger seg (gull og de ondes røde puls) tegnes på nytt mange ganger i sekundet. */
@@ -415,7 +416,7 @@ function drawMenu() {
   }
   if (BT.menu === 'pause') {
     const tt = PACK.title();
-    el.innerHTML = `<div class="bw bw-list bsw${pk}" style="${bg}"><button type="button" class="bw-row" data-a="bfast">SPEED<b>${S.bfast ? 'FAST' : 'NORMAL'}</b></button><button type="button" class="bw-row" data-a="bmusic"${S.sound ? '' : ' disabled'}>MUSIC<b>${S.music === 0 ? 'OFF' : 'ON'}</b></button><button type="button" class="bw-row red" data-a="bforfeit">FORFEIT<b>give up</b></button>${tt ? `<p class="bw-tip">♪ ${esc(tt)}</p>` : ''}${cancel('bback', 'BACK')}</div>`;
+    el.innerHTML = `<div class="bw bw-list bsw${pk}${PACK.ebx ? ' r4' : ''}" style="${bg}"><button type="button" class="bw-row" data-a="bfast">SPEED<b>${S.bfast ? 'FAST' : 'NORMAL'}</b></button><button type="button" class="bw-row" data-a="bmusic"${S.sound ? '' : ' disabled'}>MUSIC<b>${S.music === 0 ? 'OFF' : 'ON'}</b></button>${PACK.ebx ? `<button type="button" class="bw-row" data-a="bdx">MOVES<b>${S.dx === 0 ? 'CLASSIC' : 'DX'}</b></button>` : ''}<button type="button" class="bw-row red" data-a="bforfeit">FORFEIT<b>give up</b></button>${tt ? `<p class="bw-tip">♪ ${esc(tt)}</p>` : ''}${cancel('bback', 'BACK')}</div>`;
     return;
   }
   /* Veska: velg gjenstand, og så hvem den brukes på. Den koster turen din. I demoen er alt gratis, så det kan prøves. */
@@ -456,6 +457,7 @@ function animHooks(side, self) {
 }
 /* Felles animasjoner (status, stat opp/ned, helbredelse) fra pakken. Gir false hvis pakken ikke har den. */
 async function common(k, side) {
+  if (k && await ebxPlay(PACK.ebxCommon(k), side, { self: true }, 'main')) return true;
   const n = k && PACK.common(k), cv = $('#axc'); if (!n || !cv) return false;
   const p = fxPos(side), q = { x: p.x * 2, y: p.y * 2 };
   return PACK.play(n, cv, q, q, false, spdF(), null);
@@ -504,7 +506,7 @@ function stageOn(K, a, b) {
 async function stageOff() {
   const K = BT.atk; if (!K) return; BT.atk = null;
   if (K.back) K.back();
-  if (K.done) await Promise.race([K.done, sleep(900 / spdF())]);
+  if (K.done) await Promise.race([K.done, sleep((K.ebx ? 4000 : 900) / spdF())]);
   const ar = $('#arena'); if (ar) ar.classList.remove('atk');
   for (const s of ['me', 'foe']) { const el = $('#s-' + s); if (el) el.classList.remove('cast'); }
 }
@@ -571,11 +573,37 @@ function shake(ms, amp, kind, zoom, at) {
     Q.id = requestAnimationFrame(f);
   });
 }
+/* Spiller en EBDX-animasjon (se ebx.js og ebxp.js) og venter til den treffer ('hit') eller til selve animasjonen er over ('main');
+   kameraet glir hjem i bakgrunnen etterpå. Gir null hvis animasjonen ikke finnes eller bildene ikke er klare: da brukes den gamle. */
+const EBXR = 1.5;
+async function ebxPlay(key, side, o, until) {
+  const B = BT.B, sp = $('#s-' + side);
+  if (!key || !sp) return null;
+  /* Var ikke animasjonene lastet da kampskjermen ble tegnet, kobles lerretene inn nå. */
+  if (!EBXP.on() && !EBXP.attach($('#arena'))) return null;
+  const rec = EBXP.record(key, side, o);
+  /* Noen få animasjoner i EBDX er tomme (de overlater alt til spillmotoren). Da brukes den gamle. */
+  if (!rec || rec.main < 3 || !(await EBXP.load(rec, EBXP.warmed(key) ? 1500 : 250))) return null;
+  if (BT.B !== B || !sp.isConnected) return null;
+  if (o.away) sp.classList.remove('away');
+  /* De aller lengste animasjonene spilles litt fortere, så ingen angrep tar mye lengre tid enn de andre. */
+  const pl = EBXP.play(rec, spdF() * EBXR * Math.min(1.5, Math.max(1, Math.sqrt(rec.busy / 140)))); if (!pl) return null;
+  if (o.sound && !PACK.sfx(o.sound[0])) BSFX.mv(FX.kindOf(o.sound), mvTier(o.sound), o.sound[1]);
+  await pl.at(until === 'hit' ? rec.hit : rec.busy);
+  return pl;
+}
 /* Et angrep: oppladning, selve angrepet og fram til det treffer. Treffet (lyd, stopp, risting og HP-linja) hører til hendelsen som kommer etter. */
 async function playAnim(B, e) {
   const side = e.side, sp = $('#s-' + side), m0 = e.mi >= 0 ? MOVES[e.mi] : STRUGGLE, m = e.ty != null && e.ty !== m0[1] ? Object.assign(m0.slice(), { 1: e.ty }) : m0, self = !!e.self, a = fxPos(side), b = self ? a : fxPos(opp(side)), kind = FX.kindOf(m), tier = mvTier(m, e), d = vec(a, b);
   BT.ty = m[1];
   const K = BT.atk = { side, m, kind, tier, self, n: 0, style: styleOf(m, kind, self), back: null, done: null };
+  /* Animasjonen fra Elite Battle DX hvis pakken har den: den styrer selv kamera, lys og bevegelser, så resten av scenen her hoppes over. */
+  const xk = calm() ? '' : PACK.ebxFor(m);
+  if (xk) {
+    const pl = await ebxPlay(xk, side, { self: self && !e.charge, hitNum: e.charge ? 1 : 0, hide: e.away ? [side] : [], keep: e.keep || [], away: e.away, sound: m }, e.charge || m[4] === 0 || self ? 'main' : 'hit');
+    if (pl) { K.style = 'own'; K.ebx = 1; K.done = pl.done; return; }
+  }
+  if (e.away) { sp.classList.remove('away'); await bwait(200); }
   stageOn(K, a, b); sp.classList.add('cast');
   if (e.charge) { BSFX.charge(2, m[4]); const ms = FX.gather(m[0], a, m[1]); await Promise.all([gatherMot(sp, m[0], d), bwait(ms)]); return; }
   const wms = m[4] === 0 ? 300 : 250 + tier * 110;
@@ -614,7 +642,7 @@ async function playOne(B, e) {
       FX.hit(pos, BT.ty, ef, e.crit, tier, n); buzz(ef > 1 ? [40, 30, 60] : 25);
       /* Treff-stopp: et øyeblikk der alt står stille og målet lyser hvitt. Lengst for supereffektive og kritiske treff. */
       const fz = calm() || e.sub ? 0 : ((ef > 1 ? 95 : ef < 1 ? 0 : 50) + tier * 22 + (e.crit ? 50 : 0)) * (n ? 0.45 : 1) / spdF();
-      if (fz) { sp.classList.add('imp'); FX.hold(fz); PACK.hold(fz); await sleep(fz); sp.classList.remove('imp'); }
+      if (fz) { sp.classList.add('imp'); FX.hold(fz); PACK.hold(fz); EBXP.hold(fz); await sleep(fz); sp.classList.remove('imp'); }
       if (BT.B !== B || !sp.isConnected) return;
       if (K && K.back) K.back();
       else if (K && n && K.style === 'dash') { const asp = $('#s-' + K.side), d = vec(fxPos(K.side), pos); mot(asp, [{ transform: T2(0, 0, 1) }, { transform: T2(d.x * 0.35, d.y * 0.35, 1), offset: 0.4 }, { transform: T2(0, 0, 1) }], 200).then(() => clearMot(asp)); }
@@ -633,7 +661,7 @@ async function playOne(B, e) {
   }
   else if (e.t === 'stat') { if (!PACK.sfx(e.up ? 'Stat Rise Up' : 'Stat Fall')) (e.up ? BSFX.up : BSFX.down)(); sp.classList.add(e.up ? 'sup' : 'sdn'); if (!(await common(e.up ? 'StatUp' : 'StatDown', side))) { FX.stat(fxPos(side), e.up); await bwait(520); } sp.classList.remove('sup', 'sdn'); }
   else if (e.t === 'faint') { if (!PACK.sfx('In-Battle Faint No Health')) BSFX.faint(); cry(teamOf(side)[v.i].id, 0, 0.3); clearMot(sp); sp.classList.remove('ace'); sp.classList.add('faint'); await bwait(850); paintBox(side); $('#b-' + side).hidden = true; }
-  else if (e.t === 'recall') { if (e.txt) await typeOut(e.txt); if (!PACK.sfx('In-Battle Recall Switch Pokeball')) BSFX.recall(); clearMot(sp); sp.classList.remove('ace', 'subd', 'away'); sp.classList.add('recall'); $('#b-' + side).hidden = true; await bwait(420); sp.classList.add('gone'); }
+  else if (e.t === 'recall') { if (e.txt) await typeOut(e.txt); if (!PACK.sfx('In-Battle Recall Switch Pokeball')) BSFX.recall(); clearMot(sp); sp.classList.remove('ace', 'subd', 'away'); sp.classList.add('recall'); $('#b-' + side).hidden = true; await bwait(420); sp.classList.add('gone'); EBXP.unhide(side); }
   else if (e.t === 'send') {
     const team = teamOf(side), b = team[e.i], wild = side === 'foe' && !!B.tr.wild, ace = wild || (side === 'foe' && B.tr.boss && team.length > 1 && e.i === team.length - 1), big = ace && B.tr.int >= 4;
     BT.v[side] = { i: e.i, hp: e.hp, st: e.st };
@@ -650,7 +678,7 @@ async function playOne(B, e) {
     await bwait(big ? 1100 : 620);
     sp.classList.remove('in');
   }
-  else if (e.t === 'vanish') { sp.classList.toggle('away', !!e.on); await bwait(260); clearMot(sp); }
+  else if (e.t === 'vanish') { sp.classList.toggle('away', !!e.on); await bwait(260); clearMot(sp); EBXP.unhide(side); }
   else if (e.t === 'sub') { sp.classList.toggle('subd', !!e.on); await bwait(200); }
   else if (e.t === 'form') { const el = $('#s-' + side); if (el) { FX.open(fxPos(side), ''); BSFX.ball(); el.innerHTML = spr(e.id, { ani: 1, sh: e.sh, back: side === 'me', mega: e.mega }); } await bwait(480); }
   else if (e.t === 'wx') { const a = $('#arena'); if (e.k) { a.dataset.wx = e.k; FX.weather(e.k); await bwait(640); } else delete a.dataset.wx; }
@@ -662,6 +690,14 @@ async function playEv(ev) {
     const e = ev[i];
     if (BT.B !== B || !$('#arena')) return;
     if (BT.atk && e.t !== 'hit') await stageOff();
+    if (e.t === 'anim') {
+      /* Den som skal være borte etter animasjonen (flyr opp, byttes ut) blir stående skjult der animasjonen slapp den. */
+      e.keep = []; for (let j = i + 1; j < ev.length && ev[j].t !== 'anim'; j++) if ((ev[j].t === 'vanish' && ev[j].on) || ev[j].t === 'recall') e.keep.push(ev[j].side);
+    }
+    /* Den som kommer ned igjen fra lufta, hentes fram av selve angrepsanimasjonen (hvis angrepet blir noe av: bare tekst imellom, og så animasjonen). */
+    if (e.t === 'vanish' && !e.on) { let j = i + 1; while (j < ev.length && ev[j].t === 'msg') j++; if (j < ev.length && ev[j].t === 'anim' && ev[j].side === e.side && !ev[j].charge) { ev[j].away = 1; continue; } }
+    /* Første runde av et to-runders angrep: teksten («… flew up high!») kommer før animasjonen, så den gamle teksten ikke blir stående. */
+    if (e.t === 'anim' && e.charge && !e.sw && ev[i + 1] && ev[i + 1].t === 'msg') { const m2 = ev[i + 1]; m2.hold = 200; e.sw = 1; ev[i + 1] = e; ev[i] = m2; i--; continue; }
     /* Teksten «… used …!» står bare et øyeblikk: animasjonen er det som skal ha tiden. */
     if (e.t === 'msg' && ev[i + 1] && ev[i + 1].t === 'anim') e.hold = 260;
     await playOne(B, e);
@@ -688,8 +724,8 @@ async function bossIntro(B) {
     <div class="bwi-s"><div class="bwi-bg"></div><canvas class="bwi-cv" id="bwicv" width="256" height="192"></canvas><div class="bwi-em"></div>
       ${clip ? `<div class="bwi-pre"><span>${esc(RARE[tr.kind])}</span><b>${esc(evil ? tr.title : tr.cn)}</b></div><div class="bwi-sil">${tsprite(tr.img, 'big')}<i class="vb a"></i><i class="vb b"></i><i class="orb"></i><div class="nm"><span>${esc(tr.title)}</span><b>${esc(tr.n)}</b></div></div>` : ''}
       <div class="bwi-bar foe"><div class="bwi-bb"></div>${tsprite(tr.img, 'big')}<div class="bwi-n"><span>${esc(tr.title)}</span><b>${esc(tr.n)}</b></div></div>
-      <div class="bwi-bar me"><div class="bwi-bb"></div>${spr(lead.id, { ani: 1, sh: lead.sh, back: 1 })}<div class="bwi-n"><span>${esc(battleTag(B))}</span><b>You</b></div></div>
-      <div class="bwi-bolt"></div><div class="bwi-vs"><b>VS</b></div><div class="bwi-cls">${esc(tr.cn)}</div><div class="bwi-fl"></div>
+      <div class="bwi-bar me${S.av ? ' av' : ''}"><div class="bwi-bb"></div>${S.av ? tsprite(S.av, 'big') : ''}${spr(lead.id, { ani: 1, sh: lead.sh, back: 1 })}<div class="bwi-n"><span>${esc(battleTag(B))}</span><b>You</b></div></div>
+      <div class="bwi-bolt"></div><div class="bwi-vs"><b>VS</b></div><div class="bwi-cls">${esc(tr.cn)}</div><div class="bwi-go">Press to enter</div><div class="bwi-fl"></div>
     </div></div>`, 'battle vsov');
   const root = $('#bwi'), st = root.querySelector('.bwi-s'), on = c => { if (root.isConnected) root.classList.add(c); }, gone = () => BT.B !== B || !root.isConnected;
   st.style.setProperty('--u', (st.clientWidth / 256).toFixed(3) + 'px');
@@ -702,19 +738,33 @@ async function bossIntro(B) {
     if (!calm()) { FX.hooks.glitch = ms => { st.classList.add('glitch'); setTimeout(() => st.classList.remove('glitch'), ms); }; FX.show($('#bwicv'), tr.int, tr.ty, tr); }
     /* Introen: bossens egen fra pakken hvis den finnes, ellers den innebygde episke. Drønnet faller i det bossen viser seg (c3), og da glir kamplåta inn. */
     const d1 = evil ? 1900 : 1600, d2 = evil ? 2100 : tr.gold ? 1900 : 1600, it = PACK.introFor(B), stop = epicIntro(evil ? 'evil' : tr.gold ? 'ultra' : 'champ', (d1 + d2) * sp / 1000, !!it), quit = () => { stop(); PACK.stingOut(0.2); };
-    if (it) PACK.sting(it);
+    /* Har bossen sin egen introlåt, spiller den gjennom hele introen og helt til spilleren trykker seg inn i kampen. Kamplåta starter først da. */
+    if (it) PACK.sting(it, true);
     on('c1'); buzz(evil ? [90, 150, 90] : [40, 40, 40]);
     await T(d1); if (gone()) return quit();
     on('c2'); buzz(evil ? [90, 150, 90, 400, 90, 150, 90] : [30, 30, 30, 30, 120]);
     await T(d2); if (gone()) return quit();
-    on('c3'); PACK.stingOut(1.4); battleMusic(B, { fade: 1.8, from: 0.12 }); buzz([80, 40, 240]); await T(1300); if (gone()) return;
+    on('c3'); if (!it) battleMusic(B, { fade: 1.8, from: 0.12 }); buzz([80, 40, 240]); await T(1300); if (gone()) return PACK.stingOut(0.2);
     on('c4'); await T(240); if (gone()) return;
   }
   on('s1'); await T(330); on('s2'); await T(380); if (gone()) return;
   on('s3'); if (!clip) battleMusic(B); BSFX.vs(); buzz([60, 40, 60, 40, 200]);
   await T(520); on('s4');
-  await T(clip ? 1700 : tier === 'top' ? 1400 : 1150); if (gone()) return;
+  await T(clip ? 1100 : 800); if (gone()) return PACK.stingOut(0.2);
+  /* Introen blir stående til spilleren trykker («Press to enter»), så introlåta får spille så lenge man vil. */
+  await enterGate(root, gone);
+  if (gone()) return PACK.stingOut(0.2);
+  if (PACK.stinging()) { PACK.stingOut(0.9); battleMusic(B, { fade: 1.4, from: 0.12 }); }
   on('s5'); await T(300);
+}
+function enterGate(root, gone) {
+  return new Promise(res => {
+    let done = false;
+    const fin = () => { if (done) return; done = true; clearInterval(id); root.removeEventListener('pointerdown', tap); document.removeEventListener('keydown', key); root.classList.remove('go'); res(); };
+    const tap = e => { e.preventDefault(); sfx.tap(); fin(); }, key = e => { if (e.key === 'Enter' || e.key === ' ') { sfx.tap(); fin(); } };
+    const id = setInterval(() => { if (gone()) fin(); }, 250);
+    root.classList.add('go'); root.addEventListener('pointerdown', tap); document.addEventListener('keydown', key);
+  });
 }
 async function wipeIntro() {
   const o = $('#ov'), w = document.createElement('div');
@@ -900,6 +950,8 @@ const BA = {
   bpause: () => { BT.menu = 'pause'; drawMenu(); },
   bback: () => { BT.menu = 'main'; drawMenu(); },
   bfast: () => { S.bfast = S.bfast ? 0 : 1; save(true); FX.speed = spdF(); drawMenu(); },
+  /* Angrepsanimasjonene: de store fra Elite Battle DX, eller de enklere arkene og kodetegnede effektene (for den som vil ha det raskere, eller hvis noe ser rart ut). */
+  bdx: () => { S.dx = S.dx === 0 ? 1 : 0; save(true); drawMenu(); },
   bmusic: () => { S.music = S.music === 0 ? 1 : 0; save(true); if (S.music === 0) stopMusic(); else battleMusic(BT.B); drawMenu(); },
   bmove: el => { if (BT.busy || BT.B.over) return; BT.menu = 'main'; playEv(runTurn(BT.B, { t: 'move', k: +el.dataset.k })); },
   bsw: el => { if (BT.busy) return; const B = BT.B, i = +el.dataset.k; BT.menu = 'main'; playEv(B.need ? sendIn(B, i) : runTurn(B, { t: 'switch', i })); },
