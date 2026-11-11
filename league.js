@@ -438,12 +438,13 @@ const LEG = {}; LEGD.split('|').forEach(r => { const q = r.split(','); LEG[+q[0]
    NIVÅ: settes i det den viser seg, etter laget ditt (snittet av de tre sterkeste + RAIDOFF for sjeldenheten), og aldri over artens toppnivå (RAIDLV).
         Trener du laget før du prøver igjen, har du altså tatt innpå. Vanskelighetsgraden senker nivå og HP på Easy og Normal.
         Det som gjør et raid tungt, er ikke nivået, men at den legendariske har flere ganger så mye HP (RAIDHP) og de sterkeste artene i spillet.
-        Stilt inn med simulerte kamper: et jevnt lag uten veske slår de vanlige omtrent annenhver gang på Hard, de største bare av og til.
+        Stilt inn med simulerte kamper (med stedets hendelser og raseriet): et jevnt lag uten veske slår de vanlige omtrent annenhver gang på Hard, de største bare av og til.
+   STEDET: hver legendarisk har et domene som kjemper med (se DOM lenger ned): en liten hendelse hver tredje runde, og raseri under halv HP.
    HVEM: oftest en vanlig legendarisk (1), så de mytiske (3) og de største (2). De aller sjeldneste (4: Arceus og Deoxys) starter på 3 %,
         og sjansen vokser litt for hvert raid uten en av dem (S.rpity), så de kommer før eller siden. Mewtwo har egen trekning (MEWP) til du har den mørke,
         og hver gang Mewtwo viser seg, er det DARKP sjanse for at den blir til Dark Mewtwo foran øynene dine.
    BELØNNING: mynter (RAIDCOIN × vanskelighetsgrad), Rare Candy (RAIDCANDY), mye XP til hele laget, og den legendariske venter i gresset. */
-const RAIDLV = [60, 72, 66, 85, 92], RAIDHP = [2.2, 3, 2.6, 3.2, 4.2], RAIDCOIN = [1000, 2000, 1500, 4000, 6000], RAIDCANDY = [3, 5, 4, 8, 10], RAIDOFF = [1, 3, 2, 4, 6];
+const RAIDLV = [60, 72, 66, 85, 92], RAIDHP = [2, 2.7, 2.3, 2.8, 3.8], RAIDCOIN = [1200, 2500, 1800, 5000, 8000], RAIDCANDY = [3, 5, 4, 8, 10], RAIDOFF = [1, 2, 2, 2, 5];
 const RAIDTRIES = 3, RAIDGOAL = 0.3, RAIDFAC = 0.35, MEWP = 0.08, DARKP = 0.25;
 /* De sterkeste viser seg bare for lag som kan gi dem kamp: de mytiske fra lagnivå 25, de største fra 35, og Arceus, Deoxys og Dark Mewtwo fra 45. */
 const RAIDGATE = [0, 35, 25, 45, 45];
@@ -479,6 +480,44 @@ function raidSpawn(res) {
   return true;
 }
 const raidOpen = () => !!S.raid && !!LEG[S.raid.id] && S.raid.day !== dayKey();
+/* ---------- Stedet kjemper med ----------
+   Hver legendarisk har et «domene» etter stedet sitt (LEG.bg). Hver RAIDEV-te runde skjer det noe der: din Pokémon mister litt HP (1/RAIDCHIP, og typer som tåler
+   stedet slipper), får senket en verdi ett trinn, eller den legendariske henter seg litt inn. Første gang den legendariske er nede i halv HP, blir den rasende:
+   verdiene i «up» går opp ett trinn, og hendelsene kommer hver RAIDEV2-te runde resten av kampen. Hendelsene vises av kampskjermen (hendelsestypen «env», raidx.js). */
+const RAIDEV = 3, RAIDEV2 = 2, RAIDCHIP = 16, RAIDHEAL = 20;
+const DOM = {
+  ice: { n: 'Blizzard', k: 'chip', imm: [14], s: 'The blizzard bites into {N}!', d: 'the blizzard hurts your Pokémon a little (Ice types are safe)', up: [[5, 1]] },
+  bolt: { n: 'Thunderstorm', k: 'chip', imm: [4, 12], s: 'Lightning crashes down on {N}!', d: 'lightning hurts your Pokémon a little (Ground and Electric types are safe)', up: [[6, 1]] },
+  magma: { n: 'Scorched Earth', k: 'chip', imm: [9], s: 'The ground erupts under {N}!', d: 'eruptions hurt your Pokémon a little (Fire types are safe)', up: [[2, 1]] },
+  stone: { n: 'Ancient Chamber', k: 'chip', imm: [4, 5, 8], s: 'Rocks rain down on {N}!', d: 'falling rocks hurt your Pokémon a little (Rock, Ground and Steel types are safe)', up: [[3, 1]] },
+  sea: { n: 'Raging Tide', k: 'chip', imm: [10], s: 'A great wave crashes over {N}!', d: 'waves hurt your Pokémon a little (Water types are safe)', up: [[4, 1]] },
+  sky: { n: 'Jet Stream', k: 'drop', st: 6, s: 'The gale forces {N} back!', d: "the gale lowers your Pokémon's Speed", up: [[6, 1]] },
+  void: { n: 'Distortion', k: 'drop', st: 5, s: 'The air warps around {N}!', d: "the distortion lowers your Pokémon's Sp. Def", up: [[4, 1]] },
+  space: { n: 'Spatial Rift', k: 'drop', st: 3, s: 'Space bends around {N}!', d: "the rift lowers your Pokémon's Defense", up: [[4, 1]] },
+  time: { n: 'Time Warp', k: 'drop', st: 6, s: 'Time slows around {N}!', d: "the warp lowers your Pokémon's Speed", up: [[3, 1]] },
+  forest: { n: 'Life Spring', k: 'heal', s: '{F} draws strength from the land!', d: 'the land restores a little of its HP', up: [[5, 1]] },
+  origin: { n: 'Judgment', k: 'chip', imm: [], s: 'Pillars of light fall on {N}!', d: 'pillars of light hurt your Pokémon a little', up: [[2, 1], [4, 1]] },
+  dark: { n: 'Shadow Field', k: 'both', st: 5, imm: [], s: 'Shadows tear at {N}!', d: "the shadows hurt your Pokémon a little and lower its Sp. Def", up: [[2, 1], [4, 1]] }
+};
+const domKey = tr => tr.dk ? 'dark' : tr.lbg === 'flame' ? 'magma' : tr.lbg, raidDom = tr => DOM[domKey(tr)] || null;
+/* Kalles på slutten av hver runde i en raid (fra endTurn i battle.js). */
+function raidField(B, ev) {
+  const D0 = raidDom(B.tr), f = B.foe[B.b], b = B.me[B.a]; if (!D0 || B.over || f.hp <= 0) return;
+  const N = nmOf('me', b), F = f.name;
+  if (!B.rage && f.hp <= f.max / 2) { B.rage = 1; ev.push({ t: 'env', k: 'rage', s: `${F} is enraged!` }); changeStats(B, 'foe', D0.up, ev); }
+  if (b.hp <= 0 || b.v.away) return;
+  B.fld = (B.fld || 0) + 1;
+  if (B.fld < (B.rage ? RAIDEV2 : RAIDEV)) return;
+  B.fld = 0;
+  const s = D0.s.replace('{N}', N).replace('{F}', F);
+  if (D0.k === 'heal') { if (f.hp < f.max) { f.hp = Math.min(f.max, f.hp + Math.max(1, Math.floor(f.max / RAIDHEAL))); ev.push({ t: 'env', k: domKey(B.tr), s }, { t: 'heal', side: 'foe', hp: f.hp }); } return; }
+  ev.push({ t: 'env', k: domKey(B.tr), s });
+  if (D0.k !== 'drop') {
+    if (D0.imm.some(t => b.ty.includes(t))) ev.push({ t: 'msg', s: `${N} shrugs it off!` });
+    else { b.hp = Math.max(0, b.hp - Math.max(1, Math.floor(b.max / RAIDCHIP))); ev.push({ t: 'hit', side: 'me', hp: b.hp, e: 1, quiet: 1 }); settle(B, ev); }
+  }
+  if (D0.k !== 'chip' && b.hp > 0 && !B.over) changeStats(B, 'me', [[D0.st, -1]], ev, true);
+}
 function legTr(id, dk) {
   const L = dk ? DARK : LEG[id], d = D(id);
   return { n: dk ? L.n : d[0], img: '', title: raidTitle(id, dk), ty: d[1], kind: 'legend', ci: 10, cn: 'Legendary raid', skill: 1, boss: true, ultra: true, gold: L.t === 4, int: 8,

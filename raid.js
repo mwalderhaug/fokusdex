@@ -237,7 +237,7 @@ const CINE = (() => {
   C.FILM = FILM;
   const filmOf = id => FILM[id] || (C.calmFilm ? C.calmFilm(id) : null);
   C.has = id => !!filmOf(id);
-  C.info = id => { const f = filmOf(id); return f ? { len: f.len, at: f.at || 0, R: f.R } : null; };
+  C.info = id => { const f = filmOf(id); return f ? { len: f.len, at: f.at || 0, R: f.R, bg: !!f.bg, plat: f.plat || null, omen: f.omen || 0 } : null; };
   /* Henter det filmen trenger. Venter ikke lenger enn ms. */
   C.prep = async (id, ms) => {
     const f = filmOf(id); if (!f) return false;
@@ -281,21 +281,57 @@ const CINE = (() => {
   };
   /* Lufta i kampen: filmens egen stemning (tåke, lyn, glør, regn) tegnet gjennomsiktig over banen, i sløyfe. k = styrken. */
   C.air = (out, id, o) => {
-    const f = filmOf(id); if (!f || !f.air || !out) return () => {}; o = o || {}; let raf = 0, last = 0, on = true; const t0 = performance.now();
+    const f = filmOf(id); if (!f || !f.air || !out) return () => {}; o = o || {}; let raf = 0, last = 0, on = true, n = 0; const t0 = performance.now(), bgc = f.bg && o.bg ? o.bg : null;
     need(f.use || []);
     const step = ts => {
       if (!on || !out.isConnected) return; raf = requestAnimationFrame(step); if (ts - last < 30) return; last = ts;
       T = (ts - t0) / 1000 + 100; frameNo = floor(T * 60); P = newP(); cur = { id, f, sp: null, sps: {}, cc: o.cc || '#fff' };
+      /* Stedet bak (ugjennomsiktig, bak plattformene) tegnes annenhver gang: det beveger seg sakte. */
+      if (bgc && n++ % 2 === 0) { g = bgc.getContext('2d'); g.setTransform(bgc.width / W, 0, 0, bgc.height / H, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.imageSmoothingEnabled = true; try { f.bg(T, o.k == null ? 1 : o.k, cur.cc); } catch (e) { C.err = String(e && e.stack || e); } }
       g = out.getContext('2d'); g.setTransform(out.width / W, 0, 0, out.height / H, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, W, H);
       try { f.air(T, o.k == null ? 1 : o.k, cur.cc); } catch (e) { C.err = String(e && e.stack || e); }
     };
     raf = requestAnimationFrame(step);
     return () => { on = false; cancelAnimationFrame(raf); };
   };
+  /* Til testing: stedet bak (bg) på ett tidspunkt. */
+  C.bgStill = async (out, id, t, o) => { const f = filmOf(id); if (!f || !f.bg) return 'no bg'; await need(f.use || []); T = t; frameNo = floor(T * 60); P = newP(); cur = { id, f, sp: null, sps: {}, cc: (o && o.cc) || '#fff' }; g = out.getContext('2d'); g.setTransform(out.width / W, 0, 0, out.height / H, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, W, H); C.err = ''; try { f.bg(T, (o && o.k) || 1, cur.cc); } catch (e) { C.err = String(e && e.stack || e); } return C.err; };
+
+  /* ---------- Korte effekter i kampen ----------
+     Entréen til den legendariske og hendelsene fra stedet (lyn, ras, bølger, raseri): tegnes gjennomsiktig over banen. FXS[navn] = { len, R (når den viser seg), use, cues, draw(t, o) }.
+     o = { x, y (føttene til den legendariske), mx, my (føttene til din Pokémon), cc, id (arten, til silhuetter), s (størrelsen på figuren), cue(navn, verdi) }. */
+  const FXS = {};
+  const fx = (names, def) => { (Array.isArray(names) ? names : [names]).forEach(n => { FXS[n] = def; }); };
+  C.FXS = FXS;
+  C.fxInfo = n => FXS[n] ? { len: FXS[n].len, R: FXS[n].R || 0 } : null;
+  C.fxPrep = (n, id) => { const E = FXS[n]; if (!E) return Promise.resolve(false); return Promise.race([Promise.all([need(E.use || []), id ? loadSprite(id) : 0]).then(() => true), new Promise(r => setTimeout(() => r(false), 1500))]); };
+  const fxFrame = (out, E, t, o, sp) => {
+    T = t; frameNo = floor(t * 60); P = newP(); cur = { id: o.id || 0, f: E, sp, sps: {}, cc: o.cc || '#ffffff' };
+    g = out.getContext('2d'); g.setTransform(out.width / W, 0, 0, out.height / H, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.imageSmoothingEnabled = true; g.clearRect(0, 0, W, H);
+    if (t < E.len) { try { E.draw(t, o); } catch (e) { C.err = String(e && e.stack || e); } }
+  };
+  /* Spiller effekten på lerretet. Løftet holder når den er over. */
+  C.fx = (out, n, o) => new Promise(res => {
+    const E = FXS[n]; if (!E || !out) return res(false); o = o || {};
+    const t0 = performance.now(), cues = (E.cues || []).map(q => ({ t: q[0], n: q[1], v: q[2], on: false })); let sp = null;
+    if (o.id) loadSprite(o.id).then(s => { sp = s; });
+    const step = () => {
+      if (!out.isConnected) return res(false);
+      const t = (performance.now() - t0) / 1000;
+      fxFrame(out, E, t, o, sp);
+      for (const q of cues) if (!q.on && t >= q.t) { q.on = true; if (o.cue) try { o.cue(q.n, q.v); } catch (_) {} }
+      if (t >= E.len) return res(true);
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+  /* Til testing: ett bilde av effekten. */
+  C.fxStill = async (out, n, t, o) => { const E = FXS[n]; if (!E) return 'no fx ' + n; o = o || {}; await need(E.use || []); const sp = o.id ? await loadSprite(o.id) : null; C.err = ''; fxFrame(out, E, t, o, sp); return C.err; };
+
   C.airStill = (out, id, t, o) => { const f = filmOf(id); if (!f || !f.air) return; T = t; frameNo = floor(T * 60); P = newP(); cur = { id, f, sp: null, sps: {}, cc: (o && o.cc) || '#fff' }; g = out.getContext('2d'); g.setTransform(out.width / W, 0, 0, out.height / H, 0, 0); g.clearRect(0, 0, W, H); f.air(T, (o && o.k) || 1, cur.cc); };
 
   /* Verktøyene filmene bruker (filmene ligger i raidf.js). */
-  C.kit = { W, H, TAU, PI, sin, cos, abs, max, min, floor, c01, mix, seg, hit, pulse, io, eo, ei, back, rnd, rgba, blend, fill, lin, glow, im, has, tintArt, mulArt, cover, strip, spr, aura, sprH, bolt, rays, ring, wave, poly, rect, beam, stars, dust, fog, txt, vig, card, shatter, onAux, film,
+  C.kit = { W, H, TAU, PI, sin, cos, abs, max, min, floor, c01, mix, seg, hit, pulse, io, eo, ei, back, rnd, rgba, blend, fill, lin, glow, im, has, tintArt, mulArt, cover, strip, spr, aura, sprH, bolt, rays, ring, wave, poly, rect, beam, stars, dust, fog, txt, vig, card, shatter, onAux, film, fx,
     get T() { return T; }, get P() { return P; }, get g() { return g; }, get cur() { return cur; } };
   return C;
 })();

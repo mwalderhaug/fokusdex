@@ -174,13 +174,59 @@ function raidCard() {
 }
 function raidScreen() {
   const R = S.raid; if (!R) return render();
-  const V = raidShow(R), L = V.L, t = L.t, left = RAIDTRIES - (R.tries || 0), party = S.party.map(monBy).filter(Boolean), lead = BT.lead && party.some(m => m.u === BT.lead) ? BT.lead : party[0] && party[0].u;
+  const V = raidShow(R), L = V.L, t = L.t, dom = raidDom({ dk: V.sh === 2, lbg: L.bg }), left = RAIDTRIES - (R.tries || 0), party = S.party.map(monBy).filter(Boolean), lead = BT.lead && party.some(m => m.u === BT.lead) ? BT.lead : party[0] && party[0].u;
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Legendary raid</span></div>
     <div class="card k-ultra raidc" style="--cc:${L.cc}"><div class="pre-foe"><span class="raid-sp">${spr(R.id, { ani: 1, sh: V.sh, mega: defForm(R.id) })}</span><div class="sp"><div class="sm">${V.sh === 2 ? 'Shadow Pokémon · the rarest of all' : raidTitle(R.id, 0)}</div><b class="bossn" style="font-size:21px">${esc(V.n)}</b><div class="sm tn" style="margin-top:4px">Lv ${V.lv} · ${RAIDHP[t - 1]}× the HP of a normal Pokémon</div></div></div>
       <p class="sm" style="margin-top:10px">One Pokémon against your whole team, with the Bag. Its level was set by your team when it appeared, so training before you try again helps.</p>
+      ${dom ? `<p class="sm" style="margin-top:6px"><b>${dom.n}.</b> The place fights with it: every third turn ${dom.d}. Below half HP it becomes enraged, grows stronger, and it happens every second turn.</p>` : ''}
       <p class="sm" style="margin-top:6px">Win: it waits in the grass for you to catch, with ${nb(Math.round(RAIDCOIN[t - 1] * diff().coin))} coins, ${RAIDCANDY[t - 1]} Rare Candy and a lot of XP for the whole team. Lose: ${left > 1 ? `it stays, and you have ${left - 1} more ${left - 1 === 1 ? 'attempt' : 'attempts'}, one a day.` : 'this is your last attempt before it moves on.'}</p></div>
     <div><div class="lab">Your team · tap the one that leads</div><div class="lineup">${party.map(m => `<button type="button" data-a="rlead" data-u="${m.u}" class="${m.u === lead ? 'lead' : ''}">${spr(m.id, { sh: m.sh, mega: m.mega })}<span class="sp"><b>${esc(mName(m))}</b><br><span class="sm tn">Lv ${m.lv}</span></span>${m.u === lead ? '<span class="pill">Leads</span>' : ''}</button>`).join('')}</div></div>
     <div class="acts"><button type="button" class="btn gold" data-a="raidgo"${raidOpen() && party.length ? '' : ' disabled'}>${raidOpen() ? 'Start the raid' : 'Again tomorrow'}</button></div>`, 'tint', L.cc);
+}
+/* ---------- Rundt de legendariske i kampen (bildene ligger i raidx.js, reglene for stedet i league.js) ---------- */
+/* Hvilken entré den legendariske har, og hvordan figuren kommer inn i det den viser seg. */
+const entKind = tr => DOM[domKey(tr)] ? domKey(tr) : 'void';
+const ENTC = { bolt: 'e-flash', ice: 'e-flash', magma: 'e-rise', sea: 'e-rise', sky: 'e-drop', void: 'e-warp', space: 'e-zoom', time: 'e-flash', forest: 'e-zoom', stone: 'e-slam', origin: 'e-descend', dark: 'e-zoom' };
+/* Lydene effektene ber om heter som angrep i pakken. Uten pakke spilles den innebygde lyden av samme slag. */
+const SFXFB = { Thunder: 'bolt', Blizzard: 'wind', Eruption: 'boom', Surf: 'wave', Hurricane: 'wind', Psychic: 'psy', 'Cosmic Power': 'psy', 'Roar of Time': 'sound', Synthesis: 'heal', 'Rock Slide': 'fall', Judgment: 'beam', Psystrike: 'boom' };
+/* Lyd, risting og vibrasjon til effektene. more(n, v) tar det som er spesielt for én effekt. */
+const fxCue = (B, more) => (n, v) => {
+  if (BT.B !== B || !$('#arena')) return;
+  if (n === 'tick') { tone(1800, 0, 0.04, 0.03, 'square', 900); buzz(15); shake(140, 1.5); }
+  else if (n === 'thud') { BSFX.hit(); buzz(45); shake(220, 3); }
+  else if (n === 'hit') { BSFX.hit(); buzz([30, 30, 70]); shake(320, 4); }
+  else if (n === 'boom') { tone(60, 0, 0.5, 0.1, 'sine', 30); buzz([90, 60, 90, 60, 240]); shake(650, 6, 1); }
+  else if (n === 'rumble') { BSFX.dread(); buzz([20, 40, 20, 40, 20, 40, 20]); shake(800, 2); }
+  else if (n === 'beat') { BSFX.beat(); buzz([60, 80, 90]); }
+  else if (n === 'wind') BSFX.mv('wind');
+  else if (n === 'chime') BSFX.up();
+  else if (n === 'sfx') { if (!PACK.sfx(v, 0.9)) BSFX.mv(SFXFB[v] || 'boom', 3); }
+  else if (n === 'cry') cry(B.foe[B.b].id, 0, 0.6);
+  else if (more) more(n, v);
+};
+/* Hvor de to står, i effektenes 512 × 384, og hvor stor figuren til den legendariske er. */
+const fxAt = B => { const a = anc('foe', 0), m = anc('me', 0), ar = $('#arena'), sp = $('#s-foe'), cz = parseFloat(ar.style.getPropertyValue('--cz')) || 1.1, k = parseFloat(sp && sp.style.getPropertyValue('--k')) || 1; return { x: a.x * 2, y: a.y * 2, mx: m.x * 2, my: m.y * 2, cc: B.tr.cc || '#ffffff', s: 1.6 * k * cz }; };
+/* Entréen: figuren er malt skjult, effekten spilles over banen, og i det den viser seg får figuren sin egen bevegelse inn. Gir false når det ikke finnes noen egen entré. */
+async function raidEntry(B) {
+  const tr = B.tr, sp = $('#s-foe'), cv = $('#rfx'), b = B.foe[B.b], kind = entKind(tr), name = 'in:' + kind;
+  if (!cv || !sp || calm() || typeof CINE === 'undefined' || !CINE.fxInfo(name)) return false;
+  const f = CINE.FILM[tr.leg], sid = tr.dk ? 'dk' + tr.leg : (f && f.spid) || tr.leg, inf = CINE.fxInfo(name);
+  await CINE.fxPrep(name, sid); if (BT.B !== B || !sp.isConnected) return true;
+  textAway();
+  let shown = false; const show = () => { if (shown || BT.B !== B || !sp.isConnected) return; shown = true; sp.className = 'bs foe ' + ENTC[kind] + ' ace'; cry(b.id, 60, 0.6); };
+  const o = Object.assign(fxAt(B), { id: sid, cue: fxCue(B) });
+  const tm = setTimeout(show, inf.R * 1000);
+  await CINE.fx(cv, name, o); clearTimeout(tm); show();
+  return true;
+}
+/* Stedet kjemper med: teksten skrives mens hendelsen spilles over banen. Raseriet blir stående: glød rundt den legendariske, og sterkere luft resten av kampen. */
+async function envFx(B, e) {
+  const cv = $('#rfx'), name = 'ev:' + e.k, ok = !!cv && !calm() && typeof CINE !== 'undefined' && !!CINE.fxInfo(name);
+  if (e.k === 'rage') { const fo = $('#s-foe'), ar = $('#arena'); if (fo) fo.classList.add('rage'); if (ar) ar.classList.add('raging'); if (BT.airO) BT.airO.k = 1.7; }
+  const tx = e.s ? typeOut(e.s) : null;
+  if (ok) await CINE.fx(cv, name, Object.assign(fxAt(B), { cue: fxCue(B) }));
+  if (tx) await tx;
+  await bwait(ok ? 320 : 800);
 }
 /* Filmen når en legendarisk Pokémon viser seg (raid.js og raidf.js). Hver av de store har sin egen, lagt på slagene i låta si, og trioene og de mindre har
    roligere filmer. Låta starter med filmen og fortsetter inn i kampen. Filmen kan hoppes over. Med «redusert bevegelse» vises bare et stillbilde. */
@@ -193,6 +239,12 @@ async function legendIntro(B) {
   if (calm()) { await ready; if (gone()) return; root.classList.add('on'); await CINE.still(cv, id, Math.min(info.len - 0.6, info.R + 2), o); battleMusic(B, { fade: 1.2, from: 0.1 }); cry(f.id, 300, 0.5); await T(2600); if (gone()) return; root.classList.add('d'); await T(260); return; }
   /* Låta og filmen starter samtidig. Uten låt i pakken spilles den innebygde oppbyggingen, med drønnet i det den viser seg. */
   await ready; if (gone()) return;
+  /* De aller sjeldneste varsles først: mørket puster, bildet slår sprekker, og så starter filmen. */
+  if (info.omen) {
+    await CINE.fxPrep('omen'); if (gone()) return; root.classList.add('on'); PACK.music(''); music(''); BSFX.dread();
+    await CINE.fx(cv, 'omen', { cc: tr.cc, txt: tr.leg === 493 ? 'The one who shaped\nthe world draws near' : 'Something from beyond\nthe sky draws near', cue: n => { if (gone()) return; if (n === 'beat') { BSFX.beat(); buzz([70, 90, 110]); } else if (n === 'boom') { BSFX.mv('boom', 3); buzz([90, 60, 240]); } } });
+    if (gone()) return;
+  }
   const started = tk ? await PACK.music(tk, { at: info.at }) : false; if (gone()) return;
   let stop = () => {};
   if (started) music(''); else { PACK.music(''); stop = epicIntro('ultra', info.R); }
@@ -373,7 +425,7 @@ function camFit() {
 }
 function paintSprite(side, cls) {
   const b = teamOf(side)[BT.v[side].i], el = $('#s-' + side);
-  if (el) { el.className = 'bs ' + side + ' ' + (cls || ''); el.dataset.k = sprK(side, b).toFixed(3); el.style.setProperty('--k', el.dataset.k); el.innerHTML = spr(b.id, { ani: 1, sh: b.sh, back: side === 'me', mega: b.mega }); camFit(); }
+  if (el) { el.className = 'bs ' + side + ' ' + (cls || ''); el.dataset.k = sprK(side, b).toFixed(3); el.style.setProperty('--k', el.dataset.k); el.innerHTML = spr(b.id, { ani: 1, sh: b.sh, back: side === 'me', mega: b.mega }); if (side === 'foe' && BT.B && BT.B.rage) el.classList.add('rage'); camFit(); }
 }
 /* HP-linja glir mot det nye tallet, og tallet teller med. Farten følger treffet: et supereffektivt treff får linja til å rase ned,
    et vanlig går jevnt, og et lite effektivt siger sakte. Bak linja står en lys rest av det som ble slått bort et øyeblikk før den synker etter,
@@ -410,15 +462,18 @@ function fxPos(side) {
 /* Spritene forstørres etter bredden på arenaen (spillskjermen er 256 piksler bred). */
 function fitArena() { const a = $('#arena'), m = $('#bmenu'); if (a) { const u = (a.clientWidth / 256).toFixed(3) + 'px'; a.style.setProperty('--z', (a.clientWidth / 256 * 0.8).toFixed(2)); a.style.setProperty('--u', u); a.parentNode.style.setProperty('--u', u); if (m) m.style.setProperty('--u', u); } }
 window.addEventListener('resize', fitArena);
-function battleTag(B) { return B.mode === 'raid' ? 'Legendary raid' : B.mode === 'fac' ? `Frontier · Round ${B.round} · ${B.w + 1}/${FACN}` : B.mode === 'lab' ? `Demo · ${B.tr.cn}` : `${B.lap ? 'Lap ' + (B.lap + 1) + ' · ' : ''}${B.n + 1}/${LAPN} · ${B.tr.cn}`; }
+function battleTag(B) { return B.raid && raidDom(B.tr) ? `${B.mode === 'raid' ? 'Raid' : 'Demo'} · ${raidDom(B.tr).n}` : B.mode === 'raid' ? 'Legendary raid' : B.mode === 'fac' ? `Frontier · Round ${B.round} · ${B.w + 1}/${FACN}` : B.mode === 'lab' ? `Demo · ${B.tr.cn}` : `${B.lap ? 'Lap ' + (B.lap + 1) + ' · ' : ''}${B.n + 1}/${LAPN} · ${B.tr.cn}`; }
 const calm = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; } };
 function drawBattle() {
-  const B = BT.B, tr = B.tr, tier = TIER(tr.kind), scene = PACK.now(PACK.sceneFor(B));
+  const B = BT.B, tr = B.tr, tier = TIER(tr.kind);
+  /* De legendariske og klasse 9 har sin egen luft over banen (raidf.js): tåke, lyn, glør, snøstorm … De legendariske har også sitt eget sted bak plattformene (raidx.js). */
+  const airId = tr.wild ? (tr.dk ? 'dk' + tr.leg : tr.leg) : tr.kind === 'supreme' && B.mode !== 'fac' ? 's:' + tr.n : 0, ainf = airId && typeof CINE !== 'undefined' ? CINE.info(airId) : null, own = !!(tr.wild && ainf && ainf.bg);
+  const scene = own ? '' : PACK.now(PACK.sceneFor(B)), pl = own && ainf.plat ? `;--p1:${ainf.plat[0]};--p2:${ainf.plat[1]};--p3:${ainf.plat[2]}` : '';
   ov(`<div class="btop k-${tier}"${kst(tr)}><span class="pill tn">${esc(battleTag(B))}</span><span class="btn-n"><b class="${tr.boss ? 'bossn' : ''}">${esc(who(tr))}</b></span></div>
-    <div class="bscreen t-${tier}"${kst(tr)}><div class="arena a-${tr.arena} v${tr.v} t-${tier} i${tr.int}${tr.th ? ' th-' + tr.th : ''}${scene ? ' has-scene' : ''}" id="arena" style="--ac:var(--t${tr.ty});--cc:${tr.cc || 'var(--t' + tr.ty + ')'}">
-      <div class="cam" id="cam"><div class="world" id="world">${scene ? `<img class="scene" alt="" src="${scene}">` : ''}<div class="abg"></div><canvas class="fxc bgc" id="bgc" width="256" height="192"></canvas><canvas class="fxc amc" id="amc" width="512" height="384"></canvas><div class="plat pf"></div><div class="plat pm"></div></div></div><div class="dim"></div>
+    <div class="bscreen t-${tier}"${kst(tr)}><div class="arena a-${tr.arena} v${tr.v} t-${tier} i${tr.int}${tr.th ? ' th-' + tr.th : ''}${scene ? ' has-scene' : ''}" id="arena" style="--ac:var(--t${tr.ty});--cc:${tr.cc || 'var(--t' + tr.ty + ')'}${pl}">
+      <div class="cam" id="cam"><div class="world" id="world">${scene ? `<img class="scene" alt="" src="${scene}">` : ''}<div class="abg"></div>${own ? '<canvas class="fxc bgc evc" id="evc" width="512" height="384"></canvas>' : ''}<canvas class="fxc bgc" id="bgc" width="256" height="192"></canvas><canvas class="fxc amc" id="amc" width="512" height="384"></canvas><div class="plat pf"></div><div class="plat pm"></div></div></div><div class="dim"></div>
       ${tr.wild ? '' : `<div class="trn" id="trn">${tsprite(tr.img)}</div>`}
-      <div class="bs foe gone" id="s-foe"></div><div class="bs me gone" id="s-me"></div>
+      <div class="bs foe gone" id="s-foe"></div><div class="bs me gone" id="s-me"></div>${tr.wild ? '<canvas class="fxc rfx" id="rfx" width="512" height="384"></canvas>' : ''}
       <canvas class="fxc" id="fxc" width="256" height="192"></canvas><canvas class="fxc" id="axc" width="512" height="384"></canvas><div class="fx" id="fx"></div>
       <div class="hpb foe" id="b-foe" hidden></div><div class="hpb me" id="b-me" hidden></div>
     </div><button type="button" class="btext" id="btext" data-a="btap" aria-live="polite"><span id="btx"></span><i></i></button></div>
@@ -429,9 +484,12 @@ function drawBattle() {
   FX.hooks.shake = (ms, amp, kind) => shake(ms, amp == null ? 3 : amp, kind);
   /* Bakgrunnsshowet følger klassen og temaet. Rammene som beveger seg (gull og de ondes røde puls) tegnes på nytt mange ganger i sekundet. */
   FX.hooks.glitch = ms => { const a = $('#arena'); if (!a) return; a.classList.add('glitch'); setTimeout(() => a.classList.remove('glitch'), ms); };
-  /* De legendariske og klasse 9 har sin egen luft over banen (raidf.js): tåke, lyn, glør, snøstorm … Da dempes det vanlige showet, så det ikke blir for mye. */
-  const airId = tr.wild ? (tr.dk ? 'dk' + tr.leg : tr.leg) : tr.kind === 'supreme' && B.mode !== 'fac' ? 's:' + tr.n : 0, air = !!airId && !calm() && typeof CINE !== 'undefined' && CINE.has(airId);
-  if (BT.air) BT.air(); BT.air = air ? CINE.air($('#amc'), airId, { cc: tr.cc || '#ffffff', k: 1 }) : null;
+  /* Med egen luft dempes det vanlige showet, så det ikke blir for mye. BT.airO.k er styrken: den økes når den legendariske blir rasende. */
+  const air = !!airId && !calm() && typeof CINE !== 'undefined' && CINE.has(airId);
+  if (BT.air) BT.air(); BT.airO = { cc: tr.cc || '#ffffff', k: 1, bg: $('#evc') }; BT.air = air ? CINE.air($('#amc'), airId, BT.airO) : null;
+  if (own && !air) CINE.bgStill($('#evc'), airId, 12, { cc: tr.cc });
+  /* Lydene til entréen og stedets hendelser hentes nå. */
+  if (tr.wild && typeof CINE !== 'undefined' && typeof raidDom === 'function') for (const n of ['in:' + entKind(tr), 'ev:' + domKey(tr), 'ev:rage']) ((CINE.FXS[n] || {}).cues || []).forEach(q => { if (q[1] === 'sfx') PACK.warm(q[2]); });
   FX.show($('#bgc'), calm() ? 0 : air ? (tr.wild ? 0 : 4) : tr.int, tr.ty, tr);
   clearInterval(BT.goldT);
   const rk = hudRing('foe');
@@ -721,6 +779,7 @@ function abBanner(side, name) {
 async function playOne(B, e) {
   const side = e.side, sp = side ? $('#s-' + side) : null, v = side ? BT.v[side] : null;
   if (e.t === 'msg') return say(e.s, e.hold);
+  if (e.t === 'env') return envFx(B, e);
   if (e.t === 'abil') { abBanner(e.side, e.n); buzz(20); return say(e.s); }
   if (e.t === 'anim') return playAnim(B, e);
   if (e.t === 'hit') {
@@ -763,13 +822,16 @@ async function playOne(B, e) {
     paintSprite(side, 'gone');
     if (!wild) await tossBall(side);
     await sprReady(side, 1500); if (BT.B !== B || !sp.isConnected) return;
-    if (big) { BSFX.ace(); buzz([80, 40, 80, 40, 240]); await FX.ace(anc(side, 26), B.tr.ty, B.tr); if (!PACK.playing()) music(musicKey(B)); }
-    sp.className = 'bs ' + side + ' in' + (ace ? ' ace' : ''); BSFX.ball(); FX.open(anc(side), big ? '#ffe9a8' : '');
-    cry(b.id, 200, big ? 0.5 : 0.35); if (big) shake(500 / spdF(), 4, 1);
+    if (wild && await raidEntry(B)) { if (BT.B !== B || !sp.isConnected) return; if (!PACK.playing() && !MUS.id) music(musicKey(B)); }
+    else {
+      if (big) { BSFX.ace(); buzz([80, 40, 80, 40, 240]); await FX.ace(anc(side, 26), B.tr.ty, B.tr); if (!PACK.playing()) music(musicKey(B)); }
+      sp.className = 'bs ' + side + ' in' + (ace ? ' ace' : ''); BSFX.ball(); FX.open(anc(side), big ? '#ffe9a8' : '');
+      cry(b.id, 200, big ? 0.5 : 0.35); if (big) shake(500 / spdF(), 4, 1);
+    }
     await bwait(380); paintBox(side);
     if (B.mode !== 'lab') S.seen[b.id] = 1;
     await bwait(big ? 1100 : 620);
-    sp.classList.remove('in');
+    sp.classList.remove('in', ...Object.values(ENTC));
   }
   else if (e.t === 'vanish') { sp.classList.toggle('away', !!e.on); await bwait(260); clearMot(sp); EBXP.unhide(side); }
   else if (e.t === 'sub') { sp.classList.toggle('subd', !!e.on); await bwait(200); }
@@ -882,7 +944,7 @@ async function startBattle(B) {
   if (BT.B !== B) return;
   drawBattle(); drawMenu(); packHint();
   await bwait(350);
-  await say(B.tr.wild ? `The ${B.tr.title.replace(' Pokémon', '').toLowerCase()} ${B.tr.n} appeared!` : `${who(B.tr)} wants to battle!`);
+  await say(B.tr.wild ? (/^The /.test(B.tr.title) ? `${B.tr.n}, ${B.tr.title.replace(/^The /, 'the ')}, appeared!` : `The ${B.tr.title.replace(' Pokémon', '').toLowerCase()} ${B.tr.n} appeared!`) : `${who(B.tr)} wants to battle!`);
   if (BT.B !== B || !$('#arena')) return;
   if ($('#trn')) $('#trn').classList.add('out');
   await playOne(B, { t: 'send', side: 'foe', i: 0, hp: B.foe[0].hp, st: '', txt: `${B.tr.n} sent out ${B.foe[0].name}!` });
@@ -892,6 +954,7 @@ async function startBattle(B) {
   /* Egenskapene til de to som står inne (Intimidate, Pressure, været …) slår inn før første runde. */
   for (const e of startAbil(B)) { if (BT.B !== B || !$('#arena')) return; await playOne(B, e); }
   if (BT.B !== B || !$('#arena')) return;
+  if (B.raid && raidDom(B.tr)) { await say(`${B.tr.n}'s domain: ${raidDom(B.tr).n}!`); if (BT.B !== B || !$('#arena')) return; }
   if (B.over) return endBattle();
   BT.busy = false; setText(`What will ${B.me[B.a].name} do?`); drawMenu();
 }
@@ -1020,7 +1083,7 @@ function labScreen() {
     ${PACK.ok ? '' : `<div class="card nopack"><b>Built-in graphics and music</b><p class="sm" style="margin-top:4px">${GH && GH.ok ? `Sync is on, but your pack is not loaded${PACK.err ? ' (error ' + esc(PACK.err) + ')' : ' yet'}.` : 'Sync is off on this device, so your own pack is not loaded: music, HP boxes, sounds and move animations are the built-in ones.'}</p><button type="button" class="btn wide" data-a="${GH && GH.ok ? 'packre' : 'sync'}" style="margin-top:8px">${GH && GH.ok ? 'Look for the pack again' : 'Connect Sync'}</button></div>`}
     <div class="row labm"><button type="button" class="btn sp${rent ? ' nf' : ''}" data-a="labmode" data-k="0" aria-pressed="${!rent}">My team</button><button type="button" class="btn sp${rent ? '' : ' nf'}" data-a="labmode" data-k="1" aria-pressed="${rent}">Rentals · Lv ${FACLV}</button></div>
     <div class="lablist">${ORDER.map(k => { const c = TCL[k]; return `<button type="button" data-a="labgo" data-k="${k}" class="k-${TIER(k)}"><span class="cno">${c.i}</span><span class="sp"><b>${c.n}</b><br><span class="sm">${LABD[k]}</span></span>${ULTRA.has(k) ? `<span class="pill">${RARE[k].replace(' boss', '')}</span>` : ''}</button>`; }).join('')}</div>
-    <div class="stack"><div class="lab">Legendary raids · the film and the fight</div>${[['The greatest', id => LEG[id].t === 4 || LEG[id].t === 2], ['Mythical', id => LEG[id].t === 3], ['Legendary', id => LEG[id].t === 1]].map(([n, f]) => `<div class="sm tn">${n}</div><div class="legl">${Object.keys(LEG).map(Number).filter(f).sort((a, b) => (LEG[b].t === 4) - (LEG[a].t === 4)).map(id => `<button type="button" data-a="labraid" data-k="${id}" style="--cc:${LEG[id].cc}">${spr(id, { lazy: 1, mega: defForm(id) })}<b>${esc(D(id)[0])}</b></button>`).join('')}${n === 'The greatest' ? `<button type="button" data-a="labraid" data-k="dk" style="--cc:${DARK.cc}">${spr(150, { sh: 2 })}<b>Dark Mewtwo</b></button>` : ''}</div>`).join('')}</div>
+    <div class="stack"><div class="lab">Legendary raids · the film, the entrance, the place and the fight</div>${[['The greatest', id => LEG[id].t === 4 || LEG[id].t === 2], ['Mythical', id => LEG[id].t === 3], ['Legendary', id => LEG[id].t === 1]].map(([n, f]) => `<div class="sm tn">${n}</div><div class="legl">${Object.keys(LEG).map(Number).filter(f).sort((a, b) => (LEG[b].t === 4) - (LEG[a].t === 4)).map(id => `<button type="button" data-a="labraid" data-k="${id}" style="--cc:${LEG[id].cc}">${spr(id, { lazy: 1, mega: defForm(id) })}<b>${esc(D(id)[0])}</b></button>`).join('')}${n === 'The greatest' ? `<button type="button" data-a="labraid" data-k="dk" style="--cc:${DARK.cc}">${spr(150, { sh: 2 })}<b>Dark Mewtwo</b></button>` : ''}</div>`).join('')}</div>
     ${PACK.ok ? `<p class="sm tn">Your pack is loaded: ${Object.keys(PACK.man.scenes || {}).length} arenas, ${(PACK.man.music || []).length} tracks and ${Object.keys(PACK.man.sfx || {}).length} sounds.</p>` : ''}`, 'tint', 'var(--gold)');
 }
 

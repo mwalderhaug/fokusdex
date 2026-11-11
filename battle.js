@@ -635,6 +635,8 @@ function endTurn(B, ev) {
   if (B.mroom && --B.mroom <= 0 && !B.over) say('Magic Room wore off, and held item effects returned to normal!');
   if (B.wroom && --B.wroom <= 0 && !B.over) say('Wonder Room wore off, and Defense and Sp. Def stats returned to normal!');
   for (const b of [...B.me, ...B.foe]) { b.v.prot = 0; b.v.endure = 0; b.v.fl = 0; b.v.hit = null; b.v.mcoat = 0; b.v.snatch = 0; b.v.roost = 0; }
+  /* I en raid kjemper stedet med (league.js). */
+  if (B.raid && !B.over && typeof raidField === 'function') raidField(B, ev);
 }
 
 /* ---------- Motstanderens valg ---------- */
