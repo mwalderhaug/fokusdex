@@ -291,7 +291,7 @@ function evChip(e) {
 function evSheet(e) {
   const I = evInfo(e), who = evWho(e, 6), stat = e.k === 'surge' || EVSTAT[e.k], rent = modeOn('factory') && MODESN < MODES.length && (e.k === 'surge' || e.k === 'type');
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Today only</span></div>
-    <div class="evrev"><div class="evr-rays"></div><div class="evr-ic">${I.ic}</div><div class="evr-k">Special event</div><h1 class="evr-n">${esc(I.n)}</h1><p class="evr-s">${esc(I.s)}</p>
+    <div class="evrev"><div class="evr-rays"></div><div class="evr-ic">${I.ic}</div><div class="evr-k">Special event ${hq('events', 'What are special events?')}</div><h1 class="evr-n">${esc(I.n)}</h1><p class="evr-s">${esc(I.s)}</p>
       <p class="evr-d">${esc(I.d)}</p>${rent ? '<p class="sm" style="position:relative;text-align:center">In the Battle Frontier it counts for the rental Pokémon you pick. Your own get it in raids.</p>' : ''}
       ${stat ? (who.length ? `<div class="evms">${who.map(evMon).join('')}</div>` : '<p class="sm" style="position:relative;text-align:center">None of your own Pokémon qualify today. It costs you nothing: everything else is as usual.</p>') : ''}
       <p class="sm" style="text-align:center">Events are only ever for you, never for your opponents. Nothing gets harder, and nothing is lost if you sit it out.</p></div>
@@ -311,7 +311,7 @@ function modeSheet() {
     pwt: { s: `Today: ${wc.n}`, d: `A knockout cup, three rounds, three on three, and a new cup each weekday. Your three play at Lv ${WR ? WR.lv : pwtLv()}. Coins for every round, and the winner takes a trophy and ${aN(PACKS[wc.pk].n)}.`, a: 'One cup · a loss ends it', n: 1, u: W.day === S.lad.day && !WR ? 1 : 0 }
   };
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Not now</button><span class="pill tn">Choose 1 of ${MODES.length}</span></div>
-    <div><h1 class="big" style="font-size:30px">Today's mode</h1><p class="sm" style="margin-top:6px">Pick one way to battle today. The other two stay closed until your next battle day.</p></div>
+    <div><h1 class="big" style="font-size:30px">Today's mode ${hq('modes', 'What are the modes?')}</h1><p class="sm" style="margin-top:6px">Pick one way to battle today. The other two stay closed until your next battle day.</p></div>
     <div class="mdl">${MODES.map(k => `<button type="button" class="mdc${sel === k ? ' on' : ''}${bo.mode === k ? ' bo' : ''}" data-a="msel" data-k="${k}" aria-pressed="${sel === k}">
       <span class="mdc-top"><span class="ficon">${MODEIC[k]}</span><span class="sp"><b>${MODEN[k]}</b><span class="sm tn">${esc(C[k].s)}</span></span>${pipsEl(C[k].n, C[k].u)}</span>
       <span class="sm mdc-d">${esc(C[k].d)}</span>

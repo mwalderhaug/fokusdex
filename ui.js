@@ -166,7 +166,7 @@ function cry(id, delay = 0, vol = 0.45) {
   }).catch(() => {});
 }
 /* Lyd per type trykk. Handlinger med egen lyd (kast, kjøp, utvikling osv.) får ikke en ekstra. */
-const OWN = new Set(['mgive', 'triv', 'trev', 'mvtog', 'start', 'throw', 'buy', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'honyes', 'clkagain']);
+const OWN = new Set(['mgive', 'triv', 'trev', 'mvtog', 'start', 'throw', 'buy', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'honyes', 'clkagain', 'help', 'tour', 'tourgo', 'tourend', 'tourhub', 'trtipok', 'trtip']);
 const SND = {
   tab: 'tab', lagv: 'tab', dexr: 'tab',
   fag: 'chip', min: 'chip', reg: 'chip', sort: 'chip', filt: 'chip', sety: 'chip', extog: 'chip',
@@ -201,7 +201,7 @@ function render() {
   renderNav();
   /* På en eventdag får forsiden eventets farger og en annen oppstilling (se VIEW.fokus). Eventet trekkes når dagens modus velges (modePick). */
   const E = U.tab === 'fokus' && S.party.length && typeof evNow === 'function' ? evNow() : null, EI = E ? evInfo(E) : null;
-  $('#main').innerHTML = `<div class="wrap${E ? ' evpage ev-' + E.k : ''}"${E ? ` style="--ec:${EI.c};--ec2:${EI.c2 || EI.c}"` : ''}>${VIEW[U.tab]()}</div>`;
+  $('#main').innerHTML = `<div class="wrap${E ? ' evpage ev-' + E.k : ''}"${E ? ` style="--ec:${EI.c};--ec2:${EI.c2 || EI.c}"` : ''}>${helpBtn()}${VIEW[U.tab]()}</div>`;
   /* Et område som nettopp ble åpnet (av nivå eller antall arter), sies fra om én gang. */
   if (S.nreg && S.nreg.length) { const l = S.nreg; S.nreg = []; save(true); setTimeout(() => toast(`New area: ${l.join(' and ')} ${l.length > 1 ? 'are' : 'is'} open. See Shop · Routes.`), 400); }
 }
@@ -239,7 +239,7 @@ function topBar() {
 /* Kampbonusen (multiplikatoren på mynter fra kamper) slik den står akkurat nå, og trinnene time for time fram til dagsmålet. */
 function mulBox(td) {
   const g = goalMin(), gh = Math.max(1, Math.round(g / 60)), top = goalTop(), at = m => Math.round((0.5 + Math.min(1, m / g) * (top - 0.5)) * 10) / 10, now = at(td), nx = td < g ? Math.ceil((td + 1) / 60) * 60 : 0;
-  return `<div class="mulbox"><div class="row" style="justify-content:space-between;align-items:baseline"><span class="sm">Battle bonus so far today</span><b class="mulnow tn">×${now.toFixed(1)}</b></div>
+  return `<div class="mulbox"><div class="row" style="justify-content:space-between;align-items:baseline"><span class="sm">Battle bonus so far today ${hq('bonus', 'What is the battle bonus?')}</span><b class="mulnow tn">×${now.toFixed(1)}</b></div>
     <div class="mulsteps" style="--n:${gh}">${Array.from({ length: gh }, (_, i) => `<span class="${td >= (i + 1) * 60 ? 'on' : td > i * 60 ? 'cur' : ''}"><i>${i + 1} h</i><b>×${at((i + 1) * 60).toFixed(1)}</b></span>`).join('')}</div>
     <p class="sm" style="margin-top:6px">${td >= g ? `Goal reached: battles pay ×${top.toFixed(1)} coins today.` : `It grows with every minute of focus and peaks at ×${top.toFixed(1)} at your goal of ${gh} h.${nx ? ` Next step: ×${at(Math.min(g, nx)).toFixed(1)} in ${Math.min(g, nx) - td} min.` : ''}`}</p></div>`;
 }
@@ -370,7 +370,7 @@ function trainSheet(m) {
   const rows = SN.map((n, k) => `<button type="button" class="trr" data-a="trsel" data-k="${k}" aria-pressed="${k === i}"><b style="${natc(k)}">${n}</b><span class="tn v">${st[k]}</span><span class="tb g"><i style="width:${Math.round(m.iv[k] / 31 * 100)}%"></i></span><span class="tn n">${m.iv[k]}</span><span class="tb"><i style="width:${Math.round(m.ev[k] / EVMAX * 100)}%"></i></span><span class="tn n">${m.ev[k]}</span></button>`).join('');
   const evb = shed ? '' : room ? `<div class="trb">${m.ev[i] ? `<button type="button" class="btn sm2" data-a="trclr">Clear</button>` : ''}<button type="button" class="btn sm2 pri" data-a="trev" data-n="${a}"${S.coins >= evPriceOf(a) ? '' : ' disabled'}>+${a} ${coinEl(evPriceOf(a))}</button>${b > a ? `<button type="button" class="btn sm2 pri" data-a="trev" data-n="${b}">+${b} ${coinEl(evPriceOf(b))}</button>` : ''}</div>`
     : `<div class="trb fix">${m.ev[i] ? `<button type="button" class="btn sm2" data-a="trclr">Clear</button>` : ''}<span class="sm" style="align-self:center">${m.ev[i] >= EVMAX ? 'Fully trained.' : 'All 510 points are placed. Clear a stat to move them.'}</span></div>`;
-  const html = `<div class="trs"><div class="trh"><span></span><span></span><span>Potential · of 31</span><span>Training · of ${EVMAX}</span></div>${rows}</div>
+  const html = `${trainTip()}<div class="trs"><div class="trh"><span></span><span></span><span>Potential · of 31</span><span>Training · of ${EVMAX}</span></div>${rows}</div>
     <div class="card2 trx"><div class="row" style="justify-content:space-between"><b>${SN[i]}</b><span class="sm tn" style="${natc(i)}">${st[i]}${up !== dn && i === up ? ' · nature +10 %' : up !== dn && i === dn ? ' · nature −10 %' : ''}</span></div>
       ${shed ? '<p class="sm">Shedinja always has 1 HP, so there is nothing to train here.</p>' : `<div class="trl"><span class="sm">Potential <b class="tn">${m.iv[i]}</b> of 31${dIv > 0 ? `<br>+${dIv} at Lv ${m.lv}` : ''}</span>${ic > 0 ? `<button type="button" class="btn sm2 gold" data-a="triv"${S.coins >= ic ? '' : ' disabled'}>Hyper Train ${coinEl(ic)}</button>` : '<span class="pill" style="color:var(--gold)">At its best</span>'}</div>
       <div class="sm">Training <b class="tn">${m.ev[i]}</b> of ${EVMAX} · ${VIT[i]}${dEv > 0 ? ` · up to +${dEv} at Lv ${m.lv}` : ''}</div>${evb}`}
@@ -379,7 +379,7 @@ function trainSheet(m) {
     <button type="button" class="btn wide" data-a="trback">Back</button>`;
   const host = $('#trd');
   if (host && +host.dataset.u === m.u) { host.innerHTML = html; $('#trc').innerHTML = coinEl(S.coins); }
-  else openSheet(`<div class="trv" style="--tc:var(--t${d[1]})"><div class="shead">${spr(m.id, { ani: 1, sh: m.sh, mega: m.mega, s: '72px' })}<div class="sp"><div class="sm tn">Training</div><div class="pn" style="font-size:20px">${esc(mName(m))}</div><div class="sm tn">Lv ${m.lv} · ${NAT[m.nat]}</div></div><span id="trc">${coinEl(S.coins)}</span></div><div id="trd" class="trv" data-u="${m.u}">${html}</div></div>`);
+  else openSheet(`<div class="trv" style="--tc:var(--t${d[1]})"><div class="shead">${spr(m.id, { ani: 1, sh: m.sh, mega: m.mega, s: '72px' })}<div class="sp"><div class="sm tn">Training <button type="button" class="hq" data-a="trtip" aria-label="How training works">?</button></div><div class="pn" style="font-size:20px">${esc(mName(m))}</div><div class="sm tn">Lv ${m.lv} · ${NAT[m.nat]}</div></div><span id="trc">${coinEl(S.coins)}</span></div><div id="trd" class="trv" data-u="${m.u}">${html}</div></div>`);
 }
 /* Velg hvilke fire angrep den skal ha, blant alle den har lært til nå. */
 function movePick(m) {
@@ -820,7 +820,7 @@ const A = {
   extog: el => { const k = el.dataset.k, i = U.ex.indexOf(k); if (i >= 0) U.ex.splice(i, 1); else U.ex.push(k); el.setAttribute('aria-pressed', String(i < 0)); },
   snext: () => { if (!pick) return; U.step = 2; if (!U.sd) U.sd = [{ k: '', n: '', ty: [], t: '', h: '', d: '' }]; intro(); $('#ov').scrollTop = 0; },
   sback: () => { U.step = 1; intro(); },
-  sestart: () => { const r = seRead(); if (typeof r === 'string') { $('#se-err').textContent = r; return; } setSubjects(r); const c = begin(pick); sfx.evo(); closeOv(); render(); toast(c ? `${nb(c)} coins for the hours you have already done. Good luck.` : 'Good luck. Your first session gets the rested bonus.'); },
+  sestart: () => { const r = seRead(); if (typeof r === 'string') { $('#se-err').textContent = r; return; } setSubjects(r); const c = begin(pick); S.tour = 0; save(true); sfx.evo(); closeOv(); render(); tourShow(0); if (c) toast(`${nb(c)} coins for the hours you have already done.`); },
   sync: () => syncSheet(),
   synclb: () => { try { const lb = JSON.parse(localStorage.getItem('lb.gh')); $('#gh-r').value = lb.repo; $('#gh-t').value = lb.t; } catch (_) {} },
   syncsave: async () => {
@@ -858,7 +858,7 @@ const A = {
 };
 document.addEventListener('click', ev => {
   const el = ev.target.closest('[data-a]');
-  const fn = el && !el.disabled && (A[el.dataset.a] || BA[el.dataset.a]);
+  const fn = el && !el.disabled && (A[el.dataset.a] || BA[el.dataset.a] || HA[el.dataset.a]);
   if (fn) { click(el.dataset.a); fn(el); return; }
   if (ev.target.id === 'sheet') closeSheet();
 });
@@ -907,7 +907,7 @@ ghHook = adopted => { const s = $('#gh-s'); if (s) s.textContent = ghState === '
 render();
 clockCheck();
 netTime().then(o => { if (o != null && clockCheck() && $('#ov').hidden) render(); });
-if (S.started && S.timer) showTimer(); else if (typeof liveGate === 'function') liveGate();
+if (S.started && S.timer) showTimer(); else if (!(typeof liveGate === 'function' && liveGate()) && S.started && S.tour === 0) tourShow(0);
 ghPull();
 setTimeout(() => PACK.init(), 2500);
 /* Adressen …/#lab åpner demoen direkte. */
