@@ -9,8 +9,15 @@ const TIERS = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
 /* Områdene: a–b = artene som hører til. Et nytt område åpner seg når du er erfaren nok (trenernivå lv) eller har samlet nok arter (dex), det som kommer først. */
 const REG = [null, { n: 'Kanto', a: 1, b: 151, lv: 1, dex: 0 }, { n: 'Johto', a: 152, b: 251, lv: 5, dex: 30 }, { n: 'Hoenn', a: 252, b: 386, lv: 9, dex: 70 }, { n: 'Sinnoh', a: 387, b: 493, lv: 14, dex: 120 }, { n: 'Unova', a: 494, b: 649, lv: 19, dex: 180 }];
 /* Fagene ligger i lagringen (S.fag), så hver spiller har sine egne: n = navn, c = farge, ty = typer som dukker opp oftere,
-   t = planlagte timer, b = minutter gjort før appen, d = eksamensdato, ms = milepæler hentet. Økter kan også føres på faste ekstra-valg (EXTRA). */
-const EXTRA = { sok: { n: 'Job apps', c: '#D4BC8E', ty: [2, 9] }, annet: { n: 'Other', c: '#AFA89E', ty: [] } };
+   t = planlagte timer, b = minutter gjort før appen, d = eksamensdato, ms = milepæler hentet.
+   Økter kan også føres på andre aktiviteter (EXTRA: jobbsøking, musikk, lesing …). De teller OTHERW av et fag: halv XP, halve mynter, halvt så
+   mange møter og halv framdrift mot dagsmålet, og timene føres for seg. Har spilleren ingen egne fag, teller alt fullt. */
+const OTHERW = 0.5;
+const EXTRA = { sok: { n: 'Job apps', c: '#D4BC8E', ty: [2, 9] }, musikk: { n: 'Music', c: '#C9A8B4', ty: [0, 17] }, lesing: { n: 'Reading', c: '#A8B6C9', ty: [13, 7] }, prosjekt: { n: 'Project', c: '#B4C2A0', ty: [8, 12] }, annet: { n: 'Other', c: '#AFA89E', ty: [] } };
+const isSubj = k => !!(S.fag && S.fag[k]);
+const rateOf = k => isSubj(k) || !Object.keys(S.fag || {}).length ? 1 : OTHERW;
+/* Loggførte minutter (virkelige, ikke vektet) på fag og på andre aktiviteter. */
+function focusSplit() { let a = 0, b = 0; for (const d of Object.values(S.log)) for (const k in d.f || {}) { if (EXTRA[k]) b += d.f[k]; else a += d.f[k]; } return { subj: a, other: b }; }
 /* Jazz sine fag fra før fagene kunne velges. Brukes bare for å oppgradere gamle lagringer. */
 const LEGACY = { bban: { n: 'BBAN', c: '#B9AFC9', ty: [12, 8] }, cf: { n: 'CF', c: '#A9C3A2', ty: [0, 1] }, met: { n: 'MET', c: '#9FBDB8', ty: [13, 7] }, bsmo: { n: 'Ø&B', c: '#BDBE92', ty: [11, 10, 6] } };
 const PAL = ['#B9AFC9', '#A9C3A2', '#9FBDB8', '#BDBE92'];
@@ -18,7 +25,7 @@ let FAGS = {};
 function buildFags() {
   FAGS = {};
   for (const k in S.fag) { const f = S.fag[k]; FAGS[k] = { n: f.n, c: f.c, ty: f.ty || [] }; }
-  for (const k of S.extra || ['annet']) if (EXTRA[k]) FAGS[k] = EXTRA[k];
+  for (const k of Object.keys(EXTRA)) if (k === 'annet' || (S.extra || []).includes(k)) FAGS[k] = EXTRA[k];
 }
 const F = k => FAGS[k] || EXTRA.annet;
 const curFag = () => FAGS[S.last.fag] ? S.last.fag : Object.keys(FAGS)[0];
@@ -47,8 +54,8 @@ const BALLM = { poke: 1, great: 1.5, ultra: 2.2 };
 const PACKS = {
   poke: { n: 'Poké Pack', p: 250, c: '#d98f7e', d: 'One of the three is uncommon or better.', slots: [{ luck: 0 }, { luck: 0.5 }, { min: 1, luck: 0 }], shm: 1 },
   great: { n: 'Great Pack', p: 700, c: '#7fa8e6', d: 'One is rare or better, one uncommon or better.', slots: [{ luck: 0.5 }, { min: 1, luck: 0.5 }, { min: 2, luck: 0.6 }], shm: 1.5, lv: 3 },
-  ultra: { n: 'Ultra Pack', p: 1800, c: '#e3c577', d: 'One is epic. 12% pseudo-legendary, 3% legendary. Shiny odds ×2.5.', slots: [{ min: 1, luck: 1.5 }, { min: 2, luck: 1.5 }, { min: 3, luck: 2, ps: 0.12, leg: 0.03 }], shm: 2.5, lv: 5 },
-  master: { n: 'Master Pack', p: 6000, c: '#b295e6', d: 'Rare, epic and a top slot: 35% pseudo-legendary, 15% legendary. Shiny odds ×5.', slots: [{ min: 2, luck: 2 }, { min: 3, luck: 2 }, { min: 3, luck: 2, ps: 0.35, leg: 0.15 }], shm: 5, lv: 8 }
+  ultra: { n: 'Ultra Pack', p: 1800, c: '#e3c577', d: 'One is epic. 12% pseudo-legendary, 1.5% legendary. Shiny odds ×2.5.', slots: [{ min: 1, luck: 1.5 }, { min: 2, luck: 1.5 }, { min: 3, luck: 2, ps: 0.12, leg: 0.015 }], shm: 2.5, lv: 5 },
+  master: { n: 'Master Pack', p: 6000, c: '#b295e6', d: 'Rare, epic and a top slot: 35% pseudo-legendary, 8% legendary. Shiny odds ×5.', slots: [{ min: 2, luck: 2 }, { min: 3, luck: 2 }, { min: 3, luck: 2, ps: 0.35, leg: 0.08 }], shm: 5, lv: 8 }
 };
 const PACKMAX = 24;
 function openPack(k) {
@@ -377,21 +384,24 @@ function finishTimer() {
   if (min < 1) { save(true); return { min: 0 }; }
   return grant(t.fag, min, full, t.min);
 }
-/* Belønningen for en økt. De første øktminuttene hver dag gir uthvilt-bonus, og etter dagstaket (S.cap) er laget slitent: halv XP og ingen møter. */
-function grant(fag, min, full, planned) {
+/* Belønningen for en økt. De første øktminuttene hver dag gir uthvilt-bonus, og etter dagstaket (S.cap) er laget slitent: halv XP og ingen møter.
+   real = minuttene som faktisk ble brukt. min = det de er verdt (w = 1 for fag, OTHERW for andre aktiviteter): all belønning og dagsmålet regnes
+   av det. Dagsloggen fører det vektede tallet i m, de virkelige minuttene per kategori i f, og virkelige minutter på andre aktiviteter i x. */
+function grant(fag, real, full, plan) {
   const k = dayKey(), day = S.log[k] || (S.log[k] = { m: 0, s: 0, f: {} });
+  const w = rateOf(fag), min = w === 1 ? real : Math.round(real * w), planned = plan * w;
   const rested = day.s === 0, okMin = Math.max(0, Math.min(min, S.cap - day.m)), tired = okMin < min, mult = rested ? 1.5 : 1;
-  const R = { fag, min, full, rested, tired, ups: [], gifts: [], hatch: [], tl0: tlv(), enc: 0 };
+  const R = { fag, min: real, eff: min, w, full, rested, tired, ups: [], gifts: [], hatch: [], tl0: tlv(), enc: 0 };
   R.xp = Math.round((okMin * 10 + (min - okMin) * 5) * mult);
-  R.coins = Math.round((okMin * 3 + (min - okMin) * 1.5) * mult) + (full ? 30 : 0);
+  R.coins = Math.round((okMin * 3 + (min - okMin) * 1.5) * mult) + (full ? Math.round(30 * w) : 0);
   /* Fordel fra toppbosser: flere mynter i de neste øktene. */
   if (S.boost && S.boost.n > 0) { R.coins = Math.round(R.coins * S.boost.m); S.boost.n--; R.gifts.push(`Boss perk: ${S.boost.m}× coins${S.boost.n ? ` · ${S.boost.n} more session${S.boost.n > 1 ? 's' : ''}` : ''}`); if (!S.boost.n) S.boost = null; }
   S.xp += R.xp; S.coins += R.coins;
   /* Kampbonusen før og etter økta, til oppsummeringen. */
   const mulOf = m => typeof goalMin === 'function' ? Math.round((0.5 + Math.min(1, m / goalMin()) * (goalTop() - 0.5)) * 10) / 10 : null;
   R.sm0 = mulOf(day.m); R.sm1 = mulOf(day.m + min);
-  day.m += min; day.s++; day.f[fag] = (day.f[fag] || 0) + min;
-  S.fm[fag] = (S.fm[fag] || 0) + min;
+  day.m += min; day.s++; day.f[fag] = (day.f[fag] || 0) + real; if (w < 1) day.x = (day.x || 0) + real;
+  S.fm[fag] = (S.fm[fag] || 0) + real;
   S.party.forEach((u, i) => {
     const m = monBy(u); if (!m) return;
     const l0 = m.lv; m.xp += Math.round(min * 10 * (i ? 0.3 : 1)); m.lv = lvOf(m.xp);

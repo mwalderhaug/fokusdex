@@ -17,24 +17,24 @@
    De sjeldneste får også utvikle laget tidligst (slack), så de er farlige selv på lave nivåer: klasse 9 stiller nesten alltid med ferdig utviklede Pokémon.
    Tallene er stilt inn med simulerte kamper (et jevnt lag på samme nivå, uten EV og uten veske). */
 const TCL = {
-  trainer: { i: 1, n: 'Trainer', mons: 3, rel: 0.93, sk: 0.5, iv: 6, ev: 0, q: 0, coin: 36, xp: 1 },
-  gym: { i: 2, n: 'Gym Leader', mons: 4, rel: 0.97, sk: 0.84, iv: 18, ev: 24, q: 2, coin: 110, xp: 1.3, slack: 5 },
-  evilteam: { i: 3, n: 'Evil Team', mons: 5, rel: 0.97, sk: 0.85, iv: 18, ev: 24, q: 2, coin: 95, xp: 1.35 },
-  eviladmin: { i: 4, n: 'Evil Admin', mons: 5, rel: 0.975, sk: 0.87, iv: 17, ev: 20, q: 2, coin: 145, xp: 1.4, slack: 6 },
-  e4: { i: 5, n: 'Elite Four', mons: 5, rel: 0.98, sk: 0.9, iv: 21, ev: 28, q: 2, coin: 180, xp: 1.5, slack: 8 },
-  rival: { i: 6, n: 'Rival', mons: 6, rel: 0.985, sk: 0.93, iv: 19, ev: 22, q: 2, coin: 215, xp: 1.6, slack: 8 },
-  evilboss: { i: 7, n: 'Evil Leader', mons: 6, rel: 0.99, sk: 0.96, iv: 20, ev: 28, q: 2, coin: 320, xp: 1.75, slack: 12 },
-  champ: { i: 8, n: 'Champion', mons: 6, rel: 1, sk: 1, iv: 28, ev: 56, q: 2, coin: 470, xp: 1.9, slack: 16 },
-  supreme: { i: 9, n: 'Supreme Boss', mons: 6, rel: 1.01, sk: 1, iv: 31, ev: 60, q: 2, coin: 860, xp: 2.2, slack: 30 }
+  trainer: { i: 1, n: 'Trainer', mons: 3, rel: 0.93, sk: 0.5, iv: 6, ev: 0, q: 0, coin: 60, xp: 1 },
+  gym: { i: 2, n: 'Gym Leader', mons: 4, rel: 0.97, sk: 0.84, iv: 18, ev: 24, q: 2, coin: 250, xp: 1.3, slack: 5 },
+  evilteam: { i: 3, n: 'Evil Team', mons: 5, rel: 0.97, sk: 0.85, iv: 18, ev: 24, q: 2, coin: 220, xp: 1.35 },
+  eviladmin: { i: 4, n: 'Evil Admin', mons: 5, rel: 0.975, sk: 0.87, iv: 17, ev: 20, q: 2, coin: 330, xp: 1.4, slack: 6 },
+  e4: { i: 5, n: 'Elite Four', mons: 5, rel: 0.98, sk: 0.9, iv: 21, ev: 28, q: 2, coin: 420, xp: 1.5, slack: 8 },
+  rival: { i: 6, n: 'Rival', mons: 6, rel: 0.985, sk: 0.93, iv: 19, ev: 22, q: 2, coin: 500, xp: 1.6, slack: 8 },
+  evilboss: { i: 7, n: 'Evil Leader', mons: 6, rel: 0.99, sk: 0.96, iv: 20, ev: 28, q: 2, coin: 750, xp: 1.75, slack: 12 },
+  champ: { i: 8, n: 'Champion', mons: 6, rel: 1, sk: 1, iv: 28, ev: 56, q: 2, coin: 1100, xp: 1.9, slack: 16 },
+  supreme: { i: 9, n: 'Supreme Boss', mons: 6, rel: 1.01, sk: 1, iv: 31, ev: 60, q: 2, coin: 2000, xp: 2.2, slack: 30 }
 };
 /* Vanskelighetsgrad (S.diff): 0 Easy, 1 Normal, 2 Hard. Tallene i klassetabellen over er Hard, slik spillet var før valget kom.
    På lavere grad stiller motstanderne svakere: lavere nivå (rel), dummere spill (sk), dårligere oppdrett (iv, ev), enklere angrep (q), færre Pokémon (mons)
    og senere utvikling (slack) – og du får flere gjenstander i veska (bag). Belønningen følger graden (coin, xp), så det lønner seg å gå opp når laget tåler det.
    rlv/rhp = nivå og HP for de legendariske i raid. */
 const DIFF = [
-  { n: 'Easy', rel: -0.1, sk: 0.6, iv: 0.4, ev: 0, q: 1, mons: -1, slack: 0.5, coin: 0.7, xp: 0.9, bag: 5, rlv: 0.85, rhp: 0.7 },
+  { n: 'Easy', rel: -0.1, sk: 0.6, iv: 0.4, ev: 0, q: 1, mons: -1, slack: 0.5, coin: 0.5, xp: 0.9, bag: 5, rlv: 0.85, rhp: 0.7 },
   { n: 'Normal', rel: -0.05, sk: 0.85, iv: 0.75, ev: 0.5, q: 2, mons: 0, slack: 0.8, coin: 1, xp: 1, bag: 4, rlv: 0.93, rhp: 0.85 },
-  { n: 'Hard', rel: 0, sk: 1, iv: 1, ev: 1, q: 2, mons: 0, slack: 1, coin: 1.4, xp: 1.15, bag: 3, rlv: 1, rhp: 1 }
+  { n: 'Hard', rel: 0, sk: 1, iv: 1, ev: 1, q: 2, mons: 0, slack: 1, coin: 1.6, xp: 1.15, bag: 3, rlv: 1, rhp: 1 }
 ];
 const diff = () => DIFF[S.diff == null ? 2 : S.diff] || DIFF[2];
 const diffSt = st => { const d = diff(); return d.rel === 0 ? st : Object.assign({}, st, { mons: Math.max(st.i >= 2 ? 3 : 2, st.mons + d.mons), rel: st.rel + d.rel, sk: st.sk * d.sk, iv: Math.round(st.iv * d.iv), ev: Math.round(st.ev * d.ev), q: Math.min(st.q, d.q), slack: Math.round((st.slack || 0) * d.slack) }); };
@@ -102,26 +102,30 @@ function rungInfo(n, lap) {
   return { n, rd, boss, k, floor: Math.round(5 + n * 1.5 + (boss ? 1 : 0) + 6 * (lap || 0)) };
 }
 /* Vanlige trenere blir bedre utover i runden: flere Pokémon, smartere spill og bedre lag. */
-const trainerCls = rd => Object.assign({}, TCL.trainer, { mons: rd >= 2 ? 4 : 3, rel: 0.93 + 0.008 * rd, sk: 0.5 + 0.05 * rd, iv: 6 + 2 * rd, q: rd >= 1 ? 1 : 0, coin: 36 + 8 * rd, xp: 1 + 0.04 * rd });
+const trainerCls = rd => Object.assign({}, TCL.trainer, { mons: rd >= 2 ? 4 : 3, rel: 0.93 + 0.008 * rd, sk: 0.5 + 0.05 * rd, iv: 6 + 2 * rd, q: rd >= 1 ? 1 : 0, coin: 60 + 12 * rd, xp: 1 + 0.04 * rd });
 /* Lagene vokser med rundene (høyst seks). */
 const teamSize = (st, lap) => Math.min(6, st.mons + (lap >= 3 ? 2 : lap >= 1 ? 1 : 0));
 
 /* Belønninger følger fokustiden den dagen kampene ble åpnet, målt mot dagsmålet ditt (S.cap, det samme som taket før laget blir slitent):
-   ×0,5 uten studering og full uttelling når målet er nådd. Et høyere mål gir en høyere topp (4 t: ×1,7 · 6 t: ×2,0 · 8 t: ×2,3), så det lønner seg
-   å sette målet der du faktisk vil ligge – men bare hvis du når det. XP svinger mindre. */
+   ×0,5 uten studering og full uttelling når målet er nådd. Et høyere mål gir en høyere topp (4 t: ×2,0 · 6 t: ×2,5 · 8 t: ×3,0), så det lønner seg
+   å sette målet der du faktisk vil ligge – men bare hvis du når det. XP svinger mindre. Kampene er hovedkilden til mynter, så dette er
+   den viktigste premien for å studere: samme seier betaler fem ganger så mye på en dag der målet er nådd som på en dag uten studering. */
 const ladMin = () => S.lad.day ? ((S.log[S.lad.day] || {}).m || 0) : todayMin();
 const goalMin = () => Math.max(60, S.cap || 360);
-const goalTop = () => Math.round((1 + goalMin() / 360) * 10) / 10;
+const topFor = c => Math.round((1 + Math.max(60, c) / 240) * 10) / 10;
+const goalTop = () => topFor(goalMin());
 const goalPart = () => Math.min(1, ladMin() / goalMin());
 const studyMult = () => Math.round((0.5 + goalPart() * (goalTop() - 0.5)) * 10) / 10;
 const xpMult = () => 0.8 + goalPart() * 0.4;
 /* Dagens første seier gir doble mynter (S.lad.fw = dagen den er brukt). */
 const firstWin = () => S.lad.fw !== (S.lad.day || dayKey());
 const ladLost = () => !!S.lad.lost && S.lad.lost === (S.lad.day || dayKey());
-/* Ligaen tåler ett tap per dag: du får én omkamp, og det andre tapet stenger den for dagen. */
+/* Forsøk per dag: ligaen stenger ved første tap (LIVES), Frontier tåler to løp (FACLIVES), turneringen er én cup og raidet ett forsøk.
+   En boss du ikke slår, er altså et prosjekt til neste dag: tren laget, bytt på det og prøv igjen. */
 /* Veska: så mange gjenstander kan brukes per kamp. Ellers kunne nok Revive vinne enhver kamp. */
 const BAGN = 3, bagN = () => diff().bag;
-const LIVES = 2, ladFails = () => { const t = S.lad.tries, d = S.lad.day || dayKey(); return t && t.d === d ? t.n : 0; };
+const LIVES = 1, ladFails = () => { const t = S.lad.tries, d = S.lad.day || dayKey(); return t && t.d === d ? t.n : 0; };
+const FACLIVES = 2, facFails = () => { const t = S.fac.tries, d = S.lad.day || dayKey(); return t && t.d === d ? t.n : 0; };
 const ladderOpen = () => !!S.lad.day && !ladLost();
 const facLost = () => !!S.fac.lost && S.fac.lost === (S.lad.day || dayKey());
 const facOpen = () => !!S.lad.day && !facLost();
@@ -274,7 +278,7 @@ function classLoot(B, res, give) {
   ({
     trainer: () => { give(B.rd >= 3 ? 'great' : 'poke', 1 + (sm >= 1.5 ? 1 : 0)); if (hit(0.35)) give(B.rd >= 3 ? 'super' : 'potion', 1); if (hit(0.3)) enc({ luck: 1 }); if (hit((B.rd >= 2 ? 0.14 : 0.07) * sm)) give('candy', 1); },
     gym: () => { give('candy', 1 + (hit(0.3 * sm) ? 1 : 0)); give('super', 1); give('great', 2); enc({ ty, min: 2, luck: 1.5 }); },
-    evilteam: () => { give('great', 2); if (hit(0.5)) give('ultra', 1); const loot = Math.round(90 * sm * (B.dc || 1)); res.coins += loot; S.coins += loot; res.note = 'Recovered stolen coins.'; enc({ ty, min: 1, luck: 1.2 }); },
+    evilteam: () => { give('great', 2); if (hit(0.5)) give('ultra', 1); const loot = Math.round(200 * sm * (B.dc || 1)); res.coins += loot; S.coins += loot; res.note = 'Recovered stolen coins.'; enc({ ty, min: 1, luck: 1.2 }); },
     eviladmin: () => { give('ultra', 2); if (hit(0.45)) give('stone', 1); enc({ ty, min: 2, luck: 1.5 }); enc({ min: 1, luck: 1.2 }); },
     e4: () => { give('candy', 1 + (hit(0.5) ? 1 : 0)); give('ultra', 1); give('hyper', 1); enc({ ty, min: 3, luck: 1.5 }); enc({ min: 2, luck: 1.5 }); },
     rival: () => { give('candy', 2); give('revive', 1); if (S.eggs.length < 3) { S.eggs.push({ need: 120, got: 0 }); res.items.push('1 × Egg'); } else enc({ min: 3, luck: 1.5 }); enc({ min: 2, luck: 1.5 }); enc({ min: 2, luck: 1.5 }); },
@@ -323,7 +327,7 @@ function doTrade(x, mine) {
 /* ---------- Battle Frontier ---------- */
 /* Alt i Battle Frontier er på nivå 50, så alle stiller likt. En runde er seks vanlige trenere og en boss. For hver runde blir leie-Pokémonene
    og motstanderne sterkere (høyere samlet styrke), ikke høyere i nivå. Internt heter modusen fortsatt «fac». */
-const FACLV = 50, FACN = 7;
+const FACLV = 50, FACN = 7, FACROUND = r => 200 + 100 * Math.min(4, r - 1);
 const FACBST = r => [[380, 500], [420, 530], [450, 560], [480, 600]][Math.min(3, r - 1)];
 /* d flytter styrken opp eller ned: de første motstanderne i en runde er svakere enn det du leier. */
 function facMon(r, used, d) {
@@ -381,10 +385,11 @@ function facBattle() {
   const R = S.fac.run, f = facFoe();
   return mkBattle(R.team, f.team, facInfo(f), { mode: 'fac', round: R.round, w: R.w, k: f.boss ? f.k : 'trainer', sm: studyMult(), dc: diff().coin, boost: dayBoost() });
 }
-/* Frontier gir gjenstander og møter, ikke XP (Pokémonene er leid). Et tap avslutter rekken og stenger Frontier for dagen. */
+/* Frontier gir gjenstander, møter og mynter, ikke XP (Pokémonene er leid). Et tap avslutter løpet; etter FACLIVES tap er Frontier stengt for dagen.
+   En ferdig runde (sju seire) gir en egen myntpremie. */
 function finishFactory(B) {
   const R = S.fac.run, win = B.over === 'win', res = { mode: 'fac', win, ups: [], items: [], encs: [], coins: 0, round: R.round, w: R.w, swap: null, roundDone: false, streak: R.streak, perks: [], note: '' };
-  if (!win) { S.fac.best = Math.max(S.fac.best || 0, R.streak); S.fac.lost = S.lad.day || dayKey(); S.fac.run = null; save(); return res; }
+  if (!win) { const d = S.lad.day || dayKey(), n = facFails() + 1; S.fac.best = Math.max(S.fac.best || 0, R.streak); S.fac.tries = { d, n }; if (n >= FACLIVES) S.fac.lost = d; res.left = Math.max(0, FACLIVES - n); S.fac.run = null; save(); return res; }
   const sm = B.sm, bm = B.boost.mode === 'factory' ? B.boost.m : 1, r = R.round, roll = p => Math.random() < p * bm;
   const give = (it, n) => { if (n > 0) { S.items[it] += n; res.items.push(`${n} × ${SHOP[it].n}`); } };
   R.w++; R.streak++; res.w = R.w; res.streak = R.streak; S.fac.best = Math.max(S.fac.best || 0, R.streak);
@@ -398,7 +403,8 @@ function finishFactory(B) {
     if (r >= 2 && S.eggs.length < 3 && roll(0.5)) { S.eggs.push({ need: 120, got: 0 }); res.items.push('1 × Egg'); }
     if (r >= 3 && roll(0.12)) pushEnc(res, genEnc({ leg: 1 }));
     /* Sjelden boss: klassens egen belønning på toppen, som i ligaen. */
-    if (B.tr.ultra) { const c = B.tr.ci, extra = Math.round([300, 500, 1000][c - 7] * sm * (B.dc || 1)); res.coins += extra; S.coins += extra; rareLoot(c, res, give, [B.tr.ty]); res.note = `${B.tr.cn}: extra rewards.`; }
+    { const bonus = Math.round(FACROUND(r) * sm * (B.dc || 1)); res.coins += bonus; S.coins += bonus; res.perks.push(`Round ${r} cleared: ${bonus.toLocaleString('en-US')} coins on top.`); }
+    if (B.tr.ultra) { const c = B.tr.ci, extra = Math.round([600, 1000, 2000][c - 7] * sm * (B.dc || 1)); res.coins += extra; S.coins += extra; rareLoot(c, res, give, [B.tr.ty]); res.note = `${B.tr.cn}: extra rewards.`; }
     res.roundDone = true; if (Math.random() < RAIDFAC) raidSpawn(res); R.round++; R.w = 0; R.team = null; R.offer = facOffer(R.round); R.open = 0;
   } else res.swap = B.foe.map(f => f.src);
   R.foe = null;
@@ -415,7 +421,7 @@ function facSwap(mine, theirs) { const R = S.fac.run; if (R && R.team && R.team[
    Elite Four-cupen med en mester i finalen, og mesternes cup med en av de aller største i finalen.
    PREMIER: mynter for hver runde (PWTCOIN × cupens faktor × vanskelighetsgrad × studiebonus). Vinneren får et trofé, PWTCANDY Rare Candy og en pakke encounters
    (samme trekning som pakken i butikken, uten de legendariske). */
-const PWTN = 3, PWTCOIN = [150, 300, 600], PWTCANDY = 2, ROUNDN = ['Quarter-final', 'Semi-final', 'Final'];
+const PWTN = 3, PWTCOIN = [200, 400, 800], PWTCANDY = 2, ROUNDN = ['Quarter-final', 'Semi-final', 'Final'];
 const aN = s => (/^[AEIOU]/i.test(s) ? 'an ' : 'a ') + s;
 const gymCup = (n, re) => ({ n, f: 1, pk: 'great', rounds: [['gym', re], ['gym', re], ['gym', re]] });
 const CUPS = [
@@ -501,7 +507,7 @@ const LEG = {}; LEGD.split('|').forEach(r => { const q = r.split(','); LEG[+q[0]
         og sjansen vokser litt for hvert raid uten en av dem (S.rpity), så de kommer før eller siden. Mewtwo har egen trekning (MEWP) til du har den mørke,
         og hver gang Mewtwo viser seg, er det DARKP sjanse for at den blir til Dark Mewtwo foran øynene dine.
    BELØNNING: mynter (RAIDCOIN × vanskelighetsgrad), Rare Candy (RAIDCANDY), mye XP til hele laget, og den legendariske venter i gresset. */
-const RAIDLV = [60, 72, 66, 85, 92], RAIDHP = [2, 2.7, 2.3, 2.8, 3.8], RAIDCOIN = [1200, 2500, 1800, 5000, 8000], RAIDCANDY = [3, 5, 4, 8, 10], RAIDOFF = [1, 2, 2, 2, 5];
+const RAIDLV = [60, 72, 66, 85, 92], RAIDHP = [2, 2.7, 2.3, 2.8, 3.8], RAIDCOIN = [1800, 3800, 2700, 7500, 12000], RAIDCANDY = [3, 5, 4, 8, 10], RAIDOFF = [1, 2, 2, 2, 5];
 const RAIDTRIES = 3, RAIDGOAL = 0.3, RAIDFAC = 0.35, MEWP = 0.08, DARKP = 0.3;
 /* De sterkeste viser seg bare for lag som kan gi dem kamp: de mytiske fra lagnivå 25, de største fra 35, og Arceus og Deoxys fra 45. (Dark Mewtwo kommer bare ut av en slått Mewtwo.) */
 const RAIDGATE = [0, 35, 25, 45, 45];

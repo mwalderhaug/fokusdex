@@ -168,7 +168,7 @@ function cry(id, delay = 0, vol = 0.45) {
 const OWN = new Set(['triv', 'trev', 'mvtog', 'start', 'throw', 'buy', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm']);
 const SND = {
   tab: 'tab', lagv: 'tab', dexr: 'tab',
-  fag: 'chip', min: 'chip', reg: 'chip', sort: 'chip', filt: 'chip', sety: 'chip',
+  fag: 'chip', min: 'chip', reg: 'chip', sort: 'chip', filt: 'chip', sety: 'chip', extog: 'chip',
   ball: 'ball', spec: 'open', plan: 'open', sync: 'open', backup: 'open', snext: 'ok', seadd: 'open', avatar: 'open', avall: 'open', avpick: 'ok',
   close: 'close', home: 'close', later: 'close', sback: 'close', sedel: 'close', skip: 'close', syncoff: 'close', toshop: 'open',
   train: 'open', trsel: 'chip', trback: 'close', trclr: 'warn',
@@ -242,8 +242,10 @@ function mulBox(td) {
 }
 VIEW.fokus = () => {
   const p = partner(), fag = FAGS[U.fag] ? U.fag : curFag(), min = U.min || S.last.min, td = todayMin(), left = Math.max(0, S.cap - td);
-  const n = Math.floor(Math.min(min, left) / 20) + (min >= 25 && left >= min ? 1 : 0) + (S.incOn ? 1 : 0);
-  const rested = !(S.log[dayKey()] || {}).s;
+  /* Andre aktiviteter enn fagene teller halvt (rateOf): em = det økta er verdt. */
+  const w = rateOf(fag), em = Math.round(min * w), subj = Object.keys(FAGS).filter(isSubj), oth = Object.keys(FAGS).filter(k => !isSubj(k)), chip = k => `<button type="button" class="chip" data-a="fag" data-k="${k}" aria-pressed="${fag === k}">${esc(F(k).n)}</button>`;
+  const n = Math.floor(Math.min(em, left) / 20) + (min * w >= 25 && left >= em ? 1 : 0) + (S.incOn ? 1 : 0);
+  const rested = !(S.log[dayKey()] || {}).s, dx = (S.log[dayKey()] || {}).x || 0;
   let h = topBar();
   if (p) {
     const ev = evoOpts(p), nx = ev.find(x => !x.ok), rdy = ev.find(x => x.ok), a = xpAt(p.lv), b = xpAt(p.lv + 1);
@@ -254,12 +256,12 @@ VIEW.fokus = () => {
   }
   if (S.party.length > 1 || S.mons.length > 1) h += `<button type="button" class="card teamrow" data-a="tab" data-k="lag" aria-label="Open team"><span class="sm">Team</span><span class="tr-s">${S.party.slice(1).map(u => { const m = monBy(u); return m ? spr(m.id, { sh: m.sh, mega: m.mega, s: '38px' }) : ''; }).join('')}${Array.from({ length: 6 - S.party.length }, () => '<i></i>').join('')}</span><span class="sm tn">${S.mons.length} in box ›</span></button>`;
   if (S.pend.length) h += `<button type="button" class="card pendb" data-a="hunt" style="text-align:left;width:100%"><span class="grass live"><i></i><i></i><i></i><i></i></span><span class="sp"><b>${S.pend.length} ${S.pend.length === 1 ? 'encounter waiting' : 'encounters waiting'}</b><br><span class="sm">Something is rustling in the grass. Tap to step in.</span></span></button>`;
-  h += `<div class="card"><div class="lab">Subject</div><div class="chips">${Object.keys(FAGS).map(k => `<button type="button" class="chip" data-a="fag" data-k="${k}" aria-pressed="${fag === k}">${esc(F(k).n)}</button>`).join('')}</div>
+  h += `<div class="card">${subj.length ? `<div class="lab">Subject</div><div class="chips">${subj.map(chip).join('')}</div><div class="lab" style="margin-top:14px">Other things · count at half value</div><div class="chips">${oth.map(chip).join('')}</div>` : `<div class="lab">Subject</div><div class="chips">${oth.map(chip).join('')}</div>`}
     <div class="lab" style="margin-top:14px">Length</div><div class="chips">${[25, 45, 60, 75, 90].map(m => `<button type="button" class="chip tn" data-a="min" data-k="${m}" aria-pressed="${min === m}">${m} min</button>`).join('')}</div>
     ${S.regions.length > 1 ? `<div class="lab" style="margin-top:14px">Routes · tap to turn on or off</div><div class="chips">${S.regions.map(r => `<button type="button" class="chip" data-a="reg" data-k="${r}" aria-pressed="${S.routes.includes(r)}">${REG[r].n}</button>`).join('')}</div>` : ''}
     <button type="button" class="go" data-a="start" style="margin-top:16px">Start ${min} min</button>
-    <p class="sm" style="margin-top:10px;text-align:center">${left <= 0 ? 'Your team is tired today: half XP and no encounters. Rest gives a bonus tomorrow.' : `${n} ${n === 1 ? 'encounter' : 'encounters'} · ${nb(Math.min(min, left) * 10 * (rested ? 1.5 : 1))} XP${rested ? ' with rested bonus' : ''}${F(fag).ty.length ? ' · more ' + F(fag).ty.map(t => TYN[t].toLowerCase()).join(' and ') : ''}`}</p></div>`;
-  h += `<div class="card"><div class="row" style="justify-content:space-between"><b>Today</b><span class="sm tn">${hrs(td)} of ${hrs(S.cap)} h</span></div><div class="bar" style="margin-top:8px"><i style="width:${Math.min(100, Math.round(td / S.cap * 100))}%"></i></div>
+    <p class="sm" style="margin-top:10px;text-align:center">${left <= 0 ? 'Your team is tired today: half XP and no encounters. Rest gives a bonus tomorrow.' : `${n} ${n === 1 ? 'encounter' : 'encounters'} · ${nb(Math.min(em, left) * 10 * (rested ? 1.5 : 1))} XP${rested ? ' with rested bonus' : ''}${F(fag).ty.length ? ' · more ' + F(fag).ty.map(t => TYN[t].toLowerCase()).join(' and ') : ''}${w < 1 ? `<br>${esc(F(fag).n)} counts at half value: ${min} min is worth ${em}.` : ''}`}</p></div>`;
+  h += `<div class="card"><div class="row" style="justify-content:space-between"><b>Today</b><span class="sm tn">${hrs(td)} of ${hrs(S.cap)} h</span></div><div class="bar" style="margin-top:8px"><i style="width:${Math.min(100, Math.round(td / S.cap * 100))}%"></i></div>${dx ? `<p class="sm tn" style="margin-top:6px">Includes ${hrs(dx)} h of other things, counted as ${hrs(dx * OTHERW)} h.</p>` : ''}
     ${mulBox(td)}
     <div class="quests">${QUESTS.map(q => `<span class="${td >= q.m ? 'on' : ''}"><b>${td >= q.m ? '✓ ' : ''}${q.n}</b>${q.r}</span>`).join('')}</div>
     ${S.eggs.length ? `<div class="row" style="margin-top:14px"><span class="egg"></span><div class="sp"><div class="row sm tn" style="justify-content:space-between"><span>Egg${S.eggs.length > 1 ? ' (' + S.eggs.length + ')' : ''}</span><span>${S.eggs[0].need - S.eggs[0].got} min left</span></div><div class="bar gold" style="margin-top:5px"><i style="width:${Math.round(S.eggs[0].got / S.eggs[0].need * 100)}%"></i></div></div></div>` : ''}
@@ -410,7 +412,7 @@ VIEW.butikk = () => {
     <div class="card" style="padding-top:6px;padding-bottom:6px">${[1, 2, 3, 4, 5].map(r => { const g = REG[r], has = S.regions.includes(r);
       return `<div class="item"><span class="ic"><span class="map"></span></span><div class="sp"><b>${g.n}</b><div class="sm tn">${g.b - g.a + 1} species · ${dexCount(r)} caught</div>${has ? '' : `<div class="sm tn" style="margin-top:4px">Opens at trainer level ${g.lv} (you are ${tlv()}) or ${g.dex} species caught (you have ${dexAll()})</div><div class="bar" style="margin-top:6px"><i style="width:${Math.round(Math.min(1, Math.max((tlv() - 1) / Math.max(1, g.lv - 1), dexAll() / g.dex)) * 100)}%"></i></div>`}</div>${has ? `<button type="button" class="btn sm2${S.routes.includes(r) ? ' sage' : ''}" data-a="reg" data-k="${r}">${S.routes.includes(r) ? 'On' : 'Off'}</button>` : '<span class="pill">Locked</span>'}</div>`; }).join('')}</div>
     <p class="sm">New areas open by themselves as you gain experience or fill the Pokédex, whichever comes first. Every route that is on takes part in your encounters: more routes means more variety, fewer means better odds for the ones you are hunting.</p>
-    <p class="sm">Coins come from focus minutes (3 per minute), completed sessions, battles and selling duplicates.</p>`;
+    <p class="sm">Most coins come from battles, and they pay more the closer you are to your daily goal. Focus minutes give 3 coins each, and duplicates can be sold.</p>`;
 };
 
 /* ---------- Profil: merker, statistikk, innstillinger ---------- */
@@ -422,17 +424,18 @@ VIEW.profil = () => {
   let hm = '';
   const mon = addDays(t0, -((t0.getDay() + 6) % 7) - 63);
   for (let i = 0; i < 70; i++) { const d = addDays(mon, i), k = dayKey(d), m = (S.log[k] || { m: 0 }).m; hm += `<i class="${m ? (m < 90 ? 'l1' : m < 180 ? 'l2' : m < 270 ? 'l3' : 'l4') : ''}${k === dayKey() ? ' td' : ''}" title="${d.getDate()}.${d.getMonth() + 1}: ${m} min"></i>`; }
-  const all = [1, 2, 3, 4, 5].reduce((s, x) => s + dexCount(x), 0);
+  const all = [1, 2, 3, 4, 5].reduce((s, x) => s + dexCount(x), 0), sp = focusSplit(), hasS = Object.keys(S.fag).length > 0;
   return `<h1 class="big">Profile</h1>${topBar()}
     <button type="button" class="card avcard" data-a="avatar">${S.av ? tsprite(S.av) : '<span class="tsb"></span>'}<span class="sp"><span class="sm">Your character</span><b>${S.av ? esc(avName()) : 'Pick a character'}</b><span class="sm">${S.av ? 'Tap to change. Shown here and in the intro before boss battles.' : 'Choose who you are: it becomes your profile picture and shows in the intro before boss battles.'}</span></span></button>
     <h2 class="h">Badges</h2><div class="card" style="padding-top:6px;padding-bottom:6px">${badges}</div>
     <p class="sm">Each badge fills with focus hours in that subject. 25, 50 and 75% give an epic encounter, and a full badge gives a legendary one.</p>
     <h2 class="h">Stats</h2>
-    <div class="gain"><div><span class="sm">Total focus</span><b class="tn">${hrs(tot)} h</b></div><div><span class="sm">Sessions</span><b class="tn">${ses}</b></div><div><span class="sm">Day streak</span><b class="tn">${streak()}</b></div><div><span class="sm">Species caught</span><b class="tn">${all}</b></div></div>
+    <div class="gain"><div><span class="sm">${hasS ? 'Subject hours' : 'Total focus'}</span><b class="tn">${hrs(hasS ? sp.subj : tot)} h</b></div><div><span class="sm">Sessions</span><b class="tn">${ses}</b></div><div><span class="sm">Day streak</span><b class="tn">${streak()}</b></div><div><span class="sm">Species caught</span><b class="tn">${all}</b></div></div>
+    ${hasS && sp.other ? `<p class="sm">Plus ${hrs(sp.other)} h of other things, which count at half value.</p>` : ''}
     <div class="card"><div class="lab">Last ten weeks</div><div class="hm">${hm}</div></div>
     <h2 class="h">Settings</h2>
     <div class="card stack">
-      <label class="field">Daily goal<select data-c="cap">${[120, 180, 240, 300, 360, 420, 480].map(c => `<option value="${c}"${S.cap === c ? ' selected' : ''}>${c / 60} hours · battle rewards up to ×${(Math.round((1 + c / 360) * 10) / 10).toFixed(1)}</option>`).join('')}</select></label>
+      <label class="field">Daily goal<select data-c="cap">${[120, 180, 240, 300, 360, 420, 480].map(c => `<option value="${c}"${S.cap === c ? ' selected' : ''}>${c / 60} hours · battle rewards up to ×${topFor(c).toFixed(1)}</option>`).join('')}</select></label>
       <p class="sm" style="margin-top:-4px">Battle rewards grow with today's focus and peak when you reach your goal: a higher goal has a higher peak. Past the goal your team is tired (half XP, no encounters).</p>
       <div><div class="lab">Difficulty</div><div class="seg">${DIFF.map((d, i) => `<button type="button" data-a="diff" data-k="${i}" aria-pressed="${(S.diff == null ? 2 : S.diff) === i}">${d.n}</button>`).join('')}</div>
         <p class="sm" style="margin-top:6px">${['Opponents are a good bit below your level, play simply and bring smaller teams. You may use 5 items per battle.', 'Opponents are slightly below your level and make the odd mistake. You may use 4 items per battle.', 'Opponents match your level, are well trained and play to win. You may use 3 items per battle.'][S.diff == null ? 2 : S.diff]} Coins ×${diff().coin} and XP ×${diff().xp} from battles.</p></div>
@@ -473,9 +476,12 @@ function seRead() {
   return out;
 }
 function subjSheet() {
-  U.sd = subjDraft();
-  openSheet(`<h2 class="h">Your subjects</h2><p class="sm">Up to four. Each one gets a badge that fills as you focus, and its types show up more often in its sessions. Other is always there too.</p>
-    <div id="se" class="stack">${seCards()}</div><p class="err" id="se-err" role="alert"></p>
+  U.sd = subjDraft(); U.ex = (S.extra || []).filter(k => k !== 'annet' && EXTRA[k]);
+  openSheet(`<h2 class="h">Your subjects</h2><p class="sm">Up to four. Each one gets a badge that fills as you focus, and its types show up more often in its sessions. Subjects count in full.</p>
+    <div id="se" class="stack">${seCards()}</div>
+    <div><div class="lab">Other things you log · they count at half value</div><div class="chips">${Object.keys(EXTRA).filter(k => k !== 'annet').map(k => `<button type="button" class="chip" data-a="extog" data-k="${k}" aria-pressed="${U.ex.includes(k)}">${EXTRA[k].n}</button>`).join('')}<span class="chip" style="display:inline-flex;align-items:center;opacity:.55">Other · always there</span></div>
+      <p class="sm" style="margin-top:8px">Half the XP, coins and encounters, and half the progress towards your daily goal. Their hours are kept apart from your subject hours.</p></div>
+    <p class="err" id="se-err" role="alert"></p>
     <button type="button" class="btn pri wide" data-a="sesave">Save</button>`);
 }
 function syncSheet() {
@@ -533,12 +539,12 @@ let tick = 0, wake = null;
 async function keepAwake() { try { if (navigator.wakeLock && !wake) { wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; }); } } catch (_) {} }
 function dropAwake() { try { if (wake) wake.release(); } catch (_) {} wake = null; }
 function showTimer() {
-  const t = S.timer, p = partner(), n = Math.floor(t.min / 20) + (t.min >= 25 ? 1 : 0);
+  const t = S.timer, p = partner(), w = rateOf(t.fag), n = Math.floor(Math.round(t.min * w) / 20) + (t.min * w >= 25 ? 1 : 0);
   U.quit = 0;
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="quit" id="t-quit">Cancel</button><span class="pill" style="background:${F(t.fag).c};color:#17130f">${esc(F(t.fag).n)} · ${t.min} min</span></div>
     <div class="mid"><div class="ring"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="a0" cx="50" cy="50" r="46"/><circle class="a1" id="t-arc" cx="50" cy="50" r="46" stroke-dasharray="${CIRC}" stroke-dashoffset="0"/></svg>
       <div class="in">${p ? spr(p.id, { ani: 1, sh: p.sh, mega: p.mega }) : ''}<div class="clock" id="t-clock" role="timer"></div><div class="sm" id="t-sub"></div></div></div>
-      <div><div class="found" id="t-found" aria-label="Encounters found">${Array.from({ length: n }, () => '<i></i>').join('')}</div><p class="sm" style="margin-top:8px" id="t-hint">A new encounter every 20 minutes.</p></div></div>
+      <div><div class="found" id="t-found" aria-label="Encounters found">${Array.from({ length: n }, () => '<i></i>').join('')}</div><p class="sm" style="margin-top:8px" id="t-hint">${w < 1 ? `${esc(F(t.fag).n)} counts at half value: a new encounter every ${Math.round(20 / w)} minutes.` : 'A new encounter every 20 minutes.'}</p></div></div>
     <div class="acts"><button type="button" class="btn nf" data-a="pause" id="t-pause">Pause</button><button type="button" class="btn pri" data-a="early">Finish now</button></div>`, 'tint', F(t.fag).c);
   keepAwake();
   clearInterval(tick); tick = setInterval(paintTimer, 500);
@@ -553,9 +559,10 @@ function paintTimer() {
   c.textContent = `${Math.floor(s / 60)}:${pad2(s % 60)}`;
   document.title = `${Math.floor(s / 60)}:${pad2(s % 60)} · Fokusdex`;
   $('#t-arc').style.strokeDashoffset = String(Math.round(CIRC * (ms / (t.min * 60000)) * 100) / 100);
-  $('#t-sub').textContent = t.pausedAt ? 'Paused' : `+${nb(Math.floor(ms / 60000) * 10)} XP`;
+  const w = rateOf(t.fag);
+  $('#t-sub').textContent = t.pausedAt ? 'Paused' : `+${nb(Math.floor(Math.floor(ms / 60000) * w) * 10)} XP`;
   $('#t-pause').textContent = t.pausedAt ? 'Resume' : 'Pause';
-  const got = Math.floor(ms / 1200000), dots = $('#t-found').children;
+  const got = Math.floor(ms * w / 1200000), dots = $('#t-found').children;
   for (let i = 0; i < dots.length; i++) if (i < got && !dots[i].classList.contains('on')) { dots[i].classList.add('on'); if (i >= t.seen) { dots[i].classList.add('new'); t.seen = i + 1; sfx.found(); buzz(40); $('#t-hint').textContent = 'Something is rustling in the grass. It will wait until you are done.'; } }
 }
 function endTimer() {
@@ -574,7 +581,7 @@ function showReward(R) {
   R.ups.forEach(x => { const m = monBy(x.u); if (m) news.push(`<div>${spr(m.id, { sh: m.sh, mega: m.mega })}<span><b>${esc(mName(m))} level ${x.l0} → ${x.l1}</b>${x.evo ? '<br><span class="sm" style="color:var(--gold)">Ready to evolve</span>' : ''}${(x.learned || []).length ? `<br><span class="sm">Learned ${esc(x.learned.join(', '))}</span>` : ''}${(x.avail || []).length ? `<br><span class="sm">New move to pick: ${esc(x.avail.join(', '))}</span>` : ''}</span></div>`); });
   if (R.sm1 != null && R.sm1 !== R.sm0) news.push(`<div><span class="mulic">×</span><span><b>Battle bonus ×${R.sm0.toFixed(1)} → ×${R.sm1.toFixed(1)}</b><br><span class="sm">${R.sm1 >= goalTop() ? 'You reached your goal: this is the top for today.' : `It peaks at ×${goalTop().toFixed(1)} when you reach ${hrs(goalMin())} h.`}</span></span></div>`);
   R.gifts.forEach(g => news.push(`<div><span class="grass"><i></i><i></i><i></i><i></i></span><span>${esc(g)}</span></div>`));
-  const notes = [R.rested ? 'Rested bonus: 1.5× on your first session of the day.' : '', R.tired ? 'Your team is tired: minutes past the daily cap gave half XP and no encounters.' : '', R.full ? '' : 'Ended early: you are rewarded for the minutes you did.'].filter(Boolean);
+  const notes = [R.w < 1 ? `${F(R.fag).n} counts at half value: your ${R.min} minutes are worth ${R.eff}.` : '', R.rested ? 'Rested bonus: 1.5× on your first session of the day.' : '', R.tired ? 'Your team is tired: minutes past the daily cap gave half XP and no encounters.' : '', R.full ? '' : 'Ended early: you are rewarded for the minutes you did.'].filter(Boolean);
   ov(`<div class="mid" style="justify-content:flex-start;padding-top:8vh"><div><h1 class="big">${R.full ? 'Session complete.' : 'Nice work.'}</h1><p class="mut tn" style="margin-top:6px">${R.min} min ${esc(F(R.fag).n)}</p></div>
     <div class="gain"><div><span class="sm">XP</span><b class="tn" id="r-xp">+0</b></div><div><span class="sm">Coins</span><b class="tn" id="r-co">+0</b></div></div>
     ${notes.length ? `<p class="sm">${notes.join(' ')}</p>` : ''}
@@ -727,7 +734,8 @@ const A = {
   seadd: () => { if (U.sd.length < 4) { U.sd.push({ k: '', n: '', ty: [], t: '', h: '', d: '' }); seRedraw(); const f = document.querySelectorAll('#se .sein'); if (f.length) f[f.length - 1].focus(); } },
   sedel: el => { U.sd.splice(+el.dataset.i, 1); seRedraw(); },
   sety: el => { const s = U.sd[+el.dataset.i], t = +el.dataset.k; if (s.ty.includes(t)) s.ty = s.ty.filter(x => x !== t); else { s.ty.push(t); if (s.ty.length > 2) s.ty.shift(); } seRedraw(); },
-  sesave: () => { const r = seRead(); if (typeof r === 'string') { $('#se-err').textContent = r; return; } setSubjects(r); save(); closeSheet(); render(); toast('Subjects saved.'); },
+  sesave: () => { const r = seRead(); if (typeof r === 'string') { $('#se-err').textContent = r; return; } if (U.ex) S.extra = Object.keys(EXTRA).filter(k => k === 'annet' || U.ex.includes(k)); setSubjects(r); save(); closeSheet(); render(); toast('Subjects saved.'); },
+  extog: el => { const k = el.dataset.k, i = U.ex.indexOf(k); if (i >= 0) U.ex.splice(i, 1); else U.ex.push(k); el.setAttribute('aria-pressed', String(i < 0)); },
   snext: () => { if (!pick) return; U.step = 2; if (!U.sd) U.sd = [{ k: '', n: '', ty: [], t: '', h: '', d: '' }]; intro(); $('#ov').scrollTop = 0; },
   sback: () => { U.step = 1; intro(); },
   sestart: () => { const r = seRead(); if (typeof r === 'string') { $('#se-err').textContent = r; return; } setSubjects(r); const c = begin(pick); sfx.evo(); closeOv(); render(); toast(c ? `${nb(c)} coins for the hours you have already done. Good luck.` : 'Good luck. Your first session gets the rested bonus.'); },
