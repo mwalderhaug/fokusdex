@@ -409,6 +409,46 @@
       flames(t, 0.16, 0.4 * k, ['#ff5a14', '#7a2a9a']); dust('ember', { n: 46, seed: 7, cols: ['#ff8a2a', '#ffd070', '#ff3a1a'], a: 0.9 * k, spd: 1.3 }); vig(0.55 * k, '#0a0200');
     }
   });
-  /* De aller sjeldneste varsles før filmen starter. */
-  for (const id of [493, 386]) if (F[id]) F[id].omen = 1;
+  /* ================= DE ALLER SJELDNESTE SKRUS OPP =================
+     Arceus og Deoxys beholder filmene sine (raidf.js), men får et lag oppå: mer som skjer i bildet, og et hardere kamera på slagene. */
+  const amp = (id, use, more) => { const f = F[id]; if (!f) return; const d0 = f.draw; f.draw = (t, P, c) => { d0(t, P, c); more(t, P, c); }; f.use = (f.use || []).concat(use.filter(n => !(f.use || []).includes(n))); f.omen = 1; };
+  /* Arceus: for hvert slag slår bildet sprekker av lys og en strek av lys skjærer over. Fra 11.6 skyter platenes farger inn fra alle kanter, tettere og tettere.
+     Etter dommen slår søyler i de seksten fargene ned langs kantene, én etter én, mens bølger av gull går ut fra hjulet. */
+  const AB2 = [6.4, 8.39, 10.0, 11.6, 13.2];
+  amp(493, ['cracks'], (t, P) => {
+    const cx = 256, cy = 176, X = K.g, crk = tintArt('cracks', '#ffe9a8'), bh = hits(t, AB2, 0.5);
+    if (t < 0.39) return;
+    if (t < 14.8) {
+      if (bh > 0 && crk) im(crk, 256, 192, { a: bh * 0.7, add: 1, s: 1.05 });
+      AB2.forEach((q, i) => { const h = hit(t, q, 0.35); if (h <= 0) return; const an = 0.5 + i * 1.3, dx = cos(an) * 420, dy = sin(an) * 420, nx = -sin(an) * (2 + h * 5), ny = cos(an) * (2 + h * 5); poly([[cx - dx + nx, cy - dy + ny], [cx + dx + nx, cy + dy + ny], [cx + dx - nx, cy + dy - ny], [cx - dx - nx, cy - dy - ny]], '#fff6d8', h * 0.9, 1); });
+      const inw = seg(t, 11.6, 14.4) * (1 - seg(t, 14.4, 14.55));
+      if (inw > 0) { X.save(); X.globalCompositeOperation = 'lighter'; X.lineCap = 'round'; for (let i = 0; i < 32; i++) { const an = i / 32 * TAU + t * 0.6, ph = (rnd(i, 5) + t * (1.2 + inw * 2.5)) % 1, r0 = 440 * (1 - ph), r1 = r0 + 40 + inw * 70; X.strokeStyle = M.PLATE[i % 16]; X.lineWidth = 2 + inw * 3; X.globalAlpha = c01(inw * ph * 0.9); X.beginPath(); X.moveTo(cx + cos(an) * r1, cy + sin(an) * r1 * 0.75); X.lineTo(cx + cos(an) * r0, cy + sin(an) * r0 * 0.75); X.stroke(); } X.restore(); }
+      P.sh += bh * 6 + hits(t, [14.05, 14.44], 0.25) * 4; P.rgb = max(P.rgb, bh * 6 + hits(t, [14.05, 14.44], 0.25) * 5); P.z *= 1 + bh * 0.04;
+      return;
+    }
+    for (let i = 0; i < 16; i++) { const q = 15.05 + i * 0.24, k = hit(t, q, 0.9); if (k <= 0) continue; const x = i % 2 ? 26 + (i >> 1) * 21 : 486 - (i >> 1) * 21, yb = 236 * eo(seg(t, q, q + 0.12)); beam(x, 5 + k * 12, -10, yb, M.PLATE[i], k, '#fff'); glow(x, yb, 36 * k, M.PLATE[i], k * 0.9, 1); }
+    for (let i = 0; i < 3; i++) { const ph = ((t - 14.8) * 0.5 + i / 3) % 1; ring(cx, cy, 60 + ph * 420, { col: '#ffe9a8', w: 3 * (1 - ph) + 1, a: (1 - ph) * 0.45 }); }
+    if (crk) im(crk, 256, 192, { a: hit(t, 14.8, 1.0) * 0.8, add: 1, s: 1.15 });
+    P.sh += hit(t, 14.8, 1.2) * 8 + hits(t, [16.4, 18.0], 0.5) * 5; P.rgb = max(P.rgb, hit(t, 14.8, 0.9) * 8); P.z *= 1 + hit(t, 14.8, 0.5) * 0.08;
+  });
+  /* Deoxys: meteorregn gjennom hele filmen, og tegn fra Birth Island som ruller over bildet for hvert slag. I formskiftene slår lyn mellom de to trådene,
+     og formen som var henger igjen som etterbilder. Til slutt står de tre andre formene som gjenskinn rundt den. */
+  const DFT = [4.9, 5.55, 6.2, 6.85];
+  amp(386, [], (t, P) => {
+    const cx = 256, cy = 180, sw = hits(t, DFT, 0.3);
+    if (t < 0.23) return;
+    for (let i = 0; i < 7; i++) { const sp = 0.5 + rnd(i, 3) * 0.4, u = t * sp + rnd(i, 4), ph = u % 1, q = floor(u), mx = 120 + rnd(q, i) * 520 - ph * 240, my = -30 + ph * 300; if (t > 6.9 && my > 230) continue; for (let j = 0; j < 7; j++) glow(mx + j * 8, my - j * 10, 9 - j, j ? (i % 2 ? '#ff9a5a' : '#40d0c0') : '#fff', (0.8 - j * 0.1) * sin(ph * PI), 1); }
+    if (t < 3.91) {
+      const n = [0.23, 1.16, 2.09].filter(q => t >= q).length, bh = hits(t, [0.23, 1.16, 2.09], 0.4);
+      for (let i = 0; i < n * 4; i++) M.tri(24 + rnd(i, 7) * 464, 20 + ((rnd(i, 8) * 300 + t * (40 + rnd(i, 9) * 50)) % 300), 5 + (i % 3) * 4, (i % 2) * 0.8, 0.4, t * (i % 2 ? 1 : -1));
+      P.gl = max(P.gl, bh * 0.5 + (t > 3.0 && rnd(floor(t * 14), 2) > 0.5 ? seg(t, 3.0, 3.9) * 0.4 : 0)); P.rgb = max(P.rgb, bh * 5 + seg(t, 3.0, 3.9) * 4);
+      return;
+    }
+    DFT.forEach((q, i) => { const h = hit(t, q, 0.3); if (h <= 0) return;
+      for (let j = 0; j < 3; j++) bolt(86, 60 + j * 110 + i * 14, 426, 100 + j * 90 - i * 10, { seed: i * 9 + j + floor(t * 30), col: j % 2 ? '#40d0c0' : '#ff7a4a', core: '#fff', w: 2, a: h, br: 1 });
+      const prev = [386, 10001, 10002, 10003][i]; for (let j = 1; j <= 2; j++) for (const s of [-1, 1]) spr(cx + s * j * 46 * (1.3 - h), cy, 3.0, prev === 386 ? { a: h * 0.16, add: 1 } : { id: prev, a: h * 0.16, add: 1 }); });
+    const al = seg(t, 6.85, 7.4) * 0.5;
+    if (al > 0) [[10001, 92, 128], [10002, 420, 128], [10003, 256, 60]].forEach(([id, x, y], i) => { spr(x + sin(t * 1.3 + i * 2) * 6, y + cos(t * 1.1 + i) * 5, 1.5, { id, a: al, add: 1 }); ring(x, y, 44 + sin(t * 3 + i) * 3, { col: i === 1 ? '#40d0c0' : '#ff7a4a', w: 1.5, a: al }); });
+    P.sh += sw * 5; P.rot = (rnd(floor(t * 30), 5) - 0.5) * 0.05 * sw; P.gl = max(P.gl, sw * 0.7);
+  });
 })();
