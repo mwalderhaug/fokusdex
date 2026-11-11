@@ -111,20 +111,71 @@ const PACK = (() => {
   }
   /* Bildene til boss-introen må være klare før introen starter. Venter høyst et par sekunder. */
   P.introPrep = async B => { if (!(await P.init())) return; const pt = B && P.man.trainers && P.man.trainers[B.tr.img.split('|')[0]]; await Promise.race([Promise.all([loadVs(), pt ? P.url(pt) : 0]), new Promise(r => setTimeout(r, 2500))]); };
-  /* Musikken spilles i ett lydelement som låses opp av trykket som starter kampen (ellers nekter mobilen å spille). */
-  let au = null, cur = '';
-  P.unlock = () => { try { if (!au) { au = new Audio(); au.loop = true; au.preload = 'auto'; } if (!cur) { au.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='; au.play().catch(() => {}); } } catch (_) {} };
-  P.music = async path => {
+  /* Musikken dekodes og spilles gjennom samme lydutgang som effektene (WebAudio). Det er den veien som virker sikkert på iPhone, der et lydelement
+     verken kan dempes eller tones inn. Går ikke dekodingen, brukes et vanlig lydelement som låses opp av trykket som starter kampen.
+     Dekodede låter er store, så høyst to ligger i minnet om gangen. */
+  const SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+  let au = null, cur = '', node = null, mode = '', job = 0, sting = null;
+  const dec = new Map(), decJob = new Map();
+  const mvol = () => Math.min(1, Math.pow((S.vol == null ? 70 : S.vol) / 100, 1.3) * 0.75);
+  P.unlock = () => { try { ac(); if (!au) { au = new Audio(); au.loop = true; au.preload = 'auto'; } if (mode !== 'el') { au.src = SILENT; au.play().catch(() => {}); } } catch (_) {} };
+  function decode(path) {
+    if (dec.has(path)) return Promise.resolve(dec.get(path));
+    if (decJob.has(path)) return decJob.get(path);
+    const j = (async () => {
+      const u = await P.url(path), a = ac(); if (!u || !a) return null;
+      const ab = await (await fetch(u)).arrayBuffer();
+      const d = await new Promise((res, rej) => { try { const q = a.decodeAudioData(ab, res, rej); if (q && q.catch) q.catch(rej); } catch (e) { rej(e); } });
+      dec.set(path, d);
+      for (const k of [...dec.keys()]) { if (dec.size <= 2) break; if (k !== path && k !== cur) dec.delete(k); }
+      return d;
+    })().catch(() => null).then(d => { decJob.delete(path); return d; });
+    decJob.set(path, j); return j;
+  }
+  /* Gjør en låt klar på forhånd, så den starter med en gang når kampen begynner. */
+  P.cue = path => { if (path && S.sound && S.music !== 0) decode(path); };
+  function startBuf(d, o) {
+    try {
+      const a = ac(); if (!a) return false;
+      const s = a.createBufferSource(), g2 = a.createGain(), v = mvol(), t = a.currentTime;
+      s.buffer = d; s.loop = o.loop !== false; s.connect(g2); g2.connect(a.destination);
+      if (o.fade) { g2.gain.setValueAtTime(Math.max(0.0001, v * (o.from || 0)), t); g2.gain.linearRampToValueAtTime(v, t + o.fade); } else g2.gain.setValueAtTime(v, t);
+      s.start(0, Math.max(0, Math.min(d.duration - 0.2, o.at || 0)));
+      return { s, g: g2 };
+    } catch (_) { return null; }
+  }
+  function fadeOut(h, sec) {
+    if (!h) return;
+    try { const t = AC.currentTime, f = Math.max(0.03, sec); h.g.gain.cancelScheduledValues(t); h.g.gain.setValueAtTime(Math.max(0.0001, h.g.gain.value), t); h.g.gain.linearRampToValueAtTime(0.0001, t + f); h.s.stop(t + f + 0.05); } catch (_) { try { h.s.stop(); } catch (_) {} }
+  }
+  /* Spiller en låt i sløyfe. o.fade = sekunder den toner inn over (så den glir inn i stedet for å smelle på), o.out = sekunder den forrige toner ut over.
+     Gir true når låta spiller, og false hvis den ikke finnes eller musikken er slått av. */
+  P.music = async (path, o = {}) => {
     if (path === cur) return !!path;
-    cur = path || '';
-    if (au) { try { au.pause(); } catch (_) {} }
+    job++; cur = path || '';
+    if (node) { fadeOut(node, o.out == null ? 0.25 : o.out); node = null; }
+    if (au && mode === 'el') { try { au.pause(); } catch (_) {} }
+    mode = '';
     if (!path || !S.sound || S.music === 0) return false;
+    const my = job, d = await decode(path);
+    if (my !== job) return cur === path;
+    const h = d && startBuf(d, o);
+    if (h) { node = h; mode = 'wa'; return true; }
     const u = await P.url(path);
-    if (cur !== path || !u) return false;
-    P.unlock(); au.src = u; au.currentTime = 0; au.volume = Math.min(1, Math.pow((S.vol == null ? 70 : S.vol) / 100, 1.3) * 0.75);
-    au.play().catch(() => {});
-    return true;
+    if (my !== job || !u) return false;
+    try { P.unlock(); au.src = u; au.currentTime = 0; au.volume = mvol(); mode = 'el'; await au.play(); return my === job; } catch (_) { if (my === job) mode = ''; return false; }
   };
+  /* Egen intro til en boss (mappa «Intro» blant sangene): spilles mens bossen viser seg, og tones ut når kamplåta glir inn.
+     Introen velges etter navnet på bossen, så etter laget eller spillet (samme søk som kamplåta), og til slutt etter klassen. */
+  P.introFor = B => {
+    if (!P.ok || !P.man.music) return '';
+    const tr = B.tr, l = P.man.music.filter(x => x.c === 'intro'); if (!l.length) return '';
+    const by = re => { try { const r = new RegExp(re, 'i'); return l.find(x => r.test(x.t)); } catch (_) { return null; } };
+    const hit = by(tr.n.replace(/[^A-Za-z ]/g, '')) || (tr.mre && by(tr.mre)) || by(tr.kind === 'evilboss' ? 'evil|villain|team' : tr.kind === 'champ' ? 'champion' : 'supreme|legend|final|boss');
+    return hit ? hit.f : '';
+  };
+  P.sting = async path => { const my = job, d = await decode(path); if (!d || my !== job) return false; P.stingOut(0.05); sting = startBuf(d, { loop: false }); return !!sting; };
+  P.stingOut = sec => { if (sting) { fadeOut(sting, sec == null ? 1.2 : sec); sting = null; } };
   P.playing = () => !!cur;
   /* Korte lyder (angrep, treff, status) dekodes og spilles gjennom appens vanlige lydutgang, så volumknappen gjelder. Gir false hvis lyden ikke er klar. */
   P.sfxPath = name => (P.ok && P.man.sfx && P.man.sfx[name]) || '';
@@ -139,7 +190,8 @@ const PACK = (() => {
   P.prep = async B => {
     if (!(await P.init())) return;
     const jobs = [loadAnims()];
-    const tk = P.trackFor(B); if (tk) P.url(tk);
+    const tk = P.trackFor(B); if (tk) P.cue(tk);
+    const it = B.tr.ultra && B.mode !== 'fac' ? P.introFor(B) : ''; if (it) P.cue(it);
     const pt = P.man.trainers && P.man.trainers[B.tr.img.split('|')[0]]; if (pt) jobs.push(P.url(pt));
     const sc = P.sceneFor(B); if (sc) jobs.push(P.url(sc));
     jobs.push(loadHud()); if (B.tr.boss) jobs.push(loadVs());
@@ -155,15 +207,30 @@ const PACK = (() => {
       await Promise.race([Promise.all([...need].map(P.img)), new Promise(r => setTimeout(r, 8000))]);
     }
   };
+  /* Er animasjonen og arket dens klart til å spilles? */
+  P.ready = name => { const a = P.anims && P.anims.a[name], path = a ? sheetOf(name) : ''; if (!a) return false; if (path && !imgs.get(path)) { P.img(path); return false; } return true; };
+  P.frames = name => { const a = P.anims && P.anims.a[name]; return a ? a.f.length : 0; };
+  /* Bildet i animasjonen der angrepet treffer: første gang målet blinker eller skjermen lyser opp. Finnes ikke det, regnes det litt over halvveis. */
+  P.hitAt = name => {
+    const a = P.anims && P.anims.a[name]; if (!a) return 0;
+    if (a.hf == null) { let f = -1; for (const tm of a.t) if ((tm[2] === 1 || tm[2] === 2) && (f < 0 || tm[0] < f)) f = tm[0]; if (f < 2) f = Math.round(a.f.length * 0.55); a.hf = Math.max(2, Math.min(a.f.length - 1, f)); }
+    return a.hf;
+  };
+  /* Flytter animasjonen selv på angriperen (som i Tackle)? Da lar kampskjermen være å gjøre det. */
+  P.movesUser = name => { const a = P.anims && P.anims.a[name]; if (!a) return false; if (a.mu == null) a.mu = a.f.some(fr => fr.some(c => c && c[6] === -1 && (Math.abs(c[0] - 128) > 12 || Math.abs(c[1] - 224) > 12))); return a.mu; };
+  /* Treff-stopp: animasjonen står stille i ms millisekunder. */
+  let holdT = 0;
+  P.hold = ms => { holdT = performance.now() + ms; };
   /* Spiller en ark-animasjon på lerretet cv (512 × 384). u og t er midten av brukeren og målet. opp = motstanderen angriper.
-     h = kroker inn i kampskjermen: sprite(hvem, dx, dy, synlig), flash(farge, ms), tflash(farge, ms), thide(ms). Gir false hvis arket ikke er lastet. */
+     h = kroker inn i kampskjermen: sprite(hvem, dx, dy, synlig), flash(farge, ms), tflash(farge, ms), thide(ms). Gir false hvis arket ikke er lastet.
+     Starter en ny animasjon på samme lerret mens denne spiller, gir denne seg. */
   P.play = async (name, cv, u, t, opp, speed, h) => {
     const a = P.anims && P.anims.a[name], path = sheetOf(name), im = path ? imgs.get(path) : null;
-    if (!a || (path && !im)) { if (path) P.img(path); return false; }
-    const g = cv.getContext('2d'), ms = 50 / (speed || 1), dx = t.x - u.x, dy = t.y - u.y, rev = dx < 0;
+    if (!a || !cv || (path && !im)) { if (path) P.img(path); return false; }
+    const g = cv.getContext('2d'), ms = 50 / (speed || 1), dx = t.x - u.x, dy = t.y - u.y, rev = dx < 0, tok = cv._tok = (cv._tok || 0) + 1;
     g.imageSmoothingEnabled = false;
     for (let fi = 0; fi < a.f.length; fi++) {
-      if (!cv.isConnected) return true;
+      if (!cv.isConnected || cv._tok !== tok) return true;
       const fr = a.f[fi];
       g.clearRect(0, 0, 512, 384);
       for (const tm of a.t) if (tm[0] === fi && tm[2] && h) { const c = tm[3] || [255, 255, 255, 255], css = `rgba(${c[0]},${c[1]},${c[2]},${(c[3] / 255).toFixed(2)})`; if (tm[2] === 2) h.flash(css, tm[4] * ms); else if (tm[2] === 1) h.tflash(css, tm[4] * ms); else if (tm[2] === 3) h.thide(tm[4] * ms); }
@@ -181,7 +248,9 @@ const PACK = (() => {
         g.drawImage(im, (c[6] % 5) * 192, Math.floor(c[6] / 5) * 192, 192, 192, -96, -96, 192, 192); g.restore();
       }
       await new Promise(r => setTimeout(r, ms));
+      while (performance.now() < holdT) await new Promise(r => setTimeout(r, 16));
     }
+    if (cv._tok !== tok) return true;
     g.clearRect(0, 0, 512, 384);
     if (h) { h.sprite('u', 0, 0, true); h.sprite('t', 0, 0, true); }
     return true;

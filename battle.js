@@ -242,7 +242,7 @@ function useMove(B, s, k, ev, ord) {
   V.last = k;
   /* Første runde av et to-runders angrep. I sterkt sollys lader Solar Beam ferdig med en gang. */
   if (CHARGE[m[0]] && !(cont && V.lock.kind === 'charge') && !(m[0] === 'Solar Beam' && B.wx.k === 'sun')) {
-    say(`${N} ${CHARGE[m[0]][0]}`); V.lock = { k, kind: 'charge' };
+    ev.push({ t: 'anim', side: s, mi, self: 1, charge: 1 }); say(`${N} ${CHARGE[m[0]][0]}`); V.lock = { k, kind: 'charge' };
     if (CHARGE[m[0]][1]) { V.away = 1; ev.push({ t: 'vanish', side: s, on: 1 }); }
     if (m[0] === 'Skull Bash') changeStats(B, s, [[3, 1]], ev);
     return;

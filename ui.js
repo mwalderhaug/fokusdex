@@ -34,7 +34,7 @@ const coinEl = n => `<span class="coin tn"><i></i>${nb(n)}</span>`;
 try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch (_) {}
 let AC = null;
 function ac() {
-  try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); return AC; } catch (_) { return null; }
+  try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state !== 'running') AC.resume(); return AC; } catch (_) { return null; }
 }
 /* Effektene går gjennom én hovedvolumknapp (S.vol). Skrikene har sin egen (S.cvol). */
 let MG = null, NB = null;
@@ -580,7 +580,7 @@ const A = {
     ghSet(t, r); $('#gh-s').textContent = 'Connecting…';
     const p = await ghProbe();
     if (p.st === 'err') { const s = $('#gh-s'); if (s) s.textContent = ghState; GH = null; ghStore(); return; }
-    if (p.st === 'none') { await ghLink('local'); closeSheet(); render(); toast(ghState === 'ok' ? 'Sync is on. This game is now saved to GitHub.' : ghState); return; }
+    if (p.st === 'none') { await ghLink('local'); PACK.init(true); closeSheet(); render(); toast(ghState === 'ok' ? 'Sync is on. This game is now saved to GitHub.' : ghState); return; }
     U.remote = p.o;
     /* Viser hvor langt hver lagring er kommet, og merker den med mest framgang, så det ikke er mulig å velge feil ved et uhell. */
     const top = o => (o.mons || []).reduce((a, m) => Math.max(a, m.lv || 1), 1), mins = o => Object.values(o.log || {}).reduce((a, d) => a + (d.m || 0), 0);
@@ -591,8 +591,8 @@ const A = {
       <button type="button" class="card pick2" data-a="syncuse"${here ? ' data-warn="1"' : ''}><b>Use the save from GitHub${here ? '' : more}</b><span class="sm tn">${sum(p.o)}${p.o.at ? ' · saved ' + new Date(p.o.at).toLocaleDateString('en-GB') : ''}</span></button>
       <button type="button" class="btn wide" data-a="syncoff">Cancel</button>`);
   },
-  syncuse: async el => { if (el.dataset.warn === '1' && el.dataset.ok !== '1') { el.dataset.ok = '1'; el.querySelector('b').textContent = 'Tap again: this device has more progress'; return; } await ghLink('remote', U.remote); closeSheet(); render(); toast('Loaded the save from GitHub. Sync is on.'); },
-  syncup: async () => { await ghLink('local', U.remote); closeSheet(); render(); toast(ghState === 'ok' ? 'This game replaced the save on GitHub. Sync is on.' : ghState); },
+  syncuse: async el => { if (el.dataset.warn === '1' && el.dataset.ok !== '1') { el.dataset.ok = '1'; el.querySelector('b').textContent = 'Tap again: this device has more progress'; return; } await ghLink('remote', U.remote); PACK.init(true); closeSheet(); if (!$('#ov').hidden) closeOv(); render(); toast('Loaded the save from GitHub. Sync is on.'); },
+  syncup: async () => { await ghLink('local', U.remote); PACK.init(true); closeSheet(); render(); toast(ghState === 'ok' ? 'This game replaced the save on GitHub. Sync is on.' : ghState); },
   syncoff: () => { ghSet('', ''); closeSheet(); render(); toast('Sync turned off.'); },
   backup: () => backupSheet(),
   bkcopy: () => { const txt = b64e(JSON.stringify(S)); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Copied.'), () => { $('#bk-in').value = txt; toast('Copy the text in the field.'); }); },

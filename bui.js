@@ -20,14 +20,51 @@ const who = tr => (tr.title ? tr.title + ' ' : '') + tr.n;
 const TSP = 'https://play.pokemonshowdown.com/sprites/trainers/';
 const tsprite = (img, cls) => { const l = img.split('|'), pk = PACK.portrait(l[0]); if (pk) return `<span class="tsb ok ${cls || ''}"><img alt="" src="${pk}"></span>`; return `<span class="tsb ${cls || ''}"><img alt="" src="${TSP}${l[0]}.png" data-f="${l.slice(1).join('|')}" onload="this.parentNode.classList.add('ok')" onerror="tsErr(this)"></span>`; };
 window.tsErr = img => { const f = (img.dataset.f || '').split('|').filter(Boolean); if (f.length) { img.dataset.f = f.slice(1).join('|'); img.src = TSP + f[0] + '.png'; } else img.remove(); };
-/* Lydene i kamp. Tre tydelig forskjellige treff: supereffektivt, vanlig og lite effektivt. */
+/* Lydene i kamp når pakken ikke har egne. Tre tydelig forskjellige treff: supereffektivt (dypt drønn, skarpt smell og en lys klang som henger igjen),
+   vanlig (et kort, tørt smekk) og lite effektivt (et dempet dunk). */
 const BSFX = {
   swing: () => { noise(0, 0.14, 0.05, 900, 3200); },
   beam: () => { tone(900, 0, 0.28, 0.035, 'sawtooth', 2400); noise(0.05, 0.22, 0.025, 4000, 1500); },
   aura: () => { tone(520, 0, 0.3, 0.03, 'triangle', 1040); },
-  hit: () => { noise(0, 0.11, 0.09, 1400, 500); tone(180, 0, 0.1, 0.06, 'square', 90); },
-  hitS: () => { noise(0, 0.22, 0.12, 2600, 300); tone(240, 0, 0.09, 0.08, 'square', 70); tone(1200, 0.02, 0.2, 0.05, 'square', 300); tone(120, 0.09, 0.16, 0.07, 'square', 60); },
-  hitW: () => { noise(0, 0.07, 0.04, 700, 400); tone(140, 0, 0.08, 0.04, 'triangle', 110); },
+  hit: () => { noise(0, 0.09, 0.11, 1900, 420); tone(160, 0, 0.12, 0.09, 'square', 72); tone(92, 0.01, 0.1, 0.05, 'sine', 52); },
+  hitS: () => { tone(120, 0, 0.34, 0.15, 'sine', 38); noise(0, 0.16, 0.17, 5200, 600); noise(0.07, 0.22, 0.1, 2400, 240); tone(1560, 0.015, 0.24, 0.05, 'square', 420); tone(2090, 0.03, 0.2, 0.03, 'sawtooth', 700); tone(72, 0.1, 0.32, 0.08, 'triangle', 34); },
+  hitW: () => { noise(0, 0.06, 0.035, 520, 260); tone(124, 0, 0.07, 0.035, 'sine', 96); },
+  crit: () => { tone(2637, 0, 0.09, 0.04, 'square'); tone(3520, 0.05, 0.16, 0.03, 'square'); },
+  /* Oppladningen før angrepet: en tone som stiger. Sterkere angrep lader lenger og lysere. */
+  charge: (tier, cls) => { const d = 0.26 + tier * 0.11; if (cls === 2) { tone(220, 0, d, 0.025 + tier * 0.006, 'sawtooth', 880 + tier * 220); tone(330, 0, d, 0.015, 'triangle', 1320 + tier * 300); } else if (cls === 1) { noise(0, d, 0.03 + tier * 0.008, 300, 1400 + tier * 300); tone(90, 0, d, 0.03, 'triangle', 150 + tier * 30); } else tone(520, 0, d, 0.02, 'triangle', 780); },
+  /* Lyden til selve angrepet, etter hva slags bevegelse det har (samme inndeling som de kodetegnede animasjonene). */
+  mv: (k, tier, ty) => {
+    const t = tier || 0;
+    switch (k) {
+      case 'punch': noise(0, 0.12, 0.06, 500, 2400); tone(200, 0.02, 0.1, 0.03, 'square', 120); break;
+      case 'slash': for (let i = 0; i < (t >= 2 ? 3 : 2); i++) noise(0.1 + i * 0.12, 0.09, 0.06, 5200, 1800); break;
+      case 'bite': noise(0.12, 0.05, 0.08, 3000, 1200); tone(900, 0.13, 0.04, 0.04, 'square', 300); break;
+      case 'jab': for (let i = 0; i < 2 + t; i++) noise(0.05 + i * 0.07, 0.05, 0.06, 3600, 1500); break;
+      case 'needle': for (let i = 0; i < 4 + t * 2; i++) tone(1800 - i * 60, i * 0.055, 0.04, 0.025, 'square', 900); break;
+      case 'ball': noise(0, 0.3, 0.04, 800, 2200); tone(300, 0, 0.32, 0.025, 'triangle', 620); break;
+      case 'beam': { const d = 0.42 + t * 0.13; tone(900, 0, d, 0.035 + t * 0.006, 'sawtooth', 2400); tone(450, 0, d, 0.03, 'square', 620); noise(0.03, d, 0.03 + t * 0.008, 4000, 1500); break; }
+      case 'stream': { const d = 0.5 + t * 0.11; noise(0, d, 0.05 + t * 0.008, ty === 10 ? 1200 : ty === 14 ? 5200 : 2200, ty === 9 || ty === 15 ? 700 : 2600); break; }
+      case 'bolt': for (let i = 0; i < 2 + (t >= 2 ? 1 : 0) + (t >= 3 ? 1 : 0); i++) { noise(0.06 + i * 0.14, 0.1, 0.1, 6000, 900); tone(140, 0.06 + i * 0.14, 0.12, 0.06, 'sawtooth', 50); } break;
+      case 'fall': for (let i = 0; i < 5 + t * 2; i++) { noise(0.17 + i * 0.08, 0.07, 0.06, 700, 240); tone(110, 0.17 + i * 0.08, 0.07, 0.04, 'square', 60); } break;
+      case 'quake': { const d = 0.72 + t * 0.17; noise(0, d, 0.12, 160, 70); tone(52, 0, d, 0.1, 'sawtooth', 34); tone(104, 0.05, d, 0.05, 'square', 60); break; }
+      case 'wave': noise(0, 0.8, 0.07, 500, 2600); noise(0.3, 0.5, 0.05, 2600, 600); break;
+      case 'psy': for (let i = 0; i < 3 + t; i++) tone(700 + i * 90, i * 0.13, 0.16, 0.03, 'sine', 1400 - i * 60); break;
+      case 'drain': for (let i = 0; i < 6; i++) tone(1200 - i * 110, 0.1 + i * 0.07, 0.07, 0.025, 'triangle'); break;
+      case 'sound': tone(220, 0, 0.5, 0.05, 'sawtooth', 160); tone(331, 0.05, 0.45, 0.03, 'square', 250); break;
+      case 'powder': noise(0, 0.7, 0.025, 5200, 3600); break;
+      case 'buff': [392, 523, 659, 784].forEach((f, i) => tone(f, i * 0.07, 0.14, 0.03, 'triangle')); break;
+      case 'heal': [659, 784, 988, 1319].forEach((f, i) => tone(f, i * 0.08, 0.14, 0.03, 'triangle')); break;
+      case 'shield': tone(1320, 0, 0.3, 0.035, 'triangle', 1760); tone(880, 0.12, 0.3, 0.025, 'sine'); break;
+      case 'weather': noise(0, 0.9, 0.05, 900, 3000); break;
+      case 'boom': noise(0, 0.9, 0.2, 900, 60); tone(90, 0, 0.9, 0.16, 'sine', 30); noise(0.05, 0.4, 0.12, 4000, 300); break;
+      case 'roll': noise(0, 0.38, 0.06, 240, 500); tone(70, 0, 0.38, 0.05, 'square', 110); break;
+      case 'seed': [520, 620, 720].forEach((f, i) => tone(f, i * 0.1, 0.1, 0.03, 'triangle', f + 240)); break;
+      case 'wind': noise(0, 0.7, 0.06, 500, 2400); noise(0.2, 0.5, 0.04, 2400, 700); break;
+      case 'wisp': tone(600, 0, 0.5, 0.03, 'sine', 900); tone(605, 0.1, 0.4, 0.02, 'sine', 300); break;
+      case 'hazard': for (let i = 0; i < 5; i++) tone(1400 + i * 100, i * 0.05, 0.05, 0.02, 'square'); break;
+      default: noise(0, 0.14, 0.06, 700, 3000);
+    }
+  },
   faint: () => { tone(520, 0, 0.5, 0.05, 'square', 90); noise(0.25, 0.3, 0.04, 900, 200); },
   up: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.05, 0.07, 0.035)),
   down: () => [784, 659, 523, 392].forEach((f, i) => tone(f, i * 0.05, 0.07, 0.035)),
@@ -42,6 +79,47 @@ const BSFX = {
   win: () => [523, 523, 523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.11, 0.16, 0.05, 'triangle')),
   lose: () => [392, 370, 349, 330, 262].forEach((f, i) => tone(f, i * 0.2, 0.3, 0.05, 'triangle'))
 };
+/* Den episke introen til de sjeldne bossene (klasse 7 til 9), laget med lyd-API-et og uten lydfiler: en dyp drone som vokser, krigstrommer som tetner,
+   et kor som stiger, et sus som bygger seg opp, og et drønn i det bossen viser seg. Da toner kamplåta inn over etterklangen.
+   kind: 'evil' (mørk og skjev, med hjerteslag), 'champ' (staselig) eller 'ultra' (størst, med fanfare). T = sekunder fram til drønnet.
+   bare = bare drønnet (når pakken har sin egen intro til bossen). Gir en funksjon som stopper lyden. */
+function epicIntro(kind, T, bare) {
+  const m = S.sound ? out() : null; if (!m) return () => {};
+  try {
+    const a = AC, t0 = a.currentTime + 0.04, tE = t0 + T, bus = a.createGain(), cmp = a.createDynamicsCompressor(), evil = kind === 'evil', ultra = kind === 'ultra', root = evil ? 61.74 : 73.42;
+    bus.gain.value = 0.9; bus.connect(cmp); cmp.connect(m);
+    const osc = (type, f, t1, t2, dest) => { const o = a.createOscillator(), g = a.createGain(); o.type = type; o.frequency.setValueAtTime(f, t1); g.gain.setValueAtTime(0.0001, t1); o.connect(g); g.connect(dest || bus); o.start(t1); o.stop(t2 + 0.1); return { o, g }; };
+    const nb = a.createBuffer(1, a.sampleRate, a.sampleRate), ch = nb.getChannelData(0); for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
+    const hiss = (type, f1, f2, t1, t2, q) => { const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain(); s.buffer = nb; s.loop = true; f.type = type; f.Q.value = q || 1; f.frequency.setValueAtTime(f1, t1); f.frequency.exponentialRampToValueAtTime(f2, t2); g.gain.setValueAtTime(0.0001, t1); s.connect(f); f.connect(g); g.connect(bus); s.start(t1); s.stop(t2 + 0.1); return g; };
+    if (!bare) {
+      /* Dronen: sagtenner gjennom et filter som åpner seg. */
+      const lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 0.8; lp.frequency.setValueAtTime(180, t0); lp.frequency.exponentialRampToValueAtTime(evil ? 1500 : 2600, tE); lp.connect(bus);
+      for (const [mul, det, v] of [[1, 0, 0.1], [2, 6, 0.08], [evil ? 2.828 : 3, -5, 0.05], [4, 3, 0.03]]) { const x = osc('sawtooth', root * mul, t0, tE, lp); x.o.detune.value = det; x.g.gain.exponentialRampToValueAtTime(v * 0.25, t0 + T * 0.3); x.g.gain.exponentialRampToValueAtTime(v, tE - 0.05); x.g.gain.exponentialRampToValueAtTime(0.0001, tE + 0.08); }
+      /* Koret: en akkord som toner inn. Mesterne løftes en tone mot slutten, de onde synker i en skjev klang. */
+      (evil ? [1, 1.0595, 1.4142, 2] : ultra ? [1, 1.189, 1.498, 2, 2.378] : [1, 1.189, 1.498, 2]).forEach((r, i) => {
+        const f = root * 4 * r, x = osc('triangle', f, t0 + T * 0.22, tE), lfo = a.createOscillator(), lg = a.createGain();
+        lfo.frequency.value = 5 + i * 0.4; lg.gain.value = 3 + i; lfo.connect(lg); lg.connect(x.o.frequency); lfo.start(t0); lfo.stop(tE + 0.2);
+        x.o.frequency.setValueAtTime(f, tE - T * 0.24); x.o.frequency.exponentialRampToValueAtTime(f * (evil ? 0.944 : 1.1225), tE - 0.02);
+        x.g.gain.exponentialRampToValueAtTime(0.03, tE - 0.1); x.g.gain.exponentialRampToValueAtTime(0.0001, tE + 0.1);
+      });
+      /* Suset som bygger seg opp. */
+      const ng = hiss('bandpass', 220, 7000, t0, tE, 1.6); ng.gain.exponentialRampToValueAtTime(0.012, t0 + T * 0.5); ng.gain.exponentialRampToValueAtTime(0.1, tE); ng.gain.exponentialRampToValueAtTime(0.0001, tE + 0.06);
+      /* Krigstrommene: tettere og sterkere fram mot drønnet. De onde får dobbeltslag som et hjerte. */
+      const drum = (t, v) => { const x = osc('sine', 124, t, t + 0.4); x.o.frequency.exponentialRampToValueAtTime(44, t + 0.24); x.g.gain.exponentialRampToValueAtTime(v, t + 0.012); x.g.gain.exponentialRampToValueAtTime(0.0001, t + 0.36); const y = osc('triangle', 250, t, t + 0.12); y.o.frequency.exponentialRampToValueAtTime(92, t + 0.08); y.g.gain.exponentialRampToValueAtTime(v * 0.6, t + 0.006); y.g.gain.exponentialRampToValueAtTime(0.0001, t + 0.1); };
+      const hits = evil ? [0, 0.07, 0.3, 0.37, 0.56, 0.63, 0.76, 0.81, 0.87, 0.91, 0.95, 0.98] : [0, 0.2, 0.4, 0.55, 0.66, 0.75, 0.82, 0.87, 0.91, 0.94, 0.965, 0.985];
+      hits.forEach((f, i) => drum(t0 + T * f, 0.1 + 0.2 * (i / hits.length)));
+      /* Fanfaren til de aller største: en stigende arpeggio like før drønnet. */
+      if (ultra) [1, 1.189, 1.498, 2, 2.378, 2.997, 4].forEach((r, i) => { const t = tE - 0.64 + i * 0.085, x = osc('square', root * 8 * r, t, t + 0.2); x.g.gain.exponentialRampToValueAtTime(0.028, t + 0.01); x.g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18); });
+    }
+    /* Drønnet: dyp tromme, messing som faller, et smell og en cymbal som klinger ut. */
+    const bo = osc('sine', 150, tE, tE + 1.6); bo.o.frequency.exponentialRampToValueAtTime(34, tE + 0.9); bo.g.gain.exponentialRampToValueAtTime(0.36, tE + 0.02); bo.g.gain.exponentialRampToValueAtTime(0.0001, tE + 1.5);
+    const bl = a.createBiquadFilter(); bl.type = 'lowpass'; bl.frequency.setValueAtTime(1800, tE); bl.frequency.exponentialRampToValueAtTime(260, tE + 1.8); bl.connect(bus);
+    for (const [mul, v] of [[1, 0.09], [2, 0.08], [3, 0.055], [evil ? 2.828 : 2.378, 0.05], [4, 0.035]]) { const x = osc('sawtooth', root * mul, tE, tE + 2.4, bl); x.o.frequency.exponentialRampToValueAtTime(root * mul * 0.985, tE + 2); x.g.gain.exponentialRampToValueAtTime(v, tE + 0.03); x.g.gain.exponentialRampToValueAtTime(v * 0.5, tE + 0.7); x.g.gain.exponentialRampToValueAtTime(0.0001, tE + 2.3); }
+    const cr = hiss('lowpass', 2600, 300, tE, tE + 0.5); cr.gain.exponentialRampToValueAtTime(0.2, tE + 0.01); cr.gain.exponentialRampToValueAtTime(0.0001, tE + 0.45);
+    const cy = hiss('highpass', 5200, 7000, tE, tE + 2); cy.gain.exponentialRampToValueAtTime(0.07, tE + 0.02); cy.gain.exponentialRampToValueAtTime(0.0001, tE + 1.9);
+    return () => { try { const t = a.currentTime; bus.gain.cancelScheduledValues(t); bus.gain.setValueAtTime(bus.gain.value, t); bus.gain.linearRampToValueAtTime(0.0001, t + 0.15); } catch (_) {} };
+  } catch (_) { return () => {}; }
+}
 /* Enkel kampmusikk (beta): en liten sekvenser med bass, melodi og hi-hat. Egne lydfiler per trener kommer senere. */
 const TUNE = {
   battle: { bpm: 152, bass: [45, 0, 45, 57, 45, 0, 45, 57, 45, 0, 45, 57, 45, 0, 45, 57, 41, 0, 41, 53, 41, 0, 41, 53, 43, 0, 43, 55, 43, 0, 43, 55], lead: [69, 72, 76, 72, 69, 72, 76, 81, 79, 76, 72, 76, 79, 76, 72, 69, 65, 69, 72, 69, 65, 69, 72, 77, 74, 71, 67, 71, 74, 71, 67, 71] },
@@ -68,13 +146,13 @@ function music(k) {
 /* Hvilken musikk som hører til kampen. Her kobles egne lydfiler per trener inn senere. */
 const musicKey = B => ({ reg: 'battle', boss: 'boss', top: 'top', ultra: 'top' })[TIER(B.tr.kind)];
 /* Kampmusikken: trenerens egen låt fra ressurspakken hvis den finnes, ellers den innebygde. */
-async function battleMusic(B) {
+async function battleMusic(B, o) {
   const tk = PACK.trackFor(B);
-  if (tk && await PACK.music(tk)) return music('');
+  if (tk && await PACK.music(tk, o)) return music('');
   if (BT.B !== B || B.over) return;
   PACK.music(''); music(musicKey(B));
 }
-const stopMusic = () => { PACK.music(''); music(''); };
+const stopMusic = () => { PACK.music(''); PACK.stingOut(0.2); music(''); };
 document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible') stopMusic(); else if (BT.B && !BT.B.over && $('#arena')) battleMusic(BT.B); });
 
 /* ---------- Forsiden ---------- */
@@ -118,7 +196,7 @@ function boxEl(side) {
   const B = BT.B, v = BT.v[side], team = teamOf(side), b = team[v.i], f = v.hp / b.max;
   const xa = xpAt(b.lv), xb = xpAt(b.lv + 1), xf = b.src.xp != null ? Math.max(0, Math.min(1, (b.src.xp - xa) / (xb - xa))) : 0;
   return `<div class="hpn"><b>${esc(b.name)}</b>${v.st ? `<i class="st-${v.st}">${STAG[v.st]}</i>` : ''}<span class="blv tn"><small>Lv</small>${b.lv}</span></div>
-    <div class="hpr"><em>HP</em><div class="hpbar"><i style="width:${(f * 100).toFixed(1)}%;background:${hpCol(f)}"></i></div></div>
+    <div class="hpr"><em>HP</em><div class="hpbar"><b></b><i style="width:${(f * 100).toFixed(1)}%;background:${hpCol(f)}"></i></div></div>
     <div class="hpf"><span class="dots">${team.map((x, i) => `<i class="${x.out && !(i === v.i && v.hp > 0) ? 'out' : ''}"></i>`).join('')}</span>${side === 'me' ? `<span class="hpnum tn">${v.hp}/${b.max}</span>` : ''}</div>
     ${side === 'me' && B.mode === 'league' ? `<div class="xpr"><em>EXP</em><div class="xpbar"><i style="width:${Math.round(xf * 100)}%"></i></div></div>` : ''}`;
 }
@@ -160,9 +238,12 @@ function hudDraw(side) {
   }
   put(side, 0, py);
   /* HP-linja: tom stripe, og den fylte delen i grønt, gult eller rødt. */
-  const bx = (me ? 50 : 38) + M, f = Math.max(0, Math.min(1, hp / b.max)), w = hp > 0 ? Math.max(1, Math.round(48 * f)) : 0;
+  const bx = (me ? 50 : 38) + M, f = Math.max(0, Math.min(1, hp / b.max)), wf = hp > 0 ? Math.max(1, v.sh != null ? 48 * f : Math.round(48 * f)) : 0, w = Math.floor(wf);
   let r = R.hp_empty; g.drawImage(H.im, r[0] + 1, r[1] + 1, 48, 3, bx, py + 2, 48, 3);
+  /* Den lyse resten av det som nettopp ble slått bort, og så selve linja. Mens den glir, tegnes den siste pikselen delvis, så bevegelsen blir jevn. */
+  if (v.gh != null && v.gh > hp) { const gw = Math.min(48, Math.ceil(48 * v.gh / b.max)); if (gw > w) { g.globalAlpha = 0.92; g.fillStyle = '#fff'; g.fillRect(bx + w, py + 2, gw - w, 3); g.globalAlpha = 1; } }
   r = R[f > 0.5 ? 'hp_green' : f > 0.2 ? 'hp_yellow' : 'hp_red']; if (w) g.drawImage(H.im, r[0] + 1, r[1] + 1, w, 3, bx, py + 2, w, 3);
+  if (wf - w > 0.03 && w < 48) { g.globalAlpha = wf - w; g.drawImage(H.im, r[0] + 1 + Math.min(w, 46), r[1] + 1, 1, 3, bx + w, py + 2, 1, 3); g.globalAlpha = 1; }
   /* Navnet med spillets bokstaver. Er det for langt, står bokstavene én piksel tettere. */
   const gl = [...b.name].map(ch => ch === ' ' ? 4 : R['n' + ch] ? 'n' + ch : 2), wid = gl.reduce((a, q) => a + (q > 0 ? q : R[q][4]), 0), tight = wid > 62 ? 1 : 0;
   let x = me ? 10 : 14; for (const q of gl) x += q > 0 ? q : put(q, x, py - 9) - tight;
@@ -193,20 +274,31 @@ function paintSprite(side, cls) {
   const b = teamOf(side)[BT.v[side].i], el = $('#s-' + side);
   if (el) { el.className = 'bs ' + side + ' ' + (cls || ''); el.innerHTML = spr(b.id, { ani: 1, sh: b.sh, back: side === 'me' }); }
 }
-/* HP-linja glir gradvis mot det nye tallet, og tallet teller med. Lengre fall tar lengre tid. */
-function hpTo(side, hp) {
-  const B = BT.B, v = BT.v[side], b = teamOf(side)[v.i], from = v.hp, el = $('#b-' + side), pk = !!(PACK.hud && el && el.querySelector('canvas')), bar = pk ? el : $('#b-' + side + ' .hpbar i'), num = $('#b-' + side + ' .hpnum');
-  const dur = Math.max(320, Math.min(1400, Math.abs(from - hp) / b.max * 1700)) / spdF(), t0 = performance.now();
+/* HP-linja glir mot det nye tallet, og tallet teller med. Farten følger treffet: et supereffektivt treff får linja til å rase ned,
+   et vanlig går jevnt, og et lite effektivt siger sakte. Bak linja står en lys rest av det som ble slått bort et øyeblikk før den synker etter,
+   så det synes hvor mye som forsvant. o = { e: hvor effektivt, crit, hit: et treff fra et angrep }. Løftet holder til selve linja er framme. */
+const EASE = { out: k => 1 - Math.pow(1 - k, 3), io: k => k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2, sine: k => -(Math.cos(Math.PI * k) - 1) / 2 };
+function hpTo(side, hp, o = {}) {
+  const B = BT.B, v = BT.v[side], b = teamOf(side)[v.i], from = v.hp, el = $('#b-' + side), pk = !!(PACK.hud && el && el.querySelector('canvas')), bar = pk ? el : $('#b-' + side + ' .hpbar i'), gh = pk ? null : $('#b-' + side + ' .hpbar b'), num = $('#b-' + side + ' .hpnum');
+  const e = o.e == null ? 1 : o.e, dmg = hp < from, frac = Math.abs(from - hp) / b.max;
+  /* Fart i «andel av full linje per sekund», og korteste og lengste tid. */
+  const rate = !dmg ? 0.55 : e > 1 ? 1.3 : e < 1 ? 0.26 : o.crit ? 0.85 : 0.58, lim = !dmg ? [420, 1500] : e > 1 ? [230, 780] : e < 1 ? [620, 2600] : [420, 1700];
+  const dur = Math.max(lim[0], Math.min(lim[1], frac / rate * 1000)) / spdF(), ease = !dmg ? EASE.io : e > 1 ? EASE.out : e < 1 ? EASE.sine : EASE.io;
+  const ghost = dmg && !!o.hit, lag = (e > 1 ? 220 : 130) / spdF(), gdur = ghost ? dur + (e > 1 ? 420 : 260) / spdF() : dur, t0 = performance.now(), my = v.tk = (v.tk || 0) + 1;
   v.hp = hp;
   if (from === hp || !bar) return Promise.resolve();
+  if (ghost && e > 1) jolt(el);
   return new Promise(res => (function f(t) {
-    const k = Math.min(1, (t - t0) / dur), x = from + (hp - from) * k;
-    if (BT.B !== B || !bar.isConnected) return res();
-    if (pk) { v.sh = k < 1 ? x : null; hudDraw(side); }
-    else { bar.style.width = (x / b.max * 100).toFixed(1) + '%'; bar.style.background = hpCol(x / b.max); if (num) num.textContent = Math.round(x) + '/' + b.max; }
-    if (k < 1) requestAnimationFrame(f); else res();
+    const k = Math.min(1, (t - t0) / dur), x = from + (hp - from) * ease(k), kg = ghost ? Math.min(1, Math.max(0, (t - t0 - lag) / (gdur - lag))) : 1, gx = from + (hp - from) * EASE.io(kg);
+    if (BT.B !== B || BT.v[side] !== v || v.tk !== my || !bar.isConnected) { v.gh = null; return res(); }
+    if (pk) { v.sh = k < 1 ? x : null; v.gh = kg < 1 ? gx : null; hudDraw(side); }
+    else { bar.style.width = (x / b.max * 100).toFixed(2) + '%'; bar.style.background = hpCol(x / b.max); if (gh) gh.style.width = kg < 1 ? `calc((100% - 2px) * ${(gx / b.max).toFixed(4)})` : '0'; if (num) num.textContent = Math.round(x) + '/' + b.max; }
+    if (k >= 1) res();
+    if (k < 1 || kg < 1) requestAnimationFrame(f);
   })(t0));
 }
+/* HP-boksen får et lite rykk og et lysglimt når treffet var supereffektivt. */
+function jolt(el) { if (!el || !el.animate || calm()) return; try { el.animate([{ transform: 'translate(0,0)', filter: 'brightness(2.4)' }, { transform: 'translate(-3px,2px)', filter: 'brightness(1.7)' }, { transform: 'translate(3px,-2px)', filter: 'brightness(1.3)' }, { transform: 'translate(-2px,-1px)', filter: 'brightness(1.1)' }, { transform: 'translate(0,0)', filter: 'brightness(1)' }], { duration: 260 / spdF() }); } catch (_) {} }
 /* Midten av en Pokémon i effektlerretets piksler (256 × 192). */
 function fxPos(side) {
   const ar = $('#arena'), img = document.querySelector('#s-' + side + ' img'), def = side === 'foe' ? { x: 189, y: 66 } : { x: 62, y: 146 };
@@ -223,7 +315,7 @@ function drawBattle() {
   const B = BT.B, tr = B.tr, tier = TIER(tr.kind), scene = PACK.now(PACK.sceneFor(B));
   ov(`<div class="btop k-${tier}"${kst(tr)}><span class="pill tn">${esc(battleTag(B))}</span><span class="btn-n"><b class="${tr.boss ? 'bossn' : ''}">${esc(who(tr))}</b></span></div>
     <div class="bscreen t-${tier}"${kst(tr)}><div class="arena a-${tr.arena} v${tr.v} t-${tier} i${tr.int}${tr.th ? ' th-' + tr.th : ''}${scene ? ' has-scene' : ''}" id="arena" style="--ac:var(--t${tr.ty});--cc:${tr.cc || 'var(--t' + tr.ty + ')'}">
-      ${scene ? `<img class="scene" alt="" src="${scene}">` : ''}<div class="abg"></div><canvas class="fxc bgc" id="bgc" width="256" height="192"></canvas><div class="plat pf"></div><div class="plat pm"></div>
+      ${scene ? `<img class="scene" alt="" src="${scene}">` : ''}<div class="abg"></div><canvas class="fxc bgc" id="bgc" width="256" height="192"></canvas><div class="plat pf"></div><div class="plat pm"></div><div class="dim"></div>
       <div class="trn" id="trn">${tsprite(tr.img)}</div>
       <div class="bs foe gone" id="s-foe"></div><div class="bs me gone" id="s-me"></div>
       <canvas class="fxc" id="fxc" width="256" height="192"></canvas><canvas class="fxc" id="axc" width="512" height="384"></canvas><div class="fx" id="fx"></div>
@@ -231,7 +323,8 @@ function drawBattle() {
     </div><button type="button" class="btext" id="btext" data-a="btap" aria-live="polite"><span id="btx"></span><i></i></button></div>
     <div id="bmenu" class="bmenu"></div>`, 'battle k-' + tier, `var(--t${tr.ty})`);
   FX.attach($('#fxc')); FX.speed = spdF();
-  FX.hooks.shake = ms => { const a = $('#arena'); if (!a) return; a.classList.add('shake'); clearTimeout(BT.shT); BT.shT = setTimeout(() => a.classList.remove('shake'), ms); };
+  BT.sh = null; BT.atk = null;
+  FX.hooks.shake = (ms, amp, kind) => shake(ms, amp == null ? 3 : amp, kind);
   /* Bakgrunnsshowet følger klassen og temaet. Rammene som beveger seg (gull og de ondes røde puls) tegnes på nytt mange ganger i sekundet. */
   FX.hooks.glitch = ms => { const a = $('#arena'); if (!a) return; a.classList.add('glitch'); setTimeout(() => a.classList.remove('glitch'), ms); };
   FX.show($('#bgc'), calm() ? 0 : tr.int, tr.ty, tr);
@@ -249,9 +342,10 @@ async function typeOut(s) {
   while (i < s.length && !skip) { i = Math.min(s.length, i + (S.bfast ? 3 : 1)); el.textContent = s.slice(0, i); await new Promise(r => setTimeout(r, 17)); if (BT.B !== B || !el.isConnected) return; }
   el.textContent = s; BT.tap = null;
 }
-async function say(s) {
+async function say(s, hold) {
   await typeOut(s);
   const b = $('#btext'); if (!b) return;
+  if (hold) { await new Promise(r => { const id = setTimeout(r, hold / spdF()); BT.tap = () => { clearTimeout(id); r(); }; }); BT.tap = null; return; }
   b.classList.add('wait');
   await new Promise(r => { const id = setTimeout(r, (S.bfast ? 420 : 950)); BT.tap = () => { clearTimeout(id); r(); }; });
   BT.tap = null; b.classList.remove('wait');
@@ -317,26 +411,169 @@ async function common(k, side) {
   return PACK.play(n, cv, q, q, false, spdF(), null);
 }
 const wob = (side, ms) => { const sp = $('#s-' + side); if (sp) { sp.classList.add('wob'); setTimeout(() => sp.classList.remove('wob'), ms / spdF()); } };
+
+/* ---------- Angrepslaget ----------
+   Hvert angrep spilles som en liten scene, enten animasjonen kommer fra pakken eller er tegnet med kode:
+   1. banen dempes i typens farge, så angrepet lyser, og angriperen lader opp
+   2. angriperen kaster seg mot målet (eller rykker bakover når den skyter, eller hopper og slår i bakken)
+   3. i det angrepet treffer står alt stille et øyeblikk, målet lyser hvitt, og så rister skjermen og målet slås bakover
+   Sterkere angrep får mer av alt: lengre oppladning, lengre stopp, kraftigere risting. */
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+/* Hvor voldsomt et angrep er, 0–3, etter styrken. Rulling vokser for hvert treff. */
+function mvTier(m, e) {
+  if (m[4] === 0) return 0;
+  const n = m[0], p = (m[2] || (VPOW[n] ? 80 : 60)) * (e && e.roll ? Math.pow(2, Math.min(4, e.roll)) : 1);
+  return m[6] === 9 || BOOM.has(n) || p >= 120 ? 3 : p >= 90 ? 2 : p >= 60 ? 1 : 0;
+}
+/* Hvordan angriperen beveger seg: 'dash' kaster seg mot målet, 'cast' lader og skyter, 'stomp' hopper og slår i bakken, 'swell' eser ut (eksplosjon),
+   'pulse' samler kraft (statusangrep på seg selv) og 'nod' vender seg mot motstanderen (statusangrep mot den). */
+function styleOf(m, kind, self) {
+  if (m[4] === 0) return self ? 'pulse' : 'nod';
+  if (kind === 'boom') return 'swell';
+  if (kind === 'quake' || kind === 'fall') return 'stomp';
+  return m[4] === 1 && FX.contact(m) ? 'dash' : 'cast';
+}
+/* Små bevegelser på en sprite (Web Animations). Den siste stillingen holdes til clearMot, så neste bevegelse kan ta over der den forrige slapp. */
+function mot(el, kf, ms, ease) {
+  if (!el || !el.animate || calm()) return sleep(ms / spdF());
+  try { const a = el.animate(kf, { duration: Math.max(30, ms / spdF()), easing: ease || 'ease-out', fill: 'both', id: 'atk' }); return a.finished.then(() => {}, () => {}); } catch (_) { return sleep(ms / spdF()); }
+}
+function clearMot(el) { try { if (el && el.getAnimations) for (const a of el.getAnimations()) if (a.id === 'atk') a.cancel(); } catch (_) {} }
+/* Vektoren fra a til b i skjermpiksler (a og b er i spillpiksler), og hvor stor en spillpiksel er på skjermen (u). */
+const vec = (a, b) => { const ar = $('#arena'), u = ar ? ar.clientWidth / 256 : 1.5; return { x: (b.x - a.x) * u, y: (b.y - a.y) * u, u }; };
+const T2 = (x, y, sx, sy, r) => `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) scale(${sx},${sy == null ? sx : sy})${r ? ` rotate(${r}deg)` : ''}`;
+function stageOn(K, a, b) {
+  const ar = $('#arena'); if (!ar) return;
+  const m = K.m, f = K.self ? a : b;
+  ar.style.setProperty('--tc', `var(--t${m[1]})`);
+  ar.style.setProperty('--dim', (m[4] === 0 ? 0.4 : 0.5 + K.tier * 0.09).toFixed(2));
+  ar.style.setProperty('--fx', (f.x / 2.56).toFixed(1) + '%'); ar.style.setProperty('--fy', (f.y / 1.92).toFixed(1) + '%');
+  ar.classList.add('atk');
+}
+/* Scenen er over: angriperen går tilbake på plass, resten av effekten får spille ferdig, og banen lysner igjen. */
+async function stageOff() {
+  const K = BT.atk; if (!K) return; BT.atk = null;
+  if (K.back) K.back();
+  if (K.done) await Promise.race([K.done, sleep(900 / spdF())]);
+  const ar = $('#arena'); if (ar) ar.classList.remove('atk');
+  for (const s of ['me', 'foe']) { const el = $('#s-' + s); if (el) el.classList.remove('cast'); }
+}
+/* Oppladningen: angriperen trekker seg sammen, lener seg bakover eller hopper, etter hva slags angrep det er. d = vektoren mot målet. */
+function windUp(K, sp, d, ms) {
+  const Z = T2(0, 0, 1);
+  switch (K.style) {
+    case 'dash': return mot(sp, [{ transform: Z }, { transform: T2(-d.x * 0.1, -d.y * 0.1, 1.06, 0.92) }], ms, 'cubic-bezier(.3,0,.3,1)');
+    case 'cast': return mot(sp, [{ transform: Z }, { transform: T2(-d.x * 0.05, -d.y * 0.05, 1.07), offset: 0.7 }, { transform: T2(-d.x * 0.06, -d.y * 0.06, 1.04, 1.08) }], ms);
+    case 'stomp': return mot(sp, [{ transform: Z }, { transform: T2(0, 3 * d.u, 1.08, 0.88), offset: 0.45 }, { transform: T2(0, -16 * d.u, 0.96, 1.08) }], ms + 60, 'cubic-bezier(.3,0,.2,1)');
+    case 'swell': return mot(sp, [{ transform: Z }, { transform: T2(0, 0, 1.12), offset: 0.5 }, { transform: T2(0, 0, 1.03), offset: 0.7 }, { transform: T2(0, 0, 1.25) }], ms + 200, 'ease-in');
+    case 'pulse': return mot(sp, [{ transform: Z }, { transform: T2(0, -3 * d.u, 1.08), offset: 0.5 }, { transform: Z }], ms, 'ease-in-out');
+    default: return mot(sp, [{ transform: Z }, { transform: T2(d.x * 0.06, d.y * 0.06, 1.04), offset: 0.5 }, { transform: Z }], ms, 'ease-in-out');
+  }
+}
+/* Selve angrepet. hit = millisekunder til det treffer. Den som kaster seg fram, blir stående hos målet til treffet er over (K.back henter den hjem). */
+function launch(K, sp, d, hit) {
+  const far = K.side === 'me' ? 0.84 : 1.22, Z = T2(0, 0, 1);
+  switch (K.style) {
+    case 'dash':
+      mot(sp, [{ transform: T2(-d.x * 0.1, -d.y * 0.1, 1.06, 0.92) }, { transform: T2(d.x * 0.62, d.y * 0.62, far) }], Math.max(70, Math.min(140, hit - 10)), 'cubic-bezier(.5,0,.9,.5)');
+      K.back = () => { K.back = null; mot(sp, [{ transform: T2(d.x * 0.62, d.y * 0.62, far) }, { transform: T2(d.x * 0.3, d.y * 0.3 - 6 * d.u, (1 + far) / 2), offset: 0.5 }, { transform: Z }], 300, 'cubic-bezier(.2,.6,.3,1)').then(() => clearMot(sp)); };
+      break;
+    case 'cast': mot(sp, [{ transform: T2(-d.x * 0.06, -d.y * 0.06, 1.04, 1.08) }, { transform: T2(d.x * 0.07, d.y * 0.07, 1.03), offset: 0.18 }, { transform: T2(-d.x * 0.05, -d.y * 0.05, 1), offset: 0.5 }, { transform: Z }], Math.max(320, hit + 120)).then(() => clearMot(sp)); break;
+    case 'stomp': mot(sp, [{ transform: T2(0, -16 * d.u, 0.96, 1.08) }, { transform: T2(0, 2 * d.u, 1.14, 0.82), offset: 0.35 }, { transform: Z }], 300, 'cubic-bezier(.6,0,.4,1)').then(() => clearMot(sp)); break;
+    case 'swell': mot(sp, [{ transform: T2(0, 0, 1.25) }, { transform: Z }], 260).then(() => clearMot(sp)); break;
+    default: clearMot(sp);
+  }
+}
+/* Første runde av et to-runders angrep: opp i lufta, ned i bakken eller en puls av kraft. Spriten skjules av motoren rett etterpå. */
+function gatherMot(sp, name, d) {
+  const Z = T2(0, 0, 1);
+  if (/Fly|Bounce/.test(name)) return mot(sp, [{ transform: Z }, { transform: T2(0, 4 * d.u, 1.1, 0.86), offset: 0.4 }, { transform: T2(0, -130 * d.u, 0.9, 1.2) }], 460, 'cubic-bezier(.5,0,.8,.4)');
+  if (/Dig|Dive/.test(name)) return mot(sp, [{ transform: Z }, { transform: T2(0, -6 * d.u, 1), offset: 0.3 }, { transform: T2(0, 14 * d.u, 1, 0.1) }], 480, 'ease-in');
+  if (/Shadow/.test(name)) return mot(sp, [{ opacity: 1 }, { opacity: 0 }], 380);
+  return mot(sp, [{ transform: Z }, { transform: T2(0, 0, 1.06), offset: 0.3 }, { transform: Z, offset: 0.6 }, { transform: T2(0, 0, 1.08), offset: 0.85 }, { transform: Z }], 800, 'ease-in-out').then(() => clearMot(sp));
+}
+/* Målet slås bakover fra angriperen og fjærer tilbake. sev = 0–1: hvor mye treffet tok. */
+function knock(sp, side, sev, eff) {
+  const ar = $('#arena'), u = ar ? ar.clientWidth / 256 : 1.5, s = side === 'foe' ? 1 : -1, k = (eff < 1 ? 1.5 : 3 + sev * 8 + (eff > 1 ? 3 : 0)) * u, Z = T2(0, 0, 1);
+  mot(sp, [{ transform: Z }, { transform: T2(s * k, -s * k * 0.45, 1, 1, s * (eff > 1 ? 5 : 2)), offset: 0.2 }, { transform: T2(-s * k * 0.2, s * k * 0.1, 1), offset: 0.65 }, { transform: Z }], 300 + sev * 160, 'cubic-bezier(.1,.7,.3,1)').then(() => clearMot(sp));
+}
+/* Skjermen rister. amp = styrke i spillpiksler. kind: 0 = et rykk som dør ut, 1 = rumling (jordskjelv, stråler), 2 = svaier sidelengs (vind).
+   zoom = et lite kamerarykk inn mot punktet at. De sterkeste ristene tar med hele kampskjermen, ikke bare banen. Flere rist legges oppå hverandre. */
+function shake(ms, amp, kind, zoom, at) {
+  const ar = $('#arena'); if (!ar || calm() || !(amp > 0)) return;
+  const Q = BT.sh || (BT.sh = { id: 0, list: [] });
+  Q.list.push({ t0: performance.now(), ms, amp, kind: kind || 0, zoom: zoom || 0 });
+  if (at) ar.style.transformOrigin = `${(at.x / 2.56).toFixed(1)}% ${(at.y / 1.92).toFixed(1)}%`;
+  if (Q.id) return;
+  const scr = ar.closest('.bscreen');
+  Q.id = requestAnimationFrame(function f(t) {
+    Q.list = Q.list.filter(q => t - q.t0 < q.ms);
+    if (!Q.list.length || !ar.isConnected || BT.sh !== Q) { Q.id = 0; Q.list = []; ar.style.transform = ''; if (scr) scr.style.transform = ''; return; }
+    const u = ar.clientWidth / 256; let x = 0, y = 0, z = 0, big = 0;
+    for (const q of Q.list) {
+      const k = Math.max(0, (t - q.t0) / q.ms), A = q.amp * (q.kind ? Math.min(1, k * 8) * Math.min(1, (1 - k) * 4) : Math.pow(1 - k, 1.5));
+      if (q.kind === 2) { x += A * Math.sin((t - q.t0) / 70); y += A * 0.15 * Math.sin((t - q.t0) / 45); }
+      else { x += A * (Math.random() * 2 - 1); y += A * 0.7 * (Math.random() * 2 - 1); }
+      z = Math.max(z, q.zoom * Math.pow(1 - k, 2)); big = Math.max(big, A);
+    }
+    ar.style.transform = `translate(${(x * u).toFixed(1)}px,${(y * u).toFixed(1)}px) scale(${(1 + z + Math.min(0.04, big * 0.004)).toFixed(3)})`;
+    if (scr) scr.style.transform = big >= 4 ? `translate(${(x * u * 0.4).toFixed(1)}px,${(y * u * 0.4).toFixed(1)}px)` : '';
+    Q.id = requestAnimationFrame(f);
+  });
+}
+/* Et angrep: oppladning, selve angrepet og fram til det treffer. Treffet (lyd, stopp, risting og HP-linja) hører til hendelsen som kommer etter. */
+async function playAnim(B, e) {
+  const side = e.side, sp = $('#s-' + side), m = e.mi >= 0 ? MOVES[e.mi] : STRUGGLE, self = !!e.self, a = fxPos(side), b = self ? a : fxPos(opp(side)), kind = FX.kindOf(m), tier = mvTier(m, e), d = vec(a, b);
+  BT.ty = m[1];
+  const K = BT.atk = { side, m, kind, tier, self, n: 0, style: styleOf(m, kind, self), back: null, done: null };
+  stageOn(K, a, b); sp.classList.add('cast');
+  if (e.charge) { BSFX.charge(2, m[4]); const ms = FX.gather(m[0], a, m[1]); await Promise.all([gatherMot(sp, m[0], d), bwait(ms)]); return; }
+  const wms = m[4] === 0 ? 300 : 250 + tier * 110;
+  FX.charge(a, m[1], tier, wms, m[4]); if (tier >= 1 || m[4] !== 1) BSFX.charge(tier, m[4]);
+  await windUp(K, sp, d, wms);
+  if (BT.B !== B || !sp.isConnected) return;
+  const an = PACK.animFor(m);
+  if (!PACK.sfx(m[0])) BSFX.mv(kind, tier, m[1]);
+  if (an && PACK.ready(an)) {
+    /* Arkanimasjonen fra pakken. Flytter den selv på angriperen, gjør ikke vi det også. */
+    const T = PACK.frames(an) * 50, hit = m[4] ? PACK.hitAt(an) * 50 : T;
+    if (K.style === 'dash' && PACK.movesUser(an)) K.style = 'own';
+    K.done = PACK.play(an, $('#axc'), { x: a.x * 2, y: a.y * 2 }, { x: b.x * 2, y: b.y * 2 }, side === 'foe', spdF(), animHooks(side, self));
+    launch(K, sp, d, hit);
+    if (kind === 'quake' || kind === 'boom') shake(T / spdF(), kind === 'boom' ? 8 : 4 + tier * 1.5, 1);
+    else if (kind === 'beam' && tier >= 2) shake(hit / spdF(), 1 + tier * 0.8, 1);
+    await bwait(hit);
+  } else {
+    const r = FX.move(m, a, b, { roll: e.roll, self: BOOM.has(m[0]), tier, wobble: ms => wob(opp(side), ms) });
+    launch(K, sp, d, r.hit);
+    K.done = bwait(r.ms);
+    await bwait(m[4] ? r.hit : r.ms);
+  }
+}
 /* Spiller av én hendelse fra motoren. */
 async function playOne(B, e) {
   const side = e.side, sp = side ? $('#s-' + side) : null, v = side ? BT.v[side] : null;
-  if (e.t === 'msg') return say(e.s);
-  if (e.t === 'anim') {
-    const m = e.mi >= 0 ? MOVES[e.mi] : STRUGGLE, a = fxPos(side), b = e.self ? a : fxPos(opp(side)), lunge = m[4] === 1 && FX.contact(m);
-    BT.ty = m[1];
-    const an = PACK.animFor(m), snd = PACK.sfx(m[0]);
-    if (an && await PACK.play(an, $('#axc'), { x: a.x * 2, y: a.y * 2 }, { x: b.x * 2, y: b.y * 2 }, side === 'foe', spdF(), animHooks(side, e.self))) return;
-    if (lunge) { if (!snd) BSFX.swing(); sp.classList.add('lunge'); await bwait(130); } else if (!snd) { if (m[4] === 2) BSFX.beam(); else if (m[4] === 0) BSFX.aura(); else BSFX.swing(); }
-    await FX.move(m, a, b, { roll: e.roll, self: BOOM.has(m[0]), wobble: ms => wob(opp(side), ms) });
-    sp.classList.remove('lunge');
-  }
-  else if (e.t === 'hit') {
+  if (e.t === 'msg') return say(e.s, e.hold);
+  if (e.t === 'anim') return playAnim(B, e);
+  if (e.t === 'hit') {
+    const b = teamOf(side)[v.i], K = BT.atk && !e.quiet && BT.atk.side !== side ? BT.atk : null, tier = K ? K.tier : 0, sev = Math.min(1, Math.max(0, v.hp - e.hp) / b.max * 1.3);
     if (!e.quiet) {
-      if (!PACK.sfx(e.e > 1 ? 'Hit Super Effective' : e.e < 1 ? 'Hit Weak Not Very Effective' : 'Hit Normal Damage', 1)) { if (e.e > 1) BSFX.hitS(); else if (e.e < 1) BSFX.hitW(); else BSFX.hit(); }
-      FX.hit(fxPos(side), BT.ty, e.e, e.crit); buzz(e.e > 1 ? [40, 30, 60] : 25);
-      sp.classList.add('hurt'); if (e.e > 1 || e.crit) FX.hooks.shake(280 + 25 * B.tr.int); else if (B.tr.int >= 6 && e.e === 1) FX.hooks.shake(140);
+      const pos = fxPos(side), n = K ? K.n++ : 0, ef = e.e;
+      if (!PACK.sfx(ef > 1 ? 'Hit Super Effective' : ef < 1 ? 'Hit Weak Not Very Effective' : 'Hit Normal Damage', 1)) { if (ef > 1) BSFX.hitS(); else if (ef < 1) BSFX.hitW(); else BSFX.hit(); }
+      if (e.crit) BSFX.crit();
+      FX.hit(pos, BT.ty, ef, e.crit, tier, n); buzz(ef > 1 ? [40, 30, 60] : 25);
+      /* Treff-stopp: et øyeblikk der alt står stille og målet lyser hvitt. Lengst for supereffektive og kritiske treff. */
+      const fz = calm() || e.sub ? 0 : ((ef > 1 ? 95 : ef < 1 ? 0 : 50) + tier * 22 + (e.crit ? 50 : 0)) * (n ? 0.45 : 1) / spdF();
+      if (fz) { sp.classList.add('imp'); FX.hold(fz); PACK.hold(fz); await sleep(fz); sp.classList.remove('imp'); }
+      if (BT.B !== B || !sp.isConnected) return;
+      if (K && K.back) K.back();
+      else if (K && n && K.style === 'dash') { const asp = $('#s-' + K.side), d = vec(fxPos(K.side), pos); mot(asp, [{ transform: T2(0, 0, 1) }, { transform: T2(d.x * 0.35, d.y * 0.35, 1), offset: 0.4 }, { transform: T2(0, 0, 1) }], 200).then(() => clearMot(asp)); }
+      if (!e.sub) knock(sp, side, sev, ef);
+      sp.classList.add('hurt');
+      if (ef >= 1) shake((170 + sev * 260 + tier * 60 + (ef > 1 ? 90 : 0)) / spdF(), 1.6 + sev * 5 + tier * 1.1 + (ef > 1 ? 1.6 : 0) + (e.crit ? 1.4 : 0) + B.tr.int * 0.1, 0, tier >= 2 || ef > 1 || e.crit ? 0.02 + sev * 0.045 : 0, pos);
+      else shake(120 / spdF(), 0.8 + sev * 1.5, 0);
     }
-    if (e.sub) await bwait(320); else await Promise.all([hpTo(side, e.hp), bwait(e.quiet ? 250 : 440)]);
+    if (e.sub) await bwait(320); else await Promise.all([hpTo(side, e.hp, { e: e.quiet ? 1 : e.e, crit: e.crit, hit: !e.quiet }), bwait(e.quiet ? 250 : 400)]);
     sp.classList.remove('hurt');
   }
   else if (e.t === 'heal') { if (!PACK.sfx('In-Battle Heal HP Restore')) BSFX.heal(); if (!e.q && !(await common('HealthUp', side))) FX.heal(fxPos(side)); await Promise.all([hpTo(side, e.hp), bwait(400)]); }
@@ -345,32 +582,41 @@ async function playOne(B, e) {
     if (e.fx) { if (!PACK.sfx({ brn: 'Status Burned', psn: 'Status Poisoned', par: 'Status Paralyzed', frz: 'Status Frozen' }[e.fx])) BSFX.ail(); if (!(await common({ slp: 'Sleep', psn: 'Poison', brn: 'Burn', par: 'Paralysis', frz: 'Frozen', conf: 'Confusion', seed: 'LeechSeed' }[e.fx], side))) { FX.status(e.fx, fxPos(side)); await bwait(520); } }
   }
   else if (e.t === 'stat') { if (!PACK.sfx(e.up ? 'Stat Rise Up' : 'Stat Fall')) (e.up ? BSFX.up : BSFX.down)(); sp.classList.add(e.up ? 'sup' : 'sdn'); if (!(await common(e.up ? 'StatUp' : 'StatDown', side))) { FX.stat(fxPos(side), e.up); await bwait(520); } sp.classList.remove('sup', 'sdn'); }
-  else if (e.t === 'faint') { if (!PACK.sfx('In-Battle Faint No Health')) BSFX.faint(); cry(teamOf(side)[v.i].id, 0, 0.3); sp.classList.remove('ace'); sp.classList.add('faint'); await bwait(850); paintBox(side); $('#b-' + side).hidden = true; }
-  else if (e.t === 'recall') { if (e.txt) await typeOut(e.txt); if (!PACK.sfx('In-Battle Recall Switch Pokeball')) BSFX.recall(); sp.classList.remove('ace', 'subd', 'away'); sp.classList.add('recall'); $('#b-' + side).hidden = true; await bwait(420); sp.classList.add('gone'); }
+  else if (e.t === 'faint') { if (!PACK.sfx('In-Battle Faint No Health')) BSFX.faint(); cry(teamOf(side)[v.i].id, 0, 0.3); clearMot(sp); sp.classList.remove('ace'); sp.classList.add('faint'); await bwait(850); paintBox(side); $('#b-' + side).hidden = true; }
+  else if (e.t === 'recall') { if (e.txt) await typeOut(e.txt); if (!PACK.sfx('In-Battle Recall Switch Pokeball')) BSFX.recall(); clearMot(sp); sp.classList.remove('ace', 'subd', 'away'); sp.classList.add('recall'); $('#b-' + side).hidden = true; await bwait(420); sp.classList.add('gone'); }
   else if (e.t === 'send') {
     const team = teamOf(side), b = team[e.i], ace = side === 'foe' && B.tr.boss && team.length > 1 && e.i === team.length - 1, big = ace && B.tr.int >= 4;
     BT.v[side] = { i: e.i, hp: e.hp, st: e.st };
     if (big) { music(''); await say(`${B.tr.n} is down to the last Pokémon…`); }
     if (BT.B !== B || !sp.isConnected) return;
     await typeOut(e.txt);
-    sp.className = 'bs ' + side + ' gone'; $('#b-' + side).hidden = true;
+    clearMot(sp); sp.className = 'bs ' + side + ' gone'; $('#b-' + side).hidden = true;
     await tossBall(side);
     if (big) { BSFX.ace(); buzz([80, 40, 80, 40, 240]); await FX.ace(side === 'foe' ? { x: 189, y: 74 } : { x: 62, y: 150 }, B.tr.ty, B.tr); if (!PACK.playing()) music(musicKey(B)); }
     paintSprite(side, 'in' + (ace ? ' ace' : '')); BSFX.ball(); FX.open(side === 'foe' ? { x: 189, y: 72 } : { x: 62, y: 150 }, big ? '#ffe9a8' : '');
-    cry(b.id, 200, big ? 0.5 : 0.35); if (big) FX.hooks.shake(500);
+    cry(b.id, 200, big ? 0.5 : 0.35); if (big) shake(500 / spdF(), 4, 1);
     await bwait(380); paintBox(side);
     if (B.mode !== 'lab') S.seen[b.id] = 1;
     await bwait(big ? 1100 : 620);
     sp.classList.remove('in');
   }
-  else if (e.t === 'vanish') { sp.classList.toggle('away', !!e.on); await bwait(260); }
+  else if (e.t === 'vanish') { sp.classList.toggle('away', !!e.on); await bwait(260); clearMot(sp); }
   else if (e.t === 'sub') { sp.classList.toggle('subd', !!e.on); await bwait(200); }
+  else if (e.t === 'form') { const el = $('#s-' + side); if (el) { FX.open(fxPos(side), ''); BSFX.ball(); el.innerHTML = spr(e.id, { ani: 1, sh: e.sh, back: side === 'me' }); } await bwait(480); }
   else if (e.t === 'wx') { const a = $('#arena'); if (e.k) { a.dataset.wx = e.k; FX.weather(e.k); await bwait(640); } else delete a.dataset.wx; }
 }
 async function playEv(ev) {
   BT.busy = true; drawMenu();
   const B = BT.B;
-  for (const e of ev) { if (BT.B !== B || !$('#arena')) return; await playOne(B, e); }
+  for (let i = 0; i < ev.length; i++) {
+    const e = ev[i];
+    if (BT.B !== B || !$('#arena')) return;
+    if (BT.atk && e.t !== 'hit') await stageOff();
+    /* Teksten «… used …!» står bare et øyeblikk: animasjonen er det som skal ha tiden. */
+    if (e.t === 'msg' && ev[i + 1] && ev[i + 1].t === 'anim') e.hold = 260;
+    await playOne(B, e);
+  }
+  await stageOff();
   if (BT.B !== B || !$('#arena')) return;
   BT.busy = false;
   if (B.over) return endBattle();
@@ -397,18 +643,21 @@ async function bossIntro(B) {
     </div></div>`, 'battle vsov');
   const root = $('#bwi'), st = root.querySelector('.bwi-s'), on = c => { if (root.isConnected) root.classList.add(c); }, gone = () => BT.B !== B || !root.isConnected;
   st.style.setProperty('--u', (st.clientWidth / 256).toFixed(3) + 'px');
-  /* Vanlig kampmusikk først hvis treneren ikke har egen låt, og så slår den over til bossmusikken når de viser seg. */
-  if (!PACK.trackFor(B)) music('battle');
+  /* Vanlig kampmusikk først hvis treneren ikke har egen låt, og så slår den over til bossmusikken når de viser seg. De sjeldne bossene har sin egen intro i stedet. */
+  if (!clip && !PACK.trackFor(B)) music('battle');
   sfx.appear(); buzz([40, 40, 40]); on('s0');
   await T(440); if (gone()) return;
   if (clip) {
     /* Temaet til bossen spiller i bakgrunnen av klippet (aske og rød puls, snø, bobler, gull …). */
     if (!calm()) { FX.hooks.glitch = ms => { st.classList.add('glitch'); setTimeout(() => st.classList.remove('glitch'), ms); }; FX.show($('#bwicv'), tr.int, tr.ty, tr); }
-    on('c1'); if (evil) { BSFX.beat(); setTimeout(BSFX.beat, 700 * sp); buzz([90, 150, 90]); } else BSFX.vs();
-    await T(evil ? 1900 : 1500); if (gone()) return;
-    on('c2'); battleMusic(B); if (evil) { BSFX.dread(); BSFX.beat(); setTimeout(BSFX.beat, 800 * sp); buzz([90, 150, 90, 400, 90, 150, 90]); } else buzz([30, 30, 30, 30, 120]);
-    await T(evil ? 2000 : tr.gold ? 1700 : 1500); if (gone()) return;
-    on('c3'); BSFX.ace(); buzz([80, 40, 240]); await T(1300); if (gone()) return;
+    /* Introen: bossens egen fra pakken hvis den finnes, ellers den innebygde episke. Drønnet faller i det bossen viser seg (c3), og da glir kamplåta inn. */
+    const d1 = evil ? 1900 : 1600, d2 = evil ? 2100 : tr.gold ? 1900 : 1600, it = PACK.introFor(B), stop = epicIntro(evil ? 'evil' : tr.gold ? 'ultra' : 'champ', (d1 + d2) * sp / 1000, !!it), quit = () => { stop(); PACK.stingOut(0.2); };
+    if (it) PACK.sting(it);
+    on('c1'); buzz(evil ? [90, 150, 90] : [40, 40, 40]);
+    await T(d1); if (gone()) return quit();
+    on('c2'); buzz(evil ? [90, 150, 90, 400, 90, 150, 90] : [30, 30, 30, 30, 120]);
+    await T(d2); if (gone()) return quit();
+    on('c3'); PACK.stingOut(1.4); battleMusic(B, { fade: 1.8, from: 0.12 }); buzz([80, 40, 240]); await T(1300); if (gone()) return;
     on('c4'); await T(240); if (gone()) return;
   }
   on('s1'); await T(330); on('s2'); await T(380); if (gone()) return;
@@ -422,6 +671,12 @@ async function wipeIntro() {
   w.className = 'wipe'; w.innerHTML = '<i></i><i></i>'; o.append(w); sfx.appear(); buzz([40, 40, 40]);
   await new Promise(r => setTimeout(r, 820));
 }
+/* Uten ressurspakke brukes det innebygde. Det sies fra de første gangene, så det ikke er tvil om hva som vises. */
+function packHint() {
+  if (PACK.ok) return;
+  let n = 0; try { n = +localStorage.getItem('fokusdex.packhint') || 0; if (n < 3) localStorage.setItem('fokusdex.packhint', n + 1); } catch (_) {}
+  if (n < 3) toast(GH && GH.ok ? 'Built-in graphics and music: your pack was not found.' : 'Built-in graphics and music. Your own pack loads when Sync is connected (Profile).');
+}
 /* Starter en kamp: overgang, treneren på plattformen, ballkast fra begge sider, og så menyen. */
 async function startBattle(B) {
   if (BT.busy && BT.B && !BT.B.over) return;
@@ -431,7 +686,7 @@ async function startBattle(B) {
   if (B.tr.boss) { await PACK.introPrep(B); if (BT.B !== B) return; await bossIntro(B); } else { await wipeIntro(); battleMusic(B); }
   await prep;
   if (BT.B !== B) return;
-  drawBattle(); drawMenu();
+  drawBattle(); drawMenu(); packHint();
   await bwait(350);
   await say(`${who(B.tr)} wants to battle!`);
   if (BT.B !== B || !$('#arena')) return;
@@ -542,9 +797,10 @@ function labScreen() {
   const rent = !!BT.labRent;
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Demo</span></div>
     <div><h1 class="big">Try a battle.</h1><p class="mut" style="margin-top:6px">Pick a class and fight right away. Demo battles give no XP or rewards and do not touch your League or Frontier progress.</p></div>
+    ${PACK.ok ? '' : `<div class="card nopack"><b>Built-in graphics and music</b><p class="sm" style="margin-top:4px">${GH && GH.ok ? `Sync is on, but your pack is not loaded${PACK.err ? ' (error ' + esc(PACK.err) + ')' : ' yet'}.` : 'Sync is off on this device, so your own pack is not loaded: music, HP boxes, sounds and move animations are the built-in ones.'}</p><button type="button" class="btn wide" data-a="${GH && GH.ok ? 'packre' : 'sync'}" style="margin-top:8px">${GH && GH.ok ? 'Look for the pack again' : 'Connect Sync'}</button></div>`}
     <div class="row labm"><button type="button" class="btn sp${rent ? ' nf' : ''}" data-a="labmode" data-k="0" aria-pressed="${!rent}">My team</button><button type="button" class="btn sp${rent ? '' : ' nf'}" data-a="labmode" data-k="1" aria-pressed="${rent}">Rentals · Lv ${FACLV}</button></div>
     <div class="lablist">${ORDER.map(k => { const c = TCL[k]; return `<button type="button" data-a="labgo" data-k="${k}" class="k-${TIER(k)}"><span class="cno">${c.i}</span><span class="sp"><b>${c.n}</b><br><span class="sm">${LABD[k]}</span></span>${ULTRA.has(k) ? `<span class="pill">${RARE[k].replace(' boss', '')}</span>` : ''}</button>`; }).join('')}</div>
-    <p class="sm tn">${PACK.ok ? `Your pack is loaded: ${Object.keys(PACK.man.scenes || {}).length} arenas and ${(PACK.man.music || []).length} tracks.` : GH && GH.ok ? `Your pack is not loaded${PACK.err ? ' (error ' + esc(PACK.err) + ')' : ' yet'}. Open Profile, then Sync, to look for it again.` : 'No pack on this device: connect Sync in Profile to get your own arenas, HP boxes, animations and music.'}</p>`, 'tint', 'var(--gold)');
+    ${PACK.ok ? `<p class="sm tn">Your pack is loaded: ${Object.keys(PACK.man.scenes || {}).length} arenas, ${(PACK.man.music || []).length} tracks and ${Object.keys(PACK.man.sfx || {}).length} sounds.</p>` : ''}`, 'tint', 'var(--gold)');
 }
 
 /* Handlingene (kobles inn i klikk-håndteringen i ui.js). */
@@ -570,7 +826,7 @@ const BA = {
   bmove: el => { if (BT.busy || BT.B.over) return; BT.menu = 'main'; playEv(runTurn(BT.B, { t: 'move', k: +el.dataset.k })); },
   bsw: el => { if (BT.busy) return; const B = BT.B, i = +el.dataset.k; BT.menu = 'main'; playEv(B.need ? sendIn(B, i) : runTurn(B, { t: 'switch', i })); },
   bforfeit: el => { if (BT.busy) return; if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = 'TAP AGAIN TO GIVE UP'; return; } BT.B.over = 'loss'; endBattle(); },
-  packre: async () => { toast('Looking for your pack…'); const ok = await PACK.init(true); toast(ok ? `Pack found: ${Object.keys(PACK.man.scenes || {}).length} arenas, ${(PACK.man.music || []).length} tracks.` : 'No pack found in your sync repo.'); },
+  packre: async () => { toast('Looking for your pack…'); const ok = await PACK.init(true); toast(ok ? `Pack found: ${Object.keys(PACK.man.scenes || {}).length} arenas, ${(PACK.man.music || []).length} tracks.` : 'No pack found in your sync repo.'); if (BT.B == null && $('.lablist')) labScreen(); },
   blearn: el => { const m = monBy(+el.dataset.u); if (m) learnSheet(m, 'ov'); },
   lforget: el => { const L = U.learn, m = monBy(L.u); if (!m) return closeSheet(); const x = m.nm[0], old = +el.dataset.k; resolveMove(m, x, old); sfx.lvl(); toast(`${D(m.id)[0]} forgot ${MOVES[old][0]} and learned ${MOVES[x][0]}.`); learnSheet(m, L.back); },
   lskip: () => { const L = U.learn, m = monBy(L.u); if (!m) return closeSheet(); const x = m.nm[0]; resolveMove(m, x, null); toast(`${D(m.id)[0]} did not learn ${MOVES[x][0]}.`); learnSheet(m, L.back); },
