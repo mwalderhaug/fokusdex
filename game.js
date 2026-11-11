@@ -352,6 +352,9 @@ function grant(fag, min, full, planned) {
   /* Fordel fra toppbosser: flere mynter i de neste øktene. */
   if (S.boost && S.boost.n > 0) { R.coins = Math.round(R.coins * S.boost.m); S.boost.n--; R.gifts.push(`Boss perk: ${S.boost.m}× coins${S.boost.n ? ` · ${S.boost.n} more session${S.boost.n > 1 ? 's' : ''}` : ''}`); if (!S.boost.n) S.boost = null; }
   S.xp += R.xp; S.coins += R.coins;
+  /* Kampbonusen før og etter økta, til oppsummeringen. */
+  const mulOf = m => typeof goalMin === 'function' ? Math.round((0.5 + Math.min(1, m / goalMin()) * (goalTop() - 0.5)) * 10) / 10 : null;
+  R.sm0 = mulOf(day.m); R.sm1 = mulOf(day.m + min);
   day.m += min; day.s++; day.f[fag] = (day.f[fag] || 0) + min;
   S.fm[fag] = (S.fm[fag] || 0) + min;
   S.party.forEach((u, i) => {

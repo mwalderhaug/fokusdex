@@ -395,7 +395,7 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 /* Hvor Pokémonene står: midt på hver sin plattform. Stedet følger kameraet (--cz, se .cam): punktet (45 %, 80 %) ligger fast, alt annet skyves ut fra det. */
 .bs{transition:left .9s cubic-bezier(.3,.7,.2,1),top .9s cubic-bezier(.3,.7,.2,1)}
 .bs.foe{left:calc(45% + 29%*var(--cz));top:calc(80% - 31.5%*var(--cz))}
-.bs.me{left:calc(45% - 21%*var(--cz));top:calc(80% + 11.5%*var(--cz))}
+.bs.me{left:calc(45% - 21%*var(--cz));top:calc(80% + 17%*var(--cz) - var(--ly,0%))}
 .bs .sprb{position:absolute;left:0;bottom:0;width:0;height:0;display:block}
 .bs .spr{position:absolute;left:0;bottom:0;width:auto;height:auto;max-width:none;image-rendering:pixelated;transform:translateX(-50%) scale(calc(var(--z)*var(--k,1)*var(--cz)));transform-origin:50% 100%}
 .bs .sprb.shiny::after{display:none}
@@ -424,10 +424,10 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 /* Bane fra ressurspakken: ett bilde med bakgrunn og begge plattformene, som i Black 2 og White 2. */
 .arena .scene{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;image-rendering:pixelated;z-index:-2}
 .arena.has-scene .abg,.arena.has-scene .plat{display:none}
-/* Banebildene fra pakken har plattformene sine ved (73,6 %, 50,5 %) og (32 %, 89,5 %). Din egen står litt bak midten av sin (83,5 %),
-   ellers havner de små helt bak tekstboksen. */
+/* Banebildene fra pakken har plattformene sine ved (73,6 %, 50,5 %) og rundt (38 %, 97 %): din ligger nederst, mest bak tekstboksen, som i spillene.
+   Din Pokémon står midt på den og er stor nok til at overkroppen vises over boksen (de små flyttes litt bakover, se seatMe). */
 .arena.has-scene .bs.foe{left:calc(45% + 28.6%*var(--cz));top:calc(80% - 28.5%*var(--cz))}
-.arena.has-scene .bs.me{left:calc(45% - 13%*var(--cz));top:calc(80% + 3.5%*var(--cz))}
+.arena.has-scene .bs.me{left:calc(45% - 8%*var(--cz));top:calc(80% + 17%*var(--cz) - var(--ly,0%))}
 .arena.has-scene .trn{top:11%}
 @keyframes flashA{from{opacity:.85}to{opacity:0}}
 .flashov{position:absolute;inset:0;animation:flashA .25s ease-out forwards}
@@ -949,3 +949,14 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .nkrow{display:flex;gap:8px;align-items:center;margin:2px 0 4px}
 .nkin{flex:1;min-width:0;font:inherit;font-size:17px;font-weight:700;padding:7px 10px;border-radius:10px;border:1px solid var(--line,rgba(255,255,255,.18));background:rgba(0,0,0,.25);color:var(--ink,#f2ede4)}
 .nkin:focus{outline:2px solid var(--sage,#9db89a);outline-offset:1px}
+
+/* ---------- Kampbonusen på forsiden ---------- */
+.mulbox{margin-top:12px;padding:10px 12px;border-radius:14px;background:var(--card2)}
+.mulnow{font-size:20px;color:var(--gold)}
+.mulsteps{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:4px;margin-top:8px}
+.mulsteps span{display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 0;border-radius:8px;background:rgba(255,255,255,.04);color:var(--ink2);min-width:0}
+.mulsteps i{font-style:normal;font-size:10px;opacity:.8}
+.mulsteps b{font-size:11.5px;font-weight:700}
+.mulsteps .on{background:color-mix(in srgb,var(--gold) 22%,transparent);color:var(--ink)}
+.mulsteps .cur{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold) 55%,transparent);color:var(--ink)}
+.mulic{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:color-mix(in srgb,var(--gold) 20%,transparent);color:var(--gold);font-weight:800;font-size:18px;flex:none}

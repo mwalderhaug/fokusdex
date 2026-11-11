@@ -12,7 +12,7 @@ const SPR = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/';
 const slug = id => D(id)[0].toLowerCase().replace('♀', 'f').replace('♂', 'm').replace(/[^a-z0-9]/g, '');
 function spr(id, o = {}) {
   /* sh: 1 = shiny, 2 = den mørke varianten (Dark Mewtwo): vanlig bilde som farges om når det er lastet (dkPaint). */
-  if (o.sh === 2 && !o.sil) { const u = `${SPR}pokemon/${o.back ? 'back/' : ''}${id}.png`; return `<span class="sprb dark" style="--tc:var(--t${D(id)[1]})${o.s ? ';--s:' + o.s : ''}" data-n="${id}"><img class="spr" alt="Dark ${esc(D(id)[0])}" crossorigin="anonymous" ${DKC.get(u) ? `src="${DKC.get(u)}" data-dk="1"` : `src="${u}?c=1"`} data-u="${u}" onload="dkPaint(this)" onerror="dkErr(this)"></span>`; }
+  if (o.sh === 2 && !o.sil) { const u = `${SPR}pokemon/${o.back ? 'back/' : ''}${id}.png`; if (o.urls) return [u + '?c=1']; return `<span class="sprb dark" style="--tc:var(--t${D(id)[1]})${o.s ? ';--s:' + o.s : ''}" data-n="${id}"><img class="spr" alt="Dark ${esc(D(id)[0])}" crossorigin="anonymous" ${DKC.get(u) ? `src="${DKC.get(u)}" data-dk="1"` : `src="${u}?c=1"`} data-u="${u}" onload="dkPaint(this)" onerror="dkErr(this)"></span>`; }
   const shn = o.sh === 1;
   const sd = `https://play.pokemonshowdown.com/sprites/${shn ? 'gen5-shiny' : 'gen5'}/${slug(id)}.png`;
   const png = `${SPR}pokemon/${shn ? 'shiny/' : ''}${id}.png`;
@@ -20,7 +20,17 @@ function spr(id, o = {}) {
   const bk = `${SPR}pokemon/versions/generation-v/black-white/animated/back/${shn ? 'shiny/' : ''}${id}.gif`, bkp = `${SPR}pokemon/back/${shn ? 'shiny/' : ''}${id}.png`;
   const mgE = o.mega ? MEGA[o.mega - 1] : null, mg = mgE ? mgE[5] : 0, sdir = shn ? 'shiny/' : '', ANI = `${SPR}pokemon/versions/generation-v/black-white/animated/`;
   const list = mg ? (o.back ? (mgE[6] ? [`${ANI}back/${sdir}${mg}.gif`] : []).concat([`${SPR}pokemon/back/${sdir}${mg}.png`, `${SPR}pokemon/${sdir}${mg}.png`]) : (mgE[6] && o.ani ? [`${ANI}${sdir}${mg}.gif`] : []).concat([`${SPR}pokemon/${sdir}${mg}.png`])) : o.back ? [bk, bkp, `https://play.pokemonshowdown.com/sprites/${shn ? 'gen5-back-shiny' : 'gen5-back'}/${slug(id)}.png`, png] : o.ani ? [gif, png, sd] : [png, sd];
+  if (o.urls) return list;
   return `<span class="sprb${o.sil ? ' sil' : ''}${shn && !o.sil ? ' shiny' : ''}" style="--tc:var(--t${D(id)[1]})${o.s ? ';--s:' + o.s : ''}" data-n="${id}"><img class="spr" alt="${o.sil ? 'Unknown' : esc(D(id)[0])}" ${o.lazy ? 'loading="lazy" ' : ''}src="${list[0]}" data-f="${list.slice(1).join('|')}" onload="this.classList.add('ok')" onerror="sprErr(this)"></span>`;
+}
+/* Henter bildet av en Pokémon på forhånd, så det står klart i det den sendes ut (ellers dukker den opp et øyeblikk etter ballen).
+   Prøver adressene i samme rekkefølge som spr(). Gir et løfte som blir ferdig når bildet er hentet (eller ikke finnes). */
+const PRESPR = new Map();
+function preSpr(id, o = {}) {
+  const l = spr(id, Object.assign({}, o, { urls: 1 })), k = l[0]; if (PRESPR.has(k)) return PRESPR.get(k);
+  const p = new Promise(res => { let i = 0; const im = new Image(); if (o.sh === 2) im.crossOrigin = 'anonymous'; im.onload = () => res(true); im.onerror = () => { i++; if (i < l.length) im.src = l[i]; else res(false); }; im.src = l[0]; });
+  PRESPR.set(k, p); if (PRESPR.size > 60) PRESPR.delete(PRESPR.keys().next().value);
+  return p;
 }
 /* Den mørke varianten: bildet tegnes på et lerret, farges om piksel for piksel (CINE.darken) og settes tilbake som bilde. Resultatet huskes per adresse.
    Kan ikke pikslene leses, vises det vanlige bildet mørklagt i stedet. */
@@ -53,7 +63,7 @@ function ac() {
 }
 /* Effektene går gjennom én hovedvolumknapp (S.vol). Skrikene har sin egen (S.cvol). */
 let MG = null, NB = null;
-function out() { const a = ac(); if (!a) return null; if (!MG) { MG = a.createGain(); MG.connect(a.destination); } MG.gain.value = Math.pow((S.vol == null ? 70 : S.vol) / 100, 1.6) * 1.6; return MG; }
+function out() { const a = ac(); if (!a) return null; if (!MG) { MG = a.createGain(); MG.connect(a.destination); } MG.gain.value = Math.pow((S.vol == null ? 70 : S.vol) / 100, 1.6) * 2.13; return MG; }
 /* Lydstyrken (K-vektet som i LUFS-målinger) i det sterkeste 400 ms-vinduet av en dekodet lyd. Brukes til å holde angrepslyder og skrik på
    nivå med musikken, uansett hvor sterkt filene er tatt opp. Regnes én gang per lyd. */
 function loudOf(buf) {
@@ -149,7 +159,7 @@ function cry(id, delay = 0, vol = 0.45) {
     const a = ac(), src = a.createBufferSource(), g = a.createGain();
     /* Skrikene er tatt opp med svært ulik styrke (de nyeste er mye sterkere enn de eldste), så hvert skrik jevnes til samme nivå før volumet legges på. */
     const L = loudOf(buf), norm = L > -90 ? Math.max(0.12, Math.min(2, Math.pow(10, (-18 - L) / 20))) : 0.4;
-    src.buffer = buf; g.gain.value = Math.min(1.6, vol * norm * Math.pow((S.cvol == null ? 70 : S.cvol) / 100, 1.6) * 3.2); src.connect(g); g.connect(a.destination);
+    src.buffer = buf; g.gain.value = Math.min(1.6, vol * norm * Math.pow((S.cvol == null ? 70 : S.cvol) / 100, 1.6) * 4.27); src.connect(g); g.connect(a.destination);
     src.start(a.currentTime + Math.max(0, delay - (performance.now() - t0)) / 1000);
     window.cryCount++;
   }).catch(() => {});
@@ -222,6 +232,13 @@ function topBar() {
     ${coinEl(S.coins)}</div>`;
 }
 
+/* Kampbonusen (multiplikatoren på mynter fra kamper) slik den står akkurat nå, og trinnene time for time fram til dagsmålet. */
+function mulBox(td) {
+  const g = goalMin(), gh = Math.max(1, Math.round(g / 60)), top = goalTop(), at = m => Math.round((0.5 + Math.min(1, m / g) * (top - 0.5)) * 10) / 10, now = at(td), nx = td < g ? Math.ceil((td + 1) / 60) * 60 : 0;
+  return `<div class="mulbox"><div class="row" style="justify-content:space-between;align-items:baseline"><span class="sm">Battle bonus so far today</span><b class="mulnow tn">×${now.toFixed(1)}</b></div>
+    <div class="mulsteps" style="--n:${gh}">${Array.from({ length: gh }, (_, i) => `<span class="${td >= (i + 1) * 60 ? 'on' : td > i * 60 ? 'cur' : ''}"><i>${i + 1} h</i><b>×${at((i + 1) * 60).toFixed(1)}</b></span>`).join('')}</div>
+    <p class="sm" style="margin-top:6px">${td >= g ? `Goal reached: battles pay ×${top.toFixed(1)} coins today.` : `It grows with every minute of focus and peaks at ×${top.toFixed(1)} at your goal of ${gh} h.${nx ? ` Next step: ×${at(Math.min(g, nx)).toFixed(1)} in ${Math.min(g, nx) - td} min.` : ''}`}</p></div>`;
+}
 VIEW.fokus = () => {
   const p = partner(), fag = FAGS[U.fag] ? U.fag : curFag(), min = U.min || S.last.min, td = todayMin(), left = Math.max(0, S.cap - td);
   const n = Math.floor(Math.min(min, left) / 20) + (min >= 25 && left >= min ? 1 : 0) + (S.incOn ? 1 : 0);
@@ -242,6 +259,7 @@ VIEW.fokus = () => {
     <button type="button" class="go" data-a="start" style="margin-top:16px">Start ${min} min</button>
     <p class="sm" style="margin-top:10px;text-align:center">${left <= 0 ? 'Your team is tired today: half XP and no encounters. Rest gives a bonus tomorrow.' : `${n} ${n === 1 ? 'encounter' : 'encounters'} · ${nb(Math.min(min, left) * 10 * (rested ? 1.5 : 1))} XP${rested ? ' with rested bonus' : ''}${F(fag).ty.length ? ' · more ' + F(fag).ty.map(t => TYN[t].toLowerCase()).join(' and ') : ''}`}</p></div>`;
   h += `<div class="card"><div class="row" style="justify-content:space-between"><b>Today</b><span class="sm tn">${hrs(td)} of ${hrs(S.cap)} h</span></div><div class="bar" style="margin-top:8px"><i style="width:${Math.min(100, Math.round(td / S.cap * 100))}%"></i></div>
+    ${mulBox(td)}
     <div class="quests">${QUESTS.map(q => `<span class="${td >= q.m ? 'on' : ''}"><b>${td >= q.m ? '✓ ' : ''}${q.n}</b>${q.r}</span>`).join('')}</div>
     ${S.eggs.length ? `<div class="row" style="margin-top:14px"><span class="egg"></span><div class="sp"><div class="row sm tn" style="justify-content:space-between"><span>Egg${S.eggs.length > 1 ? ' (' + S.eggs.length + ')' : ''}</span><span>${S.eggs[0].need - S.eggs[0].got} min left</span></div><div class="bar gold" style="margin-top:5px"><i style="width:${Math.round(S.eggs[0].got / S.eggs[0].need * 100)}%"></i></div></div></div>` : ''}
     ${S.incOn ? '<p class="sm" style="margin-top:10px">Incense is lit for your next session.</p>' : ''}${S.boost ? `<p class="sm" style="margin-top:10px;color:var(--gold)">Boss perk: ${S.boost.m}× coins for your next ${S.boost.n} session${S.boost.n > 1 ? 's' : ''}.</p>` : ''}</div>`;
@@ -514,6 +532,7 @@ function showReward(R) {
   const news = [];
   R.hatch.forEach(x => { const m = monBy(x.u); if (m) news.push(`<div>${spr(m.id, { sh: m.sh, mega: m.mega })}<span><b>Egg hatched: ${esc(D(m.id)[0])}</b><br><span class="sm">${x.isNew ? 'New to your collection' : 'You already have it'}${m.sh ? ' · shiny' : ''}</span></span></div>`); });
   R.ups.forEach(x => { const m = monBy(x.u); if (m) news.push(`<div>${spr(m.id, { sh: m.sh, mega: m.mega })}<span><b>${esc(mName(m))} level ${x.l0} → ${x.l1}</b>${x.evo ? '<br><span class="sm" style="color:var(--gold)">Ready to evolve</span>' : ''}${(x.learned || []).length ? `<br><span class="sm">Learned ${esc(x.learned.join(', '))}</span>` : ''}${(x.avail || []).length ? `<br><span class="sm">New move to pick: ${esc(x.avail.join(', '))}</span>` : ''}</span></div>`); });
+  if (R.sm1 != null && R.sm1 !== R.sm0) news.push(`<div><span class="mulic">×</span><span><b>Battle bonus ×${R.sm0.toFixed(1)} → ×${R.sm1.toFixed(1)}</b><br><span class="sm">${R.sm1 >= goalTop() ? 'You reached your goal: this is the top for today.' : `It peaks at ×${goalTop().toFixed(1)} when you reach ${hrs(goalMin())} h.`}</span></span></div>`);
   R.gifts.forEach(g => news.push(`<div><span class="grass"><i></i><i></i><i></i><i></i></span><span>${esc(g)}</span></div>`));
   const notes = [R.rested ? 'Rested bonus: 1.5× on your first session of the day.' : '', R.tired ? 'Your team is tired: minutes past the daily cap gave half XP and no encounters.' : '', R.full ? '' : 'Ended early: you are rewarded for the minutes you did.'].filter(Boolean);
   ov(`<div class="mid" style="justify-content:flex-start;padding-top:8vh"><div><h1 class="big">${R.full ? 'Session complete.' : 'Nice work.'}</h1><p class="mut tn" style="margin-top:6px">${R.min} min ${esc(F(R.fag).n)}</p></div>

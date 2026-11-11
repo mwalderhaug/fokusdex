@@ -162,7 +162,7 @@ const PACK = (() => {
   const SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
   let au = null, cur = '', node = null, mode = '', job = 0, sting = null;
   const dec = new Map(), decJob = new Map();
-  const mvol = () => Math.min(1, Math.pow((S.mvol == null ? 70 : S.mvol) / 100, 1.3) * 0.75);
+  const mvol = () => Math.min(1, Math.pow((S.mvol == null ? 70 : S.mvol) / 100, 1.3));
   /* Hver låt kan ha en liten justering i manifestet (g, i dB): alle låtene er jevnet til samme lydstyrke, og g retter opp for at bassrike låter
      ellers høres svakere ut på små høyttalere. k = tonearten ([tonika 0–11 fra C, 0 moll / 1 dur / 2 uviss]), til den innebygde introen. */
   const ent = path => (P.ok && P.man.music && P.man.music.find(x => x.f === path)) || null;

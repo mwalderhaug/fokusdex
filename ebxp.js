@@ -252,7 +252,7 @@ void main(){
     const el = ar.querySelector('#s-' + side), im = el && el.querySelector('img.spr'), k = ar.clientWidth / W;
     if (!el) return null;
     /* Størrelsen følger det kampskjermen har satt: --k per Pokémon (høyden i Pokédexen) og --cz for kameraet. */
-    const z = (parseFloat(getComputedStyle(ar).getPropertyValue('--z')) || ar.clientWidth / 256 * 0.8) * (parseFloat(el.style.getPropertyValue('--k')) || (side === 'me' ? 1.38 : 1)) * (parseFloat(ar.style.getPropertyValue('--cz')) || 1.1) / k;
+    const z = (parseFloat(getComputedStyle(ar).getPropertyValue('--z')) || ar.clientWidth / 256 * 0.8) * (parseFloat(el.style.getPropertyValue('--k')) || (side === 'me' ? 1.9 : 1)) * (parseFloat(ar.style.getPropertyValue('--cz')) || 1.1) / k;
     const nw = im && im.naturalWidth ? im.naturalWidth : 96, nh = im && im.naturalHeight ? im.naturalHeight : 96;
     return { x: el.offsetLeft / k, y: el.offsetTop / k, w: nw * z, h: nh * z, z0: z / 2 };
   }

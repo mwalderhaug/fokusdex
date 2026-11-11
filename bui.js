@@ -339,17 +339,40 @@ function paintBox(side) {
 /* Størrelsen i kamp følger høyden i Pokédexen: de små litt mindre, de store tydelig større (Joltik 0,84 · 1 m = 1 · Charizard 1,1 · Lugia 1,3 · Wailord 1,42).
    Din egen står nærmest kameraet og er større enn motstanderen. De legendariske i raid får litt ekstra. */
 const hK = h => Math.max(0.84, Math.min(1.42, 1 + (h < 1 ? 0.1 : 0.13) * Math.log2(h)));
-const sprK = (side, b) => { const k = hK(htOf(b.id, b.mega)); return side === 'me' ? 1.38 * Math.max(0.92, k) : (BT.B && BT.B.raid ? 1.1 : 1) * k; };
+/* Din egen står nærmest kameraet og tegnes rundt dobbelt så stor som motstanderen, som i Black og White (høyden teller mindre der, ellers fyller de største hele skjermen). */
+const sprK = (side, b) => { const k = hK(htOf(b.id, b.mega)); return side === 'me' ? Math.min(2.3, 1.9 * Math.pow(k, 0.6)) : (BT.B && BT.B.raid ? 1.1 : 1) * k; };
+/* Din Pokémon står midt på plattformen sin, som ligger nederst i bildet bak tekstboksen. Er den så liten at den ville forsvunnet bak boksen,
+   flyttes den så langt bakover på plattformen at godt over halve kroppen vises (--ly = hvor mye). Regnes ut når bildet er lastet,
+   sammen med taket på størrelsen (--k) for begge sider. */
+function seat(side) {
+  const el = $('#s-' + side), ar = $('#arena'), img = el && el.querySelector('img.spr'); if (!el || !ar || !img) return;
+  const set = () => {
+    if (!img.naturalHeight || !img.isConnected) return;
+    const me = side === 'me', cz = parseFloat(ar.style.getPropertyValue('--cz')) || 1.1, k0 = parseFloat(el.dataset.k) || (me ? 1.9 : 1);
+    /* De aller største holdes innenfor skjermen: bredden og høyden har et tak. */
+    const k = Math.min(k0, (me ? 165 : 150) / (img.naturalWidth * 0.8 * cz), (me ? 140 : 106) / (img.naturalHeight * 0.8 * cz));
+    el.style.setProperty('--k', k.toFixed(3));
+    if (!me) return;
+    const H = img.naturalHeight * 0.8 * k * cz, feet = (0.8 + 0.17 * cz) * 192, want = Math.max(152, 144 + 0.42 * H);
+    el.style.setProperty('--ly', (Math.max(0, feet - want) / 192 * 100).toFixed(2) + '%');
+  };
+  if (img.complete && img.naturalHeight) set(); else img.addEventListener('load', set, { once: true });
+}
+/* Venter til bildet av den som skal ut, er lastet (høyst ms), så den ikke dukker opp et øyeblikk etter at ballen har åpnet seg. */
+const sprReady = (side, ms) => new Promise(res => { const im = document.querySelector('#s-' + side + ' img.spr'); if (!im || (im.complete && im.naturalWidth)) return res(); let done = false; const fin = () => { if (!done) { done = true; res(); } }; im.addEventListener('load', fin, { once: true }); setTimeout(fin, ms); });
+/* Der en Pokémon står (til effektene rundt den), i spillskjermens 256 × 192. dy = hvor langt over føttene. */
+const anc = (side, dy) => { const sp = $('#s-' + side), ar = $('#arena'); if (!sp || !ar || !ar.clientWidth) return side === 'foe' ? { x: 189, y: 72 } : { x: 80, y: 124 }; const u = ar.clientWidth / 256; return { x: sp.offsetLeft / u, y: Math.min(152, sp.offsetTop / u) - (dy == null ? 28 : dy) }; };
 /* Kameraet står til vanlig litt nærmere enn selve banebildet (--cz 1,10). Når en stor Pokémon står ute, trekker det seg ut (ned mot 1,0),
    så den får plass og ruver over plattformen sin. Plattformene og begge Pokémonene følger med (se .cam og .bs i stilarket). */
 function camFit() {
   const ar = $('#arena'); if (!BT.B || !ar) return;
   const h = Math.max(...['me', 'foe'].map(s => { const v = BT.v[s], b = v && teamOf(s)[v.i]; return b && v.hp > 0 ? htOf(b.id, b.mega) : 0; }));
   ar.style.setProperty('--cz', (h <= 1.6 ? 1.1 : h >= 4 ? 1 : 1.1 - 0.1 * (h - 1.6) / 2.4).toFixed(3));
+  seat('me'); seat('foe');
 }
 function paintSprite(side, cls) {
   const b = teamOf(side)[BT.v[side].i], el = $('#s-' + side);
-  if (el) { el.className = 'bs ' + side + ' ' + (cls || ''); el.style.setProperty('--k', sprK(side, b).toFixed(3)); el.innerHTML = spr(b.id, { ani: 1, sh: b.sh, back: side === 'me', mega: b.mega }); camFit(); }
+  if (el) { el.className = 'bs ' + side + ' ' + (cls || ''); el.dataset.k = sprK(side, b).toFixed(3); el.style.setProperty('--k', el.dataset.k); el.innerHTML = spr(b.id, { ani: 1, sh: b.sh, back: side === 'me', mega: b.mega }); camFit(); }
 }
 /* HP-linja glir mot det nye tallet, og tallet teller med. Farten følger treffet: et supereffektivt treff får linja til å rase ned,
    et vanlig går jevnt, og et lite effektivt siger sakte. Bak linja står en lys rest av det som ble slått bort et øyeblikk før den synker etter,
@@ -734,10 +757,13 @@ async function playOne(B, e) {
     if (big && !wild) { music(''); await say(`${B.tr.n} is down to the last Pokémon…`); }
     if (BT.B !== B || !sp.isConnected) return;
     if (!wild) await typeOut(e.txt);
-    clearMot(sp); sp.className = 'bs ' + side + ' gone'; $('#b-' + side).hidden = true;
+    clearMot(sp); $('#b-' + side).hidden = true;
+    /* Bildet males skjult med en gang, så det hentes mens ballen er i lufta. */
+    paintSprite(side, 'gone');
     if (!wild) await tossBall(side);
-    if (big) { BSFX.ace(); buzz([80, 40, 80, 40, 240]); await FX.ace(side === 'foe' ? { x: 189, y: 74 } : { x: 62, y: 150 }, B.tr.ty, B.tr); if (!PACK.playing()) music(musicKey(B)); }
-    paintSprite(side, 'in' + (ace ? ' ace' : '')); BSFX.ball(); FX.open(side === 'foe' ? { x: 189, y: 72 } : { x: 62, y: 150 }, big ? '#ffe9a8' : '');
+    await sprReady(side, 1500); if (BT.B !== B || !sp.isConnected) return;
+    if (big) { BSFX.ace(); buzz([80, 40, 80, 40, 240]); await FX.ace(anc(side, 26), B.tr.ty, B.tr); if (!PACK.playing()) music(musicKey(B)); }
+    sp.className = 'bs ' + side + ' in' + (ace ? ' ace' : ''); BSFX.ball(); FX.open(anc(side), big ? '#ffe9a8' : '');
     cry(b.id, 200, big ? 0.5 : 0.35); if (big) shake(500 / spdF(), 4, 1);
     await bwait(380); paintBox(side);
     if (B.mode !== 'lab') S.seen[b.id] = 1;
@@ -846,9 +872,12 @@ async function startBattle(B) {
   BT.B = B; BT.menu = 'main'; BT.res = null; BT.ty = 0; BT.busy = true;
   BT.v = { me: { i: 0, hp: B.me[0].hp, st: '' }, foe: { i: 0, hp: B.foe[0].hp, st: '' } };
   const prep = PACK.prep(B).catch(() => {});
+  /* Bildene til begge lagene hentes mens introen går. De to første ventes det på (litt), resten kommer i bakgrunnen. */
+  const pre = Promise.all([preSpr(B.me[0].id, { ani: 1, back: 1, sh: B.me[0].sh, mega: B.me[0].mega }), preSpr(B.foe[0].id, { ani: 1, sh: B.foe[0].sh, mega: B.foe[0].mega })]);
+  B.me.slice(1).forEach(b => preSpr(b.id, { ani: 1, back: 1, sh: b.sh, mega: b.mega })); B.foe.slice(1).forEach(b => preSpr(b.id, { ani: 1, sh: b.sh, mega: b.mega }));
   if (B.tr.wild) { await Promise.race([prep, new Promise(r => setTimeout(r, 2500))]); if (BT.B !== B) return; await legendIntro(B); }
   else { await PACK.introPrep(B); if (BT.B !== B) return; await bossIntro(B, B.tr.boss ? {} : { quick: 1, until: prep }); }
-  await prep;
+  await prep; await Promise.race([pre, new Promise(r => setTimeout(r, 2000))]);
   if (BT.B !== B) return;
   drawBattle(); drawMenu(); packHint();
   await bwait(350);
