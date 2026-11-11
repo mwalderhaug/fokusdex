@@ -408,6 +408,61 @@ function finishFactory(B) {
 /* Bytt en av dine leide mot en fra laget du nettopp slo. */
 function facSwap(mine, theirs) { const R = S.fac.run; if (R && R.team && R.team[mine] && theirs) { R.team[mine] = theirs; save(); } }
 
+/* ---------- World Tournament ----------
+   En daglig cup med utslagsrunder: kvartfinale, semifinale og finale på rad. Tre mot tre, og alle Pokémon på begge sider spiller på samme nivå (lagets nivå da cupen
+   startet), så det er valget av de tre og spillet som avgjør, ikke hvem som har trent mest. Du ser motstanderens tre før du velger dine. Ingen veske og ingen XP,
+   og laget er friskt til hver runde. Ett tap, og du er ute til neste dag med kamper. Cupen skifter med ukedagen (CUPS, søndag først): lederne fra hver region,
+   Elite Four-cupen med en mester i finalen, og mesternes cup med en av de aller største i finalen.
+   PREMIER: mynter for hver runde (PWTCOIN × cupens faktor × vanskelighetsgrad × studiebonus). Vinneren får et trofé, PWTCANDY Rare Candy og en pakke encounters
+   (samme trekning som pakken i butikken, uten de legendariske). */
+const PWTN = 3, PWTCOIN = [150, 300, 600], PWTCANDY = 2, ROUNDN = ['Quarter-final', 'Semi-final', 'Final'];
+const aN = s => (/^[AEIOU]/i.test(s) ? 'an ' : 'a ') + s;
+const gymCup = (n, re) => ({ n, f: 1, pk: 'great', rounds: [['gym', re], ['gym', re], ['gym', re]] });
+const CUPS = [
+  { n: 'Champions Cup', f: 2.2, pk: 'ultra', rounds: [['champ'], ['champ'], ['supreme']] },
+  gymCup('Kanto Leaders Cup', /^Kanto/), gymCup('Johto Leaders Cup', /^Johto/), gymCup('Hoenn Leaders Cup', /^Hoenn/), gymCup('Sinnoh Leaders Cup', /^Sinnoh/), gymCup('Unova Leaders Cup', /^B2 W2/),
+  { n: 'Elite Four Cup', f: 1.5, pk: 'ultra', rounds: [['e4'], ['e4'], ['champ']] }
+];
+const pwt = () => S.pwt || (S.pwt = { day: '', run: null, won: 0, cups: {} });
+const cupNow = () => CUPS[new Date((S.lad.day || dayKey()) + 'T12:00:00').getDay()] || CUPS[1];
+/* Cupen som er i gang. Den gjelder bare dagen den ble startet. */
+const pwtRun = () => { const P = pwt(); if (P.run && P.run.day !== S.lad.day) { P.run = null; } return P.run; };
+const pwtOpen = () => !!S.lad.day && (!!pwtRun() || pwt().day !== S.lad.day);
+const pwtLv = () => Math.max(10, Math.min(100, Math.round(leagueLv())));
+const pwtSize = () => Math.max(1, Math.min(PWTN, S.party.map(monBy).filter(Boolean).length));
+const pwtCoins = (c, r) => Math.round(PWTCOIN[r] * c.f * studyMult() * diff().coin);
+function pwtStart() {
+  const P = pwt(), c = cupNow(), opp = [];
+  c.rounds.forEach(([k, re]) => { let l = POOL[k].map((_, i) => i).filter(i => (!re || re.test(POOL[k][i][5] || '')) && !opp.some(o => o[0] === k && o[1] === i)); if (!l.length) l = POOL[k].map((_, i) => i); opp.push([k, l[rnd(l.length)]]); });
+  P.day = S.lad.day; P.run = { day: S.lad.day, wd: CUPS.indexOf(c), lv: pwtLv(), n: pwtSize(), opp, r: 0, foe: null }; save();
+}
+/* Motstanderen i runden som venter. Laget trekkes én gang, så det du ser på forhånd er det du møter. */
+function pwtFoe() {
+  const R = pwtRun(), c = CUPS[R.wd], [k, i] = R.opp[R.r], d = POOL[k][i], st = diffSt(TCL[k]);
+  if (!R.foe) { R.foe = bossTeam(d, R.n, R.lv, st, true); save(); }
+  return { c, k, st, team: R.foe, tr: trainerOf(k, i, { skill: st.sk, sc: 'pwt' }) };
+}
+/* us = de du har valgt (u), den første går ut først. Dine spiller på cupens nivå i denne kampen, uten at de egentlige nivåene røres. */
+function pwtBattle(us) {
+  const R = pwtRun(), f = pwtFoe(), mine = us.map(monBy).filter(Boolean).slice(0, R.n).map(m => Object.assign({}, m, { lv: R.lv }));
+  return mkBattle(mine, f.team, f.tr, { mode: 'pwt', st: f.st, k: f.k, r: R.r, cup: f.c.n, bag: 0, xm: 0, sm: studyMult(), dc: diff().coin, boost: { mode: '', m: 1, xp: 1 } });
+}
+function finishPwt(B) {
+  const P = pwt(), R = pwtRun(), win = B.over === 'win', res = { mode: 'pwt', win, ups: [], items: [], encs: [], coins: 0, trade: null, perks: [], note: '', r: B.r, cup: B.cup, done: false };
+  if (!R) return res;
+  const c = CUPS[R.wd];
+  if (!win) { P.run = null; res.note = `You are out of the ${c.n}. A new cup opens after your next day of focus.`; save(); return res; }
+  res.coins = Math.round(PWTCOIN[R.r] * c.f * B.sm * (B.dc || 1)); S.coins += res.coins;
+  R.r++; R.foe = null;
+  if (R.r >= PWTN) {
+    res.done = true; P.won = (P.won || 0) + 1; P.cups[c.n] = (P.cups[c.n] || 0) + 1; P.run = null;
+    S.items.candy = (S.items.candy || 0) + PWTCANDY; res.items.push(`${PWTCANDY} × Rare Candy`);
+    const PK = PACKS[c.pk]; PK.slots.forEach(sl => pushEnc(res, genEnc({ min: sl.min || 0, luck: sl.luck || 0, shm: PK.shm })));
+    res.perks.push(`Champion of the ${c.n}! That is trophy number ${P.won}.`); res.note = `The prize is ${aN(PK.n)}: three encounters are waiting in the grass.`;
+  }
+  save(); return res;
+}
+
 /* ---------- Demo ---------- */
 /* Prøvekamp mot en valgfri klasse. Gir ingenting og rører verken ligaen eller Frontier. rent = leide Pokémon på nivå 50 i stedet for ditt eget lag. */
 function labBattle(k, rent, pi) {
