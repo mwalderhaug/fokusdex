@@ -368,7 +368,7 @@ function drawMenu() {
   if (!B || BT.busy || B.over) { el.innerHTML = `<div class="bw bw-main bw-idle${pk}" style="${mim('ball')}"></div>`; return; }
   const me = B.me[B.a];
   if (B.need || BT.menu === 'team') {
-    el.innerHTML = `<div class="bw bw-party bsw${pk}" style="${bg}">${B.me.map((b, i) => partyPanel(b, i, 'bsw', b.hp > 0 && !(i === B.a && !B.need), i === B.a && !B.need)).join('')}<p class="bw-tip">${B.need ? 'Choose a Pokémon.' : 'Switch to which Pokémon?'}</p>${B.need ? '' : cancel()}</div>`;
+    el.innerHTML = `<div class="bw bw-party bsw${pk}" style="${bg}">${B.me.map((b, i) => partyPanel(b, i, 'bsw', b.hp > 0 && !(i === B.a && B.need !== 1), i === B.a && B.need !== 1)).join('')}<p class="bw-tip">${B.need === 1 ? 'Choose a Pokémon.' : 'Switch to which Pokémon?'}</p>${B.need ? '' : cancel()}</div>`;
     return;
   }
   if (BT.menu === 'moves') {
@@ -615,7 +615,7 @@ async function playOne(B, e) {
   }
   else if (e.t === 'vanish') { sp.classList.toggle('away', !!e.on); await bwait(260); clearMot(sp); }
   else if (e.t === 'sub') { sp.classList.toggle('subd', !!e.on); await bwait(200); }
-  else if (e.t === 'form') { const el = $('#s-' + side); if (el) { FX.open(fxPos(side), ''); BSFX.ball(); el.innerHTML = spr(e.id, { ani: 1, sh: e.sh, back: side === 'me' }); } await bwait(480); }
+  else if (e.t === 'form') { const el = $('#s-' + side); if (el) { FX.open(fxPos(side), ''); BSFX.ball(); el.innerHTML = spr(e.id, { ani: 1, sh: e.sh, back: side === 'me', mega: e.mega }); } await bwait(480); }
   else if (e.t === 'wx') { const a = $('#arena'); if (e.k) { a.dataset.wx = e.k; FX.weather(e.k); await bwait(640); } else delete a.dataset.wx; }
 }
 async function playEv(ev) {

@@ -9,7 +9,14 @@ const TCH = { normal: '/rock steel/ghost', fighting: 'normal rock steel ice dark
   steel: 'rock ice fairy/steel fire water electric/', fire: 'bug steel grass ice/rock fire water dragon/', water: 'ground rock fire/water grass dragon/', grass: 'ground rock water/flying poison bug steel fire grass dragon/',
   electric: 'flying water/grass electric dragon/ground', psychic: 'fighting poison/steel psychic/dark', ice: 'flying ground grass dragon/steel fire water ice/', dragon: 'dragon/steel/fairy', dark: 'ghost psychic/fighting dark fairy/', fairy: 'fighting dragon dark/poison steel fire/' };
 const CH = TYPES.map(t => { const row = TYPES.map(() => 1); TCH[t].split('/').forEach((l, k) => l.split(' ').filter(Boolean).forEach(x => { row[TYPES.indexOf(x)] = [2, 0.5, 0][k]; })); return row; });
-const typeEff = (t, b) => (t === 4 && b.v && b.v.mag) ? 0 : CH[t][b.ty[0]] * (b.ty[1] >= 0 && b.ty[1] !== b.ty[0] ? CH[t][b.ty[1]] : 1);
+/* GRAV settes for hver runde: under Gravity treffer Ground-angrep også de som flyr eller svever. */
+let GRAV = 0;
+const typeEff = (t, b) => {
+  const V = b.v || {};
+  if (t === 4 && !GRAV && (V.mag || V.tele)) return 0;
+  const one = x => { const c = CH[t][x]; if (c) return c; return (t === 4 && x === 2 && GRAV) || (V.fore === 1 && x === 7 && (t === 0 || t === 1)) || (V.fore === 2 && x === 16 && t === 13) ? 1 : 0; };
+  return one(b.ty[0]) * (b.ty[1] >= 0 && b.ty[1] !== b.ty[0] ? one(b.ty[1]) : 1);
+};
 const stgM = s => s >= 0 ? (2 + s) / 2 : 2 / (2 - s);
 const accM = s => s >= 0 ? (3 + s) / 3 : 3 / (3 - s);
 const clampS = v => Math.max(-6, Math.min(6, v));
@@ -38,9 +45,9 @@ const VPOW = { 'Flail': hpPow, 'Reversal': hpPow, 'Low Kick': wPow, 'Grass Knot'
   'Gyro Ball': (u, t, B) => Math.max(1, Math.min(150, Math.floor(25 * spdB(B, t) / Math.max(1, spdB(B, u))))),
   'Wring Out': (u, t) => 1 + Math.floor(120 * t.hp / t.max), 'Crush Grip': (u, t) => 1 + Math.floor(120 * t.hp / t.max),
   'Punishment': (u, t) => Math.min(200, 60 + 20 * t.sg.reduce((a, b) => a + Math.max(0, b), 0)), 'Magnitude': () => [10, 30, 50, 70, 90, 110, 150][[0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 6][rnd(20)]],
-  'Present': () => [40, 80, 120][rnd(3)], 'Spit Up': () => 100, 'Natural Gift': () => 70, 'Trump Card': () => 60, 'Fling': () => 50, 'Beat Up': () => 50, 'Bide': () => 60 };
+  'Present': () => [40, 80, 120][rnd(3)], 'Spit Up': u => 100 * (u.v.stock || 1), 'Natural Gift': () => 70, 'Trump Card': () => 60, 'Fling': () => 50, 'Beat Up': () => 50, 'Bide': () => 60 };
 /* Unike statusangrep som retter seg mot motstanderen (resten virker på brukeren eller banen). */
-const FOEU = new Set(['Taunt', 'Encore', 'Disable', 'Mean Look', 'Block', 'Spider Web', 'Lock-On', 'Mind Reader', 'Spite', 'Soak', 'Pain Split', 'Psych Up', 'Memento', 'Power Swap', 'Guard Swap', 'Heart Swap', 'Reflect Type']);
+const FOEU = new Set(['Psycho Shift', 'Transform', 'Mimic', 'Sketch', 'Guard Split', 'Power Split', 'Telekinesis', 'Taunt', 'Encore', 'Disable', 'Mean Look', 'Block', 'Spider Web', 'Lock-On', 'Mind Reader', 'Spite', 'Soak', 'Pain Split', 'Psych Up', 'Memento', 'Power Swap', 'Guard Swap', 'Heart Swap', 'Reflect Type']);
 
 /* En Pokémon i kamp. src er den eide Pokémonen (eller en generert motstander med samme felter). v = det som nullstilles ved bytte. */
 function bmon(src) {
@@ -68,15 +75,17 @@ function powOf(B, u, t, m, ord) {
   if (n === 'Eruption' || n === 'Water Spout') p = Math.max(1, Math.floor(p * u.hp / u.max));
   if (n === 'Stored Power') p = 20 + 20 * boosts(u);
   if ((n === 'Facade' && u.status) || (n === 'Hex' && t.status) || (n === 'Venoshock' && t.status === 'psn') || (n === 'Brine' && t.hp <= t.max / 2) || (n === 'Wake-Up Slap' && t.status === 'slp') || (n === 'Smelling Salts' && t.status === 'par')
-    || (n === 'Payback' && ord === 1) || ((n === 'Revenge' || n === 'Avalanche') && u.v.hit) || n === 'Acrobatics' || (n === 'Weather Ball' && B.wx.k)) p *= 2;
+    || (n === 'Payback' && ord === 1) || ((n === 'Revenge' || n === 'Avalanche') && u.v.hit) || n === 'Acrobatics' || (n === 'Weather Ball' && B.wx.k) || (n === 'Assurance' && t.v.hit) || (n === 'Retaliate' && B.sd[sideOf(B, u)].fell === B.turn - 1)) p *= 2;
+  if ((m[1] === 12 && u.v.charge) || (ROLL.has(n) && u.v.curl)) p *= 2;
+  if (u.v.mefirst) p = Math.floor(p * 1.5);
   if (n === 'Solar Beam' && B.wx.k && B.wx.k !== 'sun') p = Math.floor(p / 2);
   if (ROLL.has(n)) p *= Math.pow(2, Math.min(4, u.v.roll || 0));
   if (CHAIN.has(n)) p = Math.min(160, p * Math.pow(2, u.v.chain || 0));
   return p;
 }
 function dmgOf(B, u, t, m, pow, crit, roll) {
-  const phys = m[4] === 1, n = m[0], ai = phys ? 1 : 3, di = phys || n === 'Psyshock' || n === 'Psystrike' || n === 'Secret Sword' ? 2 : 4;
-  let a = (n === 'Foul Play' ? t : u).st[ai] * (crit && u.sg[ai] < 0 ? 1 : stgM((n === 'Foul Play' ? t : u).sg[ai])), d = t.st[di] * (crit && t.sg[di] > 0 ? 1 : stgM(t.sg[di]));
+  const phys = m[4] === 1, n = m[0], ai = phys ? 1 : 3, d0 = phys || n === 'Psyshock' || n === 'Psystrike' || n === 'Secret Sword' ? 2 : 4, di = B.wroom ? 6 - d0 : d0, raw = n === 'Chip Away' || n === 'Sacred Sword';
+  let a = (n === 'Foul Play' ? t : u).st[ai] * (crit && u.sg[ai] < 0 ? 1 : stgM((n === 'Foul Play' ? t : u).sg[ai])), d = t.st[di] * ((crit && t.sg[di] > 0) || raw ? 1 : stgM(t.sg[di]));
   if (B.wx.k === 'sand' && di === 4 && t.ty.includes(5)) d *= 1.5;
   const base = Math.floor(Math.floor((Math.floor(2 * u.lv / 5) + 2) * pow * a / d) / 50) + 2;
   let mod = (crit ? 1.5 : 1) * (roll ? 0.85 + Math.random() * 0.15 : 0.925) * (u.ty.includes(m[1]) ? 1.5 : 1) * typeEff(m[1], t) * (phys && u.status === 'brn' && n !== 'Facade' ? 0.5 : 1);
@@ -118,9 +127,11 @@ function changeStats(B, s, list, ev, byFoe) {
 function sendOut(B, s, i, ev, txt) {
   const b = (s === 'me' ? B.me : B.foe)[i], sd = B.sd[s], N = nmOf(s, b), air = b.ty.includes(2);
   if (s === 'me') B.a = i; else B.b = i;
-  b.v = {}; b.sg = Z8(); if (b.tox) b.tox = 1;
+  unform(b); b.v = {}; b.sg = Z8(); if (b.tox) b.tox = 1;
+  if (B.pass && B.pass.s === s) { b.sg = B.pass.sg; Object.assign(b.v, B.pass.v); B.pass = null; }
   ev.push({ t: 'send', side: s, i, hp: b.hp, st: b.status, txt: txt || (s === 'me' ? `Go! ${b.name}!` : `${B.tr.n} sent out ${b.name}!`) });
   const hurt = (d, x) => { b.hp = Math.max(0, b.hp - Math.max(1, Math.floor(d))); ev.push({ t: 'hit', side: s, hp: b.hp, e: 1, quiet: 1 }, { t: 'msg', s: x }); };
+  if (sd.hw && b.hp > 0) { sd.hw = 0; if (b.hp < b.max || b.status) { b.hp = b.max; b.status = ''; b.tox = 0; ev.push({ t: 'heal', side: s, hp: b.hp }, { t: 'status', side: s, st: '' }, { t: 'msg', s: `The healing wish came true for ${lc(N)}!` }); } }
   if (sd.rock) hurt(b.max / 8 * CH[5][b.ty[0]] * (b.ty[1] >= 0 ? CH[5][b.ty[1]] : 1), `Pointed stones dug into ${lc(N)}!`);
   if (sd.spikes && !air && b.hp > 0) hurt(b.max / [8, 6, 4][sd.spikes - 1], `${N} is hurt by the spikes!`);
   if (sd.tsp && !air && b.hp > 0) {
@@ -129,6 +140,11 @@ function sendOut(B, s, i, ev, txt) {
   }
   settle(B, ev);
 }
+/* Tar vare på det en Pokémon hadde før noe i kampen byttet det ut (verdier, typer, angrep), og setter det tilbake når den kommer inn på nytt. */
+const keep = b => { if (!b.orig) b.orig = { st: b.st.slice(), ty: b.ty.slice(), mv: b.mv }; };
+const unform = b => { if (b.orig) { b.st = b.orig.st; b.ty = b.orig.ty; b.mv = b.orig.mv; b.orig = null; b.tf = 0; } };
+/* Sitter denne fast? Feller og Mean Look holder bare så lenge den som satte dem, står inne. */
+const stuck = (B, s) => { const V = act(B, s).v, f = act(B, opp(s)); return !!((V.trap && (!V.trapBy || V.trapBy === f)) || (V.nosw && (V.nosw === 1 || V.nosw === f)) || V.ingrain); };
 function swapTo(B, s, i, ev) {
   const old = act(B, s);
   if (old.hp > 0) ev.push({ t: 'recall', side: s, txt: s === 'me' ? `${old.name}, come back!` : `${B.tr.n} withdrew ${old.name}!` });
@@ -168,7 +184,7 @@ const UM = {
   'Disable': c => { const tv = c.t.v; if (tv.dis || tv.last == null || tv.last < 0) return fail(c); tv.dis = { k: tv.last, n: 4 }; c.say(`${nmOf(c.o, c.t)}'s ${MOVES[c.t.mv[tv.last].i][0]} was disabled!`); },
   'Aqua Ring': c => { if (c.V.aqua) return fail(c); c.V.aqua = 1; c.say(`${c.N} surrounded itself with a veil of water!`); },
   'Ingrain': c => { if (c.V.ingrain) return fail(c); c.V.ingrain = 1; c.say(`${c.N} planted its roots!`); },
-  'Mean Look': c => { if (c.t.v.nosw) return fail(c); c.t.v.nosw = 1; c.say(`${nmOf(c.o, c.t)} can no longer escape!`); },
+  'Mean Look': c => { if (c.t.v.nosw) return fail(c); c.t.v.nosw = c.u; c.say(`${nmOf(c.o, c.t)} can no longer escape!`); },
   'Psych Up': c => { c.u.sg = c.t.sg.slice(); c.say(`${c.N} copied ${lc(nmOf(c.o, c.t))}'s stat changes!`); },
   'Lock-On': c => { c.V.lockon = 1; c.say(`${c.N} took aim at ${lc(nmOf(c.o, c.t))}!`); },
   'Destiny Bond': c => { c.V.dbond = 1; c.say(`${c.N} is trying to take its foe down with it!`); },
@@ -176,9 +192,9 @@ const UM = {
   'Heal Bell': c => { for (const b of c.s === 'me' ? c.B.me : c.B.foe) if (b.hp > 0) { b.status = ''; b.tox = 0; } c.ev.push({ t: 'status', side: c.s, st: '' }); c.say(c.m[0] === 'Heal Bell' ? 'A bell chimed!' : 'A soothing aroma wafted through the area!'); },
   'Splash': c => c.say('But nothing happened!'), 'Teleport': fail, 'Helping Hand': fail,
   'Magnet Rise': c => { if (c.V.mag) return fail(c); c.V.mag = 5; c.say(`${c.N} levitated with electromagnetism!`); },
-  'Soak': c => { c.t.ty = [10, -1]; c.say(`${nmOf(c.o, c.t)} transformed into the Water type!`); },
-  'Reflect Type': c => { c.u.ty = c.t.ty.slice(); c.say(`${c.N}'s type became the same as ${lc(nmOf(c.o, c.t))}'s type!`); },
-  'Conversion': c => { c.u.ty = [MOVES[c.u.mv[0].i][1], -1]; c.say(`${c.N} transformed into the ${TYN[c.u.ty[0]]} type!`); },
+  'Soak': c => { keep(c.t); c.t.ty = [10, -1]; c.say(`${nmOf(c.o, c.t)} transformed into the Water type!`); },
+  'Reflect Type': c => { keep(c.u); c.u.ty = c.t.ty.slice(); c.say(`${c.N}'s type became the same as ${lc(nmOf(c.o, c.t))}'s type!`); },
+  'Conversion': c => { keep(c.u); c.u.ty = [MOVES[c.u.mv[0].i][1], -1]; c.say(`${c.N} transformed into the ${TYN[c.u.ty[0]]} type!`); },
   'Spite': c => { const tv = c.t.v, x = tv.last != null && tv.last >= 0 ? c.t.mv[tv.last] : null; if (!x || !x.pp) return fail(c); x.pp = Math.max(0, x.pp - 4); c.say(`It reduced the PP of ${lc(nmOf(c.o, c.t))}'s ${MOVES[x.i][0]}!`); },
   'Belly Drum': c => { const u = c.u; if (u.hp <= u.max / 2 || u.sg[1] >= 6) return fail(c); u.hp -= Math.floor(u.max / 2); u.sg[1] = 6; c.ev.push({ t: 'hit', side: c.s, hp: u.hp, e: 1, quiet: 1 }, { t: 'stat', side: c.s, up: true }); c.say(`${c.N} cut its own HP and maximized its Attack!`); },
   'Wish': c => { const sd = c.B.sd[c.s]; if (sd.wish) return fail(c); sd.wish = { n: 2, hp: Math.floor(c.u.max / 2) }; c.say(`${c.N} made a wish!`); },
@@ -189,8 +205,32 @@ const UM = {
   'Acupressure': c => { const o = [1, 2, 3, 4, 5, 6, 7].filter(i => c.u.sg[i] < 6); if (!o.length) return fail(c); changeStats(c.B, c.s, [[o[rnd(o.length)] + 1, 2]], c.ev); },
   'Memento': c => { changeStats(c.B, c.o, [[2, -2], [4, -2]], c.ev, true); c.u.hp = 0; c.ev.push({ t: 'hit', side: c.s, hp: 0, e: 1, quiet: 1 }); },
   'Power Swap': c => swapSg(c, [1, 3]), 'Guard Swap': c => swapSg(c, [2, 4]), 'Heart Swap': c => swapSg(c, [1, 2, 3, 4, 5, 6, 7]),
-  'Power Trick': c => { const st = c.u.st, x = st[1]; st[1] = st[2]; st[2] = x; c.say(`${c.N} switched its Attack and Defense!`); }
+  'Power Trick': c => { keep(c.u); const st = c.u.st, x = st[1]; st[1] = st[2]; st[2] = x; c.say(`${c.N} switched its Attack and Defense!`); }
 };
+Object.assign(UM, {
+  'Stockpile': c => { const n = c.V.stock || 0; if (n >= 3) return fail(c); c.V.stock = n + 1; c.say(`${c.N} stockpiled ${n + 1}!`); changeStats(c.B, c.s, [[3, 1], [5, 1]], c.ev); },
+  'Swallow': c => { const n = c.V.stock || 0, u = c.u; if (!n || u.hp >= u.max) return fail(c); c.V.stock = 0; u.hp = Math.min(u.max, u.hp + Math.max(1, Math.floor(u.max * [0.25, 0.5, 1][n - 1]))); c.ev.push({ t: 'heal', side: c.s, hp: u.hp }); c.say(`${c.N} regained health!`); },
+  'Charge': c => { c.V.charge = 2; c.say(`${c.N} began charging power!`); changeStats(c.B, c.s, [[5, 1]], c.ev); },
+  'Defense Curl': c => { c.V.curl = 1; changeStats(c.B, c.s, [[3, 1]], c.ev); },
+  'Transform': c => { const u = c.u, t = c.t; if (t.hp <= 0 || u.tf || t.tf || t.v.sub) return fail(c); keep(u); u.tf = 1; u.st = [u.st[0]].concat(t.st.slice(1)); u.ty = t.ty.slice(); u.sg = t.sg.slice(); u.mv = t.mv.map(x => ({ i: x.i, pp: 5, max: 5 })); c.V.lock = null; c.ev.push({ t: 'form', side: c.s, id: t.id, sh: t.sh, mega: t.mega || 0 }); c.say(`${c.N} transformed into ${t.name}!`); },
+  'Mimic': c => { const lm = c.B.lastM[c.o], u = c.u, k = u.mv.findIndex(x => MOVES[x.i][0] === c.m[0]); if (lm == null || lm < 0 || k < 0 || u.mv.some(x => x.i === lm)) return fail(c); keep(u); u.mv = u.mv.slice(); u.mv[k] = { i: lm, pp: 5, max: 5 }; c.say(`${c.N} learned ${MOVES[lm][0]}!`); },
+  'Camouflage': c => { keep(c.u); c.u.ty = [0, -1]; c.say(`${c.N} transformed into the Normal type!`); },
+  'Conversion 2': c => { const lm = c.B.lastM[c.o]; if (lm == null || lm < 0) return fail(c); const o = TYPES.map((_, i) => i).filter(i => CH[MOVES[lm][1]][i] < 1 && !c.u.ty.includes(i)); if (!o.length) return fail(c); keep(c.u); c.u.ty = [o[rnd(o.length)], -1]; c.say(`${c.N} transformed into the ${TYN[c.u.ty[0]]} type!`); },
+  'Guard Split': c => { keep(c.u); keep(c.t); for (const i of [2, 4]) { const a = Math.floor((c.u.st[i] + c.t.st[i]) / 2); c.u.st[i] = c.t.st[i] = a; } c.say(`${c.N} shared its guard with the target!`); },
+  'Power Split': c => { keep(c.u); keep(c.t); for (const i of [1, 3]) { const a = Math.floor((c.u.st[i] + c.t.st[i]) / 2); c.u.st[i] = c.t.st[i] = a; } c.say(`${c.N} shared its power with the target!`); },
+  'Psycho Shift': c => { const st = c.u.status, id = +Object.keys(AIL).find(k => AIL[k] === st); if (!st || c.t.status || !ailOk(c.t, st) || c.t.v.sub) return fail(c); const bad = c.u.tox; c.u.status = ''; c.u.tox = 0; c.ev.push({ t: 'status', side: c.s, st: '' }); applyAil(c.B, c.o, id, c.ev, true, !!bad); },
+  'Imprison': c => { if (c.V.imprison) return fail(c); c.V.imprison = 1; c.say(`${c.N} sealed any moves its target shares with it!`); },
+  'Grudge': c => { c.V.grudge = 1; c.say(`${c.N} wants its target to bear a grudge!`); },
+  'Magic Coat': c => { c.V.mcoat = 1; c.say(`${c.N} shrouded itself with Magic Coat!`); },
+  'Snatch': c => { c.V.snatch = 1; c.say(`${c.N} waits for a target to make a move!`); },
+  'Gravity': c => { if (c.B.grav) return fail(c); c.B.grav = 5; GRAV = 5; c.say('Gravity intensified!'); },
+  'Magic Room': c => { c.B.mroom = c.B.mroom ? 0 : 5; c.say(c.B.mroom ? 'It created a bizarre area in which items lose their effects!' : 'Magic Room wore off.'); },
+  'Wonder Room': c => { c.B.wroom = c.B.wroom ? 0 : 5; c.say(c.B.wroom ? 'It created a bizarre area in which Defense and Sp. Def stats are swapped!' : 'Wonder Room wore off.'); },
+  'Telekinesis': c => { if (c.t.v.tele || c.t.v.ingrain) return fail(c); c.t.v.tele = 3; c.say(`${nmOf(c.o, c.t)} was hurled into the air!`); },
+  'Healing Wish': c => { const team = c.s === 'me' ? c.B.me : c.B.foe; if (!team.some(b => b !== c.u && b.hp > 0)) return fail(c); c.B.sd[c.s].hw = 1; c.u.hp = 0; c.ev.push({ t: 'hit', side: c.s, hp: 0, e: 1, quiet: 1 }); },
+  'Baton Pass': c => { const team = c.s === 'me' ? c.B.me : c.B.foe; if (!team.some(b => b !== c.u && b.hp > 0)) return fail(c); const V = c.V, v = {}; for (const k of ['sub', 'conf', 'focus', 'aqua', 'ingrain', 'seed', 'curse', 'mag', 'perish', 'nosw', 'stock']) if (V[k]) v[k] = V[k]; c.B.pass = { s: c.s, sg: c.u.sg.slice(), v }; c.B.pivot = c.s; }
+});
+UM['Sketch'] = UM['Mimic']; UM['Lunar Dance'] = UM['Healing Wish'];
 UM['Aromatherapy'] = UM['Heal Bell']; UM['Block'] = UM['Spider Web'] = UM['Mean Look']; UM['Mind Reader'] = UM['Lock-On'];
 /* Tilstander utover de fem vanlige (tilstandsnummeret fra dataene). */
 const AILX = {
@@ -198,9 +238,14 @@ const AILX = {
   9: c => { if (c.t.status !== 'slp' || c.t.v.night) return fail(c); c.t.v.night = 1; c.say(`${nmOf(c.o, c.t)} began having a nightmare!`); },
   14: c => { if (c.t.status || c.t.v.yawn || c.B.sd[c.o].safe) return fail(c); c.t.v.yawn = 2; c.say(`${c.N} made ${lc(nmOf(c.o, c.t))} drowsy!`); },
   18: c => { if (c.t.v.seed) return fail(c); if (c.t.ty.includes(11)) return c.say(`It doesn't affect ${lc(nmOf(c.o, c.t))}…`); c.t.v.seed = 1; c.ev.push({ t: 'status', side: c.o, st: c.t.status, fx: 'seed' }); c.say(`${nmOf(c.o, c.t)} was seeded!`); },
+  12: c => { if (c.t.v.torm) return fail(c); c.t.v.torm = 1; c.say(`${nmOf(c.o, c.t)} was subjected to torment!`); },
+  15: c => { if (c.t.v.hblock) return fail(c); c.t.v.hblock = 5; c.say(`${nmOf(c.o, c.t)} was prevented from healing!`); },
+  17: c => { c.t.v.fore = c.m[0] === 'Miracle Eye' ? 2 : 1; c.say(`${nmOf(c.o, c.t)} was identified!`); },
+  19: c => { if (c.t.v.embargo) return fail(c); c.t.v.embargo = 5; c.say(`${nmOf(c.o, c.t)} can't use items anymore!`); },
   20: c => { for (const s of ['me', 'foe']) { const b = act(c.B, s); if (b.hp > 0 && !b.v.perish) b.v.perish = 4; } c.say('All Pokémon that heard the song will faint in three turns!'); }
 };
-const handled = m => m[4] > 0 || !!UM[m[0]] || (m[6] === 1 && (!!AIL[m[7]] || m[7] === 6 || !!AILX[m[7]])) || m[6] === 3 || m[6] === 5 || m[12].length > 0;
+const CALLS = new Set(['Metronome', 'Sleep Talk', 'Copycat', 'Mirror Move', 'Me First', 'Assist', 'Nature Power']), HEALS = new Set(['Rest', 'Wish', 'Swallow', 'Pain Split', 'Aqua Ring', 'Ingrain', 'Healing Wish', 'Lunar Dance']), PIVOT = new Set(['U-turn', 'Volt Switch']);
+const handled = m => m[4] > 0 || !!UM[m[0]] || CALLS.has(m[0]) || (m[6] === 1 && (!!AIL[m[7]] || m[7] === 6 || !!AILX[m[7]])) || m[6] === 3 || m[6] === 5 || m[12].length > 0;
 /* Angrep som ikke gjør noe i disse kampene ennå. De velges ikke automatisk, og trenerne bruker dem ikke. */
 window.DEADMV = new Set(MOVES.map((m, i) => handled(m) && !['Splash', 'Teleport', 'Helping Hand'].includes(m[0]) ? -1 : i).filter(i => i >= 0));
 const METRO = MOVES.map((m, i) => m[4] > 0 && m[2] > 0 && !CHARGE[m[0]] && !BOOM.has(m[0]) ? i : -1).filter(i => i >= 0);
@@ -209,7 +254,7 @@ const METRO = MOVES.map((m, i) => m[4] > 0 && m[2] > 0 && !CHARGE[m[0]] && !BOOM
 function useMove(B, s, k, ev, ord) {
   const u = act(B, s), o = opp(s), t = act(B, o), N = nmOf(s, u), V = u.v, say = x => ev.push({ t: 'msg', s: x });
   if (u.hp <= 0) return;
-  const wasProt = V.lastProt; V.lastProt = 0; V.dbond = 0;
+  const wasProt = V.lastProt; V.lastProt = 0; V.dbond = 0; V.grudge = 0; V.mefirst = 0;
   const stop = () => { if (V.away) { V.away = 0; ev.push({ t: 'vanish', side: s, on: 0 }); } V.lock = null; V.roll = 0; V.chain = 0; V.cm = ''; };
   if (V.rech) { V.rech = 0; say(`${N} must recharge!`); return; }
   if (u.status === 'slp') {
@@ -237,9 +282,13 @@ function useMove(B, s, k, ev, ord) {
   if (slot && !cont) {
     if (V.dis && V.dis.k === k) { say(`${N}'s ${m[0]} is disabled!`); return; }
     if (V.taunt && m[4] === 0) { say(`${N} can't use ${m[0]} after the taunt!`); return; }
+    if (V.torm && V.last === k && u.mv.length > 1) { say(`${N} can't use the same move twice in a row due to the torment!`); return; }
+    if (V.hblock && (m[6] === 3 || m[6] === 8 || HEALS.has(m[0]))) { say(`${N} can't use ${m[0]} because of Heal Block!`); return; }
+    if (t.hp > 0 && t.v.imprison && t.mv.some(x => x.i === slot.i)) { say(`${N} can't use its sealed ${m[0]}!`); return; }
     slot.pp = Math.max(0, slot.pp - 1);
   }
-  V.last = k;
+  V.last = k; if (k >= 0) (V.used || (V.used = {}))[k] = 1;
+  V.rage = m[0] === 'Rage' ? 1 : 0;
   /* Første runde av et to-runders angrep. I sterkt sollys lader Solar Beam ferdig med en gang. */
   if (CHARGE[m[0]] && !(cont && V.lock.kind === 'charge') && !(m[0] === 'Solar Beam' && B.wx.k === 'sun')) {
     ev.push({ t: 'anim', side: s, mi, self: 1, charge: 1 }); say(`${N} ${CHARGE[m[0]][0]}`); V.lock = { k, kind: 'charge' };
@@ -248,25 +297,46 @@ function useMove(B, s, k, ev, ord) {
     return;
   }
   if (cont && V.lock.kind === 'charge') { V.lock = null; if (V.away) { V.away = 0; ev.push({ t: 'vanish', side: s, on: 0 }); } }
+  /* Bide: lagrer skaden den tar i to runder og gir dobbelt tilbake. */
+  if (m[0] === 'Bide') {
+    if (!(cont && V.lock.kind === 'bide')) { V.lock = { k, kind: 'bide', n: 2 }; V.bide = 0; ev.push({ t: 'anim', side: s, mi, self: 1, charge: 1 }); say(`${N} is storing energy!`); return; }
+    if (--V.lock.n > 0) { say(`${N} is storing energy!`); return; }
+    const d0 = (V.bide || 0) * 2; V.lock = null; V.bide = null; say(`${N} unleashed its energy!`);
+    if (!d0 || t.hp <= 0 || t.v.prot || t.v.away) { say('But it failed!'); return; }
+    ev.push({ t: 'anim', side: s, mi, self: 0 }); t.hp -= Math.min(t.hp, d0); ev.push({ t: 'hit', side: o, hp: t.hp, e: 1 }); return;
+  }
+  /* Future Sight og Doom Desire: angrepet varsles nå og treffer den som står der to runder senere. */
+  if (m[0] === 'Future Sight' || m[0] === 'Doom Desire') {
+    say(`${N} used ${m[0]}!`); B.lastM[s] = mi;
+    if (B.sd[o].fut) { say('But it failed!'); return; }
+    B.sd[o].fut = { n: 3, u, mi, by: s }; ev.push({ t: 'anim', side: s, mi, self: 1, charge: 1 }); say(m[0] === 'Doom Desire' ? `${N} chose Doom Desire as its destiny!` : `${N} foresaw an attack!`); return;
+  }
   say(`${N} used ${m[0]}!`);
   /* Angrep som kaller et annet angrep. */
   if (m[0] === 'Metronome') { mi = METRO[rnd(METRO.length)]; m = MOVES[mi]; say(`Waggling a finger let it use ${m[0]}!`); }
   else if (m[0] === 'Sleep Talk') { const c = u.mv.filter(x => MOVES[x.i][0] !== 'Sleep Talk' && !CHARGE[MOVES[x.i][0]]); if (u.status !== 'slp' || !c.length) return say('But it failed!'); mi = c[rnd(c.length)].i; m = MOVES[mi]; say(`${N} used ${m[0]}!`); }
+  else if (m[0] === 'Me First') { const ti = B.intent ? B.intent[o] : -1; if (ti == null || ti < 0 || (B.moved && B.moved[o]) || MOVES[ti][4] === 0 || CHARGE[MOVES[ti][0]]) return say('But it failed!'); mi = ti; m = MOVES[mi]; V.mefirst = 1; say(`${N} used ${m[0]}!`); }
+  else if (m[0] === 'Assist') { const c = (s === 'me' ? B.me : B.foe).filter(b => b !== u).flatMap(b => b.mv.map(x => x.i)).filter(i => !CALLS.has(MOVES[i][0]) && !CHARGE[MOVES[i][0]] && !DEADMV.has(i) && !['Protect', 'Detect', 'Endure', 'Transform', 'Mimic', 'Sketch', 'Baton Pass', 'Bide', 'Future Sight', 'Doom Desire'].includes(MOVES[i][0])); if (!c.length) return say('But it failed!'); mi = c[rnd(c.length)]; m = MOVES[mi]; say(`${N} used ${m[0]}!`); }
+  else if (m[0] === 'Nature Power') { mi = MOVES.findIndex(x => x[0] === 'Tri Attack'); if (mi < 0) return say('But it failed!'); m = MOVES[mi]; say(`Nature Power turned into ${m[0]}!`); }
   else if (m[0] === 'Copycat' || m[0] === 'Mirror Move') { const lm = B.lastM[o]; if (lm == null || lm < 0 || MOVES[lm][4] === 0 || CHARGE[MOVES[lm][0]]) return say('But it failed!'); mi = lm; m = MOVES[mi]; say(`${N} used ${m[0]}!`); }
   B.lastM[s] = mi;
   const atFoe = m[4] > 0 || (m[17] !== 1 && ![3, 10, 11].includes(m[6]) && (m[6] !== 13 || FOEU.has(m[0])) && !UM_SELF.has(m[0]));
   if (m[0] === 'Dream Eater' && t.status !== 'slp') { say('But it failed!'); return stop(); }
   if (m[0] === 'Snore' && u.status !== 'slp') { say('But it failed!'); return stop(); }
   if (m[0] === 'Fake Out' && V.t) { say('But it failed!'); return stop(); }
+  if (m[0] === 'Sucker Punch') { const ti = B.intent ? B.intent[o] : -1; if ((B.moved && B.moved[o]) || ti == null || (ti >= 0 && MOVES[ti][4] === 0) || ti === -2) { say('But it failed!'); return stop(); } }
+  if (m[0] === 'Last Resort' && !(u.mv.length > 1 && u.mv.every((x, j) => j === k || (V.used && V.used[j])))) { say('But it failed!'); return stop(); }
+  if (m[0] === 'Spit Up' && !V.stock) { say('But it failed!'); return stop(); }
+  if (m[0] === 'Synchronoise' && !t.ty.some(x => x >= 0 && u.ty.includes(x))) { say(`It doesn't affect ${lc(nmOf(o, t))}…`); return stop(); }
   if (m[0] === 'Focus Punch' && V.hit) { say(`${N} lost its focus and couldn't move!`); return stop(); }
   if (atFoe) {
     if (t.hp <= 0) { say('But there was no target…'); return stop(); }
     if (t.v.prot && m[0] !== 'Feint' && m[0] !== 'Shadow Force') { say(`${nmOf(o, t)} protected itself!`); return stop(); }
     let hit = true;
-    if (V.lockon) hit = true;
+    if (V.lockon || (t.v.tele && m[6] !== 9)) hit = true;
     else if (t.v.away) hit = false;
     else if (m[6] === 9) hit = u.lv >= t.lv && Math.random() < (30 + u.lv - t.lv) / 100;
-    else if (m[3] && !((m[0] === 'Thunder' || m[0] === 'Hurricane') && B.wx.k === 'rain') && !(m[0] === 'Blizzard' && B.wx.k === 'hail')) hit = Math.random() < m[3] / 100 * accM(clampS(u.sg[6] - t.sg[7]));
+    else if (m[3] && !((m[0] === 'Thunder' || m[0] === 'Hurricane') && B.wx.k === 'rain') && !(m[0] === 'Blizzard' && B.wx.k === 'hail')) hit = Math.random() < m[3] / 100 * accM(clampS(u.sg[6] - (t.v.fore ? Math.min(0, t.sg[7]) : t.sg[7]))) * (B.grav ? 5 / 3 : 1);
     V.lockon = 0;
     if (!hit) {
       say(t.v.away ? `${nmOf(o, t)} avoided the attack!` : `${N}'s attack missed!`);
@@ -277,6 +347,7 @@ function useMove(B, s, k, ev, ord) {
   if (m[4] > 0) {
     const fixed = FIXED[m[0]], te = m === STRUGGLE ? 1 : typeEff(m[1], t), e = fixed ? 1 : te;
     if (te === 0) { say(`It doesn't affect ${lc(nmOf(o, t))}…`); return stop(); }
+    if (fixed && !(fixed(u, t, B) > 0)) { say('But it failed!'); return stop(); }
     if (ROLL.has(m[0])) V.roll = cont ? (V.roll || 0) + 1 : 0;
     if (CHAIN.has(m[0])) V.chain = V.cm === m[0] ? Math.min(3, (V.chain || 0) + 1) : 0;
     V.cm = CHAIN.has(m[0]) ? m[0] : '';
@@ -294,10 +365,12 @@ function useMove(B, s, k, ev, ord) {
       }
       d = Math.min(t.hp, d);
       if (d >= t.hp && (t.v.endure || m[0] === 'False Swipe')) { d = t.hp - 1; held = !!t.v.endure; }
-      t.hp -= d; total += d; t.v.hit = { d: (t.v.hit ? t.v.hit.d : 0) + d, p: m[4] };
+      t.hp -= d; total += d; t.v.hit = { d: (t.v.hit ? t.v.hit.d : 0) + d, p: m[4] }; if (t.v.bide != null) t.v.bide += d;
       ev.push({ t: 'hit', side: o, hp: t.hp, e, crit });
     }
     if (crit) say('A critical hit!');
+    if (total > 0 && t.hp > 0 && t.v.rage) { say(`${nmOf(o, t)}'s rage is building!`); changeStats(B, o, [[2, 1]], ev); }
+    if (m[0] === 'Spit Up') V.stock = 0;
     if (m[6] === 9) say("It's a one-hit KO!");
     else if (!fixed && m !== STRUGGLE) { if (e > 1) say("It's super effective!"); else if (e < 1) say("It's not very effective…"); }
     if (hits > 1) say(`Hit ${n} time${n > 1 ? 's' : ''}!`);
@@ -310,7 +383,8 @@ function useMove(B, s, k, ev, ord) {
     if (u.hp > 0 && m[6] === 7 && m[12].length && Math.random() * 100 < (m[11] || 100)) changeStats(B, s, m[12], ev);
     if (t.hp > 0 && !sub) {
       if (m[7] > 0 && m[7] <= 6 && Math.random() * 100 < (m[8] || 100)) applyAil(B, o, m[7], ev, false, m[0] === 'Poison Fang');
-      if (m[7] === 8 && !t.v.trap) { t.v.trap = 4 + rnd(2); t.v.trapn = m[0]; say(`${nmOf(o, t)} was trapped by ${m[0]}!`); }
+      if (m[0] === 'Tri Attack' && Math.random() < 0.2) applyAil(B, o, [1, 4, 3][rnd(3)], ev, false);
+      if (m[7] === 8 && !t.v.trap) { t.v.trap = 4 + rnd(2); t.v.trapn = m[0]; t.v.trapBy = u; say(`${nmOf(o, t)} was trapped by ${m[0]}!`); }
       if (m[6] === 6 && m[12].length && Math.random() * 100 < (m[11] || 100)) changeStats(B, o, m[12], ev, true);
       if (m[15] && ord === 0 && Math.random() * 100 < m[15]) t.v.fl = 1;
       if ((m[0] === 'Wake-Up Slap' && t.status === 'slp') || (m[0] === 'Smelling Salts' && t.status === 'par')) { t.status = ''; ev.push({ t: 'status', side: o, st: '' }); }
@@ -325,12 +399,21 @@ function useMove(B, s, k, ev, ord) {
       if (!cont) V.lock = { k, kind: 'rage', n: 1 + rnd(2) };
       else if (--V.lock.n <= 0) { V.lock = null; if (!V.conf) { V.conf = 2 + rnd(4); say(`${N} became confused due to fatigue!`); } }
     }
+    if (m[0] === 'Uproar' && u.hp > 0) { if (!cont) { V.lock = { k, kind: 'uproar', n: 2 }; say(`${N} caused an uproar!`); } else if (--V.lock.n <= 0) { V.lock = null; say(`${N} calmed down.`); } }
+    if (t.hp <= 0 && t.v.grudge && slot && u.hp > 0) { slot.pp = 0; say(`${N}'s ${m[0]} lost all its PP due to the grudge!`); }
+    if (PIVOT.has(m[0]) && total > 0 && u.hp > 0 && (s === 'me' ? B.me : B.foe).some(b => b !== u && b.hp > 0)) B.pivot = s;
     if (t.hp <= 0 && t.v.dbond && u.hp > 0) { u.hp = 0; ev.push({ t: 'hit', side: s, hp: 0, e: 1, quiet: 1 }); say(`${nmOf(o, t)} took its attacker down with it!`); }
     return;
   }
   /* Statusangrep */
   ev.push({ t: 'anim', side: s, mi, self: atFoe ? 0 : 1 });
-  const c = { B, s, o, u, t, V, N, ev, say, m, wasProt };
+  let c = { B, s, o, u, t, V, N, ev, say, m, wasProt };
+  if (atFoe && t.v.mcoat && !UM_SELF.has(m[0])) { say(`${N}'s ${m[0]} was bounced back by Magic Coat!`); c = { B, s: o, o: s, u: t, t: u, V: t.v, N: nmOf(o, t), ev, say, m, wasProt: 0 }; }
+  else if (!atFoe && t.hp > 0 && t.v.snatch && (m[6] === 2 || m[6] === 3)) { t.v.snatch = 0; say(`${nmOf(o, t)} snatched ${lc(N)}'s move!`); c = { B, s: o, o: s, u: t, t: u, V: t.v, N: nmOf(o, t), ev, say, m, wasProt: 0 }; }
+  return statusMove(c);
+}
+function statusMove(c) {
+  const { B, s, o, u, t, N, ev, say, m } = c;
   if (m[0] === 'Thunder Wave' && typeEff(m[1], t) === 0) return say(`It doesn't affect ${lc(nmOf(o, t))}…`);
   if (UM[m[0]]) UM[m[0]](c);
   else if (m[6] === 1) { if (AILX[m[7]]) AILX[m[7]](c); else applyAil(B, o, m[7], ev, true, m[0] === 'Toxic'); }
@@ -350,7 +433,7 @@ const UM_SELF = new Set(['Curse', 'Trick Room', 'Water Sport', 'Mud Sport', 'Haz
 function settle(B, ev) {
   for (const s of ['foe', 'me']) {
     const b = act(B, s);
-    if (b.hp <= 0 && !b.out) { b.out = 1; b.status = ''; ev.push({ t: 'faint', side: s }, { t: 'msg', s: `${nmOf(s, b)} fainted!` }); if (s === 'foe') B.kos.push({ id: b.id, lv: b.lv }); }
+    if (b.hp <= 0 && !b.out) { b.out = 1; b.status = ''; ev.push({ t: 'faint', side: s }, { t: 'msg', s: `${nmOf(s, b)} fainted!` }); B.sd[s].fell = B.turn; if (s === 'foe') B.kos.push({ id: b.id, lv: b.lv }); }
   }
   if (B.over) return;
   if (!B.me.some(x => x.hp > 0)) B.over = 'loss';
@@ -374,13 +457,19 @@ function endTurn(B, ev) {
     if (B.over) break;
     const b = act(B, s), o = opp(s), f = act(B, o), N = nmOf(s, b), V = b.v, sd = B.sd[s];
     if (b.hp <= 0) continue;
+    if (sd.fut && --sd.fut.n <= 0) {
+      const F = sd.fut, fm = MOVES[F.mi]; sd.fut = null; say(`${N} took the ${fm[0]} attack!`);
+      if (typeEff(fm[1], b) === 0) say(`It doesn't affect ${lc(N)}…`);
+      else { ev.push({ t: 'anim', side: o, mi: F.mi, self: 0 }); const e = typeEff(fm[1], b), d = Math.min(b.hp, dmgOf(B, F.u, b, fm, fm[2], false, true)); b.hp -= d; ev.push({ t: 'hit', side: s, hp: b.hp, e }); if (e > 1) say("It's super effective!"); else if (e < 1) say("It's not very effective…"); settle(B, ev); if (b.hp <= 0) continue; }
+    }
+    if (V.trap && V.trapBy && (V.trapBy.hp <= 0 || f !== V.trapBy)) { V.trap = 0; say(`${N} was freed from ${V.trapn}!`); }
     if (sd.wish && --sd.wish.n <= 0) { heal(s, b, sd.wish.hp, `${N}'s wish came true!`); sd.wish = null; }
-    if (V.ingrain) heal(s, b, b.max / 16, `${N} absorbed nutrients with its roots!`);
-    if (V.aqua) heal(s, b, b.max / 16, `A veil of water restored ${lc(N)}'s HP!`);
+    if (V.ingrain && !V.hblock) heal(s, b, b.max / 16, `${N} absorbed nutrients with its roots!`);
+    if (V.aqua && !V.hblock) heal(s, b, b.max / 16, `A veil of water restored ${lc(N)}'s HP!`);
     if (V.seed && f.hp > 0) {
       const d = Math.min(b.hp, Math.max(1, Math.floor(b.max / 8)));
       hurt(s, b, d, `${N}'s health is sapped by Leech Seed!`);
-      if (f.hp < f.max) { f.hp = Math.min(f.max, f.hp + d); ev.push({ t: 'heal', side: o, hp: f.hp }); }
+      if (f.hp < f.max && !f.v.hblock) { f.hp = Math.min(f.max, f.hp + d); ev.push({ t: 'heal', side: o, hp: f.hp }); }
       if (b.hp <= 0) continue;
     }
     if (b.status === 'psn') { hurt(s, b, b.tox ? b.max * Math.min(15, b.tox++) / 16 : b.max / 8, `${N} is hurt by poison!`); if (b.hp <= 0) continue; }
@@ -393,13 +482,18 @@ function endTurn(B, ev) {
     if (V.taunt && --V.taunt <= 0) say(`${N}'s taunt wore off!`);
     if (V.enc && --V.enc.n <= 0) { V.enc = null; say(`${N}'s encore ended!`); }
     if (V.dis && --V.dis.n <= 0) { V.dis = null; say(`${N} is no longer disabled!`); }
-    if (V.mag) V.mag--;
+    if (V.mag) V.mag--; if (V.tele) V.tele--; if (V.charge) V.charge--;
+    if (V.hblock && --V.hblock <= 0) say(`${N}'s Heal Block wore off!`);
+    if (V.embargo && --V.embargo <= 0) say(`${N} can use items again!`);
     V.t = (V.t || 0) + 1;
   }
   for (const s of ['me', 'foe']) { const sd = B.sd[s]; for (const [k, x] of [['ref', 'Reflect'], ['ls', 'Light Screen'], ['safe', 'Safeguard'], ['mist', 'Mist'], ['tail', 'Tailwind'], ['lucky', 'Lucky Chant']]) if (sd[k] && --sd[k] <= 0 && !B.over) say(`${s === 'me' ? 'Your' : "The foe's"} ${x} wore off!`); }
   if (B.troom && --B.troom <= 0 && !B.over) say('The twisted dimensions returned to normal!');
   if (B.mud) B.mud--; if (B.wsp) B.wsp--;
-  for (const b of [...B.me, ...B.foe]) { b.v.prot = 0; b.v.endure = 0; b.v.fl = 0; b.v.hit = null; }
+  if (B.grav && --B.grav <= 0 && !B.over) say('Gravity returned to normal!');
+  if (B.mroom && --B.mroom <= 0 && !B.over) say('Magic Room wore off, and held item effects returned to normal!');
+  if (B.wroom && --B.wroom <= 0 && !B.over) say('Wonder Room wore off, and Defense and Sp. Def stats returned to normal!');
+  for (const b of [...B.me, ...B.foe]) { b.v.prot = 0; b.v.endure = 0; b.v.fl = 0; b.v.hit = null; b.v.mcoat = 0; b.v.snatch = 0; }
 }
 
 /* ---------- Motstanderens valg ---------- */
@@ -485,7 +579,7 @@ function aiAct(B) {
   if (V.rech || V.lock) return { t: 'move', k: V.lock ? V.lock.k : 0 };
   const bench = B.foe.map((x, i) => i).filter(i => i !== B.b && B.foe[i].hp > 0 && !(B.tr.boss && i === B.foe.length - 1 && B.foe.filter(x => x.hp > 0).length > 2));
   /* Bytte: når motstanderen truer hardt, treneren ikke kan slå tilbake, og noen på benken står klart bedre. */
-  if (bench.length && sk >= 0.6 && !V.trap && !V.nosw && !V.ingrain && B.turn - B.aiSw > 2 && t.hp > 0) {
+  if (bench.length && sk >= 0.6 && !stuck(B, 'foe') && B.turn - B.aiSw > 2 && t.hp > 0) {
     const threat = bestDmg(B, t, u) / u.hp, mine = bestDmg(B, u, t) / t.hp;
     if (threat >= 0.55 && mine < 0.5 && u.hp > u.max * 0.25) {
       let best = -1, bs = 0;
@@ -495,7 +589,7 @@ function aiAct(B) {
   }
   const opts = [];
   u.mv.forEach((x, k) => {
-    if (x.pp <= 0 || (V.dis && V.dis.k === k) || (V.enc && V.enc.k !== k)) return;
+    if (x.pp <= 0 || (V.dis && V.dis.k === k) || (V.enc && V.enc.k !== k) || (V.torm && V.last === k && u.mv.length > 1) || (t.v.imprison && t.mv.some(y => y.i === x.i))) return;
     const m = MOVES[x.i]; let sc;
     if (m[4] > 0) {
       const d = estDmg(B, u, t, m);
@@ -527,14 +621,14 @@ function aiNext(B) {
 /* ---------- Runden ---------- */
 /* Det spilleren kan gjøre akkurat nå. Skjermen bruker disse til å tegne menyen. */
 const autoAct = B => { const V = B.me[B.a].v; return V.rech || V.lock ? { t: 'move', k: V.lock ? V.lock.k : 0 } : null; };
-const canSwitch = B => { const b = B.me[B.a], V = b.v; return b.hp <= 0 || !(V.trap || V.nosw || V.ingrain || V.lock || V.rech); };
-const moveOk = (B, k) => { const b = B.me[B.a], V = b.v, x = b.mv[k]; return !!x && x.pp > 0 && !(V.dis && V.dis.k === k) && !(V.taunt && MOVES[x.i][4] === 0) && (!V.enc || V.enc.k === k); };
+const canSwitch = B => { const b = B.me[B.a], V = b.v; return b.hp <= 0 || !(stuck(B, 'me') || V.lock || V.rech); };
+const moveOk = (B, k) => { const b = B.me[B.a], V = b.v, x = b.mv[k]; const f = B.foe[B.b], m = x ? MOVES[x.i] : null; return !!x && x.pp > 0 && !(V.dis && V.dis.k === k) && !(V.taunt && m[4] === 0) && (!V.enc || V.enc.k === k) && !(V.torm && V.last === k && b.mv.length > 1) && !(V.hblock && (m[6] === 3 || m[6] === 8 || HEALS.has(m[0]))) && !(f.hp > 0 && f.v.imprison && f.mv.some(y => y.i === x.i)); };
 /* Én runde. a = { t: 'move', k } (k = -1 er Struggle) eller { t: 'switch', i }. */
 /* Veska: gjenstander fra butikken brukt i kamp. Å bruke en koster turen din, akkurat som et bytte.
    hp = hvor mye som helbredes, cure = fjerner status, rev = vekker en som har besvimt (andel av HP). */
 const BAG = { potion: { hp: 20 }, super: { hp: 60 }, hyper: { hp: 120 }, maxp: { hp: 9999 }, heal: { cure: 1 }, revive: { rev: 0.5 }, maxrev: { rev: 1 } };
 function itemOk(B, k, i) {
-  const d = BAG[k], b = B.me[i]; if (!d || !b) return false;
+  const d = BAG[k], b = B.me[i]; if (!d || !b || B.mroom || (i === B.a && b.v.embargo)) return false;
   if (d.rev) return b.hp <= 0;
   if (b.hp <= 0) return false;
   return d.cure ? !!b.status || !!b.v.conf : b.hp < b.max;
@@ -547,9 +641,30 @@ function useItem(B, k, i, ev) {
   else { const h = Math.min(b.max - b.hp, d.hp); b.hp += h; if (on) ev.push({ t: 'heal', side: 'me', hp: b.hp }); say(`${b.name} recovered ${h} HP.`); }
   B.bag = Math.max(0, (B.bag || 0) - 1);
 }
+/* Resten av runden etter at angrepene i køen q er gjort. Bytter spilleren ut midt i runden (U-turn, Volt Switch, Baton Pass),
+   stopper runden her til den nye er valgt (B.need = 2), og sendIn gjør resten. Motstanderen velger selv og runden går videre. */
+function runQueue(B, q, ev) {
+  while (q.length) {
+    const [s, k, who, ord] = q.shift();
+    if (B.over || who.hp <= 0 || act(B, s) !== who) continue;
+    useMove(B, s, k, ev, ord); B.moved[s] = 1; settle(B, ev);
+    if (B.pivot) {
+      const side = B.pivot; B.pivot = null;
+      if (!B.over && act(B, side).hp > 0) {
+        if (side === 'me') { B.rest = q; B.need = 2; return false; }
+        const c = B.foe.map((x, i) => i).filter(i => i !== B.b && B.foe[i].hp > 0), t = B.me[B.a];
+        if (c.length) { let best = c[0], bs = -9; for (const i of c) { const f = B.foe[i], sc = bestDmg(B, f, t) / Math.max(1, t.hp) - bestDmg(B, t, f) / f.hp; if (sc > bs) { bs = sc; best = i; } } swapTo(B, 'foe', best, ev); B.aiSw = B.turn; }
+      } else B.pass = null;
+    }
+  }
+  return true;
+}
 function runTurn(B, a) {
-  const ev = []; B.turn++;
+  const ev = []; B.turn++; GRAV = B.grav || 0;
   const fa = aiAct(B);
+  /* Hva hver side har tenkt å gjøre denne runden: angrepets nummer, -1 for Struggle og -2 for alt annet (bytte, gjenstand). */
+  const idx = (b, k) => k >= 0 && b.mv[k] ? b.mv[b.v.enc ? b.v.enc.k : k].i : -1;
+  B.intent = { me: a.t === 'move' ? idx(B.me[B.a], a.k) : -2, foe: fa.t === 'move' ? idx(B.foe[B.b], fa.k) : -2 }; B.moved = { me: 0, foe: 0 }; B.pivot = null; B.rest = null;
   if (a.t === 'item') useItem(B, a.k, a.i, ev);
   if (a.t === 'switch') swapTo(B, 'me', a.i, ev);
   if (fa.t === 'switch' && !B.over) { swapTo(B, 'foe', fa.i, ev); B.aiSw = B.turn; }
@@ -561,7 +676,8 @@ function runTurn(B, a) {
     const first = pa !== pb ? pa > pb : sa !== sb ? (sa > sb) !== !!B.troom : Math.random() < 0.5;
     if (!first) q.reverse();
   }
-  q.forEach(([s, k, who], n) => { if (B.over || who.hp <= 0 || act(B, s) !== who) return; useMove(B, s, k, ev, q.length === 2 ? n : 1); settle(B, ev); });
+  q.forEach((x, n) => x.push(q.length === 2 ? n : 1));
+  if (!runQueue(B, q, ev)) return ev;
   if (!B.over) endTurn(B, ev);
   afterTurn(B, ev);
   return ev;
@@ -571,4 +687,16 @@ function afterTurn(B, ev) {
   for (let g = 0; g < 8 && !B.over && B.foe[B.b].hp <= 0; g++) sendOut(B, 'foe', aiNext(B), ev);
   B.need = !B.over && B.me[B.a].hp <= 0 ? 1 : 0;
 }
-function sendIn(B, i) { const ev = []; sendOut(B, 'me', i, ev); afterTurn(B, ev); return ev; }
+/* Spilleren har valgt hvem som kommer inn: etter en besvimelse, eller midt i runden etter U-turn og lignende (da gjøres resten av runden etterpå). */
+function sendIn(B, i) {
+  const ev = []; GRAV = B.grav || 0;
+  if (B.need === 2) {
+    const q = B.rest || []; B.rest = null; B.need = 0;
+    if (i !== B.a && B.me[i] && B.me[i].hp > 0) swapTo(B, 'me', i, ev); else B.pass = null;
+    if (!runQueue(B, q, ev)) return ev;
+    if (!B.over) endTurn(B, ev);
+    afterTurn(B, ev);
+    return ev;
+  }
+  sendOut(B, 'me', i, ev); afterTurn(B, ev); return ev;
+}
