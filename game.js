@@ -291,7 +291,7 @@ function wildLv(id, t) {
 const KEY = 'fokusdex.v1';
 function fresh() {
   return {
-    v: 1, mig: 9, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
+    v: 1, mig: 10, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
     items: { poke: 15, great: 0, ultra: 0, dusk: 0, master: 0, gberry: 0, candy: 0, stone: 0, mstone: 0, incense: 0, potion: 0, super: 0, hyper: 0, maxp: 0, heal: 0, revive: 0, maxrev: 0, ash: 0 }, charm: 0, ring: 0, lst: {},
     lure: 0, slure: 0, prism: 0, shb: null,
     mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, routes: [1], eggs: [], pend: [], incOn: 0,
@@ -307,6 +307,14 @@ let S = fresh();
 /* Tar i bruk en lagring (fra enheten, synk eller sikkerhetskopi) og oppgraderer gamle lagringer der fagene var faste. */
 /* Versjon 9: en shiny har full IV i alt (det gjelder også dem som er fanget før). */
 function migrate9() { for (const m of S.mons) if (m.sh && Array.isArray(m.iv)) m.iv = [31, 31, 31, 31, 31, 31]; S.mig = 9; }
+/* Raid fra før «den viser seg selv»-reglene (ingen S.raid.at) fikk aldri de nye feltene: kortet kunne si «attempt 1 of 2» og «last attempt» på én gang,
+   og raidet sto framme før dagens kamper. De stilles på nytt etter reglene som gjelder nå: samme legendariske, ingen brukte forsøk, og skjult til
+   dagens kamper er ferdige (er de alt ferdige, står kortet der som før). */
+function migrate10() {
+  const R = S.raid;
+  if (R && !R.at) { let done = false; try { done = !!S.lad.day && typeof dayDone === 'function' && dayDone(); } catch (_) {} R.tries = 0; R.day = ''; R.at = dayKey(); R.hid = done ? 0 : 1; R.nw = 0; delete R.seen; }
+  S.mig = 10;
+}
 function adopt(o) {
   S = Object.assign(fresh(), o);
   S.lad = Object.assign(fresh().lad, o.lad || {}); S.fac = Object.assign(fresh().fac, o.fac || {});
@@ -322,6 +330,10 @@ function adopt(o) {
   if (!o.mig || o.mig < 7) migrate7();
   if (!o.mig || o.mig < 8) migrate8();
   if (!o.mig || o.mig < 9) migrate9();
+  if (!o.mig || o.mig < 10) migrate10();
+  /* Et forsøk kan ikke være eldre enn raidet selv (S.raid.at = dagen det kom). Et slikt merke kommer fra en eldre appversjon som flettet inn
+     forsøkene fra et tidligere raid av samme art: de gjelder ikke dette. */
+  if (S.raid && S.raid.at && S.raid.day && S.raid.day < S.raid.at) { S.raid.tries = 0; S.raid.day = ''; }
   S.routes = (S.routes || []).filter(r => S.regions.includes(r)); if (!S.routes.length) S.routes = [S.regions.includes(S.region) ? S.region : S.regions[0]];
   S.mons.forEach(ensure);
   unlockRegions();
@@ -444,7 +456,7 @@ function carry(p) {
   if (p.pwt && p.pwt.day && (!S.pwt || ge(p.pwt.day, S.pwt.day))) { if (!S.pwt) S.pwt = { day: '', run: null, won: 0, cups: {} }; if (S.pwt.day !== p.pwt.day) { S.pwt.day = p.pwt.day; S.pwt.run = null; } }
   if (p.mode && p.mode.day && (!S.mode || ge(p.mode.day, S.mode.day))) S.mode = p.mode;
   if (p.evt && p.evt.day && (!S.evt || ge(p.evt.day, S.evt.day))) S.evt = p.evt;
-  if (p.raid && S.raid && p.raid.id === S.raid.id && !!p.raid.dk === !!S.raid.dk) { S.raid.tries = Math.max(S.raid.tries || 0, p.raid.tries || 0); if (ge(p.raid.day, S.raid.day)) S.raid.day = p.raid.day || ''; if (p.raid.seen) S.raid.seen = 1; }
+  if (p.raid && S.raid && p.raid.id === S.raid.id && !!p.raid.dk === !!S.raid.dk && (p.raid.at || '') === (S.raid.at || '')) { S.raid.tries = Math.max(S.raid.tries || 0, p.raid.tries || 0); if (ge(p.raid.day, S.raid.day)) S.raid.day = p.raid.day || ''; if (p.raid.seen) S.raid.seen = 1; }
   if (p.tmax > (S.tmax || 0)) S.tmax = p.tmax;
   if (p.fair && (!S.fair || p.fair.n > S.fair.n)) S.fair = p.fair;
   if (p.hon && (!S.hon || ge(p.hon.d, S.hon.d))) S.hon = p.hon;
