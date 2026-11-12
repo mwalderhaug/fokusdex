@@ -998,7 +998,8 @@ document.addEventListener('keydown', ev => {
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   if (Date.now() - NT.at > 600000) netTime().then(() => { if (clockLock() && $('#ov').hidden && $('#sheet').hidden) render(); });
-  if (S.timer) { keepAwake(); paintTimer(); } else ghPull();
+  const tab = tabShow();
+  if (S.timer) { if (!tab) { keepAwake(); paintTimer(); } } else ghPull();
 });
 
 /* ---------- Oppstart ---------- */
@@ -1021,7 +1022,11 @@ window.addEventListener('resize', fixViewport);
 window.addEventListener('orientationchange', () => setTimeout(fixViewport, 300));
 load(); ghLoad();
 saveHook = ghSoon;
-ghHook = adopted => { const s = $('#gh-s'); if (s) s.textContent = ghState === 'ok' ? 'Sync is on.' : ghState; if (adopted && !S.timer && ($('#ov').hidden || $('#nav').hidden)) { closeOv(); render(); toast('Loaded a newer save from another device.'); } };
+/* kept = minutter fra økter som fulgte med da to lagringer møttes (jrMerge i game.js). */
+ghHook = (adopted, kept) => { const s = $('#gh-s'); if (s) s.textContent = ghState === 'ok' ? 'Sync is on.' : ghState; if ((adopted || kept) && !S.timer && ($('#ov').hidden || $('#nav').hidden)) { closeOv(); render(); toast(adopted ? 'Loaded a newer save from another device.' + (kept ? ` Your ${kept} min of focus on this device were kept.` : '') : `${kept} min of focus from another device were added.`); } };
+/* En annen fane av appen har lagret noe nyere (tabSync i game.js): da vises det som gjelder nå. En økt som går, eier skjermen. */
+function tabShow() { if (!tabSync()) return false; if (S.timer) showTimer(); else if ($('#ov').hidden) render(); return true; }
+window.addEventListener('storage', ev => { if (ev.key === KEY) tabShow(); });
 render();
 clockCheck();
 netTime().then(o => { if (o != null && clockCheck() && $('#ov').hidden) render(); });

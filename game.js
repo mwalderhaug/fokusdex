@@ -453,6 +453,44 @@ async function netTime() {
 }
 /* En annen lagring (kopi, synk) kan bare ta over når den er nyere enn spillet på enheten, eller når spillet her ikke er startet. */
 const canAdopt = o => !!o && (!S.started || (o.rev || 0) > (S.rev || 0));
+/* ---------- En fullført økt går aldri tapt ----------
+   To kopier av appen (to enheter, eller to faner i samme nettleser) kan begge ha lagret noe siden sist de var like. Da tar lagringen med høyest nummer
+   over, og det den andre gjorde i mellomtiden, er borte. Det meste kan gjøres om igjen, men ikke en fullført økt: den er tiden din. (12. november 2026
+   forsvant en økt på 90 minutter slik: en kopi uten økt hadde lagret flere ganger enn den med økta.)
+   Derfor fører hver lagring en journal over de siste øktene (S.jr): t = da økta startet (det er navnet dens), e = da den sluttet, f = fag,
+   r = minutter, p = planlagt, u = fullført, d = dagen. Når to lagringer møtes (ghPull, tabSync), får den som vinner, øktene den mangler fra den andre,
+   med alt økta ga (grant på nytt). Det gjelder begge veier: også når lagringen her vinner, hentes først øktene bare den andre har. En økt gis aldri
+   to ganger (navnet er det samme i begge), og en økt som overlapper i tid med en den andre alt har, teller ikke: klokka går ikke to steder samtidig. */
+const JRN = 12;
+function jrAdd(e) { const l = Array.isArray(S.jr) ? S.jr : (S.jr = []); if (l.some(x => x.t === e.t)) return; l.push(e); l.sort((a, b) => a.t - b.t); while (l.length > JRN) l.shift(); }
+const jrOk = e => !!e && typeof e.t === 'number' && typeof e.e === 'number' && e.e >= e.t && e.r >= 1 && e.r <= 720 && typeof e.f === 'string' && /^\d{4}-\d\d-\d\d$/.test(e.d || '');
+/* Øktene i lagringen a som lagringen b ikke har. Har b ingen journal (en lagring fra før journalen fantes), gjelder de som sluttet etter b sin siste
+   økt. Er journalen til b full, regnes alt som er eldre enn dens eldste, som kjent. */
+function jrMissing(a, b) {
+  /* Det som skal gis på nytt, må ha sluttet før nå (en klokke stilt fram gir ingenting). Det b alt har, teller som kjent uansett hva klokka her sier. */
+  const mine = (a && Array.isArray(a.jr) ? a.jr : []).filter(e => jrOk(e) && e.e <= Date.now() + 600000), theirs = (b && Array.isArray(b.jr) ? b.jr : []).filter(jrOk);
+  if (!mine.length) return [];
+  const has = new Set(theirs.map(x => x.t)), old = theirs.length >= JRN ? Math.min(...theirs.map(x => x.t)) : 0, last = theirs.length ? 0 : ((b && b.lastEnd) || 0);
+  return mine.filter(x => !has.has(x.t) && x.t > old && x.e > last && !theirs.some(y => x.t < y.e && x.e > y.t));
+}
+/* Gir lagringen som gjelder nå (S), øktene den mangler fra den andre (p). Svaret er minuttene som kom til. */
+function jrMerge(p) {
+  let n = 0;
+  for (const x of jrMissing(p, S)) { try { grant(x.f, x.r, !!x.u, x.p || x.r, { t: x.t, e: x.e, d: x.d, again: 1 }); n += x.r; } catch (_) {} }
+  return n;
+}
+/* En annen fane eller et annet vindu av appen i samme nettleser deler lageret, men husker sin egen tilstand. Har den andre lagret noe nyere, tar denne
+   det over før den gjør noe mer (ui.js kaller dette når fanen kommer fram og når lageret endres); ellers ville neste lagring herfra skrive over det.
+   Har den andre bare en økt denne mangler, hentes økta. Ikke midt i en økt eller en kamp her, og ikke mens den andre står i en økt eller en kamp:
+   en økt som går, eies av fanen som startet den, og når den er ferdig, hentes resultatet. Gir true når noe ble endret. */
+function tabSync() {
+  if (SBX || !S.started || S.timer || (S.live && S.live.dev === devId()) || (typeof BT !== 'undefined' && BT.B)) return false;
+  let o = null; try { o = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (_) {}
+  if (!o || o.v !== 1 || !Array.isArray(o.mons) || o.live || o.timer) return false;
+  if (o.rev > S.rev) { const p = S; adopt(o); carry(p); if (jrMerge(p)) save(true); return true; }
+  if (jrMerge(o)) { save(true); return true; }
+  return false;
+}
 /* Det som er brukt opp i dag, følger med når en annen lagring tar over: forsøk, dagens modus og event, første seier. p = lagringen som var her. */
 function carry(p) {
   if (!p || !p.started) return;
@@ -613,13 +651,14 @@ function finishTimer() {
   const ms = elapsedMs(t), full = ms >= t.min * 60000 - 800, min = full ? t.min : Math.floor(ms / 60000);
   S.timer = null;
   if (min < 1) { save(true); return { min: 0 }; }
-  return grant(t.fag, min, full, t.min);
+  return grant(t.fag, min, full, t.min, { t: t.start });
 }
 /* Belønningen for en økt. De første øktminuttene hver dag gir uthvilt-bonus, og etter dagstaket (S.cap) er laget slitent: halv XP og ingen møter.
    real = minuttene som faktisk ble brukt. min = det de er verdt (w = 1 for fag, OTHERW for andre aktiviteter): all belønning og dagsmålet regnes
    av det. Dagsloggen fører det vektede tallet i m, de virkelige minuttene per kategori i f, og virkelige minutter på andre aktiviteter i x. */
-function grant(fag, real, full, plan) {
-  const k = dayKey(), day = S.log[k] || (S.log[k] = { m: 0, s: 0, f: {} });
+function grant(fag, real, full, plan, re) {
+  /* re = { t: da økta startet }. Gis en økt på nytt etter at to lagringer har møttes (jrMerge: re.again), hører den til dagen den ble gjort (re.d). */
+  const k = re && re.again && re.d ? re.d : dayKey(), day = S.log[k] || (S.log[k] = { m: 0, s: 0, f: {} });
   const w = rateOf(fag), min = w === 1 ? real : Math.round(real * w), planned = plan * w;
   const rested = day.s === 0, okMin = Math.max(0, Math.min(min, S.cap - day.m)), tired = okMin < min, mult = rested ? 1.5 : 1;
   const R = { fag, min: real, eff: min, w, full, rested, tired, ups: [], gifts: [], hatch: [], tl0: tlv(), enc: 0 };
@@ -633,7 +672,9 @@ function grant(fag, real, full, plan) {
   R.sm0 = mulOf(day.m); R.sm1 = mulOf(day.m + min);
   day.m += min; day.s++; day.f[fag] = (day.f[fag] || 0) + real; if (w < 1) day.x = (day.x || 0) + real;
   S.fm[fag] = (S.fm[fag] || 0) + real;
-  stamp(); S.run = (S.run || 0) + real; S.lastEnd = Date.now();
+  stamp();
+  if (re && re.again) S.lastEnd = Math.max(S.lastEnd || 0, re.e || 0); else { S.run = (S.run || 0) + real; S.lastEnd = Date.now(); }
+  jrAdd({ t: re && re.t ? re.t : S.lastEnd - real * 60000, e: re && re.again ? re.e : S.lastEnd, f: fag, r: real, p: plan || real, u: full ? 1 : 0, d: k });
   /* Achievements: lengste rekke dager, og dager med dagsmålet nådd (hver dag teller én gang, også om målet endres underveis). */
   { const A = achInit(), g0 = typeof goalMin === 'function' ? goalMin() : S.cap; A.bs = Math.max(A.bs || 0, streak()); if (A.gd !== k && day.m >= g0) { A.goal = (A.goal || 0) + 1; A.gd = k; } }
   S.party.forEach((u, i) => {
@@ -906,7 +947,7 @@ async function ghLink(use, o) {
 async function ghPull() {
   if (!GH || !GH.ok || ghBusy || SBX || S.timer || (S.live && S.live.dev === devId())) return;
   ghBusy = true;
-  let push = false, adopted = false;
+  let push = false, adopted = false, kept = 0;
   try {
     const r = await ghReq('GET');
     if (r.status === 404) { ghSha = ''; push = true; }
@@ -914,14 +955,17 @@ async function ghPull() {
     else {
       const j = await r.json(); ghSha = j.sha;
       const o = JSON.parse(b64d(j.content));
-      if (o && o.v === 1 && o.rev > S.rev) { const p = S; adopt(o); carry(p); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (_) {} adopted = true; }
-      else if (o && S.rev > o.rev) push = true;
+      /* En økt eller en kamp som startet mens svaret var på vei, røres ikke: lagringen her står til den er ferdig. */
+      if (S.timer || (S.live && S.live.dev === devId())) { ghBusy = false; ghState = 'ok'; return; }
+      /* Øktene følger med begge veier (jrMerge). Kom det noen til, lagres og lastes det sammenslåtte opp. */
+      if (o && o.v === 1 && o.rev > S.rev) { const p = S; adopt(o); carry(p); kept = jrMerge(p); if (kept) { save(true); push = true; } try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (_) {} adopted = true; }
+      else { if (o && o.v === 1) { kept = jrMerge(o); if (kept) save(true); } if (o && S.rev > o.rev) push = true; }
       ghState = 'ok';
     }
   } catch (_) { ghState = 'Offline'; }
   ghBusy = false;
   if (push) await ghPush();
-  if (ghHook) ghHook(adopted);
+  if (ghHook) ghHook(adopted, kept);
 }
 async function ghPush() {
   if (!GH || !GH.ok || ghBusy || SBX) return;
