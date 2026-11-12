@@ -482,6 +482,7 @@ function finishLeague(B) {
     /* De to spesielle gir mer av alt, og seieren huskes (S.spw). */
     if (B.tr.sp) { const extra = Math.round(res.coins * 0.5); res.coins += extra; S.coins += extra; give('candy', 4); give('mstone', 1); pushEnc(res, legEnc()); (S.spw || (S.spw = {}))[B.tr.n] = (S.spw[B.tr.n] || 0) + 1; res.perks.push(`${B.tr.n} is beaten. Half again as many coins, and one more legendary encounter.`); }
     L.best = (L.best || 0) + 1; (L.seen = L.seen || []).push(k + B.ti); L.next = null; L.c = Math.min(CLIMBTOP, clsI(k)); L.won = (L.won || 0) + 1;
+    if (clsI(k) >= 8) achInit().ch++;
     if (++L.n >= LAPN) { L.lap++; L.n = 0; L.seen = []; L.c = 0; res.lapDone = true; raidSpawn(res); }
   } else {
     const d = L.day || dayKey(), n = ladFails() + 1; L.tries = { d, n }; if (n >= ladLives()) L.lost = d; res.left = Math.max(0, ladLives() - n);
@@ -821,7 +822,7 @@ function raidBattle(lead, demo) {
 function finishRaid(B) {
   const win = B.over === 'win', id = B.tr.leg, R = S.raid, nm = B.tr.n, t = B.tr.lt, res = { mode: 'raid', win, ups: [], items: [], encs: [], coins: 0, trade: null, perks: [], note: '', kind: 'legend', leg: id };
   if (win) {
-    grantXp(B, res);
+    grantXp(B, res); achInit().rw++;
     res.coins = Math.round(RAIDCOIN[t - 1] * (B.dc || 1) * evCoin()); S.coins += res.coins; evPerk(res);
     const c = RAIDCANDY[t - 1]; S.items.candy = (S.items.candy || 0) + c; res.items.push(`${c} × Rare Candy`);
     if (t >= 2) { const n = t >= 4 ? 3 : 1; S.items.ultra = (S.items.ultra || 0) + n + 1; res.items.push(`${n + 1} × Ultra Ball`); }

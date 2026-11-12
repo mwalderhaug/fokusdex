@@ -135,6 +135,7 @@ const sfx = {
   fail: () => { noise(0, 0.12, 0.06, 1800, 3500); tone(500, 0.02, 0.14, 0.04, 'square', 1200); },
   flee: () => { noise(0, 0.35, 0.04, 2500, 400); tone(700, 0, 0.35, 0.03, 'triangle', 140); },
   coin: () => { tone(988, 0, 0.06); tone(1319, 0.06, 0.12); },
+  rank: () => { seq([784, 988, 1175, 1568], 0.09, 0.16, 0.045, 'triangle'); noise(0.45, 0.16, 0.09, 420, 110); tone(110, 0.45, 0.18, 0.07, 'triangle', 60); tone(2093, 0.64, 0.45, 0.028, 'triangle'); tone(1568, 0.64, 0.45, 0.028, 'triangle'); },
   sell: () => { tone(1319, 0, 0.05); tone(988, 0.05, 0.05); tone(1568, 0.11, 0.14, 0.04, 'triangle'); },
   lvl: () => seq([784, 988, 1175, 1568], 0.08, 0.12, 0.045, 'triangle'),
   hatch: () => { noise(0, 0.15, 0.05, 900, 2500); seq([1047, 1319, 1568, 2093], 0.07, 0.1, 0.04, 'triangle'); },
@@ -166,11 +167,11 @@ function cry(id, delay = 0, vol = 0.45) {
   }).catch(() => {});
 }
 /* Lyd per type trykk. Handlinger med egen lyd (kast, kjøp, utvikling osv.) får ikke en ekstra. */
-const OWN = new Set(['mgive', 'triv', 'trev', 'mvtog', 'start', 'throw', 'buy', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'honyes', 'clkagain', 'help', 'tour', 'tourgo', 'tourend', 'tourhub', 'trtipok', 'trtip', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats']);
+const OWN = new Set(['mgive', 'triv', 'trev', 'mvtog', 'start', 'throw', 'buy', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'honyes', 'clkagain', 'help', 'tour', 'tourgo', 'tourend', 'tourhub', 'trtipok', 'trtip', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats', 'achget', 'achall']);
 const SND = {
   tab: 'tab', lagv: 'tab', dexr: 'tab',
   fag: 'chip', min: 'chip', reg: 'chip', sort: 'chip', filt: 'chip', sety: 'chip', extog: 'chip',
-  ball: 'ball', spec: 'open', plan: 'open', sync: 'open', backup: 'open', snext: 'ok', seadd: 'open', avatar: 'open', avall: 'open', avpick: 'ok',
+  ball: 'ball', spec: 'open', plan: 'open', sync: 'open', backup: 'open', snext: 'ok', seadd: 'open', avatar: 'open', avall: 'open', avpick: 'ok', ach: 'open', rkok: 'ok',
   close: 'close', home: 'close', later: 'close', sback: 'close', sedel: 'close', skip: 'close', syncoff: 'close', toshop: 'open',
   train: 'open', trsel: 'chip', trback: 'close', trclr: 'warn',
   lead: 'ok', sesave: 'ok', syncsave: 'ok', bkcopy: 'ok', bkload: 'ok', party: 'ok', fav: 'fav',
@@ -192,12 +193,14 @@ const NAV = [
   ['profil', 'Profile', '<circle cx="12" cy="9" r="5"/><path d="M8.500 13.200L7 21l5-2.500L17 21l-1.500-7.800"/>']
 ];
 function renderNav() {
-  $('#nav').innerHTML = NAV.map(([k, n, p]) => `<button type="button" data-a="tab" data-k="${k}"${U.tab === k ? ' aria-current="page"' : ''}><svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg><span>${n}</span>${k === 'fokus' && S.pend.length ? '<i class="dot"></i>' : ''}</button>`).join('');
+  $('#nav').innerHTML = NAV.map(([k, n, p]) => `<button type="button" data-a="tab" data-k="${k}"${U.tab === k ? ' aria-current="page"' : ''}><svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg><span>${n}</span>${(k === 'fokus' && S.pend.length) || (k === 'profil' && U.as && U.as.open) ? '<i class="dot"></i>' : ''}</button>`).join('');
 }
 function render() {
   buildFags();
   if (!S.started) { $('#nav').hidden = true; $('#main').innerHTML = ''; return intro(); }
   $('#nav').hidden = false;
+  /* Achievements: summen regnes én gang per tegning. Når et nytt mål er nådd siden sist, sies det fra én gang. */
+  { const as = U.as = achSum(); if (U.asN != null && as.open > U.asN) setTimeout(() => toast('Achievement reached. Tap your picture to claim the reward.'), 700); U.asN = as.open; }
   renderNav();
   /* På en eventdag får forsiden eventets farger og en annen oppstilling (se VIEW.fokus). Eventet trekkes når dagens modus velges (modePick). */
   const E = U.tab === 'fokus' && S.party.length && typeof evNow === 'function' ? evNow() : null, EI = E ? evInfo(E) : null;
@@ -227,10 +230,77 @@ function avSheet(all) {
   /* Pakkens egne bilder hentes første gang velgeren åpnes, og så tegnes den på nytt med dem. */
   PACK.portraits(PLAYERS.concat(rest).map(x => x[0].split('|')[0])).then(n => { if (n && $('#sheet .avgrid')) avSheet(all); }).catch(() => {});
 }
+/* ---------- Achievements og rang ----------
+   Et trykk på profilbildet åpner denne siden. Rammen og stempelet rundt bildet følger rangen (rankOf): én medalje for hver belønning du henter. */
+const AIC = {
+  hours: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9.5 2.5h5"/>',
+  streak: '<path d="M12 3c1 3.600 5 5.600 5 10a5 5 0 0 1-10 0c0-2 1-3.200 2-4 .200 1.500 1 2.300 1.800 2.500C10.500 9 11 5.500 12 3z"/>',
+  goal: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".6"/>',
+  tlv: '<path d="M12 19V6M6.500 11.500 12 6l5.500 5.500"/>',
+  top: '<path d="M6.500 12.500 12 7l5.500 5.500M6.500 18 12 12.500 17.500 18"/>',
+  train: '<path d="M12 5v14M5 12h14"/>',
+  dex: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.500" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/>',
+  shiny: '<path d="M11 3.500l1.900 5.100L18 10.500l-5.100 1.900L11 17.500l-1.900-5.100L4 10.500l5.100-1.900z"/><path d="M18.500 15.500l.700 1.800 1.800.700-1.800.700-.700 1.800-.700-1.800-1.800-.700 1.800-.700z"/>',
+  leg: '<path d="M12 3.500l2.600 5.300 5.900.900-4.300 4.100 1 5.800L12 16.900l-5.200 2.700 1-5.800L3.500 9.700l5.900-.900z"/>',
+  evo: '<path d="M19 12a7 7 0 1 1-2.200-5.100M19 4.500V8h-3.500"/><path d="M12 15V9.500M9.800 11.500 12 9.300l2.200 2.200"/>',
+  perfect: '<circle cx="12" cy="12" r="8"/><path d="M4 12h5.500M14.500 12H20"/><circle cx="12" cy="12" r="2.500"/>',
+  pack: '<rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9.500 9.500h5M9.500 13h5"/>',
+  lwin: '<path d="M12 3.500l7 2.500v5.500c0 4.500-3 7.500-7 9-4-1.500-7-4.500-7-9V6z"/><path d="M9 12l2.200 2.200L15.200 10"/>',
+  lap: '<path d="M19 12a7 7 0 1 1-2.200-5.100M19 4.500V8h-3.500"/>',
+  champ: '<path d="M4 18.500h16M4.500 15.500l-1-8.500 5 4L12 5l3.500 6 5-4-1 8.500z"/>',
+  cynthia: '<path d="M4 18.500h16M4.500 15.500l-1-8.500 5 4L12 5l3.500 6 5-4-1 8.500z"/><circle cx="12" cy="12.500" r="1"/>',
+  ghetsis: '<path d="M13 3 5 13.500h5.500L9.500 21 18 10h-5.500z"/>',
+  fstreak: '<path d="M8 20V8l4-4 4 4v12M5 20h14M10.500 12h3M10.500 15.500h3"/>',
+  cup: '<path d="M8 4.500h8v5a4 4 0 0 1-8 0zM8 6H5c0 3 1.500 4.500 3.500 4.500M16 6h3c0 3-1.500 4.500-3.500 4.500M12 13.500V17M8.500 19.500h7M9.500 17h5"/>',
+  raid: '<path d="M12 3l9 9-9 9-9-9z"/><path d="M10 10.200a2 2 0 1 1 3 1.700c-.700.400-1 .800-1 1.600M12 16v.100"/>',
+  dark: '<path d="M3 12s3.500-6 9-6 9 6 9 6-3.500 6-9 6-9-6-9-6z"/><circle cx="12" cy="12" r="2.500"/>',
+  ring: '<circle cx="12" cy="13.500" r="6"/><path d="M9.500 4h5l-1.500 3h-2z"/>'
+};
+const rewTxt = r => [r.c ? `${nb(r.c)} coins` : '', r.k ? `${r.k} Rare Candy` : '', r.u ? `${r.u} Ultra Ball${r.u > 1 ? 's' : ''}` : '', r.m ? `${r.m > 1 ? r.m + ' Mega Stones' : 'a Mega Stone'}` : ''].filter(Boolean).join(' + ');
+const achPips = s => `<span class="apips" role="img" aria-label="${s.got} of ${s.max} medals">${Array.from({ length: s.max }, (_, i) => `<i class="${i < s.got ? 'on' : i < s.done ? 'rdy' : ''}"></i>`).join('')}</span>`;
+const achText = (a, s) => a.f ? a.f(nb(s.val), nb(s.next), s) : a.t.length === 1 ? a.u : s.done >= s.max ? `${nb(s.val)} ${a.u}` : `${nb(s.val)} of ${nb(s.next)} ${a.u}`;
+/* Profilbildet i rangens ramme. Elite har en ring som glir rundt. */
+const avIn = R => `${R.i >= RANKS.length - 1 ? '<i class="rkring"><i></i></i>' : ''}${S.av ? tsprite(S.av) : '<span class="tsb"></span>'}`;
+const avFrame = (R, cls, stamp) => `<span class="avf rk${R.i}${cls ? ' ' + cls : ''}" style="--rk:${R.c}">${avIn(R)}${stamp ? `<span class="stamp">${R.n}</span>` : ''}</span>`;
+function achSheet() {
+  const sum = U.as = achSum(), R = sum.R, tot = achTotal(), pct = R.next ? Math.round((R.p - R.at) / (R.next - R.at) * 100) : 100, gs = [];
+  ACH.forEach(a => { if (a.ty == null && !gs.includes(a.g)) gs.push(a.g); });
+  const row = a => {
+    const s = achState(a), full = s.got >= s.max, r = achRew(a, Math.min(s.max - 1, s.open ? s.got : s.done)), w = s.done >= s.max ? 100 : Math.round(Math.min(1, s.val / s.next) * 100);
+    return `<div class="arow${s.open ? ' rdy' : ''}${full ? ' full' : ''}" id="ach-${a.k}"><span class="aic"><svg viewBox="0 0 24 24" aria-hidden="true">${AIC[a.k] || AIC.leg}</svg></span><div class="sp">
+      <div class="row" style="justify-content:space-between"><b>${a.n}</b>${achPips(s)}</div>
+      <div class="sm tn">${achText(a, s)}</div><div class="bar"><i style="width:${w}%"></i></div>
+      ${s.open ? `<button type="button" class="btn gold sm2 aclaim" data-a="achget" data-k="${a.k}">Claim ${rewTxt(r)}</button>` : `<div class="sm arew">${full ? 'Complete' : `Reward: ${rewTxt(r)}`}</div>`}</div></div>`;
+  };
+  const tyc = a => {
+    const s = achState(a), full = s.got >= s.max, r = achRew(a, Math.min(s.max - 1, s.got)), body = `<b>${TYN[a.ty]}</b><span class="sm tn">${s.done >= s.max ? s.val : `${s.val} of ${s.next}`}</span>${achPips(s)}${s.open ? `<span class="tyget">Claim ${nb(r.c)}</span>` : ''}`;
+    return s.open ? `<button type="button" class="tyc rdy" id="ach-${a.k}" data-a="achget" data-k="${a.k}" style="--tc:var(--t${a.ty})" aria-label="${TYN[a.ty]} collector: claim ${nb(r.c)} coins">${body}</button>` : `<div class="tyc${full ? ' full' : ''}" id="ach-${a.k}" style="--tc:var(--t${a.ty})">${body}</div>`;
+  };
+  const html = `<div class="row" style="justify-content:space-between"><h2 class="h" style="font-size:22px;margin:0">Achievements</h2><button type="button" class="btn sm2" data-a="close">Close</button></div>
+    <div class="ahead" style="--rk:${R.c}">${avFrame(R, 'lg', 1)}<div class="sp"><div class="sm">Your rank</div><b class="arank">${R.n}</b>
+      <div class="bar"><i style="width:${pct}%;background:${R.c}"></i></div><div class="sm tn" style="margin-top:5px">${R.p} of ${tot} medals${R.nn ? ` · ${R.next - R.p} more to ${R.nn}` : ' · the highest rank'}</div></div></div>
+    <div class="rkl">${RANKS.map((r, i) => `<span class="${i <= R.i ? 'on' : ''}${i === R.i ? ' now' : ''}" style="--rk:${r[2]}"><b>${r[0]}</b><i class="tn">${r[1]}</i></span>`).join('')}</div>
+    <p class="sm">Every reward you claim is a medal. Medals raise your rank, and your rank is the frame and stamp around your picture.</p>
+    ${sum.open ? `<button type="button" class="btn gold wide" data-a="achall">Claim all ${sum.open} reward${sum.open > 1 ? 's' : ''}</button>` : ''}
+    ${gs.map(g => `<div class="lab">${g}</div><div class="card alist">${ACH.filter(a => a.g === g && a.ty == null).map(row).join('')}</div>`).join('')}
+    <div class="lab">Types · species caught of each type</div><div class="tygrid">${ACH.filter(a => a.ty != null).map(tyc).join('')}</div>
+    <button type="button" class="btn wide" data-a="avatar">${S.av ? 'Change character' : 'Pick a character'}</button>`;
+  const sh = document.querySelector('#sheet .sheet.achsh');
+  if (sh) { const y = sh.scrollTop; sh.innerHTML = `<span class="grab"></span>${html}`; sh.scrollTop = y; }
+  else { openSheet(html); const s = document.querySelector('#sheet .sheet'); if (s) s.classList.add('achsh'); }
+}
+/* Ny rang: bildet i den nye rammen, og stempelet som slås ned. Ligger over arket til du trykker videre. */
+function rankUp(R) {
+  const w = $('#sheet'); if (w.hidden) return;
+  const old = w.querySelector('.rkup'); if (old) old.remove();
+  const d = document.createElement('div'); d.className = 'rkup'; d.style.setProperty('--rk', R.c);
+  d.innerHTML = `<div class="lab">New rank</div>${avFrame(R, 'xl')}<span class="stamp">${R.n}</span><p class="sm">Your picture has a new frame.${R.nn ? ` ${R.next - R.p} more medals to ${R.nn}.` : ' This is the highest rank there is.'}</p><button type="button" class="btn gold" data-a="rkok">Continue</button>`;
+  w.appendChild(d); sfx.rank(); buzz([20, 60, 90]);
+}
 function topBar() {
-  const l = tlv(), a = tlvXp(l), b = tlvXp(l + 1), st = streak();
-  return `<div class="top">${S.av ? `<button type="button" class="avb" data-a="avatar" aria-label="Change your character">${tsprite(S.av)}<span class="avl tn">${l}</span></button>` : `<div class="lv tn"><small>LVL</small>${l}</div>`}
-    <div class="sp"><div class="row" style="justify-content:space-between"><b>Trainer</b>${st >= 2 ? `<span class="pill" style="color:var(--sage)">${st}-day streak</span>` : ''}</div>
+  const l = tlv(), a = tlvXp(l), b = tlvXp(l + 1), st = streak(), as = U.as || achSum(), R = as.R;
+  return `<div class="top"><button type="button" class="avb avf rk${R.i}${S.av ? '' : ' noav'}" data-a="ach" style="--rk:${R.c}" aria-label="Achievements. Rank: ${R.n}${as.open ? `. ${as.open} reward${as.open > 1 ? 's' : ''} to claim` : ''}">${S.av ? `${avIn(R)}<span class="avl tn">${l}</span>` : `${R.i >= RANKS.length - 1 ? '<i class="rkring"><i></i></i>' : ''}<span class="lv tn"><small>LVL</small>${l}</span>`}${as.open ? '<i class="dot"></i>' : ''}</button>
+    <div class="sp"><div class="row" style="justify-content:space-between"><b class="rkt" style="color:${R.c}">${R.n}</b>${st >= 2 ? `<span class="pill" style="color:var(--sage)">${st}-day streak</span>` : ''}</div>
     <div class="bar" style="margin-top:7px"><i style="width:${Math.round((S.xp - a) / (b - a) * 100)}%"></i></div>
     <div class="sm tn" style="margin-top:4px">${nb(S.xp - a)} of ${nb(b - a)} XP to level ${l + 1}</div></div>
     ${coinEl(S.coins)}</div>`;
@@ -443,7 +513,10 @@ VIEW.profil = () => {
   for (let i = 0; i < 70; i++) { const d = addDays(mon, i), k = dayKey(d), m = (S.log[k] || { m: 0 }).m; hm += `<i class="${m ? (m < 90 ? 'l1' : m < 180 ? 'l2' : m < 270 ? 'l3' : 'l4') : ''}${k === dayKey() ? ' td' : ''}" title="${d.getDate()}.${d.getMonth() + 1}: ${m} min"></i>`; }
   const all = [1, 2, 3, 4, 5].reduce((s, x) => s + dexCount(x), 0), sp = focusSplit(), hasS = Object.keys(S.fag).length > 0;
   return `<h1 class="big">Profile</h1>${topBar()}
-    <button type="button" class="card avcard" data-a="avatar">${S.av ? tsprite(S.av) : '<span class="tsb"></span>'}<span class="sp"><span class="sm">Your character</span><b>${S.av ? esc(avName()) : 'Pick a character'}</b><span class="sm">${S.av ? 'Tap to change. Shown here and in the intro before boss battles.' : 'Choose who you are: it becomes your profile picture and shows in the intro before boss battles.'}</span></span></button>
+    ${(() => { const as = U.as || achSum(), R = as.R, pct = R.next ? Math.round((R.p - R.at) / (R.next - R.at) * 100) : 100;
+      return `<div class="card avcard" style="--rk:${R.c}"><button type="button" class="avpb" data-a="ach" aria-label="Achievements. Rank: ${R.n}">${avFrame(R, 'lg', 1)}</button><span class="sp"><span class="sm">${S.av ? esc(avName()) : 'No character yet'}</span><b>${R.n}</b>
+        <span class="bar"><i style="width:${pct}%;background:${R.c}"></i></span><span class="sm tn">${R.p} of ${achTotal()} medals${R.nn ? ` · ${R.next - R.p} more to ${R.nn}` : ''}</span></span></div>
+      <div class="row"><button type="button" class="btn sp${as.open ? ' gold' : ''}" data-a="ach">${as.open ? `${as.open} reward${as.open > 1 ? 's' : ''} ready` : 'Achievements'}</button><button type="button" class="btn sp" data-a="avatar">${S.av ? 'Change character' : 'Pick a character'}</button></div>`; })()}
     <h2 class="h">Badges</h2><div class="card" style="padding-top:6px;padding-bottom:6px">${badges}</div>
     <p class="sm">Each badge fills with focus hours in that subject. 25, 50 and 75% give an epic encounter, and a full badge gives a legendary one. A reward needs time logged here in the app: ${MSGATE / 60} hours in the subject for each one, and ${BADGEGATE / 60} hours in all for the legendary.</p>
     <h2 class="h">Stats</h2>
@@ -768,6 +841,18 @@ const A = {
   spec: el => specSheet(+el.dataset.k),
   close: () => closeSheet(),
   avatar: () => avSheet(false),
+  ach: () => achSheet(),
+  achget: el => {
+    const a = achBy(el.dataset.k), R0 = rankOf(), r = achClaim(el.dataset.k); if (!r) return;
+    sfx.coin(); buzz(12); U.asN = null; render(); achSheet(); toast(`${a.n}: ${rewTxt(r)}`);
+    const R1 = rankOf(); if (R1.i > R0.i) rankUp(R1);
+  },
+  achall: () => {
+    const R0 = rankOf(), o = achClaimAll(); if (!o.n) return;
+    sfx.sell(); buzz([12, 30, 12]); U.asN = null; render(); achSheet(); toast(`${o.n} medal${o.n > 1 ? 's' : ''}: ${rewTxt(o)}`);
+    const R1 = rankOf(); if (R1.i > R0.i) rankUp(R1);
+  },
+  rkok: () => { const l = document.querySelector('#sheet .rkup'); if (l) l.remove(); },
   avall: () => avSheet(true),
   avpick: el => { S.av = el.dataset.k || ''; save(); closeSheet(); render(); toast(S.av ? `You are now ${avName()}.` : 'Character removed.'); },
   sort: el => { U.sort = el.dataset.k; render(); },

@@ -137,6 +137,15 @@ const HELP = [
     <div class="hgrid packs">${['poke', 'great', 'ultra', 'master'].map(k => `<span style="--pc:${PACKS[k].c}"><b>${PACKS[k].n.replace(' Pack', '')}</b><span class="sm tn">${nb(PACKS[k].p)}</span><span class="sm tn">${+(PACKS[k].slots[2].leg * 100).toFixed(1)} %</span></span>`).join('')}</div>
     ${hP('The percentage is the chance of a <b>legendary</b> in the last card. The card does not say who it is: you find out when you meet it in the grass.')}` },
 
+  { k: 'ach', n: 'Achievements and rank', s: 'Medals, rewards and the frame around your picture', ic: () => hSym('★', 'var(--gold)'), body: () => { const R = rankOf(); return `
+    ${hP('Tap <b>your picture</b> at the top of the Focus page to open your achievements.')}
+    <div class="hach" style="--rk:${R.c}">${avFrame(R, 'lg', 1)}<div class="sp"><b style="color:${R.c}">${R.n}</b><p class="sm">${R.p} of ${achTotal()} medals${R.nn ? ` · ${R.next - R.p} more to ${R.nn}` : ''}</p></div></div>
+    ${hRow(hSym('●', 'var(--gold)'), 'Steps and medals', 'An achievement has up to five steps: study hours, species caught, League wins and so on. When a step is reached, a gold dot shows on your picture. Claim it for a reward, and it counts as one medal.')}
+    ${hRow(hSym('◆', 'var(--violet)'), 'Rank', `Medals raise your rank: ${RANKS.map(r => `${r[0]} at ${r[1]}`).join(', ')}. The rank is the frame and stamp around your picture.`)}
+    ${hRow(coinEl(ACOIN[1]), 'Rewards', `The five steps pay ${ACOIN.map(nb).join(', ')} coins. A few pay Rare Candy or a Mega Stone as well.`)}
+    ${hRow(hSym('18', 'var(--blue)'), 'One for every type', 'Catch 5, 12 and 25 different species of a type. Eighteen types, three medals each.')}
+    <button type="button" class="btn wide" data-a="ach">Open your achievements</button>`; } },
+
   { k: 'fair', n: 'Fair play', s: 'What the game checks, and what it trusts you with', ic: () => hSym('✓', 'var(--sage)'), body: () => `
     ${hP('Fokusdex cannot see whether you are really studying. It trusts you with that, and closes the shortcuts it can:')}
     ${hRow(hSym('⟲', 'var(--sage)'), 'Leaving a battle', 'The battle is saved after every turn and goes on where it was. Giving up counts as a loss.')}
@@ -200,7 +209,7 @@ function tourSteps() {
     { pic: `<div class="tr-bar">${hBar(0.62, 0.5, top)}<span class="sm">today's battle bonus</span></div>`, n: '3 · Study raises the battle bonus', t: `Every minute you study today raises today's bonus, from ×0.5 up to ×${top} at your goal of ${hrs(g)} hours. It multiplies the coins you win in battles.` },
     { pic: `<div class="tr-rew"><span><b class="tn">+450</b><span class="sm">XP</span></span><span><b class="tn">${coinEl(135)}</b><span class="sm">coins</span></span><span>${ballEl('poke', '34px')}<span class="sm">encounters</span></span></div>${hMeter()}`, n: '4 · Collect your rewards', t: 'After a session you get XP and coins, and the Pokémon you found wait in the grass. Stop the marker in the green zone to catch them.' },
     { pic: `<div class="tr-modes"><span class="ficon hfi">L</span><span class="ficon hfi">F</span><span class="ficon hfi">W</span><span class="evc-ic hev" style="--ec:${EVENTS.gold.c}">${EVENTS.gold.ic}</span></div>`, n: '5 · Battle when you are done', t: 'Press Done for today and choose one of three battle modes. Some days a special event shows up, with a bonus just for you. Battles are where most coins come from.' },
-    { pic: '<span class="helpb tr-q" aria-hidden="true">?</span>', n: 'Questions?', t: 'The ? in the top corner opens the question hub: short answers with pictures. Rules and rewards on the Focus page has every number. And the first time you train a Pokémon, the game explains how.' }
+    { pic: '<span class="helpb tr-q" aria-hidden="true">?</span>', n: 'Questions?', t: 'The ? in the top corner opens the question hub: short answers with pictures. Rules and rewards on the Focus page has every number. Tap your picture to see your achievements and rank.' }
   ];
 }
 function tourShow(i) {

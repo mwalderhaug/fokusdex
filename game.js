@@ -479,6 +479,7 @@ function throwBall(e, ball, zone) {
   if (!(S.items[ball] > 0) || e.tr <= 0) return null;
   S.items[ball]--; e.tr--;
   const crit = Math.random() < critP(), p = Math.min(0.97, catchP(e.id, ball, zone) * (crit ? CRITM : 1)), ok = Math.random() < p;
+  if (zone === 2) achInit().pf++;
   S.seen[e.id] = 1;
   let mon = null, isNew = false; const bonus = { c: 0, why: [] };
   if (ok) {
@@ -541,6 +542,8 @@ function grant(fag, real, full, plan) {
   day.m += min; day.s++; day.f[fag] = (day.f[fag] || 0) + real; if (w < 1) day.x = (day.x || 0) + real;
   S.fm[fag] = (S.fm[fag] || 0) + real;
   stamp(); S.run = (S.run || 0) + real; S.lastEnd = Date.now();
+  /* Achievements: lengste rekke dager, og dager med dagsmålet nådd (hver dag teller én gang, også om målet endres underveis). */
+  { const A = achInit(), g0 = typeof goalMin === 'function' ? goalMin() : S.cap; A.bs = Math.max(A.bs || 0, streak()); if (A.gd !== k && day.m >= g0) { A.goal = (A.goal || 0) + 1; A.gd = k; } }
   S.party.forEach((u, i) => {
     const m = monBy(u); if (!m) return;
     const l0 = m.lv; m.xp += Math.round(min * 10 * (i ? 0.3 : 1)); m.lv = lvOf(m.xp);
@@ -596,6 +599,74 @@ function grant(fag, real, full, plan) {
   return R;
 }
 
+/* ---------- Achievements og rang ----------
+   Hvert mål har flere trinn (t), og hvert trinn gir en belønning som hentes med ett trykk (r: mynter, c = Rare Candy, u = Ultra Balls, m = Mega Stone).
+   S.ach[k] = antall trinn som er hentet. Hvor langt du er kommet, leses av spillet slik det står (v), pluss noen tellere i S.st som ikke finnes
+   andre steder (ev utviklinger, pf perfekte kast, ch mestere slått, rw raid vunnet, bs lengste rekke dager, goal dager med dagsmålet nådd).
+   Hvert trinn du henter, er en medalje. Rangen (RANKS) følger antall medaljer og vises som ramme og stempel rundt profilbildet:
+   du rykker altså opp i det du henter en belønning, ikke midt i en kamp. */
+const ACOIN = [100, 250, 600, 1500, 4000], ATY = [80, 200, 500];
+const tyCount = t => Object.keys(S.caught).filter(id => { const d = D(+id); return d && (d[1] === t || d[2] === t); }).length;
+function achInit() {
+  if (S.st) return S.st;
+  const legs = Object.keys(S.caught).filter(id => isLeg(+id)).length;
+  const g0 = Math.max(60, S.cap || 360), hit = Object.keys(S.log).filter(d => S.log[d].m >= g0);
+  S.st = { ev: 0, pf: 0, ch: 0, rw: legs, bs: streak(), goal: hit.length, gd: hit.includes(dayKey()) ? dayKey() : '' };
+  return S.st;
+}
+const ACH = [
+  { g: 'Study', k: 'hours', n: 'Study hours', u: 'hours of focus', v: () => Math.floor(totalMin() / 60), t: [5, 25, 75, 150, 300] },
+  { g: 'Study', k: 'streak', n: 'Day streak', f: (v, n, s) => s.done >= s.max ? `Best streak: ${v} days in a row` : `Best streak: ${v} of ${n} days in a row`, v: () => Math.max(achInit().bs || 0, streak()), t: [3, 7, 14, 30, 60] },
+  { g: 'Study', k: 'goal', n: 'Daily goal', u: 'days with your daily goal reached', v: () => achInit().goal || 0, t: [1, 5, 15, 40, 100] },
+  { g: 'Trainer', k: 'tlv', n: 'Trainer level', f: (v, n, s) => s.done >= s.max ? `Trainer level ${v}` : `Trainer level ${v} · next medal at ${n}`, v: () => tlv(), t: [5, 10, 15, 20, 30] },
+  { g: 'Trainer', k: 'top', n: 'Strong team', f: (v, n, s) => s.done >= s.max ? `Your strongest Pokémon is Lv ${v}` : `Your strongest Pokémon is Lv ${v} · next medal at Lv ${n}`, v: () => S.mons.reduce((a, m) => Math.max(a, m.lv), 0), t: [20, 35, 50, 75, 100] },
+  { g: 'Trainer', k: 'train', n: 'Fully trained', u: 'Pokémon with all 510 training points', v: () => S.mons.filter(m => evSum(m) >= EVTOT).length, t: [1, 3, 6], r: [{ c: 600, k: 2 }, { c: 1500, k: 3 }, { c: 4000, k: 5 }] },
+  { g: 'Collection', k: 'dex', n: 'Species caught', u: 'different species caught', v: () => Object.keys(S.caught).length, t: [10, 30, 75, 150, 300] },
+  { g: 'Collection', k: 'shiny', n: 'Shiny hunter', u: 'shiny Pokémon owned', v: () => S.mons.filter(m => m.sh === 1).length, t: [1, 3, 10, 25], r: [{ c: 250 }, { c: 600, k: 2 }, { c: 1500, k: 3 }, { c: 4000, k: 5 }] },
+  { g: 'Collection', k: 'leg', n: 'Legendary collector', u: 'legendary species caught', v: () => Object.keys(S.caught).filter(id => isLeg(+id)).length, t: [1, 3, 8, 15], r: [{ c: 600, k: 2 }, { c: 1500, k: 3 }, { c: 4000, k: 5 }, { c: 8000, m: 1 }] },
+  { g: 'Collection', k: 'evo', n: 'Evolver', u: 'evolutions', v: () => achInit().ev || 0, t: [3, 10, 30] },
+  { g: 'Collection', k: 'perfect', n: 'Perfect throws', u: 'perfect throws', v: () => achInit().pf || 0, t: [10, 50, 200] },
+  { g: 'Collection', k: 'pack', n: 'Pack opener', u: 'encounter packs opened', v: () => S.packs || 0, t: [3, 15, 50] },
+  { g: 'League', k: 'lwin', n: 'League wins', u: 'League battles won', v: () => S.lad.best || 0, t: [5, 25, 75, 200, 500] },
+  { g: 'League', k: 'lap', n: 'Laps cleared', u: 'laps of the League cleared', v: () => S.lad.lap || 0, t: [1, 3, 6, 12], r: [{ c: 600, k: 2 }, { c: 1500, k: 3 }, { c: 3000, k: 4 }, { c: 6000, m: 1 }] },
+  { g: 'League', k: 'champ', n: 'Champion slayer', u: 'Champions beaten', v: () => achInit().ch || 0, t: [1, 3, 10], r: [{ c: 600, k: 2 }, { c: 1500, k: 3 }, { c: 4000, m: 1 }] },
+  { g: 'League', k: 'cynthia', n: 'The Sinnoh Champion', u: 'Beat Cynthia in the last battle of a League lap', v: () => (S.spw || {}).Cynthia || 0, t: [1], r: [{ c: 3000, k: 5 }] },
+  { g: 'League', k: 'ghetsis', n: 'No mercy', u: 'Beat Ghetsis, Champions Edition, in the last battle of a League lap', v: () => (S.spw || {}).Ghetsis || 0, t: [1], r: [{ c: 3000, k: 5 }] },
+  { g: 'Frontier and cups', k: 'fstreak', n: 'Frontier streak', f: (v, n, s) => s.done >= s.max ? `Best run: ${v} wins in a row` : `Best run: ${v} of ${n} wins in a row`, v: () => Math.max(S.fac.best || 0, (S.fac.run || {}).streak || 0), t: [5, 10, 20, 35] },
+  { g: 'Frontier and cups', k: 'cup', n: 'Trophies', u: 'cups won in the World Tournament', v: () => (S.pwt || {}).won || 0, t: [1, 5, 15, 40] },
+  { g: 'Raids', k: 'raid', n: 'Raid victories', u: 'legendary raids won', v: () => achInit().rw || 0, t: [1, 3, 8, 15], r: [{ c: 600, k: 2 }, { c: 1500, k: 3 }, { c: 4000, k: 5 }, { c: 8000, m: 1 }] },
+  { g: 'Raids', k: 'dark', n: 'The shadow', u: 'Catch Dark Mewtwo', v: () => S.mons.some(m => m.id === 150 && m.sh === 2) ? 1 : 0, t: [1], r: [{ c: 5000, m: 1 }] },
+  { g: 'Raids', k: 'ring', n: 'The Mega Ring', u: 'Earn the Mega Ring', v: () => S.ring ? 1 : 0, t: [1], r: [{ c: 1000, k: 2 }] }
+].concat(TYN.map((n, t) => ({ g: 'Types', k: 'ty' + t, n: `${n} collector`, ty: t, u: `${n}-type species caught`, v: () => tyCount(t), t: [5, 12, 25], r: ATY.map(c => ({ c })) })));
+const achBy = k => ACH.find(a => a.k === k);
+const achRew = (a, i) => (a.r && a.r[i]) || { c: ACOIN[Math.min(ACOIN.length - 1, i + (a.t.length < 5 ? 1 : 0))] };
+/* done = trinn klart, got = trinn hentet, val = hvor langt du er, next = neste mål (eller det siste når alt er klart).
+   Et trinn som er hentet, står: selger du en shiny etterpå, mister du ikke medaljen. */
+function achState(a) { const val = a.v(), got = Math.min(a.t.length, (S.ach || {})[a.k] || 0), done = Math.max(got, a.t.filter(x => val >= x).length); return { val, done, got, max: a.t.length, next: a.t[Math.min(a.t.length - 1, done)], open: done - got }; }
+const achOpen = () => ACH.reduce((n, a) => n + achState(a).open, 0);
+const achPoints = () => ACH.reduce((n, a) => n + achState(a).got, 0);
+const achTotal = () => ACH.reduce((n, a) => n + a.t.length, 0);
+/* Henter belønningen for neste trinn som er klart. Gir det som ble gitt, eller null. */
+function achClaim(k, quiet) {
+  const a = achBy(k); if (!a) return null; const st = achState(a); if (st.open <= 0) return null;
+  const r = achRew(a, st.got); S.coins += r.c || 0;
+  if (r.k) S.items.candy = (S.items.candy || 0) + r.k; if (r.u) S.items.ultra = (S.items.ultra || 0) + r.u; if (r.m) S.items.mstone = (S.items.mstone || 0) + r.m;
+  (S.ach || (S.ach = {}))[k] = st.got + 1; if (!quiet) save();
+  return r;
+}
+/* Henter alt som venter. Gir antall og summen. */
+function achClaimAll() {
+  const o = { n: 0, c: 0, k: 0, u: 0, m: 0 };
+  for (const a of ACH) { let r; while ((r = achClaim(a.k, 1))) { o.n++; o.c += r.c || 0; o.k += r.k || 0; o.u += r.u || 0; o.m += r.m || 0; } }
+  if (o.n) save();
+  return o;
+}
+const RANKS = [['Rookie', 0, '#a39b8f'], ['Novice', 6, '#a6c59c'], ['Skilled', 16, '#7fa8e6'], ['Expert', 30, '#b295e6'], ['Master', 50, '#e3c577'], ['Elite', 80, '#ffd9a0']];
+function rankFor(p) { let i = 0; RANKS.forEach((r, j) => { if (p >= r[1]) i = j; }); return { i, n: RANKS[i][0], c: RANKS[i][2], p, at: RANKS[i][1], next: RANKS[i + 1] ? RANKS[i + 1][1] : 0, nn: RANKS[i + 1] ? RANKS[i + 1][0] : '' }; }
+const rankOf = () => rankFor(achPoints());
+/* Alt på én gang, til forsiden: hvor mange belønninger som venter (open), medaljer (p) og rang (R). */
+function achSum() { let open = 0, p = 0; for (const a of ACH) { const s = achState(a); open += s.open; p += s.got; } return { open, p, R: rankFor(p) }; }
+
 /* ---------- Lag, utvikling, salg, butikk ---------- */
 function evoOpts(m) {
   return (EVO[m.id] || []).map(to => {
@@ -609,6 +680,7 @@ function evolve(m, to) {
   const o = evoOpts(m).find(x => x.to === to);
   if (!o || !o.ok) return false;
   if (o.stone) S.items.stone--;
+  achInit().ev++;
   m.id = to; S.seen[to] = 1; S.caught[to] = 1;
   save(); return true;
 }

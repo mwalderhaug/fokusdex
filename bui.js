@@ -1300,6 +1300,10 @@ function rulesSheet() {
       ${row('New species', NEWCOIN.map((c, i) => `${TIERS[i].toLowerCase()} ${c}`).join(' · ') + ' coins')}
       ${row('Perfect throw', `+${PERFCOIN} coins`)}${row('Catches in a row', `+${STREAKC} coins each from the third, up to ${STREAKMAX}`)}
       ${row('Critical capture', 'now and then the ball holds extra well')}</div>
+    <div class="card stack"><b>Achievements and rank</b><p class="sm">Tap your picture to see them. An achievement has up to five steps. Every step you claim pays a reward and counts as one medal, and medals raise your rank: the frame and stamp around your picture. There are ${achTotal()} medals in all.</p>
+      ${row('Reward for each step', ACOIN.map(nb).join(' · ') + ' coins')}${row('Type collectors', ATY.map(nb).join(' · ') + ' coins')}
+      ${row('Some also give', 'Rare Candy or a Mega Stone')}
+      ${row('Ranks', RANKS.map(r => `${r[0]} ${r[1]}`).join(' · ') + ' medals')}</div>
     <div class="card stack"><b>Fair play</b><p class="sm">The game trusts you with the clock and the timer, and closes the shortcuts it can.</p>
       ${row('A battle you leave', 'is saved after every turn and goes on where it was<br>giving up counts as a loss')}
       ${row('The device clock', 'set back or ahead: sessions and battles pause until it is right again')}
