@@ -1484,6 +1484,7 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .sbxbar{display:flex;align-items:center;gap:8px;margin-right:42px;padding:9px 10px 9px 14px;border-radius:16px;background:color-mix(in srgb,var(--gold) 16%,var(--card));box-shadow:0 0 0 1.5px color-mix(in srgb,var(--gold) 55%,transparent)}
 .sbxbar .sp{display:flex;flex-direction:column;flex:1 1 auto;min-width:0}.sbxbar b{color:var(--gold);font-size:14px;letter-spacing:.02em}
 .sbxbar .btn.gold{background:var(--gold);color:#2a2109}
+.sndb{display:flex;align-items:center;gap:10px;text-align:left}.sndb b{min-width:66px}.sndb .sm{flex:1}
 .sbxc{box-shadow:0 0 0 1px color-mix(in srgb,var(--gold) 40%,transparent)}
 /* ---------- Traileren ---------- */
 .tlr{position:absolute;inset:0;background:radial-gradient(120% 80% at 50% 18%,#1d1a16,#0b0a09 72%);display:flex;align-items:center;justify-content:center;overflow:hidden;text-align:center;transition:background .6s}

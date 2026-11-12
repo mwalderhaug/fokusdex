@@ -143,8 +143,13 @@ const sfx = {
   sell: () => { tone(1319, 0, 0.05); tone(988, 0.05, 0.05); tone(1568, 0.11, 0.14, 0.04, 'triangle'); },
   lvl: () => seq([784, 988, 1175, 1568], 0.08, 0.12, 0.045, 'triangle'),
   hatch: () => { noise(0, 0.15, 0.05, 900, 2500); seq([1047, 1319, 1568, 2093], 0.07, 0.1, 0.04, 'triangle'); },
-  evo: () => [392, 494, 587, 784, 988, 1175].forEach((f, i) => tone(f, i * 0.11, 0.2, 0.06, 'triangle'))
+  evo: () => [392, 494, 587, 784, 988, 1175].forEach((f, i) => tone(f, i * 0.11, 0.2, 0.06, 'triangle')),
+  /* Øyeblikk som har sin egen fanfare i pakken. Uten pakke låter de som den nærmeste av lydene over. */
+  caught: () => sfx0.got(), evolved: () => sfx0.evo(), item: () => sfx0.ok(), keyitem: () => sfx0.fav(), berry: () => sfx0.ok(), egg: () => sfx0.ok(), learn: () => sfx0.lvl(), heal: () => sfx0.ok(), saved: () => sfx0.ok()
 };
+/* sfx0 = de innebygde lydene. Har pakken en lyd med samme navn (PACK.sys), spilles den i stedet. */
+const sfx0 = Object.assign({}, sfx);
+for (const k of Object.keys(sfx)) sfx[k] = (...a) => { if (!(S.sound && typeof PACK !== 'undefined' && PACK.sys && PACK.sys(k))) sfx0[k](...a); };
 /* Pokémon-skrik: lydfilene fra Black/White-tiden i PokeAPI sitt åpne lydarkiv (nyere skrik som reserve). Hentes første gang og mellomlagres. */
 const CRY = new Map();
 function cryBuf(id) {
@@ -171,7 +176,7 @@ function cry(id, delay = 0, vol = 0.45) {
   }).catch(() => {});
 }
 /* Lyd per type trykk. Handlinger med egen lyd (kast, kjøp, utvikling osv.) får ikke en ekstra. */
-const OWN = new Set(['mgive', 'triv', 'trev', 'mvtog', 'start', 'throw', 'buy', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'honyes', 'clkagain', 'help', 'tour', 'tourgo', 'tourend', 'tourhub', 'trtipok', 'trtip', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats', 'achget', 'achall']);
+const OWN = new Set(['mgive', 'triv', 'trev', 'mvtog', 'start', 'throw', 'buy', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'honyes', 'clkagain', 'help', 'tour', 'tourgo', 'tourend', 'tourhub', 'trtipok', 'trtip', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats', 'achget', 'achall', 'sbxsnd']);
 const SND = {
   tab: 'tab', lagv: 'tab', dexr: 'tab',
   fag: 'chip', min: 'chip', reg: 'chip', sort: 'chip', filt: 'chip', sety: 'chip', extog: 'chip',
@@ -816,7 +821,7 @@ function doThrow() {
   const step = () => {
     if (i < wobs) { st.className = 'stage held'; void st.offsetWidth; st.className = 'stage held wob'; sfx.wob(i); buzz(20); i++; return setTimeout(step, 700); }
     if (r.ok) {
-      st.className = 'stage held'; sfx.got(); buzz([60, 40, 60, 40, 140]);
+      st.className = 'stage held'; if (e.sh || isLeg(e.id)) sfx.caught(); else sfx.got(); buzz([60, 40, 60, 40, 140]);
       $('#e-stars').innerHTML = Array.from({ length: 10 }, (_, k) => { const a = k / 10 * 6.283, d = 70 + Math.random() * 50; return `<i style="--dx:${Math.round(Math.cos(a) * d)}px;--dy:${Math.round(Math.sin(a) * d)}px;animation-delay:${k * 0.02}s"></i>`; }).join('');
       const info = $('#e-info'); if (info) info.innerHTML = catchCard(r, e);
       { const sk = $('.estk'); if (sk) sk.textContent = `${S.cst} in a row`; }
@@ -841,7 +846,7 @@ function evoShow(m, from) {
   closeSheet();
   ov(`<div class="mid r${tierOf(m.id)}"><div class="stage rev">${spr(m.id, { ani: 1, sh: m.sh, mega: m.mega })}</div><div><p class="mut">${esc(D(from)[0])} evolved into</p><div class="ename">${esc(D(m.id)[0])}</div><div class="row" style="justify-content:center;margin-top:8px;gap:6px">${types(m.id)}</div></div></div>
     <div class="acts"><button type="button" class="btn pri" data-a="home">Continue</button></div>`, 'tint', `var(--t${D(m.id)[1]})`);
-  sfx.evo(); cry(m.id, 750); buzz([80, 50, 80, 50, 200]);
+  sfx.evolved(); cry(m.id, 750); buzz([80, 50, 80, 50, 200]);
 }
 
 /* ---------- Handlinger ---------- */
@@ -903,7 +908,7 @@ const A = {
   evolve: el => { const m = monBy(+el.dataset.u), from = m.id; if (evolve(m, +el.dataset.k)) { render(); evoShow(m, from); } },
   sell: el => { const m = monBy(+el.dataset.u); if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.innerHTML = 'Tap again to sell'; return; } const v = sell(m); save(); sfx.sell(); closeSheet(); render(); toast(`Sold for ${nb(v)} coins.`); },
   selldupes: el => { const du = dupes(); if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = `Tap again to sell ${du.length}`; return; } let v = 0; du.forEach(m => { v += sell(m); }); save(); sfx.sell(); render(); toast(`${du.length} sold for ${nb(v)} coins.`); },
-  buy: el => { if (buy(el.dataset.k)) { sfx.coin(); render(); toast(`${SHOP[el.dataset.k].n} bought.`); } },
+  buy: el => { if (buy(el.dataset.k)) { (el.dataset.k === 'egg' ? sfx.egg : sfx.coin)(); render(); toast(`${SHOP[el.dataset.k].n} bought.`); } },
   pack: el => { const k = el.dataset.k, out = openPack(k); if (!out) return toast(S.pend.length > PACKMAX ? 'Catch some of your waiting encounters first.' : 'Not enough coins.'); sfx.coin(); packShow(k, out); },
   pkopen: () => { const o = $('#pko'); if (!o || o.classList.contains('open')) return; o.classList.add('open'); sfx.appear(); buzz([30, 40, 30]); $('#pkt').textContent = 'Tap the cards to turn them'; },
   pkflip: el => {

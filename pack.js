@@ -69,7 +69,7 @@ const PACK = (() => {
   /* Rett etter at pakken er funnet, hentes det første kampen trenger i bakgrunnen: HP-boksene, introbildene, ballene, animasjonsdataene og trenerlåtene. */
   function warmUp() {
     const m = P.man, list = [m.hud && m.hud.f, m.vs && m.vs.f, 'ui/ball_pokeball.png', 'ui/ball_pokeball_open.png'].filter(Boolean);
-    list.forEach(f => P.url(f)); loadHud(); loadMenu(); loadFont(); loadAnims(); loadEbx();
+    list.forEach(f => P.url(f)); loadHud(); loadMenu(); loadFont(); loadAnims(); loadEbx(); loadSys(false);
     (m.music || []).filter(x => x.c === 'trainer').forEach(x => P.url(x.f));
     /* Bildet og låta til den som venter i ligaen hentes også, og forsiden tegnes på nytt når bildet er klart (bare hvis den står framme). */
     try { if (S.party.length) { const t = nextTrainer(), tr = trainerInfo(t), f = P.trackFor({ tr, lap: t.lap, rd: Math.floor(t.n / 2), mode: 'league' }), pt = m.trainers && m.trainers[tr.img.split('|')[0]]; if (f) P.url(f); if (pt && !mem.get(pt)) P.url(pt).then(u => { if (u && !S.timer && ($('#ov') || {}).hidden && U.tab === 'fokus' && ($('#sheet') || {}).hidden !== false) render(); }); } } catch (_) {}
@@ -290,6 +290,26 @@ const PACK = (() => {
       s.buffer = d; g.gain.setValueAtTime(v, t); if (F) s.playbackRate.value = F.rate; s.connect(g); g.connect(o); s.start();
       last = { s, g, v, t0: t, len: d.duration / (F ? F.rate : 1) };
       if (F && last.len > F.max + 0.2) sfxCut(last, F.max);
+      return true;
+    } catch (_) { return false; }
+  };
+  /* SYSTEMLYDENE (manifest.sys: lydnavn → fil): trykk, åpne og lukke, kast, og de korte fanfarene fra spillene. Appens egne lyder (sfx i ui.js) spør
+     her først, så pakken bytter dem ut én for én, og det som ikke finnes i pakken, låter som før. Filene er små og hentes når pakken er funnet;
+     de dekodes første gang en lyd trengs (det krever at lyden er låst opp av et trykk), og da alle på en gang. Styrken har et tak, godt under
+     kamplydene: SYSCAP for de korte, SYSCAPJ for fanfarene (over SYSLONG sekunder). */
+  const SYSCAP = -27, SYSCAPJ = -23, SYSLONG = 1.2;
+  let sysAll = false;
+  const warmF = f => { if (!f || bufs.has(f) || !S.sound) return; bufs.set(f, null); P.url(f).then(u => u && fetch(u)).then(r => r && r.arrayBuffer()).then(b => b && ac() && AC.decodeAudioData(b)).then(d => { if (d) bufs.set(f, d); else bufs.delete(f); }).catch(() => bufs.delete(f)); };
+  const loadSys = decode => { const m = P.ok && P.man.sys; if (!m) return; for (const k in m) { if (decode) warmF(m[k]); else P.url(m[k]); } if (decode) sysAll = true; };
+  P.sysPath = name => (P.ok && P.man.sys && P.man.sys[name]) || '';
+  P.sysNames = () => (P.ok && P.man.sys ? Object.keys(P.man.sys) : []);
+  P.sys = (name, vol) => {
+    const f = P.sysPath(name); if (!f || !S.sound) return false;
+    if (!sysAll) loadSys(true);
+    const d = bufs.get(f); if (!d) { warmF(f); return false; }
+    try {
+      const o = out(); if (!o) return false; const s = AC.createBufferSource(), g = AC.createGain(), L = loudOf(d), cap = d.duration > SYSLONG ? SYSCAPJ : SYSCAP;
+      s.buffer = d; g.gain.value = (vol == null ? 1 : vol) * (L > cap ? Math.pow(10, (cap - L) / 20) : 1); s.connect(g); g.connect(o); s.start();
       return true;
     } catch (_) { return false; }
   };

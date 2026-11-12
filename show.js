@@ -37,7 +37,7 @@ function raidCaught(B, res) {
   at(750, () => { st.className = 'stage in'; sfx.thr(); buzz(30); });
   at(1200, () => { st.className = 'stage held'; void st.offsetWidth; st.className = 'stage held wob'; sfx.wob(0); buzz(20); });
   at(1950, () => {
-    st.className = 'stage held'; sfx.got(); buzz([60, 40, 60, 40, 140]);
+    st.className = 'stage held'; sfx.caught(); buzz([60, 40, 60, 40, 140]);
     $('#rc-stars').innerHTML = Array.from({ length: 10 }, (_, k) => { const a = k / 10 * 6.283, d = 70 + Math.random() * 50; return `<i style="--dx:${Math.round(Math.cos(a) * d)}px;--dy:${Math.round(Math.sin(a) * d)}px;animation-delay:${k * 0.02}s"></i>`; }).join('');
     $('#rc-info').innerHTML = catchCard({ mon: m, crit: 0, bonus: { c: res.cau.c || 0, why: res.cau.c ? [`New species +${res.cau.c}`] : [] }, isNew: res.cau.isNew }, { id: m.id });
     cry(m.id, 500); $('#rc-act').style.visibility = 'visible';
@@ -273,9 +273,20 @@ function sbxTool(k) {
   else if (k === 'day') sbxDay();
   else if (k === 'dayl' || k === 'dayf' || k === 'dayp') sbxDay({ dayl: 'league', dayf: 'factory', dayp: 'pwt' }[k]);
 }
+/* Lydtavla: hver lyd i appen (sfx), hva den brukes til, og om den kommer fra pakken (PACK.sys) eller er den innebygde. */
+const SNDUSE = { tap: 'Any button', tab: 'Tabs', chip: 'Filters and choices', ball: 'Choosing a ball', open: 'A sheet opens', close: 'Close and back', ok: 'Confirmed', warn: 'Warnings', fav: 'Favourite',
+  start: 'A session or a battle starts', done: 'A session is complete', coin: 'Coins and purchases', sell: 'Selling', found: 'An encounter', appear: 'A wild Pokémon appears', thr: 'A ball is thrown', wob: 'The ball wobbles',
+  got: 'Caught', caught: 'Caught: shiny or legendary', fail: 'It broke free', flee: 'It fled', lvl: 'Level up', evo: 'A rare find, a Mega Stone', evolved: 'Evolution', hatch: 'An egg hatches', egg: 'An egg bought',
+  rank: 'A new rank', event: 'A special event', item: 'An item to hold', keyitem: 'A plate or another lasting item', berry: 'A berry', learn: 'Not in use yet', heal: 'Not in use yet', saved: 'Not in use yet' };
+function sbxSounds() {
+  openSheet(`<h2 class="h" style="margin-top:0">Sounds</h2><p class="sm">Tap one to hear it. <b>Pack</b> means it comes from your resource pack. The others are the built-in sounds, which is also what plays without the pack.</p>
+    <div class="stack" style="margin-top:10px">${Object.keys(sfx).map(k => `<button type="button" class="btn wide sndb" data-a="sbxsnd" data-k="${k}"><b>${k}</b><span class="sm">${SNDUSE[k] || ''}</span>${PACK.sysPath(k) ? '<span class="pill">Pack</span>' : ''}</button>`).join('')}</div>
+    <button type="button" class="btn wide nf" data-a="sbxtools">Back to the tools</button>`);
+}
 function sbxTools() {
   openSheet(`<h2 class="h" style="margin-top:0">Sandbox tools</h2><p class="sm">Everything here changes the copy only. Leave the sandbox, and your real save is exactly as it was.</p>
     <div class="stack" style="margin-top:10px">${SBXT.map(([k, n]) => `<button type="button" class="btn wide" data-a="sbxtool" data-k="${k}">${n}</button>`).join('')}</div>
+    <button type="button" class="btn wide" data-a="sbxsounds">Sounds · hear every interface sound</button>
     <button type="button" class="btn wide nf" data-a="lab">Back to the Sandbox screen</button><button type="button" class="btn wide gold" data-a="sbxleave">Leave the sandbox</button>`);
 }
 function sbxPick(what) {
@@ -328,6 +339,8 @@ const XA = {
   sbxfac: el => { const r = Math.max(1, +el.dataset.k || 1); if (!sbxEnter()) return; sbxDay(); sbxFac(r); sbxGo(`Sandbox: a Frontier run from round ${r}.`); },
   sbxcup: el => { const i = +el.dataset.k; if (!CUPS[i] || !sbxEnter()) return; sbxDay(); SBX.cup = i; sbxGo(`Sandbox: the ${CUPS[i].n}.`); },
   sbxtools: () => { if (!SBX) return; sfx.open(); sbxTools(); },
+  sbxsounds: () => { if (!SBX) return; sbxSounds(); },
+  sbxsnd: el => { const k = el.dataset.k; if (sfx[k]) sfx[k](k === 'wob' ? 1 : undefined); },
   sbxtool: el => { if (!SBX) return; const k = el.dataset.k; sbxTool(k); sfx.ok(); closeSheet(); render(); toast((SBXT.find(x => x[0] === k) || ['', 'Done'])[1] + ': done.'); },
   sbxleave: () => { if (!SBX) return; closeSheet(); closeOv(); sbxLeave(); render(); toast('Back in your real save. Nothing from the sandbox was kept.'); }
 };
