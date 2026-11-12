@@ -808,7 +808,8 @@ function doThrow() {
     }
     setTimeout(() => {
       E.busy = false;
-      if (E.done) { $('#e-ctl').innerHTML = `<div class="acts">${S.pend.length ? `<button type="button" class="btn gold" data-a="hunt">Next encounter · ${S.pend.length} left</button><button type="button" class="btn nf" data-a="home">Done</button>` : '<button type="button" class="btn pri" data-a="home">Done</button>'}</div>`; }
+      const ctl = $('#e-ctl'); if (!ctl) return;
+      if (E.done) { ctl.innerHTML = `<div class="acts">${S.pend.length ? `<button type="button" class="btn gold" data-a="hunt">Next encounter · ${S.pend.length} left</button><button type="button" class="btn nf" data-a="home">Done</button>` : '<button type="button" class="btn pri" data-a="home">Done</button>'}</div>`; }
       else { st.className = 'stage'; drawEnc(false); aim(); }
     }, r.ok ? 1300 : 650);
   };

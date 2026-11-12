@@ -293,7 +293,7 @@ async function legendIntro(B) {
   const watch = setInterval(() => { if (gone()) pl.stop(); }, 300);
   await pl.done; clearInterval(watch); document.removeEventListener('keydown', key);
   if (gone()) return stop();
-  if (!started && !PACK.playing() && !MUS.id) battleMusic(B);
+  if (!started && !PACK.playing() && !MUSIC.playing()) battleMusic(B);
   root.classList.add('d'); await T(240);
 }
 /* Dagens event: dine egne som får noe ut av det (laget først, så de sterkeste i boksen). */
@@ -949,7 +949,7 @@ async function playOne(B, e) {
     paintSprite(side, 'gone');
     if (!wild) await tossBall(side);
     await sprReady(side, 1500); if (BT.B !== B || !sp.isConnected) return;
-    if (wild && await raidEntry(B)) { if (BT.B !== B || !sp.isConnected) return; if (!PACK.playing() && !MUS.id) music(musicKey(B)); }
+    if (wild && await raidEntry(B)) { if (BT.B !== B || !sp.isConnected) return; if (!PACK.playing() && !MUSIC.playing()) music(musicKey(B)); }
     else {
       if (big) { BSFX.ace(); buzz([80, 40, 80, 40, 240]); await FX.ace(anc(side, 26), B.tr.ty, B.tr); if (!PACK.playing()) music(musicKey(B)); }
       sp.className = 'bs ' + side + ' in' + (ace ? ' ace' : ''); BSFX.ball(); FX.open(anc(side), big ? '#ffe9a8' : '');
