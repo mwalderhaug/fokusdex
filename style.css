@@ -373,7 +373,7 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 /* Trening: seks rader (stat, verdi, anlegg, trening) og kjøpene for den valgte under. */
 .trv{display:flex;flex-direction:column;gap:14px}
 .trs{display:flex;flex-direction:column;gap:4px}
-.trh,.trr{display:grid;grid-template-columns:70px 32px minmax(0,1fr) 20px minmax(0,1fr) 28px;align-items:center;gap:8px;padding:0 12px}
+.trh,.trr{display:grid;grid-template-columns:70px 32px minmax(0,1fr) 20px minmax(0,2fr) 28px;align-items:center;gap:8px;padding:0 12px}
 .trh{font-size:11px;font-weight:700;color:var(--ink2);margin-bottom:2px}
 .trh span:nth-child(n+3){grid-column:span 2}
 .trr{min-height:40px;border-radius:14px;text-align:left;background:var(--card);box-shadow:0 0 0 1px var(--line)}
@@ -381,6 +381,7 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .trr b{font-size:13.5px;font-weight:700}
 .trr .v{font-weight:800;text-align:right}
 .trr .n{font-size:12px;color:var(--ink2);text-align:right}
+.trr .n.ht{color:var(--gold);font-weight:800}
 .tb{height:7px;border-radius:4px;background:rgba(255,255,255,.09);overflow:hidden}
 .tb>i{display:block;height:100%;border-radius:4px;background:var(--tc);transition:width .35s cubic-bezier(.2,.7,.2,1)}
 .tb.g>i{background:var(--gold)}
@@ -1385,3 +1386,64 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 @media (prefers-reduced-motion:reduce){.rkring i,.apips i.rdy,.rkup .avf,.rkup>.stamp{animation:none}}
 .hach{display:flex;align-items:center;gap:20px;padding:10px 4px 20px}
 .hach b{font-size:20px}
+
+/* ---------- G/H: raidet kommer, demoen (trenere og pakker), guiden og «Show the game» ---------- */
+/* Raidet kommer: varselet på lerretet, så kortet. */
+.rarr{position:absolute;inset:0;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.rarr-cv{position:absolute;left:50%;top:50%;width:max(100%,calc(var(--appH,100dvh)*1.333));aspect-ratio:4/3;transform:translate(-50%,-50%);image-rendering:pixelated;opacity:0;transition:opacity .3s}
+.rarr.on .rarr-cv{opacity:1}.rarr.done .rarr-cv{opacity:.16}
+.rarr-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:24px;opacity:0;transform:translateY(10px);transition:opacity .5s ease,transform .5s ease;pointer-events:none;max-width:420px}
+.rarr.done .rarr-c{opacity:1;transform:none;pointer-events:auto}
+.rarr-c .raid-sp.qm{animation:rarrP 2.2s ease-in-out infinite}
+.rarr-c .acts{width:100%;margin-top:8px}
+@keyframes rarrP{50%{box-shadow:0 0 0 9px color-mix(in srgb,var(--gold) 22%,transparent),0 0 44px color-mix(in srgb,var(--gold) 70%,transparent)}}
+/* Demoen: hvem vil du møte. */
+.labtr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:4px}
+.labtr button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 6px;border-radius:16px;background:var(--card);box-shadow:0 0 0 1px var(--line);min-width:0;text-align:center}
+.labtr button:active{transform:scale(.97)}
+.labtr .tsb{width:64px;height:64px}
+.labtr b{font-size:13px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.labtr .sm{font-size:11px;line-height:1.25}
+.labpk .btn{display:flex;flex-direction:column;align-items:center;gap:6px;min-height:0;padding:10px 4px;font-size:12px;border-radius:16px}
+.labpk .pk-ic{width:26px;height:34px;border-radius:6px}.labpk .pk-ic i{width:10px;height:10px}
+/* Pakkeodds. */
+.pkbar{display:flex;height:10px;border-radius:5px;overflow:hidden;gap:2px}
+.pkbar i{min-width:2px;border-radius:2px}
+.pkbar .r0{background:var(--r0)}.pkbar .r1{background:var(--r1)}.pkbar .r2{background:var(--r2)}.pkbar .r3{background:var(--r3)}.pkbar .r4{background:var(--r4)}
+.pkbest{display:flex;flex-wrap:wrap;gap:6px}
+.pkbest span{width:60px;height:60px;border-radius:14px;background:var(--card2);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1px var(--line)}
+.pkbest span.shy{box-shadow:0 0 0 1.5px var(--gold)}
+/* Guiden: ligastrekene og de to verdiene. */
+.tr-lap{display:flex;gap:5px;width:min(280px,100%)}
+.tr-lap i{flex:1;height:12px;border-radius:6px;background:var(--soft)}
+.tr-lap i.on{background:var(--sage)}.tr-lap i.cur{background:var(--gold)}.tr-lap i.ul{flex:1.5;box-shadow:inset 0 0 0 1.5px var(--gold)}
+.tr-iv{display:flex;flex-direction:column;gap:12px;width:min(280px,100%)}
+.tr-iv>span{display:grid;grid-template-columns:30px minmax(0,1fr) 64px;align-items:center;gap:10px;text-align:left}
+.tr-iv>span:first-child .tb{width:50%}
+.tr-iv .tb{height:10px;border-radius:5px;--tc:var(--sage)}
+.tr-raid{width:96px;height:96px}.tr-raid i{font-size:50px}
+/* Show the game. */
+.shwc{box-shadow:0 0 0 1px color-mix(in srgb,var(--gold) 34%,transparent)}
+.shw-hero{display:flex;flex-direction:column;gap:12px;align-items:stretch;text-align:left;padding:6px 0 2px}
+.shw-k{font-size:40px;font-weight:900;letter-spacing:-.04em;line-height:1}
+.shw-n{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.shw-n>div,.shwov .gain>div{background:var(--card);border-radius:16px;padding:10px 12px;box-shadow:0 0 0 1px var(--line)}
+.shw-n b{display:block;font-size:22px;font-weight:800;letter-spacing:-.03em}
+.shwov .gain{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.shwov .gain>div{background:var(--card2);padding:8px 10px}.shwov .gain b{font-size:19px}
+.shw-f{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.shw-f button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 8px;border-radius:18px;background:linear-gradient(color-mix(in srgb,var(--cc,#888) 22%,var(--card2)),var(--card2));box-shadow:0 0 0 1px color-mix(in srgb,var(--cc,#888) 40%,transparent)}
+.shw-f button:active{transform:scale(.97)}
+.shw-f .tsb{width:84px;height:84px}
+.shw-ev{display:flex;flex-direction:column;gap:10px}
+.shw-ev>div{display:flex;gap:12px;align-items:center}
+.shw-ev .sp{display:flex;flex-direction:column;gap:1px}
+.shw-ev b{font-size:14px}
+.shw-t{position:absolute;inset:0;background:#000;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px}
+.shw-t>div{animation:shwIn .7s ease both}
+.shw-t .shw-k{font-size:44px;text-transform:uppercase;letter-spacing:.04em}
+.shw-b{margin-top:12px;color:var(--ink2);font-size:16px;max-width:30ch}
+@keyframes shwIn{from{opacity:0;transform:translateY(8px) scale(.98)}}
+.exb{margin-left:auto;background:var(--gold);color:#2a2109;font-weight:800;min-height:28px}
+@media (prefers-reduced-motion:reduce){.rarr-c .raid-sp.qm,.shw-t>div{animation:none}}
+.tr-iv .tb.hbx{width:100%}.tr-iv>span:first-child .tb.hbx{width:50%}

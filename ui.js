@@ -405,7 +405,7 @@ function monSheet(m) {
   openSheet(`<div class="shead">${spr(m.id, { ani: 1, sh: m.sh, mega: m.mega })}<div class="sp"><div class="sm tn">No. ${m.id} · ${REG[regOf(m.id)].n}${m.sh === 2 ? ' · <b style="color:#ff8a2a">Dark</b>' : m.sh ? ' · <b style="color:var(--gold)">Shiny</b>' : ''}</div>${ed ? `<div class="nkrow"><input class="nkin" id="nkin" maxlength="12" value="${esc(m.nn || '')}" placeholder="${esc(d[0])}" autocomplete="off" autocapitalize="words" aria-label="Nickname"><button type="button" class="btn sm2 pri" data-a="nicksave" data-u="${m.u}">Save</button></div>` : `<div class="pn">${esc(mName(m))}${gs(m)}<button type="button" class="nkb" data-a="nick" data-u="${m.u}" aria-label="Give a nickname">✎</button></div>`}${m.nn && !ed ? `<div class="sm">${esc(spName(m))}</div>` : ''}<div class="row" style="margin-top:6px;flex-wrap:wrap;gap:6px">${types(m.id)} ${tierEl(m.id)}${fm && fm[1] === 'Origin' ? ' <span class="pill">Origin Forme</span>' : canForm ? ' <span class="pill">Altered Forme</span>' : ''}</div></div></div>
     <div><div class="row sm tn" style="justify-content:space-between"><span>Level ${m.lv}</span><span>${n > 1 ? 'You have ' + n + ' of these' : 'Your only one'}</span></div><div class="bar" style="margin-top:6px"><i style="width:${Math.round((m.xp - a) / (b - a) * 100)}%"></i></div></div>
     <div class="card2" style="--tc:var(--t${d[1]})">${hexEl(m)}
-      <div class="row" style="flex-wrap:wrap;gap:6px;justify-content:center"><span class="pill">${NAT[m.nat]}${up !== dn ? ` · +${SN[up]} −${SN[dn]}` : ' · neutral'}</span><span class="pill" style="color:${j.sum >= 121 ? 'var(--gold)' : j.sum >= 91 ? 'var(--sage)' : 'var(--ink2)'}">Judge: ${j.t}${j.sum >= 186 ? '' : ' · best ' + SN[j.best]}</span><span class="pill tn">Trained ${evt} of 510</span></div>${abLine(m.id, m.mega)}<button type="button" class="btn sm2 wide" data-a="train" data-u="${m.u}" style="margin-top:6px">Train · raise its stats for coins</button></div>
+      <div class="row" style="flex-wrap:wrap;gap:6px;justify-content:center"><span class="pill">${NAT[m.nat]}${up !== dn ? ` · +${SN[up]} −${SN[dn]}` : ' · neutral'}</span><span class="pill" style="color:${j.sum >= 121 ? 'var(--gold)' : j.sum >= 91 ? 'var(--sage)' : 'var(--ink2)'}">Judge: ${j.t}${j.sum >= 186 ? '' : ' · best ' + SN[j.best]}</span><span class="pill tn">EVs ${evt} of 510</span></div>${abLine(m.id, m.mega)}<button type="button" class="btn sm2 wide" data-a="train" data-u="${m.u}" style="margin-top:6px">Train · raise its stats for coins</button></div>
     <div><div class="row" style="justify-content:space-between;margin-bottom:7px"><div class="lab" style="margin:0">Moves${fresh ? ' · <b style="color:var(--gold)">new move learned</b>' : ''}</div>${more ? `<button type="button" class="btn sm2" data-a="mvpick" data-u="${m.u}">Change moves</button>` : ''}</div>
       ${(m.nm || []).length ? `<button type="button" class="newmv" data-a="mlearn" data-u="${m.u}" style="width:100%;text-align:left;margin-bottom:8px"><span class="bang">!</span><span class="sm" style="color:var(--ink)">Wants to learn <b>${esc(MOVES[m.nm[0]][0])}</b>${m.nm.length > 1 ? ' and ' + (m.nm.length - 1) + ' more' : ''}. Tap to decide.</span></button>` : ''}<div class="mvg">${m.mv.map(x => moveEl(x)).join('')}</div>
       ${nx ? `<p class="sm tn" style="margin-top:7px">Next move: ${esc(MOVES[nx.mv][0])} at level ${nx.lv}</p>` : ''}</div>
@@ -430,26 +430,27 @@ function megaCard(m) {
     : leg ? '' : o.map(k => `<button type="button" class="btn sm2 wide gold" data-a="mgive" data-u="${m.u}" data-k="${k}"${S.items.mstone > 0 ? '' : ' disabled'}>Give a Mega Stone · ${esc(megaName(k))}</button>`).join('');
   return `<div class="card2 mgc${has && S.ring ? ' on' : ''}"><div class="row" style="gap:12px;align-items:center">${spr(m.id, { sh: m.sh, mega: cur, s: '64px' })}<div class="sp"><b>${esc(megaName(cur))}</b><div class="sm tn">${info}</div><div class="sm" style="margin-top:4px">${txt}</div></div></div>${btn}</div>`;
 }
-/* Trening: seks rader med verdi, anlegg (IV) og trening (EV). Den valgte staten får kjøpene under. Etter et kjøp tegnes innholdet om på stedet,
-   så arket ikke glir inn på nytt for hvert trykk. */
+/* Trening: seks rader med verdi, IV og EV. IV-feltet er halvparten så bredt som EV-feltet, fordi full IV er verdt 31 poeng på nivå 100 og full EV 63:
+   da ser man at de to har ulike tak. Den valgte verdien får kjøpene under. Etter et kjøp tegnes innholdet om på stedet, så arket ikke glir inn på nytt. */
 function trainSheet(m) {
   const d = D(m.id), st = statsOf(m), up = natUp(m.nat), dn = natDn(m.nat), free = EVTOT - evSum(m);
   if (U.tri == null) U.tri = BST[m.id - 1].indexOf(Math.max(...BST[m.id - 1]));
   const i = U.tri, natc = k => up !== dn && k === up ? 'color:var(--sage)' : up !== dn && k === dn ? 'color:var(--red)' : '';
-  /* Hva et kjøp gir på nivået den har nå. */
-  const gain = f => { const c = { id: m.id, lv: m.lv, mega: m.mega, nat: m.nat, iv: m.iv.slice(), ev: m.ev.slice() }; f(c); return statsOf(c)[i] - st[i]; };
-  const room = evRoom(m, i), dIv = gain(c => { c.iv[i] = 31; }), dEv = gain(c => { c.ev[i] += room; }), ic = ivCost(m, i), shed = m.id === 292 && i === 0;
+  /* Hva et kjøp gir på nivået den har nå, og på nivå 100. */
+  const clone = lv => ({ id: m.id, lv: lv || m.lv, mega: m.mega, nat: m.nat, iv: m.iv.slice(), ev: m.ev.slice(), ht: (m.ht || [0, 0, 0, 0, 0, 0]).slice() });
+  const gain = (f, lv) => { const a = clone(lv), b = clone(lv); f(b); return statsOf(b)[i] - statsOf(a)[i]; };
+  const room = evRoom(m, i), ht = !!(m.ht && m.ht[i]), ivv = ivOf(m, i), dIv = gain(c => { c.ht[i] = 1; }), dIv100 = gain(c => { c.ht[i] = 1; }, 100), dEv = gain(c => { c.ev[i] += room; }), dEv100 = gain(c => { c.ev[i] += room; }, 100), ic = ivCost(m, i), shed = m.id === 292 && i === 0;
   const a = Math.min(10, room), b = evCan(m, i, EVMAX);
-  const hp = typeof hpType === 'function' && m.mv.some(x => MOVES[x][0] === 'Hidden Power') ? [hpType(m.iv), hpType(m.iv.map((v, k) => k === i ? 31 : v))] : null;
-  const rows = SN.map((n, k) => `<button type="button" class="trr" data-a="trsel" data-k="${k}" aria-pressed="${k === i}"><b style="${natc(k)}">${n}</b><span class="tn v">${st[k]}</span><span class="tb g"><i style="width:${Math.round(m.iv[k] / 31 * 100)}%"></i></span><span class="tn n">${m.iv[k]}</span><span class="tb"><i style="width:${Math.round(m.ev[k] / EVMAX * 100)}%"></i></span><span class="tn n">${m.ev[k]}</span></button>`).join('');
-  const evb = shed ? '' : room ? `<div class="trb">${m.ev[i] ? `<button type="button" class="btn sm2" data-a="trclr">Clear</button>` : ''}<button type="button" class="btn sm2 pri" data-a="trev" data-n="${a}"${S.coins >= evPriceOf(a) ? '' : ' disabled'}>+${a} ${coinEl(evPriceOf(a))}</button>${b > a ? `<button type="button" class="btn sm2 pri" data-a="trev" data-n="${b}">+${b} ${coinEl(evPriceOf(b))}</button>` : ''}</div>`
-    : `<div class="trb fix">${m.ev[i] ? `<button type="button" class="btn sm2" data-a="trclr">Clear</button>` : ''}<span class="sm" style="align-self:center">${m.ev[i] >= EVMAX ? 'Fully trained.' : 'All 510 points are placed. Clear a stat to move them.'}</span></div>`;
-  const html = `${trainTip()}<div class="trs"><div class="trh"><span></span><span></span><span>Potential · of 31</span><span>Training · of ${EVMAX}</span></div>${rows}</div>
+  const rows = SN.map((n, k) => `<button type="button" class="trr" data-a="trsel" data-k="${k}" aria-pressed="${k === i}"><b style="${natc(k)}">${n}</b><span class="tn v">${st[k]}</span><span class="tb g"><i style="width:${Math.round(ivOf(m, k) / 31 * 100)}%"></i></span><span class="tn n${m.ht && m.ht[k] ? ' ht' : ''}">${ivOf(m, k)}</span><span class="tb"><i style="width:${Math.round(m.ev[k] / EVMAX * 100)}%"></i></span><span class="tn n">${m.ev[k]}</span></button>`).join('');
+  const evb = shed ? '' : room ? `<div class="trb">${m.ev[i] ? `<button type="button" class="btn sm2" data-a="trclr">Clear</button>` : ''}<button type="button" class="btn sm2 pri" data-a="trev" data-n="${a}"${S.coins >= evPriceOf(a) ? '' : ' disabled'}>+${a} EV ${coinEl(evPriceOf(a))}</button>${b > a ? `<button type="button" class="btn sm2 pri" data-a="trev" data-n="${b}">+${b} EV ${coinEl(evPriceOf(b))}</button>` : ''}</div>`
+    : `<div class="trb fix">${m.ev[i] ? `<button type="button" class="btn sm2" data-a="trclr">Clear</button>` : ''}<span class="sm" style="align-self:center">${m.ev[i] >= EVMAX ? `This stat is at the cap of ${EVMAX}.` : `All ${EVTOT} EVs are placed. Clear a stat to move them.`}</span></div>`;
+  const ivb = ht ? '<span class="pill" style="color:var(--gold)">Hyper trained</span>' : ivv >= 31 ? '<span class="pill" style="color:var(--gold)">Perfect</span>'
+    : htOk(m) ? `<button type="button" class="btn sm2 gold" data-a="triv"${S.coins >= ic ? '' : ' disabled'}>Hyper Train ${coinEl(ic)}</button>` : `<span class="pill">From Lv ${HTLV}</span>`;
+  const html = `${trainTip()}<div class="trs"><div class="trh"><span></span><span></span><span>IV · max 31</span><span>EV · max ${EVMAX}</span></div>${rows}</div>
     <div class="card2 trx"><div class="row" style="justify-content:space-between"><b>${SN[i]}</b><span class="sm tn" style="${natc(i)}">${st[i]}${up !== dn && i === up ? ' · nature +10 %' : up !== dn && i === dn ? ' · nature −10 %' : ''}</span></div>
-      ${shed ? '<p class="sm">Shedinja always has 1 HP, so there is nothing to train here.</p>' : `<div class="trl"><span class="sm">Potential <b class="tn">${m.iv[i]}</b> of 31${dIv > 0 ? `<br>+${dIv} at Lv ${m.lv}` : ''}</span>${ic > 0 ? `<button type="button" class="btn sm2 gold" data-a="triv"${S.coins >= ic ? '' : ' disabled'}>Hyper Train ${coinEl(ic)}</button>` : '<span class="pill" style="color:var(--gold)">At its best</span>'}</div>
-      <div class="sm">Training <b class="tn">${m.ev[i]}</b> of ${EVMAX} · ${VIT[i]}${dEv > 0 ? ` · up to +${dEv} at Lv ${m.lv}` : ''}</div>${evb}`}
-      ${hp && hp[0] !== hp[1] && ic > 0 ? `<p class="sm">Hidden Power follows potential: it would change from ${TYN[hp[0]]} to ${TYN[hp[1]]}.</p>` : ''}</div>
-    <p class="sm">${trainCut() < 1 ? `<b style="color:var(--gold)">Training Camp: everything here costs ${Math.round((1 - trainCut()) * 100)} % less today.</b> ` : ''}<b class="tn">${free}</b> of ${EVTOT} training points are free. Focus sessions train your partner too, a point every two minutes.</p>
+      ${shed ? '<p class="sm">Shedinja always has 1 HP, so there is nothing to train here.</p>' : `<div class="trl"><span class="sm"><b>IV</b> <b class="tn">${m.iv[i]}</b> of 31${ht ? ' · counts as 31' : ''}<br>${ht || ivv >= 31 ? 'Nothing more to gain here.' : `Born with it. Hyper Training makes it count as 31: +${dIv} now, +${dIv100} at Lv 100.`}</span>${ivb}</div>
+      <div class="sm"><b>EV</b> <b class="tn">${m.ev[i]}</b> of ${EVMAX} · ${VIT[i]}${dEv > 0 ? `<br>Room for ${room} more: +${dEv} now, +${dEv100} at Lv 100.` : ''}</div>${evb}`}</div>
+    <p class="sm">${trainCut() < 1 ? `<b style="color:var(--gold)">Training Camp: everything here costs ${Math.round((1 - trainCut()) * 100)} % less today.</b> ` : ''}<b class="tn">${free}</b> of ${EVTOT} EVs are free, enough to max two stats. Focus sessions give your partner 1 EV every two minutes.</p>
     <button type="button" class="btn wide" data-a="trback">Back</button>`;
   const host = $('#trd');
   if (host && +host.dataset.u === m.u) { host.innerHTML = html; $('#trc').innerHTML = coinEl(S.coins); }
@@ -521,6 +522,7 @@ VIEW.profil = () => {
       return `<div class="card avcard" style="--rk:${R.c}"><button type="button" class="avpb" data-a="ach" aria-label="Achievements. Rank: ${R.n}">${avFrame(R, 'lg', 1)}</button><span class="sp"><span class="sm">${S.av ? esc(avName()) : 'No character yet'}</span><b>${R.n}</b>
         <span class="bar"><i style="width:${pct}%;background:${R.c}"></i></span><span class="sm tn">${R.p} of ${achTotal()} medals${R.nn ? ` · ${R.next - R.p} more to ${R.nn}` : ''}</span></span></div>
       <div class="row"><button type="button" class="btn sp${as.open ? ' gold' : ''}" data-a="ach">${as.open ? `${as.open} reward${as.open > 1 ? 's' : ''} ready` : 'Achievements'}</button><button type="button" class="btn sp" data-a="avatar">${S.av ? 'Change character' : 'Pick a character'}</button></div>`; })()}
+    <div class="card stack shwc"><div><b>Show the game</b><p class="sm" style="margin-top:4px">A trailer and a tour of what is in here: the intros, the legendaries, the battles, the events and your collection. Made for showing a friend.</p></div><div class="row"><button type="button" class="btn sp gold" data-a="show">Open the showcase</button><button type="button" class="btn sp" data-a="tour">Start guide</button></div></div>
     <h2 class="h">Badges</h2><div class="card" style="padding-top:6px;padding-bottom:6px">${badges}</div>
     <p class="sm">Each badge fills with focus hours in that subject. 25, 50 and 75% give an epic encounter, and a full badge gives a legendary one. A reward needs time logged here in the app: ${MSGATE / 60} hours in the subject for each one, and ${BADGEGATE / 60} hours in all for the legendary.</p>
     <h2 class="h">Stats</h2>
@@ -541,7 +543,7 @@ VIEW.profil = () => {
       <button type="button" class="btn wide" data-a="plan">Edit subjects</button>
       <button type="button" class="btn wide" data-a="sync">Sync between devices${GH && GH.ok ? ' · ' + (ghState === 'ok' ? 'on' : ghState || 'connecting') : ''}</button>
       <button type="button" class="btn wide" data-a="backup">Backup</button>
-      <button type="button" class="btn wide" data-a="lab">Demo battle · try any class</button>
+      ${isAdmin() ? '<button type="button" class="btn wide" data-a="lab">Demo · battles, raids and packs (admin)</button>' : ''}
     </div>
     <p class="sm">Battle speed, music and forfeit are in the Pause menu during a battle.</p>
     <p class="sm">Fokusdex is a private hobby project. Pokémon and the names belong to Nintendo, Game Freak and Creatures. Images are fetched from PokeAPI when the app is used and are not part of the app.</p>`;
@@ -587,7 +589,8 @@ function syncSheet() {
     ${lb && lb.t && lb.repo ? '<button type="button" class="btn wide" data-a="synclb">Use the key from Live-blekker</button>' : ''}
     <p class="sm" id="gh-s">${GH && GH.ok ? (ghState === 'ok' ? 'Sync is on.' : esc(ghState)) : 'Sync is off.'}</p>
     <div class="row"><button type="button" class="btn pri sp" data-a="syncsave">Connect</button>${GH && GH.ok ? '<button type="button" class="btn sp danger" data-a="syncoff">Turn off</button>' : ''}</div>
-    ${GH && GH.ok ? `<p class="sm" style="margin-top:6px">Your own graphics, sound and music pack: put it in a folder called <b>pack</b> in the same repo. ${PACK.ok ? `Found: ${Object.keys(PACK.man.scenes || {}).length} arenas, ${(PACK.man.music || []).length} tracks, ${Object.keys(PACK.man.sfx || {}).length} sounds.` : 'None found yet.'}</p><button type="button" class="btn wide" data-a="packre">Check for the pack again</button>` : ''}`);
+    ${GH && GH.ok ? '' : '<p class="sm" style="margin-top:6px">A pack of your own graphics, sounds and music goes in the same repo: a folder called <b>pack</b> at the top of it, with its manifest.json inside. The app finds it when Sync is connected.</p>'}
+    ${GH && GH.ok ? `<p class="sm" style="margin-top:6px">Your own graphics, sound and music pack: put it in a folder called <b>pack</b> at the top of the same repo (pack/manifest.json). ${PACK.ok ? `Found: ${Object.keys(PACK.man.scenes || {}).length} arenas, ${(PACK.man.music || []).length} tracks, ${Object.keys(PACK.man.sfx || {}).length} sounds.` : 'None found yet.'}</p><button type="button" class="btn wide" data-a="packre">Check for the pack again</button>` : ''}`);
 }
 function backupSheet() {
   openSheet(`<h2 class="h">Backup</h2><p class="sm">Copy the text to keep your game safe, or paste a copy to restore it.</p>
@@ -602,13 +605,13 @@ function backupSheet() {
 function openSheet(html) { const w = $('#sheet'); w.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><span class="grab"></span>${html}</div>`; w.hidden = false; }
 function closeSheet() { const w = $('#sheet'); w.hidden = true; w.innerHTML = ''; }
 /* Åpner en encounter-pakke: pakken ristes opp, tre kort kommer ut med baksiden opp, og hvert snus med et trykk. Fargen på kortet røper sjeldenheten først når det snus. */
-function packShow(k, encs) {
-  const P = PACKS[k]; U.pk = encs;
+function packShow(k, encs, demo) {
+  const P = PACKS[k]; U.pk = encs; U.pkDemo = demo ? k : '';
   ov(`<div class="pko" id="pko" style="--pc:${P.c}">
     <button type="button" class="pk-pack" data-a="pkopen" aria-label="Open the pack"><span class="pk-ic big"><i></i></span><b>${P.n}</b></button>
     <div class="pk-cards">${encs.map((e, i) => `<button type="button" class="pk-card r${e.t}${e.sh ? ' shy' : ''}" data-a="pkflip" data-k="${i}" style="--i:${i}" aria-label="Card ${i + 1}"><span class="pk-in"><span class="pk-back"><i></i></span>${e.myst ? '<span class="pk-front pkq"><span class="pkq-o" aria-hidden="true"><i>?</i></span><b>? ? ?</b><span class="tier r4">Legendary</span><span class="sm">Who is it? Find out in the grass</span></span>' : `<span class="pk-front">${spr(e.id, { ani: 1, sh: e.sh, mega: defForm(e.id) })}<b>${e.sh ? 'Shiny ' : ''}${esc(D(e.id)[0])}${gs(e)}</b><span class="tier r${e.t}">${TIERS[e.t]}</span><span class="sm tn">Lv ${e.lv}${S.caught[e.id] ? '' : ' · new'}</span></span>`}</span></button>`).join('')}</div>
     <p class="sm" id="pkt" style="text-align:center">Tap the pack to open it</p>
-    <div class="acts" id="pka" style="visibility:hidden"><button type="button" class="btn gold" data-a="pkhunt">Catch them now</button><button type="button" class="btn nf" data-a="pkdone">Later</button></div></div>`, 'packov', P.c);
+    <div class="acts" id="pka" style="visibility:hidden">${demo ? `<button type="button" class="btn gold" data-a="pkdemo" data-k="${k}">Open another</button><button type="button" class="btn nf" data-a="packlab">Back to the packs</button>` : '<button type="button" class="btn gold" data-a="pkhunt">Catch them now</button><button type="button" class="btn nf" data-a="pkdone">Later</button>'}</div>${demo ? '<p class="sm tn" style="text-align:center">Demo · free, and nothing is kept</p>' : ''}</div>`, 'packov', P.c);
 }
 function ov(html, cls, tc) { const o = $('#ov'); o.className = 'ov' + (cls ? ' ' + cls : ''); o.style.setProperty('--tc', tc || 'var(--sage)'); o.innerHTML = `<div class="ovin">${html}</div>`; o.hidden = false; }
 function closeOv() { const o = $('#ov'); o.hidden = true; o.innerHTML = ''; }
@@ -764,7 +767,7 @@ const oddsEl = e => { const o = oddsOf(e, E.ball); return `Catch odds: <b class=
 function catchCard(r, e) {
   const m = r.mon, j = judge(m), st = ['Decent', 'Above average', 'Great', 'Outstanding', 'Flawless'].indexOf(j.t) + 1, reg = regOf(e.id), tot = REG[reg].b - REG[reg].a + 1, n = countOf(e.id);
   return `<div class="ecard"><div class="row" style="justify-content:center;gap:8px"><b class="ecard-h">Caught!</b>${r.crit ? '<span class="pill ecrit">Critical capture</span>' : ''}</div>
-    <div class="epot" role="img" aria-label="Potential: ${j.t}, ${st} of 5 stars"><span class="sm">Potential</span><span class="epot-s">${Array.from({ length: 5 }, (_, i) => `<i class="${i < st ? 'on' : ''}" style="animation-delay:${0.25 + i * 0.16}s"></i>`).join('')}</span><b class="epot-t" style="animation-delay:${0.3 + st * 0.16}s">${j.t}</b></div>
+    <div class="epot" role="img" aria-label="Potential: ${j.t}, ${st} of 5 stars"><span class="sm">Potential · IVs</span><span class="epot-s">${Array.from({ length: 5 }, (_, i) => `<i class="${i < st ? 'on' : ''}" style="animation-delay:${0.25 + i * 0.16}s"></i>`).join('')}</span><b class="epot-t" style="animation-delay:${0.3 + st * 0.16}s">${j.t}</b></div>
     <div class="sm tn">${NAT[m.nat]} nature · best stat ${SN[j.best]}</div>
     ${r.bonus.c ? `<div class="ecoin"><b>+${coinEl(r.bonus.c)}</b><span class="sm">${esc(r.bonus.why.join(' · '))}</span></div>` : ''}
     <div class="sm">${r.isNew ? `<b style="color:var(--sage)">New species</b> · ${REG[reg].n} ${dexCount(reg)} of ${tot}` : `You have ${n} now. A duplicate sells for ${nb(sellValue(m))} coins.`}</div></div>`;
@@ -835,7 +838,7 @@ const A = {
   pause: () => { togglePause(); paintTimer(); },
   early: () => endTimer(),
   quit: () => { if (!U.quit) { U.quit = 1; $('#t-quit').textContent = 'Tap again to cancel'; setTimeout(() => { U.quit = 0; const b = $('#t-quit'); if (b) b.textContent = 'Cancel'; }, 3000); return; } clearInterval(tick); dropAwake(); S.timer = null; save(true); document.title = 'Fokusdex'; closeOv(); render(); },
-  home: () => { encQuiet(); closeOv(); render(); },
+  home: () => { encQuiet(); closeOv(); render(); if (typeof raidArrive === 'function') raidArrive(); },
   hunt: () => hunt(),
   later: () => { cancelAnimationFrame(E.raf); encQuiet(); closeOv(); render(); },
   skip: () => { if (E.busy) return; cancelAnimationFrame(E.raf); dropPend(E.e); S.cst = 0; save(); hunt(); },
@@ -874,7 +877,7 @@ const A = {
   train: el => { const m = monBy(+el.dataset.u); if (!m) return; U.tru = m.u; U.tri = null; trainSheet(m); },
   trsel: el => { const m = monBy(U.tru); if (!m) return; U.tri = +el.dataset.k; trainSheet(m); },
   trback: () => { const m = monBy(U.tru); if (m) monSheet(m); else closeSheet(); },
-  triv: () => { const m = monBy(U.tru); if (!m) return; const i = U.tri; if (buyIv(m, i)) { sfx.coin(); render(); trainSheet(m); toast(`${SN[i]} potential is at its best.`); } },
+  triv: () => { const m = monBy(U.tru); if (!m) return; const i = U.tri; if (buyIv(m, i)) { sfx.coin(); render(); trainSheet(m); toast(`${SN[i]} is Hyper trained: it now counts as IV 31.`); } },
   trev: el => { const m = monBy(U.tru); if (!m) return; const i = U.tri, n = buyEv(m, i, +el.dataset.n); if (n) { sfx.coin(); render(); trainSheet(m); } },
   trclr: el => { const m = monBy(U.tru); if (!m) return; const i = U.tri; if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = `Tap again: remove ${m.ev[i]}`; return; } clearEv(m, i); render(); trainSheet(m); toast(`${SN[i]} training removed. The points are free again.`); },
   evolve: el => { const m = monBy(+el.dataset.u), from = m.id; if (evolve(m, +el.dataset.k)) { render(); evoShow(m, from); } },
@@ -886,10 +889,10 @@ const A = {
   pkflip: el => {
     if (el.classList.contains('on') || !$('#pko').classList.contains('open')) return;
     const e = U.pk && U.pk[+el.dataset.k]; if (!e) return;
-    el.classList.add('on'); if (!e.myst) S.seen[e.id] = 1;
+    el.classList.add('on'); if (!e.myst && !U.pkDemo) S.seen[e.id] = 1;
     if (e.myst) { sfx.event(); buzz([80, 50, 80, 50, 80, 50, 320]); } else if (e.t >= 3 || e.sh) { sfx.evo(); buzz([60, 40, 60, 40, 220]); } else if (e.t >= 2) { sfx.got(); buzz(40); } else { sfx.found(); buzz(15); }
     if (!e.myst) cry(e.id, 280, 0.35);
-    if (document.querySelectorAll('#pko .pk-card:not(.on)').length === 0) { const best = U.pk.reduce((a, x) => Math.max(a, x.t + (x.sh ? 2 : 0)), 0); $('#pkt').textContent = U.pk.some(x => x.myst) ? 'A legendary! Step into the grass to see who it is.' : best >= 4 ? 'What a pull!' : best >= 3 ? 'A great pack.' : 'They are waiting in the grass.'; $('#pka').style.visibility = 'visible'; save(true); }
+    if (document.querySelectorAll('#pko .pk-card:not(.on)').length === 0) { const best = U.pk.reduce((a, x) => Math.max(a, x.t + (x.sh ? 2 : 0)), 0); $('#pkt').textContent = U.pk.some(x => x.myst) ? 'A legendary! Step into the grass to see who it is.' : best >= 4 ? 'What a pull!' : best >= 3 ? 'A great pack.' : U.pkDemo ? 'An ordinary pack.' : 'They are waiting in the grass.'; $('#pka').style.visibility = 'visible'; if (!U.pkDemo) save(true); }
   },
   pkdone: () => { U.pk = null; closeOv(); render(); },
   pkhunt: () => { U.pk = null; hunt(); },
@@ -948,7 +951,7 @@ const A = {
 };
 document.addEventListener('click', ev => {
   const el = ev.target.closest('[data-a]');
-  const fn = el && !el.disabled && (A[el.dataset.a] || BA[el.dataset.a] || HA[el.dataset.a]);
+  const fn = el && !el.disabled && (A[el.dataset.a] || BA[el.dataset.a] || HA[el.dataset.a] || (typeof XA !== 'undefined' && XA[el.dataset.a]));
   if (fn) { click(el.dataset.a); fn(el); return; }
   if (ev.target.id === 'sheet') closeSheet();
 });
@@ -997,7 +1000,7 @@ ghHook = adopted => { const s = $('#gh-s'); if (s) s.textContent = ghState === '
 render();
 clockCheck();
 netTime().then(o => { if (o != null && clockCheck() && $('#ov').hidden) render(); });
-if (S.started && S.timer) showTimer(); else if (!(typeof liveGate === 'function' && liveGate()) && S.started && S.tour === 0) tourShow(0);
+if (S.started && S.timer) showTimer(); else if (!(typeof liveGate === 'function' && liveGate()) && S.started) { if (S.tour !== TOURV) tourShow(0); else if (typeof raidArrive === 'function') raidArrive(); }
 ghPull();
 setTimeout(() => PACK.init(), 2500);
 /* Adressen …/#lab åpner demoen direkte. */

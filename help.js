@@ -22,7 +22,7 @@ const HELP = [
     ${hP('Fokusdex turns your study time into a Pokémon adventure. The loop is the same every day:')}
     ${hRow(hSym('1', 'var(--sage)'), 'Study with the timer on', 'Every minute gives XP and coins. Your Pokémon level up while you work.')}
     ${hRow('<span class="grass live"><i></i><i></i><i></i><i></i></span>', 'Wild Pokémon show up', 'One for every 20 minutes. They wait in the grass until your session is done, and then you catch them.')}
-    ${hRow(hSym('3', 'var(--gold)'), 'Battle when you are done', `Press <b>Done for today</b> and pick a battle mode. The more you studied today, the more the battles pay.`)}
+    ${hRow(hSym('3', 'var(--gold)'), 'Battle when you are done', `After ${OPENMIN} minutes of focus, press <b>Done for today</b> and pick a battle mode. The more you studied today, the more the battles pay.`)}
     ${hNote('The game only gives. A day you skip costs you nothing, and nothing you own is ever taken away.')}
     <div class="hmore">${hLink('timer', 'Subjects and the timer')}${hLink('bonus', 'The battle bonus')}${hLink('modes', 'Battles')}</div>` },
 
@@ -39,7 +39,7 @@ const HELP = [
     <div class="hmore">${hLink('bonus', 'The battle bonus')}${hLink('catch', 'Encounters and catching')}</div>` },
 
   { k: 'bonus', n: 'The battle bonus', s: 'How study time multiplies your winnings', ic: () => hSym('×', 'var(--gold)'), body: () => { const g = goalMin(), top = goalTop(), now = studyMult(); return `
-    ${hP('Every minute you study today raises <b>today\'s battle bonus</b>. It multiplies the coins you win in battles.')}
+    ${hP('Every minute you study today raises <b>today\'s battle bonus</b>. It multiplies the coins you win in battles, and the XP and the odds for Rare Candy follow it too, from ×0.7 to ×1.3.')}
     ${hBar(Math.min(1, (S.lad.day ? ladMin() : todayMin()) / g), 0.5, top.toFixed(1))}
     ${hP(`With no study the bonus is ×0.5. It grows evenly and peaks at <b>×${top.toFixed(1)}</b> when you reach your goal of ${hrs(g)} hours. Right now it is <b>×${now}</b>.`)}
     ${hH('A higher goal, a higher peak')}
@@ -64,10 +64,10 @@ const HELP = [
     ${hRow(ballEl('great', '30px'), `Great Ball · ×${BALLM.great}`, 'Better odds and a wider zone. In the Shop from trainer level 3.')}
     ${hRow(ballEl('ultra', '30px'), `Ultra Ball · ×${BALLM.ultra}`, 'The best odds. From trainer level 7.')}
     ${hH('After the catch')}
-    ${hRow(hStars(4), 'Potential', 'The stars show how good the Pokémon was born: one star is plain, five is flawless. Training can raise it later.')}
+    ${hRow(hStars(4), 'Potential · IVs', `The stars show how good the Pokémon was born: one star is plain, five is flawless. From Lv ${HTLV} Hyper Training can make up for low ones.`)}
     ${hRow(coinEl(PERFCOIN), 'Small bonuses', `A perfect throw gives +${PERFCOIN} coins, and from the third catch in a row you get a little more for each one.`)}
     ${hRow(hSym('✦', 'var(--gold)'), 'Shiny Pokémon', 'A rare other colour. Worth five times as much, and mostly just nice to own.')}
-    <div class="hmore">${hLink('train', 'Training and potential')}${hLink('shop', 'Balls and packs')}</div>` },
+    <div class="hmore">${hLink('train', 'IVs, EVs and training')}${hLink('shop', 'Balls and packs')}</div>` },
 
   { k: 'team', n: 'Your team', s: 'Partner, levels, evolution and moves', ic: () => hSym('☗', 'var(--blue)'), body: () => `
     ${hRow(hMon(hMyPartner()), 'Six on the team, one partner', 'The first Pokémon on your team is your partner. It gets all the XP from your study minutes. The other five get 30 %.')}
@@ -87,7 +87,7 @@ const HELP = [
     ${hRow(hSym('⚔', 'var(--red)'), 'Fight, Bag, Pokémon', 'Pick a move, use an item from the Shop, or switch to another Pokémon. The move menu shows the type and how well it will hit.')}
     ${hRow(hSym('⏸', 'var(--ink2)'), 'Pause menu', 'Battle speed, music, and giving up are in the Pause menu. FAST runs the battle at more than double speed, sounds included.')}
     ${hRow(hSym('⟲', 'var(--sage)'), 'A battle you leave', 'Is saved after every turn and goes on where it was. Giving up counts as a loss.')}
-    ${hRow(hSym('?', 'var(--blue)'), 'Practice', 'The demo battle (Focus page or Profile) lets you try any class without rewards and without using an attempt.')}
+    ${hRow(hSym('▶', 'var(--blue)'), 'See it first', 'Show the game, under Profile, plays a battle for you: rental Pokémon against a Champion. You can take over whenever you like, and nothing is at stake.')}
     <div class="hmore">${hLink('events', 'Special events')}${hLink('raids', 'Legendary raids')}${hLink('bonus', 'The battle bonus')}</div>` },
 
   { k: 'events', n: 'Special events', s: 'Some days come with a gift', ic: () => `<span class="evc-ic hev" style="--ec:${EVENTS.surge.c}">${EVENTS.surge.ic}</span>`, body: () => `
@@ -98,16 +98,16 @@ const HELP = [
   { k: 'raids', n: 'Legendary raids', s: 'One huge Pokémon against your whole team', ic: () => '<span class="raid-sp qm hqm"><i>?</i></span>', body: () => `
     ${hP('Now and then a legendary Pokémon shows itself. Who it is stays <b>secret</b> until you stand in front of it.')}
     ${hH('When it appears')}
-    ${hRow(hSym('◎', 'var(--sage)'), 'You reach your daily goal', `${Math.round(RAIDGOAL * 100)} % chance.`)}
-    ${hRow(hSym('7', 'var(--gold)'), 'Every seventh day in a row', 'Always.')}
-    ${hRow('<span class="ficon hfi">L</span>', 'You finish a League lap', 'Always. A cleared Frontier round sometimes gives one too.')}
+    ${hRow(hSym('?', 'var(--gold)'), 'Rarely, and never on a fixed day', 'About once a week if you study every day. The longer since the last one, the better the odds.')}
+    ${hRow(hSym('◎', 'var(--sage)'), 'You reach your daily goal', 'One more draw that day.')}
+    ${hRow('<span class="ficon hfi">L</span>', 'You win a League lap or a Frontier round', 'One more draw.')}
     ${hH('The fight')}
     ${hP(`It is one Pokémon with ${RAIDHP[0]} to ${RAIDHP[3]} times the HP of a normal one, against your whole team, and you may use the Bag. Its place fights too: something happens on the field every third turn, and below half HP it becomes enraged.`)}
-    ${hP(`You get <b>${RAIDTRIES} attempts</b>, one a day. Then it moves on. Its level was set by your team when it appeared, so training between attempts helps.`)}
+    ${hP(`You get <b>${RAIDTRIES} attempts</b>, one a day. The first time you do not know who is waiting. If you lose, you get one more attempt the next day, and now you know. Then it moves on. It stands well above your team, so a raid is meant to be hard.`)}
     ${hH('If you win')}
-    ${hP('It waits in the grass for you to catch, and you get a pile of coins, Rare Candy and XP for the whole team.')}` },
+    ${hP('It is yours. Winning the raid is the catch: no throws. You also get a pile of coins, Rare Candy and XP for the whole team.')}` },
 
-  { k: 'train', n: 'Training', s: 'Potential and training points, made simple', ic: () => hSym('▲', 'var(--red)'), body: () => `
+  { k: 'train', n: 'Training: IVs and EVs', s: 'What they are, why they matter, and their caps', ic: () => hSym('▲', 'var(--red)'), body: () => `
     ${helpTrain()}
     ${hH('Where')}
     ${hP('Open <b>Team</b>, tap a Pokémon, and press <b>Train</b>.')}
@@ -115,7 +115,10 @@ const HELP = [
     ${hP('Speed, and the attack stat the Pokémon actually uses: Attack for physical moves, Sp. Atk for special ones. Its card shows which moves are which.')}
     ${hH('Nature')}
     ${hP('Every Pokémon has a nature. Most natures raise one stat by 10 % and lower another. On the Train page the raised stat is green and the lowered one red.')}
-    ${hNote(`A fully trained Pokémon costs about ${nb(EVTOT * EVP + 93 * IVP)} coins. Start with the one or two you use the most.`)}` },
+    ${hH('What it costs')}
+    ${hRow(coinEl(EVP), 'One EV', `A vitamin is 10 EVs. All ${EVTOT} cost ${nb(EVTOT * EVP)} coins.`)}
+    ${hRow(coinEl(HTP), 'Hyper Training, one stat', `The same price whatever the IV was. Only from Lv ${HTLV}, as in the games.`)}
+    ${hNote('Neither can go past its cap, so a fully trained Pokémon here is exactly as strong as a fully trained one in the games. Start with the one or two you use the most.')}` },
 
   { k: 'mega', n: 'Mega Evolution', s: 'One stronger form a battle', ic: () => '<span class="gem mg hgem"></span>', body: () => `
     ${hRow('<span class="gem mg hgem"></span>', 'The Mega Ring', 'The first Champion you beat gives you the ring and a Mega Stone.')}
@@ -166,15 +169,16 @@ const HEV = { surge: 'Your Pokémon that have a Mega form start every battle in 
   gold: 'Every battle pays one and a half times the coins.', wind: 'One more attempt in the League, or one more run in the Frontier.', lucky: 'Shiny odds are five times as high, and bosses give one more encounter.', camp: 'Training costs 40 % less.' };
 /* De tre modusene, kort. (Hentes fra reglene, så teksten følger med når de endres.) */
 function helpModes() {
-  return hRow('<span class="ficon hfi">L</span>', 'Trainer League', `Your own team, ${LAPN} battles a lap. A trainer first, then the class rises as you go, and a Champion waits at the end. You never see who is next before the intro. Every win gives the whole team XP, and bosses give Rare Candy and items. ${LIVES === 1 ? 'One loss ends it for the day.' : `${LIVES} losses end it for the day.`}`)
-    + hRow('<span class="ficon hfi">F</span>', 'Battle Frontier', `You rent Pokémon instead of using your own, and everything is Lv ${FACLV}. ${FACN} battles a round. You win items, encounters and coins, but no XP. ${FACLIVES} runs a day.`)
-    + hRow('<span class="ficon hfi">W</span>', 'World Tournament', `A knockout cup, three rounds, three on three, and a new cup each weekday. Coins for every round, and a pack of encounters for the winner.`);
+  return hRow('<span class="ficon hfi">L</span>', 'Trainer League', `Your own team, ${LAPN} battles a lap. A trainer first, then the class rises as you go, and a Champion waits at the end. You never see who is next before the intro. Every win gives the whole team XP, and bosses give Rare Candy and items. One loss ends the lap, and the next lap starts from battle 1. One lap a day.`)
+    + hRow('<span class="ficon hfi">F</span>', 'Battle Frontier', `You rent Pokémon instead of using your own, and everything is Lv ${FACLV}. ${FACN} battles a round. You win coins, items and encounters, and your own team gets XP for every win. ${FACLIVES} runs a day.`)
+    + hRow('<span class="ficon hfi">W</span>', 'World Tournament', `A knockout cup, three rounds, three on three, and a new cup each weekday. Coins and XP for every round, and a pack of encounters for the winner.`);
 }
-/* Potensial og treningspoeng. Brukes både i hubben og første gang Train åpnes. */
+/* IV og EV. Brukes både i hubben og første gang Train åpnes. */
 function helpTrain() {
-  return `${hP('Two hidden things decide how strong a Pokémon becomes. Both count more the higher its level.')}
-    ${hRow('<span class="tb g hbx"><i style="width:70%"></i></span>', 'Potential', 'What it was born with: 0 to 31 in each stat. The gold bars, and the stars you see when you catch it. <b>Hyper Training</b> raises it for coins.')}
-    ${hRow('<span class="tb hbx"><i style="width:45%"></i></span>', 'Training', `Points it has earned: at most ${EVMAX} in one stat and ${EVTOT} in all. The coloured bars. Your partner earns one for every two minutes you study, and you can buy more.`)}`;
+  return `${hP('Two numbers decide how strong a Pokémon is beyond its level. They have <b>different caps</b> and are raised separately.')}
+    ${hRow('<span class="tb g hbx"><i style="width:55%"></i></span>', 'IV · what it was born with', `Individual Values: 0 to 31 in each stat, set when you catch it. The stars on the catch screen. IVs cannot be trained, but from Lv ${HTLV} <b>Hyper Training</b> makes a stat count as 31 in battle.`)}
+    ${hRow('<span class="tb hbx"><i style="width:45%"></i></span>', 'EV · what training adds', `Effort Values: at most ${EVMAX} in one stat and ${EVTOT} in all, so two stats can be maxed, not all six. Your partner earns 1 EV for every two minutes you study, and you can buy more.`)}
+    ${hNote('Why it matters: at Lv 100 a perfect IV is worth 31 points in a stat and full EVs 63. A base-100 stat is 205 with neither and 299 with both, so the same Pokémon can be almost half again as fast or as strong.')}`;
 }
 
 /* ---------- Hubben ---------- */
@@ -187,7 +191,8 @@ function helpOpen(k) {
     : `<div class="row" style="justify-content:space-between"><h2 class="h" style="font-size:22px;margin:0">Questions</h2><button type="button" class="btn sm2" data-a="close">Close</button></div>
        <p class="sm">Pick a topic. Short answers, with pictures.</p>
        <div class="hlist">${HELP.map(t => `<button type="button" class="hitem" data-a="help" data-k="${t.k}"><span class="hic">${t.ic()}</span><span class="sp"><b>${t.n}</b><span class="sm">${t.s}</span></span><span class="hgo">›</span></button>`).join('')}</div>
-       <button type="button" class="btn wide" data-a="tour">Show the start guide again</button>
+       <button type="button" class="btn wide" data-a="tour">Show the guide again</button>
+       <button type="button" class="btn wide" data-a="show">Show the game · trailer and tour</button>
        <button type="button" class="btn wide nf" data-a="rules">Rules and rewards · every number</button>`;
   const sh = document.querySelector('#sheet .sheet.helpsh');
   if (sh) { sh.innerHTML = `<span class="grab"></span>${html}`; sh.scrollTop = 0; }
@@ -198,18 +203,23 @@ function helpOpen(k) {
 const helpBtn = () => `<button type="button" class="helpb${S.hseen ? '' : ' new'}" data-a="help" data-k="" aria-label="Questions and help">?</button>`;
 const hq = (k, label) => `<button type="button" class="hq" data-a="help" data-k="${k}" aria-label="${label || 'What is this?'}">?</button>`;
 
-/* ---------- Startguiden ----------
-   Sju korte steg. Vises én gang, rett etter at en ny spiller har valgt partner og fag (S.tour = 0), og kan vises igjen fra hubben. */
+/* ---------- Guiden ----------
+   Ti korte steg. Vises én gang: rett etter at en ny spiller har valgt partner og fag, og første gang appen åpnes etter en oppdatering som har endret
+   reglene (S.tour !== TOURV). Kan vises igjen fra hubben og fra Profil. */
+const TOURV = 2;
 function tourSteps() {
-  const g = goalMin(), top = goalTop().toFixed(1), fags = Object.keys(FAGS).slice(0, 4), pid = hMyPartner();
+  const g = goalMin(), top = goalTop().toFixed(1), fags = Object.keys(FAGS).slice(0, 4), pid = hMyPartner(), old = S.tour === 1 || (S.tour == null && S.mons.length > 1);
   return [
-    { pic: `<span class="tr-mon">${spr(pid, { ani: 1, s: '120px' })}</span>`, n: 'Welcome, trainer', t: 'Fokusdex turns your study time into a Pokémon adventure. Here is how it works, in one minute.' },
+    { pic: `<span class="tr-mon">${spr(pid, { ani: 1, s: '120px' })}</span>`, n: old ? 'A lot is new' : 'Welcome, trainer', t: old ? 'Fokusdex has been updated: the League, the raids, training and the rewards have changed. Here is the whole game as it works now, in one minute.' : 'Fokusdex turns your study time into a Pokémon adventure. Here is how it works, in one minute.' },
     { pic: `<div class="chips tr-chips">${fags.map((f, i) => `<span class="chip" aria-pressed="${i === 0}" style="--tc:${F(f).c}">${esc(F(f).n)}</span>`).join('')}</div>`, n: '1 · Pick what you study', t: 'Tap a subject on the Focus page. Your own subjects count in full. Other things, like job applications or music, count at half value.' },
     { pic: `<span class="go tr-go">Start 45 min</span><span class="tr-sub"><span class="grass live"><i></i><i></i><i></i><i></i></span> every 20 minutes</span>`, n: '2 · Start the timer', t: 'Choose a length and press Start. Then study. You can lock your phone, the timer keeps going. Every 20 minutes a wild Pokémon shows up.' },
-    { pic: `<div class="tr-bar">${hBar(0.62, 0.5, top)}<span class="sm">today's battle bonus</span></div>`, n: '3 · Study raises the battle bonus', t: `Every minute you study today raises today's bonus, from ×0.5 up to ×${top} at your goal of ${hrs(g)} hours. It multiplies the coins you win in battles.` },
-    { pic: `<div class="tr-rew"><span><b class="tn">+450</b><span class="sm">XP</span></span><span><b class="tn">${coinEl(135)}</b><span class="sm">coins</span></span><span>${ballEl('poke', '34px')}<span class="sm">encounters</span></span></div>${hMeter()}`, n: '4 · Collect your rewards', t: 'After a session you get XP and coins, and the Pokémon you found wait in the grass. Stop the marker in the green zone to catch them.' },
-    { pic: `<div class="tr-modes"><span class="ficon hfi">L</span><span class="ficon hfi">F</span><span class="ficon hfi">W</span><span class="evc-ic hev" style="--ec:${EVENTS.gold.c}">${EVENTS.gold.ic}</span></div>`, n: '5 · Battle when you are done', t: 'Press Done for today and choose one of three battle modes. Some days a special event shows up, with a bonus just for you. Battles are where most coins come from.' },
-    { pic: '<span class="helpb tr-q" aria-hidden="true">?</span>', n: 'Questions?', t: 'The ? in the top corner opens the question hub: short answers with pictures. Rules and rewards on the Focus page has every number. Tap your picture to see your achievements and rank.' }
+    { pic: `<div class="tr-rew"><span><b class="tn">+450</b><span class="sm">XP</span></span><span><b class="tn">${coinEl(135)}</b><span class="sm">coins</span></span><span>${ballEl('poke', '34px')}<span class="sm">encounters</span></span></div>${hMeter()}`, n: '3 · Collect your rewards', t: 'After a session you get XP and coins, and the Pokémon you found wait in the grass. Stop the marker in the green zone to catch them.' },
+    { pic: `<div class="tr-bar">${hBar(0.62, 0.5, top)}<span class="sm">today's battle bonus</span></div>`, n: '4 · Study raises the battle bonus', t: `Every minute you study today raises today's bonus, from ×0.5 up to ×${top} at your goal of ${hrs(g)} hours. It multiplies the coins you win in battles, and lifts the XP and the Rare Candy too.` },
+    { pic: `<div class="tr-modes"><span class="ficon hfi">L</span><span class="ficon hfi">F</span><span class="ficon hfi">W</span><span class="evc-ic hev" style="--ec:${EVENTS.gold.c}">${EVENTS.gold.ic}</span></div>`, n: '5 · Battle when you are done', t: `After ${OPENMIN} minutes of focus you can press Done for today and choose one of three battle modes. All three give your own team XP. Some days a special event shows up, with a bonus just for you.` },
+    { pic: `<div class="tr-lap">${Array.from({ length: LAPN }, (_, n) => `<i class="${n < 5 ? 'on' : n === 5 ? 'cur' : ''}${n === LAPN - 1 ? ' ul' : ''}"></i>`).join('')}</div><span class="sm">${LAPN} battles to a Champion</span>`, n: '6 · The League is one clean run', t: `The class rises as you go, and a Champion waits in battle ${LAPN}. One loss ends the lap, and the next lap starts from battle 1. So build your team before you go for the final.` },
+    { pic: `<div class="tr-iv"><span><b>IV</b><span class="tb g hbx"><i style="width:60%"></i></span><span class="sm tn">max 31</span></span><span><b>EV</b><span class="tb hbx"><i style="width:40%"></i></span><span class="sm tn">max ${EVMAX}</span></span></div>`, n: '7 · Train your team', t: `Open a Pokémon and press Train. EVs are what training adds: up to ${EVMAX} in a stat, enough to max two. IVs are what it was born with, and Hyper Training can lift them from Lv ${HTLV}.` },
+    { pic: '<span class="raid-sp qm hqm tr-raid"><i>?</i></span>', n: '8 · Legendary raids', t: `Now and then a legendary shows itself. You do not know who it is until you stand in front of it, and you get ${RAIDTRIES} attempts. Beat it, and it is yours.` },
+    { pic: '<span class="helpb tr-q" aria-hidden="true">?</span>', n: 'Questions?', t: 'The ? in the top corner has short answers with pictures, and Rules and rewards on the Focus page has every number. This guide is under Profile, next to the showcase: a trailer and a tour for showing a friend.' }
   ];
 }
 function tourShow(i) {
@@ -221,7 +231,7 @@ function tourShow(i) {
     <div class="acts">${i ? '<button type="button" class="btn nf" data-a="tourgo" data-k="-1">Back</button>' : ''}<button type="button" class="btn ${last ? 'gold' : 'pri'}" data-a="${last ? 'tourend' : 'tourgo'}" data-k="1">${last ? 'Start studying' : 'Next'}</button></div>
     ${last ? '<button type="button" class="btn wide nf" data-a="tourhub">Open the question hub</button>' : ''}`, 'tint', 'var(--sage)');
 }
-function tourEnd(hub) { if (S.tour !== 1) { S.tour = 1; save(true); } closeOv(); render(); if (hub) helpOpen(''); }
+function tourEnd(hub) { if (S.tour !== TOURV) { S.tour = TOURV; save(true); } closeOv(); render(); if (hub) helpOpen(''); else if (typeof raidArrive === 'function') raidArrive(); }
 
 /* ---------- Første gang Train åpnes: hva potensial og treningspoeng er. Kan hentes fram igjen med spørsmålstegnet der. ---------- */
 const trainTipOn = () => !(S.tip && S.tip.train) || U.trhelp;

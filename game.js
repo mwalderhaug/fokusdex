@@ -67,16 +67,21 @@ function legEnc(shm) {
 }
 const PACKS = {
   poke: { n: 'Poké Pack', p: 250, c: '#d98f7e', d: 'One of the three is uncommon or better. 0.2% legendary.', slots: [{ luck: 0 }, { luck: 0.5 }, { min: 1, luck: 0, leg: 0.002 }], shm: 1 },
-  great: { n: 'Great Pack', p: 700, c: '#7fa8e6', d: 'One is rare or better, one uncommon or better. 0.6% legendary.', slots: [{ luck: 0.5 }, { min: 1, luck: 0.5 }, { min: 2, luck: 0.6, leg: 0.006 }], shm: 1.5, lv: 3 },
-  ultra: { n: 'Ultra Pack', p: 1800, c: '#e3c577', d: 'One is epic. 12% pseudo-legendary, 1.5% legendary. Shiny odds ×2.5.', slots: [{ min: 1, luck: 1.5 }, { min: 2, luck: 1.5 }, { min: 3, luck: 2, ps: 0.12, leg: 0.015 }], shm: 2.5, lv: 5 },
-  master: { n: 'Master Pack', p: 6000, c: '#b295e6', d: 'Rare, epic and a top slot: 35% pseudo-legendary, 8% legendary. Shiny odds ×5.', slots: [{ min: 2, luck: 2 }, { min: 3, luck: 2 }, { min: 3, luck: 2, ps: 0.35, leg: 0.08 }], shm: 5, lv: 8 }
+  great: { n: 'Great Pack', p: 700, c: '#7fa8e6', d: 'One is rare or better, one uncommon or better. 0.5% legendary.', slots: [{ luck: 0.5 }, { min: 1, luck: 0.5 }, { min: 2, luck: 0.6, leg: 0.005 }], shm: 1.2, lv: 3 },
+  ultra: { n: 'Ultra Pack', p: 1800, c: '#e3c577', d: 'One is epic. 12% pseudo-legendary, 1.2% legendary. Shiny odds ×1.5.', slots: [{ min: 1, luck: 1.5 }, { min: 2, luck: 1.5 }, { min: 3, luck: 2, ps: 0.12, leg: 0.012 }], shm: 1.5, lv: 5 },
+  master: { n: 'Master Pack', p: 6000, c: '#b295e6', d: 'Rare, epic and a top slot: 35% pseudo-legendary, 5% legendary. Shiny odds ×2.', slots: [{ min: 2, luck: 2 }, { min: 3, luck: 2 }, { min: 3, luck: 2, ps: 0.35, leg: 0.05 }], shm: 2, lv: 8 }
 };
 const PACKMAX = 24;
+/* Innholdet i en pakke (tre møter), uten å røre lagringen: brukes av butikken og av demoen. lg = plassen ga en legendarisk, ps = en pseudo-legendarisk.
+   demo = den legendariske vises med en gang (det finnes ikke noe gress å møte den i). */
+const PKPS = [147, 246, 371, 374, 443, 633];
+function packDraw(k, demo) {
+  const P = PACKS[k];
+  return P.slots.map(sl => { const r = Math.random(), lg = r < (sl.leg || 0) ? legEnc(P.shm) : null, ps = !lg && r < (sl.leg || 0) + (sl.ps || 0), e = lg || (ps ? genEnc({ ids: PKPS, shm: P.shm }) : genEnc({ min: sl.min || 0, luck: sl.luck || 0, shm: P.shm })); e.pk = 1; if (demo) { delete e.myst; if (lg) e.lg = 1; if (ps) e.ps = 1; } return e; });
+}
 function openPack(k) {
   const P = PACKS[k]; if (!P || S.coins < P.p || (P.lv && tlv() < P.lv) || S.pend.length > PACKMAX) return null;
-  const pseudo = [147, 246, 371, 374, 443, 633];
-  const out = P.slots.map(sl => { const r = Math.random(), lg = r < (sl.leg || 0) ? legEnc(P.shm) : null; return lg || (r < (sl.leg || 0) + (sl.ps || 0) ? genEnc({ ids: pseudo, shm: P.shm }) : genEnc({ min: sl.min || 0, luck: sl.luck || 0, shm: P.shm })); });
-  out.forEach(e => { e.pk = 1; });
+  const out = packDraw(k);
   S.coins -= P.p; S.pend.push(...out); S.packs = (S.packs || 0) + 1; save();
   return out;
 }
@@ -107,8 +112,12 @@ const tierOf = id => {
 const regOf = id => id <= 151 ? 1 : id <= 251 ? 2 : id <= 386 ? 3 : id <= 493 ? 4 : 5;
 const EVO = {};
 DEX.forEach((d, i) => { if (d[4]) (EVO[d[4]] = EVO[d[4]] || []).push(i + 1); });
-const lvOf = xp => Math.max(1, Math.min(100, Math.floor(Math.sqrt(xp / 12))));
-const xpAt = l => 12 * l * l;
+/* XP-kurven: 12 · nivå² · (1 + nivå/25). De første nivåene går omtrent som før; nivå 50 koster tre ganger så mye som med den gamle kurven (12 · nivå²)
+   og nivå 100 fem ganger, så laget ikke er utlært etter en måned. xpAtOld brukes bare til å regne om lagringer fra før (migrate8). */
+const xpAtOld = l => 12 * l * l;
+const xpAt = l => Math.round(12 * l * l * (1 + l / 25));
+const XPT = Array.from({ length: 102 }, (_, l) => xpAt(l));
+const lvOf = xp => { let a = 1, b = 100; while (a < b) { const m = (a + b + 1) >> 1; if (XPT[m] <= xp) a = m; else b = m - 1; } return a; };
 
 /* ---------- Stats, natur, IV/EV og angrep ----------
    Hver Pokémon har iv (0–31 per stat, trukket ved fangst), ev (trenes av fokusminutter), nat (natur 0–24) og mv (opptil fire angrep).
@@ -169,7 +178,7 @@ const mTypes = m => { const g = megaOf(m); return g ? [g[2], g[3]] : [D(m.id)[1]
 function statsOf(m) {
   const b = m.mega ? MEGA[m.mega - 1][4] : BST[m.id - 1], up = natUp(m.nat), dn = natDn(m.nat);
   return b.map((B, i) => {
-    const core = Math.floor((2 * B + m.iv[i] + Math.floor(m.ev[i] / 4)) * m.lv / 100);
+    const core = Math.floor((2 * B + ivOf(m, i) + Math.floor(m.ev[i] / 4)) * m.lv / 100);
     if (i === 0) return m.id === 292 ? 1 : core + m.lv + 10;
     const v = core + 5;
     return up === dn ? v : i === up ? Math.floor(v * 1.1) : i === dn ? Math.floor(v * 0.9) : v;
@@ -196,10 +205,16 @@ function ensure(m) {
   if (!m.mv || !m.mv.length) m.mv = defaultMoves(m.id, m.lv);
   return m;
 }
-/* Trening for mynter, på kortet til hver Pokémon. Anlegg (IV, 0 til 31 i hver stat) løftes til topps med hypertrening: IVP mynter per poeng som
-   mangler. Treningspoeng (EV, 252 i en stat og 510 til sammen) kjøpes som vitaminer: EVP mynter per poeng. Trening kan fjernes fra en stat
-   uten å få noe igjen, så poengene kan legges et annet sted. */
-const EVP = 10, IVP = 30, EVMAX = 252, EVTOT = 510;
+/* Trening for mynter, på kortet til hver Pokémon – som i spillene, og med de samme takene.
+   IV (Individual Values): det den ble født med, 0 til 31 i hver verdi. IV-er kan ikke trenes. Men fra nivå HTLV kan en verdi HYPERTRENES (Bottle Cap
+   i spillene): da regnes den som 31 i kamp, mens den egentlige IV-en står (m.ht[i] = 1; Hidden Power følger fortsatt den egentlige). HTP mynter per
+   verdi, uansett hvor lav den var. (Før kostet det per poeng som manglet, og fra nivå 1: da var perfekte verdier nesten gratis.)
+   EV (Effort Values): det trening legger på, høyst EVMAX (252) i én verdi og EVTOT (510) til sammen, så to verdier kan trenes helt opp. Fire EV er
+   ett poeng på nivå 100. Kjøpes som vitaminer (EVP mynter per poeng), og partneren får dem også av fokusøkter. Trening kan fjernes fra en verdi
+   uten å få noe igjen, så poengene kan legges et annet sted.
+   På nivå 100 er full IV verdt 31 poeng i en verdi og full EV 63: de to har ulike tak og trenes hver for seg, og ingen av dem kan gå over taket. */
+const EVP = 10, HTP = 1000, HTLV = 50, EVMAX = 252, EVTOT = 510;
+const ivOf = (m, i) => m.ht && m.ht[i] ? 31 : m.iv[i];
 const VIT = ['HP Up', 'Protein', 'Iron', 'Calcium', 'Zinc', 'Carbos'];
 const evSum = m => m.ev.reduce((a, b) => a + b, 0);
 const evRoom = (m, i) => Math.max(0, Math.min(EVMAX - m.ev[i], EVTOT - evSum(m)));
@@ -208,8 +223,10 @@ const trainCut = () => typeof evPrice === 'function' ? evPrice() : 1, evPriceOf 
 const evCan = (m, i, n) => { n = Math.max(0, Math.min(n, evRoom(m, i))); while (n > 0 && evPriceOf(n) > S.coins) n--; return n; };
 function buyEv(m, i, n) { n = evCan(m, i, n); if (!(n > 0)) return 0; m.ev[i] += n; S.coins -= evPriceOf(n); save(); return n; }
 function clearEv(m, i) { const n = m.ev[i]; if (n) { m.ev[i] = 0; save(); } return n; }
-const ivCost = (m, i) => Math.ceil((31 - m.iv[i]) * IVP * trainCut());
-function buyIv(m, i) { const c = ivCost(m, i); if (!(c > 0) || S.coins < c) return 0; m.iv[i] = 31; S.coins -= c; save(); return c; }
+/* Hypertrening av én verdi: prisen (0 når verdien alt er 31), og om nivået er høyt nok. */
+const ivCost = (m, i) => ivOf(m, i) >= 31 ? 0 : Math.ceil(HTP * trainCut());
+const htOk = m => m.lv >= HTLV;
+function buyIv(m, i) { const c = ivCost(m, i); if (!(c > 0) || !htOk(m) || S.coins < c) return 0; if (!m.ht) m.ht = [0, 0, 0, 0, 0, 0]; m.ht[i] = 1; S.coins -= c; save(); return c; }
 /* EV-er fra økter legges først i den staten som alt er mest trent, og ellers i artens beste stat (maks 252 per stat, 510 totalt). For en Pokémon
    som bare er trent av økter, er det samme rekkefølge som før; har du selv kjøpt trening i en stat, fortsetter øktene der. */
 function addEv(m, n) {
@@ -280,6 +297,7 @@ function adopt(o) {
   if (!o.mig || o.mig < 5) migrate5();
   if (!o.mig || o.mig < 6) migrate6(o);
   if (!o.mig || o.mig < 7) migrate7();
+  if (!o.mig || o.mig < 8) migrate8();
   S.routes = (S.routes || []).filter(r => S.regions.includes(r)); if (!S.routes.length) S.routes = [S.regions.includes(S.region) ? S.region : S.regions[0]];
   S.mons.forEach(ensure);
   unlockRegions();
@@ -321,6 +339,18 @@ function migrate6(o) {
 function migrate7() {
   const L = S.lad, n = Math.max(0, Math.min(11, L.n || 0)); L.n = Math.min(9, Math.round(n * 10 / 12)); L.c = L.n ? Math.max(1, Math.min(7, L.n - 1)) : 0; L.next = null; L.seen = [];
   S.mig = 7;
+}
+/* Versjon 8: (1) XP-kurven er brattere. Alle Pokémon beholder nivået sitt og like stor del av veien til neste. (2) En runde i ligaen er 8 kamper
+   (før 10), og et tap avslutter den: du står omtrent like langt i runden. (3) Raid har to forsøk. */
+function migrate8() {
+  for (const m of S.mons) {
+    const x = m.xp || 0, l = Math.max(1, Math.min(100, m.lv || Math.floor(Math.sqrt(x / 12)))), a = xpAtOld(l), b = xpAtOld(l + 1);
+    const f = l >= 100 ? 0 : Math.max(0, Math.min(0.999, (x - a) / (b - a)));
+    m.lv = l; m.xp = Math.round(xpAt(l) + f * (xpAt(l + 1) - xpAt(l)));
+  }
+  const L = S.lad, n = Math.max(0, Math.min(9, L.n || 0)); L.n = Math.min(7, Math.round(n * 8 / 10)); L.c = L.n ? Math.max(1, Math.min(7, L.c || L.n)) : 0; L.next = null; L.seen = [];
+  if (S.raid && (S.raid.tries || 0) >= 2) S.raid.tries = 1;
+  S.mig = 8;
 }
 function load() {
   try { const o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (o && o.v === 1) adopt(o); } catch (_) {}
@@ -379,7 +409,8 @@ const canAdopt = o => !!o && (!S.started || (o.rev || 0) > (S.rev || 0));
 function carry(p) {
   if (!p || !p.started) return;
   const ge = (a, b) => (a || '') >= (b || ''), tr = (a, b) => !a ? b : !b ? a : a.d === b.d ? (a.n >= b.n ? a : b) : (a.d > b.d ? a : b);
-  if (p.lad) { S.lad.tries = tr(p.lad.tries, S.lad.tries) || null; if (ge(p.lad.lost, S.lad.lost)) S.lad.lost = p.lad.lost || ''; if (ge(p.lad.fw, S.lad.fw) && p.lad.fw) S.lad.fw = p.lad.fw; }
+  /* Et tap den andre lagringen ikke kjenner til, avslutter runden der også (ligaen: tap = runden over), og en runde som er vunnet i dag, er dagens runde. */
+  if (p.lad) { S.lad.tries = tr(p.lad.tries, S.lad.tries) || null; if (ge(p.lad.lost, S.lad.lost)) { if (p.lad.lost && p.lad.lost !== S.lad.lost) { S.lad.n = 0; S.lad.c = 0; S.lad.seen = []; S.lad.next = null; S.lad.fell = p.lad.fell || 0; } S.lad.lost = p.lad.lost || ''; } if (ge(p.lad.fw, S.lad.fw) && p.lad.fw) S.lad.fw = p.lad.fw; if (p.lad.lapd && ge(p.lad.lapd, S.lad.lapd)) S.lad.lapd = p.lad.lapd; }
   if (p.fac) { S.fac.tries = tr(p.fac.tries, S.fac.tries) || null; if (ge(p.fac.lost, S.fac.lost)) S.fac.lost = p.fac.lost || ''; }
   if (p.pwt && p.pwt.day && (!S.pwt || ge(p.pwt.day, S.pwt.day))) { if (!S.pwt) S.pwt = { day: '', run: null, won: 0, cups: {} }; if (S.pwt.day !== p.pwt.day) { S.pwt.day = p.pwt.day; S.pwt.run = null; } }
   if (p.mode && p.mode.day && (!S.mode || ge(p.mode.day, S.mode.day))) S.mode = p.mode;
@@ -420,8 +451,11 @@ function streak() {
   return n;
 }
 /* Shiny Charm: vinnes fra de sjeldneste bossene og virker av seg selv i de neste fokusøktene (S.charm = antall økter igjen). Flere legges sammen. */
-const CHARM = { n: 5, m: 8 };
-const shinyOdds = () => (1 / 150) * (1 + Math.min(streak(), 10) * 0.15) * (S.charm > 0 ? CHARM.m : 1);
+const CHARM = { n: 5, m: 6 };
+/* Shiny: 1 av SHINYN, litt bedre for hver dag på rad (opp til ×1,5 etter ti dager), og mer i dyre pakker, på Lucky Day og med Shiny Charm.
+   Før var grunnsjansen 1 av 150 og en Master Pack ga ×5 oppå ×2,5 for dager på rad: da var hver tjuende fangst shiny. */
+const SHINYN = 300;
+const shinyOdds = () => (1 / SHINYN) * (1 + Math.min(streak(), 10) * 0.05) * (S.charm > 0 ? CHARM.m : 1);
 
 function addMon(id, lv, sh, egg, g) {
   const m = { u: S.uid++, id, lv, xp: xpAt(lv), sh: sh === 2 ? 2 : sh ? 1 : 0, fav: 0, at: Date.now(), iv: rollIv(egg), ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: defaultMoves(id, lv), g: g == null ? rollG(id) : g };
@@ -472,6 +506,8 @@ const zones = (e, ball) => ({ g: Math.max(14, 36 - e.t * 5 + (ball === 'great' ?
    at noen slipper unna (STREAKC per fangst fra den tredje, høyst STREAKMAX). S.cst = rekka akkurat nå.
    Kritisk fangst: en sjelden gang (critP, litt oftere jo flere arter du har) sitter ballen ekstra godt, og sjansen er CRITM ganger så stor. */
 const NEWCOIN = [15, 30, 60, 120, 300], PERFCOIN = 10, STREAKC = 5, STREAKMAX = 50, CRITM = 2.5;
+/* Legendariske møter i vanlige økter (se grant), og hvor mange minutter fokus en dag må ha før kampene kan åpnes og dagen teller som studiedag. */
+const LEGSES = 0.0012, LEGSTIR = [0.003, 0.01], OPENMIN = 25;
 const critP = () => Math.min(0.1, 0.03 + Object.keys(S.caught).length * 0.0002);
 /* Hvor godt sjansen står med denne ballen i den grønne sonen: 2 = god, 1 = jevn, 0 = tøff. */
 const oddsOf = (e, ball) => { const p = catchP(e.id, ball, 1); return p >= 0.7 ? 2 : p >= 0.4 ? 1 : 0; };
@@ -551,11 +587,12 @@ function grant(fag, real, full, plan) {
     if (m.lv > l0) R.ups.push(Object.assign({ u, l0, l1: m.lv, evo: evoOpts(m).some(x => x.ok) }, learnUp(m, l0)));
   });
   for (const q of QUESTS) if (day.m - min < q.m && day.m >= q.m) { q.give(); R.gifts.push(`Daily goal, ${q.n}: ${q.r}`); }
-  /* Raid: dagsmålet nådd gir en sjanse for at en legendarisk viser seg, og hver sjuende dag på rad gir en sikker. */
-  if (typeof raidSpawn === 'function' && !S.raid && S.party.length) {
-    const g = goalMin(), st = streak();
-    if (day.s === 1 && day.m >= 25 && st > 0 && st % 7 === 0) { if (raidSpawn()) R.gifts.push(`${st} days in a row: a legendary Pokémon has shown itself. A raid is waiting.`); }
-    else if (day.m - min < g && day.m >= g && Math.random() < RAIDGOAL) { if (raidSpawn()) R.gifts.push('Daily goal reached: a legendary Pokémon has shown itself. A raid is waiting.'); }
+  /* Raid: sjeldent, og aldri til fast tid (raidRoll i league.js). Dagens første OPENMIN minutter teller som en studiedag og gir én trekning,
+     og dagsmålet nådd gir én til. */
+  if (typeof raidRoll === 'function' && S.party.length) {
+    const g = goalMin();
+    if (day.m - min < OPENMIN && day.m >= OPENMIN) { S.rwait = (S.rwait || 0) + 1; if (raidRoll()) { R.raid = 1; R.gifts.push('A legendary Pokémon has shown itself. A raid is waiting.'); } }
+    if (!R.raid && day.m - min < g && day.m >= g && raidRoll()) { R.raid = 1; R.gifts.push('Daily goal reached: a legendary Pokémon has shown itself. A raid is waiting.'); }
   }
   R.tl1 = tlv();
   for (const n of unlockRegions()) R.gifts.push(`New area: ${n} is open. Its Pokémon now show up in your encounters.`);
@@ -574,10 +611,12 @@ function grant(fag, real, full, plan) {
   let n = Math.floor(okMin / 20) + (full && planned >= 25 && okMin >= planned ? 1 : 0), luck = Math.min(1.5, planned / 60);
   if (S.incOn && okMin > 0) { n++; luck += 0.5; S.incOn = 0; }
   n = Math.min(n, 6);
-  /* Hvert vanlig møte kan en sjelden gang være legendarisk: 0,5 % i en kort økt, opp mot 1 % i en lang, litt mer med dager på rad. */
-  const legP = 0.005 * (1 + luck * 0.5) + Math.min(streak(), 10) * 0.0003;
+  /* Hvert vanlig møte kan en sjelden gang være legendarisk: LEGSES i en kort økt, opp mot det dobbelte i en lang, litt mer med dager på rad.
+     En hel økt på 45 minutter eller mer har i tillegg en liten sjanse (LEGSTIR) for at noe legendarisk rører seg. Begge er en tredel av det de var:
+     de store kommer i raid, og et legendarisk møte i gresset skal være en sjelden overraskelse. */
+  const legP = LEGSES * (1 + luck * 0.5) + Math.min(streak(), 10) * 0.0001;
   for (let i = 0; i < n; i++) encs.push(Math.random() < legP ? legEnc() : genEnc({ fag, luck }));
-  if (full && planned >= 45 && okMin >= planned && Math.random() < Math.min(0.04, 0.01 + 0.005 * streak())) { encs.push(legEnc()); R.gifts.push('Something legendary is stirring in the grass.'); }
+  if (full && planned >= 45 && okMin >= planned && Math.random() < Math.min(LEGSTIR[1], LEGSTIR[0] + 0.0015 * streak())) { encs.push(legEnc()); R.gifts.push('Something legendary is stirring in the grass.'); }
   const fg = S.fag[fag];
   if (fg) {
     /* Milepælene regnes av hele planen (med timene du hadde fra før), men belønningen krever tid som er logget her: MSGATE minutter for hver
@@ -620,7 +659,7 @@ const ACH = [
   { g: 'Study', k: 'goal', n: 'Daily goal', u: 'days with your daily goal reached', v: () => achInit().goal || 0, t: [1, 5, 15, 40, 100] },
   { g: 'Trainer', k: 'tlv', n: 'Trainer level', f: (v, n, s) => s.done >= s.max ? `Trainer level ${v}` : `Trainer level ${v} · next medal at ${n}`, v: () => tlv(), t: [5, 10, 15, 20, 30] },
   { g: 'Trainer', k: 'top', n: 'Strong team', f: (v, n, s) => s.done >= s.max ? `Your strongest Pokémon is Lv ${v}` : `Your strongest Pokémon is Lv ${v} · next medal at Lv ${n}`, v: () => S.mons.reduce((a, m) => Math.max(a, m.lv), 0), t: [20, 35, 50, 75, 100] },
-  { g: 'Trainer', k: 'train', n: 'Fully trained', u: 'Pokémon with all 510 training points', v: () => S.mons.filter(m => evSum(m) >= EVTOT).length, t: [1, 3, 6], r: [{ c: 600, k: 2 }, { c: 1500, k: 3 }, { c: 4000, k: 5 }] },
+  { g: 'Trainer', k: 'train', n: 'Fully trained', u: 'Pokémon with all 510 EVs', v: () => S.mons.filter(m => evSum(m) >= EVTOT).length, t: [1, 3, 6], r: [{ c: 600, k: 2 }, { c: 1500, k: 3 }, { c: 4000, k: 5 }] },
   { g: 'Collection', k: 'dex', n: 'Species caught', u: 'different species caught', v: () => Object.keys(S.caught).length, t: [10, 30, 75, 150, 300] },
   { g: 'Collection', k: 'shiny', n: 'Shiny hunter', u: 'shiny Pokémon owned', v: () => S.mons.filter(m => m.sh === 1).length, t: [1, 3, 10, 25], r: [{ c: 250 }, { c: 600, k: 2 }, { c: 1500, k: 3 }, { c: 4000, k: 5 }] },
   { g: 'Collection', k: 'leg', n: 'Legendary collector', u: 'legendary species caught', v: () => Object.keys(S.caught).filter(id => isLeg(+id)).length, t: [1, 3, 8, 15], r: [{ c: 600, k: 2 }, { c: 1500, k: 3 }, { c: 4000, k: 5 }, { c: 8000, m: 1 }] },
@@ -661,7 +700,7 @@ function achClaimAll() {
   if (o.n) save();
   return o;
 }
-const RANKS = [['Rookie', 0, '#a39b8f'], ['Novice', 6, '#a6c59c'], ['Skilled', 16, '#7fa8e6'], ['Expert', 30, '#b295e6'], ['Master', 50, '#e3c577'], ['Elite', 80, '#ffd9a0']];
+const RANKS = [['Rookie', 0, '#a39b8f'], ['Novice', 10, '#a6c59c'], ['Skilled', 25, '#7fa8e6'], ['Expert', 50, '#b295e6'], ['Master', 80, '#e3c577'], ['Elite', 105, '#ffd9a0']];
 function rankFor(p) { let i = 0; RANKS.forEach((r, j) => { if (p >= r[1]) i = j; }); return { i, n: RANKS[i][0], c: RANKS[i][2], p, at: RANKS[i][1], next: RANKS[i + 1] ? RANKS[i + 1][1] : 0, nn: RANKS[i + 1] ? RANKS[i + 1][0] : '' }; }
 const rankOf = () => rankFor(achPoints());
 /* Alt på én gang, til forsiden: hvor mange belønninger som venter (open), medaljer (p) og rang (R). */
@@ -686,7 +725,9 @@ function evolve(m, to) {
 }
 /* Pokémon fra kjøpte pakker selges for 30 %, ellers kunne en pakke kjøpes og selges med fortjeneste. */
 const PKSELL = 0.3;
-const sellValue = m => Math.round(SELL[tierOf(m.id)] * (1 + m.lv / 20) * (m.sh ? 5 : 1) * (m.pk ? PKSELL : 1));
+/* Salgsverdien følger sjeldenheten, ikke nivået: før vokste den med nivået (og ville Pokémon følger laget ditt), så salg av duplikater ble den
+   største inntektskilden sent i spillet. */
+const sellValue = m => Math.round(SELL[tierOf(m.id)] * (m.sh ? 5 : 1) * (m.pk ? PKSELL : 1));
 function sell(m) {
   if (S.mons.length <= 1) return 0;
   const v = sellValue(m); unbond(m);
@@ -763,6 +804,12 @@ const b64e = s => { const b = new TextEncoder().encode(s); let r = ''; for (let 
 const b64d = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, '')), c => c.charCodeAt(0)));
 function ghLoad() { try { GH = JSON.parse(localStorage.getItem(GHK) || 'null'); } catch (_) { GH = null; } if (GH && !(GH.t && GH.repo)) GH = null; }
 function ghStore() { try { if (GH) localStorage.setItem(GHK, JSON.stringify(GH)); else localStorage.removeItem(GHK); } catch (_) {} }
+/* Demoen (prøv hvilken som helst klasse, raid og pakke) er et testverktøy for den som eier appen. Den vises bare på enheter der Sync er koblet til
+   et lagringsrepo hos eieren (ADMIN = GitHub-brukere). Det ligger ingen hemmelighet i koden: tilkoblingen krever en nøkkel til det private repoet, og
+   ok settes først når nøkkelen har virket. Appen har ingen tjener, så dette er en lukket dør, ikke en lås: den som endrer lagringen eller koden for
+   hånd, kommer forbi – som med alt annet her. */
+const ADMIN = ['mwalderhaug'];
+function isAdmin() { return !!(GH && GH.ok && ADMIN.includes(String(GH.repo || '').split('/')[0].trim().toLowerCase())); }
 /* ok = 1 først når brukeren har valgt hvilken lagring som gjelder (ghLink). Før det synkes ingenting. */
 function ghSet(t, repo) { GH = t && repo ? { t, repo, ok: 0 } : null; ghSha = ''; ghState = ''; ghStore(); }
 function ghReq(method, body) {

@@ -189,7 +189,7 @@ const CINE = (() => {
     rect(0, y - 63, W * e, 2, col, 0.9 * e);
     txt((o.cap || cur.cap || '').toUpperCase(), 256, y - 38, { size: 18, ls: 5, col, a: seg(T, t0 + 0.1, t0 + 0.4) });
     if (slam > 0) { g.save(); g.translate(256, y); g.scale(z, z); txt((cur.name || '').toUpperCase(), 0, 0, { size: 52, ls: 3, col: '#fff', sh: col, sd: 3, a: slam }); g.restore(); }
-    txt('Lv ' + (cur.lv || '?'), 256, y + 26, { size: 20, ls: 2, col: '#fff', a: seg(T, t0 + 0.3, t0 + 0.55) });
+    if (cur.lv) txt('Lv ' + cur.lv, 256, y + 26, { size: 20, ls: 2, col: '#fff', a: seg(T, t0 + 0.3, t0 + 0.55) });
     if (slam > 0 && slam < 1) rect(0, y - 44, W, 52, '#fff', (1 - slam) * 0.5, 1);
   };
   /* Bildet deles i skår som flyr utover fra (cx, cy) og avslører det som er tegnet under. old = lerretet med bildet som knuses, k = 0..1. */
@@ -239,16 +239,17 @@ const CINE = (() => {
   C.has = id => !!filmOf(id);
   C.info = id => { const f = filmOf(id); return f ? { len: f.len, at: f.at || 0, R: f.R, bg: !!f.bg, plat: f.plat || null, omen: f.omen || 0 } : null; };
   /* Henter det filmen trenger. Venter ikke lenger enn ms. */
-  C.prep = async (id, ms) => {
+  C.prep = async (id, ms, extra) => {
     const f = filmOf(id); if (!f) return false;
-    const jobs = Promise.all([need((f.use || []).concat(['paint'])), (typeof id === 'number' || /^dk/.test(id)) ? loadSprite(f.spid || id) : 0].concat((f.sps || []).map(loadSprite)));
+    const jobs = Promise.all([need((f.use || []).concat(['paint'])), (typeof id === 'number' || /^dk/.test(id)) ? loadSprite(f.spid || id) : 0].concat((f.sps || []).concat(extra || []).map(loadSprite)));
     await Promise.race([jobs, new Promise(r => setTimeout(r, ms || 4000))]); return true;
   };
   let B = null;
   async function setCur(id, o) {
     const f = filmOf(id); o = o || {}; const sps = {};
-    for (const s of f.sps || []) sps[s] = await Promise.race([loadSprite(s), new Promise(r => setTimeout(() => r(null), 30))]);
-    cur = { id, f, sp: await Promise.race([loadSprite(f.spid || id), new Promise(r => setTimeout(() => r(null), 30))]), sps, cc: o.cc || '#ffffff', name: o.name || '', cap: o.cap || 'Legendary Pokémon', lv: o.lv || 0 };
+    /* o.team = laget som møter (bossfilmene viser det som skygger): bildene hentes sammen med filmens egne. */
+    for (const s of (f.sps || []).concat(o.team || [])) if (!(s in sps)) sps[s] = await Promise.race([loadSprite(s), new Promise(r => setTimeout(() => r(null), 30))]);
+    cur = { id, f, sp: await Promise.race([loadSprite(f.spid || id), new Promise(r => setTimeout(() => r(null), 30))]), sps, cc: o.cc || '#ffffff', name: o.name || '', cap: o.cap || 'Legendary Pokémon', lv: o.lv || 0, team: o.team || null };
     if (!B) { B = document.createElement('canvas'); B.width = W; B.height = H; }
   }
   /* Tegner ett bilde av filmen på lerretet out. */

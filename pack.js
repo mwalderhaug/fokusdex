@@ -72,7 +72,7 @@ const PACK = (() => {
     list.forEach(f => P.url(f)); loadHud(); loadMenu(); loadFont(); loadAnims(); loadEbx();
     (m.music || []).filter(x => x.c === 'trainer').forEach(x => P.url(x.f));
     /* Bildet og låta til den som venter i ligaen hentes også, og forsiden tegnes på nytt når bildet er klart (bare hvis den står framme). */
-    try { if (S.party.length) { const t = nextTrainer(), tr = trainerInfo(t), f = P.trackFor({ tr, lap: t.lap, rd: Math.floor(t.n / 2), mode: 'league' }), pt = m.trainers && m.trainers[tr.img.split('|')[0]]; if (f) P.url(f); if (pt && !mem.get(pt)) P.url(pt).then(u => { if (u && !S.timer && $('#ov').hidden && U.tab === 'fokus' && $('#sheet').hidden !== false) render(); }); } } catch (_) {}
+    try { if (S.party.length) { const t = nextTrainer(), tr = trainerInfo(t), f = P.trackFor({ tr, lap: t.lap, rd: Math.floor(t.n / 2), mode: 'league' }), pt = m.trainers && m.trainers[tr.img.split('|')[0]]; if (f) P.url(f); if (pt && !mem.get(pt)) P.url(pt).then(u => { if (u && !S.timer && ($('#ov') || {}).hidden && U.tab === 'fokus' && ($('#sheet') || {}).hidden !== false) render(); }); } } catch (_) {}
   }
   /* DS-skriften til tekstboksen og menyene i kampen. Når den er lastet, slås den på for kampskjermen (klassen dsf på siden). */
   let fontJob = null;
