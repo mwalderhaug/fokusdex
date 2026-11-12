@@ -386,7 +386,7 @@ function ladderCard() {
     league: `<div class="card stack" id="mode-league"><div class="row" style="justify-content:space-between"><b>Trainer League</b><span class="row" style="gap:8px">${tag('league')}${pipsEl(ladLives(), ladFails())}</span></div>${row}${prog}
       ${ladLost() ? '<p class="sm">You lost today. The League opens again after your next day of focus, and you keep your place and the XP.</p>' : `<p class="sm">${bo.mode === 'league' ? '+30% XP and better odds for Rare Candy today. ' : ''}${LAPN} battles a lap, and the class rises as you go: a trainer first, a Champion at the end. XP for the whole team after each battle. ${ladLives() - ladFails() > 1 ? 'Second Wind: you can lose once today and still go on.' : 'One loss closes the League for the day, so a boss you cannot beat is a project for tomorrow.'}</p><button type="button" class="go${L.n >= LAPN - 1 ? ' gold' : ''}" data-a="bpre">Battle</button>`}</div>`,
     factory: `<div class="card stack" id="mode-factory"><div class="row" style="justify-content:space-between"><b>Battle Frontier</b><span class="row" style="gap:8px">${tag('factory')}${pipsEl(facLives(), facFails())}</span></div>${fac}
-      ${facLost() ? '<p class="sm">Your runs for today are used. The Frontier opens again after your next day of focus.</p>' : `<p class="sm">${bo.mode === 'factory' ? '1.5× luck on items, encounters and rare bosses today. ' : ''}Six trainers, then a boss. No XP and no Bag here: you win coins, items and encounters. A loss ends the run, and you have ${facLives() - facFails() === 1 ? 'one run left today' : (facLives() - facFails()) + ' runs left today'}.</p><button type="button" class="btn wide gold" data-a="fenter">${R ? 'Continue the run' : 'Enter the Frontier'}</button>`}</div>`,
+      ${facLost() ? '<p class="sm">Your runs for today are used. The Frontier opens again after your next day of focus.</p>' : `<p class="sm">${bo.mode === 'factory' ? '1.5× luck on items, encounters and rare bosses today. ' : ''}${FACN - 1} trainers, then a boss. No XP and no Bag here: you win coins, items and encounters. A loss ends the run, and you have ${facLives() - facFails() === 1 ? 'one run left today' : (facLives() - facFails()) + ' runs left today'}.</p><button type="button" class="btn wide gold" data-a="fenter">${R ? 'Continue the run' : 'Enter the Frontier'}</button>`}</div>`,
     pwt: `<div class="card stack" id="mode-pwt"><div class="row" style="justify-content:space-between"><b>World Tournament</b><span class="row" style="gap:8px">${tag('pwt')}${pipsEl(1, pwtOpen() ? 0 : 1)}</span></div>
       <div class="modec"><span class="ficon">W</span><div class="sp"><b>${esc(wc.n)}</b><div class="sm tn">${WR ? `${ROUNDN[WR.r]} · round ${WR.r + 1} of ${PWTN}` : 'Three rounds · three on three'} · Lv ${WR ? WR.lv : pwtLv()}${W.won ? ` · ${W.won} ${W.won === 1 ? 'trophy' : 'trophies'}` : ''}</div></div></div>
       ${pwtOpen() ? `<p class="sm">A knockout cup that changes with the day of the week. You see the opponent's team before you pick your three. No Bag and no XP: you play for coins, and the winner takes a trophy and ${aN(PACKS[wc.pk].n)}.</p><button type="button" class="btn wide gold" data-a="wenter">${WR ? 'Continue the cup' : 'Enter the cup'}</button>` : '<p class="sm">You have played today\'s cup. A new one opens after your next day of focus.</p>'}</div>`
@@ -1206,9 +1206,9 @@ function overview() {
       <button type="button" class="btn wide" data-a="${tp == null ? 'tskip' : 'tback'}">${tp == null ? 'Keep my team · extra encounter' : 'Back'}</button></div>`;
   } else if (res.swap) {
     const fs = BT.fs;
-    extra = `<div class="card stack"><b>Swap one in?</b><p class="sm">${fs == null ? `Take one of ${esc(tr.n)}'s Pokémon in exchange for one of yours, or keep your four.` : `Who leaves for ${esc(D(res.swap[fs].id)[0])}?`}</p>
-      <div class="rent">${fs == null ? res.swap.map((x, i) => monCard(x, 'fswp', i)).join('') : S.fac.run.team.map((x, i) => monCard(x, 'fswm', i)).join('')}</div>
-      ${fs == null ? '' : '<button type="button" class="btn wide" data-a="fswb">Back</button>'}</div>`;
+    extra = `<div class="card stack"><div class="row" style="justify-content:space-between"><b>Swap one in?</b><span class="sm tn">optional</span></div><p class="sm">You may take one of ${esc(tr.n)}'s Pokémon in exchange for one of yours. You see both teams side by side, and nothing is final until you press Next.</p>
+      <div class="swprev">${res.swap.map(x => spr(x.id, { mega: x.mega, s: '46px' })).join('')}</div>
+      <button type="button" class="btn wide" data-a="swopen">Look at their team</button></div>`;
   }
   const L = S.lad, R = S.fac.run;
   const next = raid ? esc(res.note) : cup ? (!res.win ? esc(res.note) : res.done ? `You won the ${esc(res.cup)}. A new cup opens after your next day of focus.` : `Next: the ${ROUNDN[res.r + 1].toLowerCase()} of the ${esc(res.cup)}. Your team is healed.`) : lab ? 'Demo battle: no XP or rewards, and your League and Frontier progress are untouched.'
@@ -1220,7 +1220,7 @@ function overview() {
       <p class="hof-t">${res.win ? `You beat ${nm}.` : lab ? `${nm} won this time.` : cup ? `${nm} knocked you out of the cup.` : fac ? `${nm} stopped your run.` : `${nm} won this time. You keep your place and the XP.`}</p></div>
     ${team}${rew}${extra}${res.ring ? `<div class="card mgring"><div class="row" style="gap:12px;align-items:center"><span class="gem mg" style="width:34px;height:34px;flex:none"></span><div class="sp"><div class="sm">A Champion's gift</div><b style="font-size:19px">The Mega Ring</b><p class="sm" style="margin-top:4px">Give your Mega Stone to a Pokémon that has a Mega form, on its card. It can then Mega Evolve once a battle, from the move menu.</p></div></div></div>` : ''}${res.raid && S.raid ? `<div class="card k-ultra raidc"><div class="sm">A legendary Pokémon has appeared</div><b class="bossn" style="font-size:19px">${S.raid.seen ? esc(S.raid.dk ? DARK.n : D(S.raid.id)[0]) + ' · ' : ''}Lv ${S.raid.lv}</b><p class="sm" style="margin-top:4px">${S.raid.seen ? '' : 'Who it is stays secret until you face it. '}Beat it and it waits in the grass for you to catch. It is far stronger than anything in the League.</p><button type="button" class="btn gold wide" data-a="raid" style="margin-top:8px">See the raid</button></div>` : ''}
     <div class="card"><span class="sm" style="color:var(--ink)">${next}</span></div>
-    <div class="acts">${lab ? '<button type="button" class="btn gold" data-a="lab">Another demo</button><button type="button" class="btn nf" data-a="home">Done</button>' : (res.win || res.left) && open ? `<button type="button" class="btn gold" data-a="${cup ? 'wenter' : fac ? 'fenter' : 'bpre'}">${cup ? 'Next round' : !res.win ? (fac ? 'Start a new run' : res.gone ? 'Next battle' : 'Rematch') : fac && res.roundDone ? 'Pick new rentals' : 'Next battle'}</button><button type="button" class="btn nf" data-a="home">Done</button>` : '<button type="button" class="btn pri" data-a="home">Done</button>'}</div>`, 'tint ovtop', res.win ? 'var(--gold)' : 'var(--red)');
+    <div class="acts">${lab ? '<button type="button" class="btn gold" data-a="lab">Another demo</button><button type="button" class="btn nf" data-a="home">Done</button>' : (res.win || res.left) && open ? `<button type="button" class="btn gold" data-a="${cup ? 'wenter' : fac ? 'fenter' : 'bpre'}">${cup ? 'Next round' : !res.win ? (fac ? 'Start a new run' : res.gone ? 'Next battle' : 'Rematch') : fac && res.roundDone ? 'Pick new rentals' : fac && res.swap ? 'Next battle · keep my four' : 'Next battle'}</button><button type="button" class="btn nf" data-a="home">Done</button>` : '<button type="button" class="btn pri" data-a="home">Done</button>'}</div>`, 'tint ovtop', res.win ? 'var(--gold)' : 'var(--red)');
   if (first && !fac && !lab && !raid && !cup) setTimeout(animXp, 500);
   res.shown = 1;
 }
@@ -1278,8 +1278,8 @@ function rulesSheet() {
       ${row('Battle ' + LAPN, 'always a Champion')}${row('Or one of the greatest', `${Math.round(SUPP(0) * 100)} % in the first lap, up to ${Math.round(SUPP(99) * 100)} %`)}
       ${row('Coins per win', `${TCL.trainer.coin} for a trainer up to ${TCL.champ.coin} for a Champion<br>${TCL.supreme.coin} for one of the greatest`)}
       <p class="sm"><b>Cynthia</b> and <b>Ghetsis, Champions Edition</b> are the rarest finals. Each has a film of their own and a team to match, gives you one chance only, and pays half again as many coins, with one more legendary encounter, Rare Candy and a Mega Stone on top.</p></div>
-    <div class="card stack"><b>Battle Frontier</b><p class="sm">Rental Pokémon at Lv ${FACLV}. Six trainers and then a boss a round. No XP: you win items, encounters and coins. A loss ends the run, and you can start ${FACLIVES} runs a day.</p>
-      ${row('Coins per win', 'about 30 to 80 × bonus')}${row('Round cleared', `${FACROUND(1)} and up × bonus`)}</div>
+    <div class="card stack"><b>Battle Frontier</b><p class="sm">Rental Pokémon at Lv ${FACLV}: you open seven balls and pick four. ${FACN - 1} trainers and then a boss a round. After a win you may swap one of theirs for one of yours. No XP: you win items, encounters and coins. A loss ends the run, and you can start ${FACLIVES} runs a day.</p>
+      ${row('Coins per win', 'about 40 to 100 × bonus')}${row('Round cleared', `${FACROUND(1)} and up × bonus`)}</div>
     <div class="card stack"><b>World Tournament</b><p class="sm">One cup a day, a new one each day of the week. Quarter-final, semi-final and final, three on three. Your three all play at your team's level, whatever level they really are, and the opponents stand at the same level on Hard and a little below it on Normal and Easy. You see the opponent's team before you pick. No Bag, no XP, and one loss ends the cup.</p>
       ${row('Coins per round', PWTCOIN.join(' · ') + ' × cup × bonus')}${row('Leaders cups · Elite Four · Champions', CUPS.slice(1, 2).concat(CUPS[6], CUPS[0]).map(c => '×' + c.f).join(' · '))}${row('Winner', `trophy · ${PWTCANDY} Rare Candy · a pack`)}</div>
     <div class="card stack"><b>Legendary raids</b><p class="sm">One legendary at a time, against your whole team. Who it is stays secret until you stand in front of it. You get ${RAIDTRIES} attempts, one a day, then it moves on. Its level follows your team, and it has ${RAIDHP[0]} to ${RAIDHP[4]} times the HP of a normal Pokémon.</p>
@@ -1319,15 +1319,40 @@ function facScreen() {
   if (R.offer) {
     const sel = BT.fsel;
     return ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Battle Frontier · Round ${R.round}</span></div>
-      <div><h1 class="big">Pick 4 of 7.</h1><p class="mut" style="margin-top:6px">Rental Pokémon, all at Lv ${FACLV} like everyone you meet. The first one you pick leads. A round is six trainers and then a boss, and you can swap in one Pokémon from each trainer you beat.</p></div>
-      <div class="rent">${R.offer.map((m, i) => monCard(m, 'fsel', i, sel.includes(i)).replace('<b>', sel.includes(i) ? `<span class="ord">${sel.indexOf(i) + 1}</span><b>` : '<b>')).join('')}</div>
+      <div><h1 class="big">Pick 4 of 7.</h1><p class="mut" style="margin-top:6px">Rental Pokémon, all at Lv ${FACLV} like everyone you meet. The first one you pick leads. A round is ${FACN - 1} trainers and then a boss, and you can swap in one Pokémon from each trainer you beat.</p></div>
+      <div class="rent">${R.offer.map((m, i) => monCard(m, 'fsel', i, sel.includes(i)).replace('<b>', (sel.includes(i) ? `<span class="ord">${sel.indexOf(i) + 1}</span>` : '') + `<span class="fstar sm" aria-hidden="true">${'★'.repeat(facStars(m))}</span><b>`)).join('')}</div>
+      ${sel.length >= 2 ? `<p class="sm" style="text-align:center">${teamWeak(sel.map(i => R.offer[i]))}</p>` : ''}
       <div class="acts"><button type="button" class="btn gold" data-a="fpick"${sel.length === 4 ? '' : ' disabled'}>${sel.length === 4 ? 'Take these four' : `Pick ${4 - sel.length} more`}</button></div>`, 'tint', 'var(--t8)');
   }
   const f = facFoe(), tr = facInfo(f), tier = TIER(tr.kind);
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Round ${R.round} · battle ${R.w + 1} of ${FACN}</span></div>
     <div class="card k-${tier}"${kst(tr)}><div class="pre-foe">${tsprite(tr.img)}<div class="sp"><div class="sm">${f.boss ? (tr.ultra ? `${esc(RARE[tr.kind][0].toUpperCase() + RARE[tr.kind].slice(1))} · ${esc(tr.cn)} · extra rewards` : `Boss · ${esc(tr.cn)} · last battle of the round`) : 'Battle Frontier'}</div><b class="${f.boss ? 'bossn' : ''}" style="font-size:19px">${esc(who(tr))}</b><div class="sm tn" style="margin-top:4px">4 Pokémon at Lv ${FACLV} · favours ${TYN[f.hint]} types</div></div></div></div>
     <div><div class="lab">Your rentals · tap the one that leads</div><div class="lineup">${R.team.map((m, i) => `<button type="button" data-a="flead" data-k="${i}" class="${i ? '' : 'lead'}">${spr(m.id, { mega: m.mega })}<span class="sp"><b>${esc(mName(m))}</b><br><span class="sm tn">${m.mv.map(x => esc(MOVES[x][0])).join(', ')}</span></span>${i ? '' : '<span class="pill">Leads</span>'}</button>`).join('')}</div></div>
+    <button type="button" class="btn wide nf" data-a="fstats">Stats and moves of your four</button>
     <div class="acts"><button type="button" class="btn gold" data-a="fgo">Start battle</button></div>`, 'tint', 'var(--t8)');
+}
+/* Typene minst to på laget er svake mot. */
+function teamWeak(list) {
+  const bad = TYN.map((n, t) => [n, list.filter(m => { const ty = mTypes(m); return CH[t][ty[0]] * (ty[1] >= 0 && ty[1] !== ty[0] ? CH[t][ty[1]] : 1) >= 2; }).length]).filter(x => x[1] >= 2).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  return bad.length ? 'Careful: ' + bad.map(x => `${x[1]} of them are weak to ${x[0]}`).join(', ') + '.' : 'No shared weakness so far. A good spread.';
+}
+/* ---------- Byttet etter en seier i Battle Frontier ----------
+   Begge lag vises hver for seg og med navn. Ett trykk velger og viser sammendraget (verdier og angrep) nederst. Når én fra hvert lag er valgt,
+   bytter de to plass med en liten animasjon, og du ser laget slik det blir. Ingenting er gjort før «Next»: da låses laget (handler swnext). */
+function facSwapScreen() {
+  const R = S.fac.run, res = BT.res, B = BT.B; if (!R || !R.team || !res || !res.swap) return overview();
+  const W = BT.sw || (BT.sw = { a: null, b: null, view: null }), theirs = res.swap, mine = R.team, done = W.a != null && W.b != null;
+  const myRow = mine.map((m, i) => done && i === W.b ? theirs[W.a] : m), thRow = theirs.map((m, i) => done && i === W.a ? mine[W.b] : m);
+  const card = (m, side, i) => { const sel = side === 'th' ? W.a === i : W.b === i, on = W.view && W.view[0] === side && W.view[1] === i;
+    return `<button type="button" class="swc${sel ? ' sel' : ''}${done && sel ? ' moved' : ''}${on ? ' on' : ''}${m.mega ? ' mega' : ''}" data-a="swtap" data-s="${side}" data-k="${i}" id="sw-${side}-${i}" style="--tc:var(--t${mTypes(m)[0]})" aria-pressed="${sel}">${spr(m.id, { mega: m.mega, s: '52px' })}<b>${esc(mName(m))}</b><span class="fstar" aria-hidden="true">${'★'.repeat(facStars(m))}</span>${sel ? `<span class="swt">${done ? (side === 'my' ? 'NEW' : 'GIVEN') : side === 'my' ? 'OUT' : 'IN'}</span>` : ''}</button>`; };
+  const v = W.view, vm = v ? (v[0] === 'th' ? thRow : myRow)[v[1]] : null;
+  ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="swback">Back</button><span class="pill tn">Round ${R.round} · ${R.w} of ${FACN} won</span></div>
+    <div><h1 class="big" style="font-size:26px">${done ? 'Swapped. For now.' : 'Swap one in?'}</h1><p class="sm" style="margin-top:6px">${done ? 'This is your team if you go on. Undo if you change your mind: nothing is final until you press Next.' : W.a != null ? 'Now tap the one of yours that leaves.' : W.b != null ? 'Now tap the one of theirs that comes in.' : 'Tap one of theirs and one of yours, in any order. Or keep your four.'}</p></div>
+    <div class="swg"><div class="swl th"><span>${esc(who(B.tr))}</span><b>Their team</b></div><div class="swr th">${thRow.map((m, i) => card(m, 'th', i)).join('')}</div>
+      <div class="swmid" aria-hidden="true"><i></i><span>${done ? 'swapped' : 'swap'}</span><i></i></div>
+      <div class="swl my"><span>Lv ${FACLV} rentals</span><b>Your team</b></div><div class="swr my">${myRow.map((m, i) => card(m, 'my', i)).join('')}</div></div>
+    <div class="acts">${done ? '<button type="button" class="btn nf" data-a="swundo">Undo</button>' : ''}<button type="button" class="btn gold" data-a="swnext">${done ? 'Next · lock this team' : 'Next · keep my four'}</button></div>
+    ${vm ? sumCard(vm) : '<div class="fsum empty"><p class="mut">Tap a Pokémon to see its stats and moves.</p></div>'}`, 'tint', 'var(--t8)');
 }
 
 /* Battle Frontier: leie-Pokémonene trekkes én og én. Hver ball må åpnes og Pokémonen ses over (typer, verdier, angrep) før den neste kan åpnes.
@@ -1336,7 +1361,7 @@ const STN6 = ['HP', 'Attack', 'Defense', 'Sp. Atk', 'Sp. Def', 'Speed'];
 function sumCard(m, fresh) {
   const g = megaOf(m), st = statsOf(m), ty = mTypes(m), top = Math.max(...st.slice(1));
   return `<div class="fsum${g ? ' mega' : ''}${fresh ? ' pop' : ''}" style="--tc:var(--t${ty[0]})">
-    <div class="fs-top">${spr(m.id, { ani: 1, mega: m.mega })}<div class="sp"><b class="fs-n">${esc(mName(m))}</b><div class="sm tn">Lv ${m.lv} · ${NAT[m.nat]} · ${judge(m).t}</div><div class="row" style="gap:4px;margin-top:6px;flex-wrap:wrap">${tyEl(m)}${g ? '<span class="pill megap">MEGA</span>' : ''}</div></div></div>
+    <div class="fs-top">${spr(m.id, { ani: 1, mega: m.mega })}<div class="sp"><b class="fs-n">${esc(mName(m))}</b><div class="sm tn">Lv ${m.lv} · ${NAT[m.nat]} · ${judge(m).t}</div>${m.u ? '' : `<div class="fs-role"><span class="fstar" role="img" aria-label="Strength ${facStars(m)} of 5">${'★'.repeat(facStars(m))}<i>${'★'.repeat(5 - facStars(m))}</i></span><b>${facRole(m)}</b></div>`}<div class="row" style="gap:4px;margin-top:6px;flex-wrap:wrap">${tyEl(m)}${g ? '<span class="pill megap">MEGA</span>' : ''}</div></div></div>
     <div class="fs-st">${STN6.map((n, i) => `<div><span>${n}</span><i><b style="width:${Math.min(100, st[i] / 220 * 100).toFixed(0)}%;background:${i && st[i] === top ? 'var(--gold)' : 'var(--tc)'}"></b></i><em class="tn">${st[i]}</em></div>`).join('')}</div>
     <div class="fs-mv">${m.mv.map(x => { const mv = mvEff(null, { src: m }, MOVES[x]); return `<span style="--c:var(--t${mv[1]})"><b>${esc(mv[0])}</b><small>${TYN[mv[1]]}${mv[2] ? ' · ' + mv[2] : ''}</small></span>`; }).join('')}</div></div>`;
 }
@@ -1344,8 +1369,8 @@ function facDraw(R) {
   const n = R.open, vi = BT.fview != null && BT.fview < n ? BT.fview : n - 1, cur = vi >= 0 ? R.offer[vi] : null, fresh = !!BT.fnew && vi === n - 1;
   BT.fnew = false;
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Battle Frontier · Round ${R.round}</span></div>
-    <div><h1 class="big">${n === 0 ? 'Seven Poké Balls.' : n < 7 ? `Pokémon ${vi + 1} of 7` : 'All seven are open.'}</h1><p class="mut" style="margin-top:6px">${n === 0 ? `Open them one at a time. Every rental is fully evolved and at Lv ${FACLV}, and with great luck one of them is a Mega.` : n < 7 ? 'Look it over, then open the next ball. You pick four when all seven are open.' : 'Tap a ball to look again, then pick your four.'}</p></div>
-    <div class="fdr">${R.offer.map((m, i) => i < n ? `<button type="button" class="fdb open${m.mega ? ' mega' : ''}${i === vi ? ' on' : ''}" data-a="fview" data-k="${i}" aria-label="${esc(mName(m))}">${spr(m.id, { mega: m.mega })}</button>` : `<span class="fdb${i === n ? ' next' : ''}">${ballEl(R.round >= 3 ? 'ultra' : R.round === 2 ? 'great' : 'poke')}</span>`).join('')}</div>
+    <div><h1 class="big">${n === 0 ? 'Seven Poké Balls.' : n < 7 ? `Pokémon ${vi + 1} of 7` : 'All seven are open.'}</h1><p class="mut" style="margin-top:6px">${n === 0 ? `Open them one at a time. The ball tells you a little: a Great Ball holds a stronger Pokémon than a Poké Ball, and an Ultra Ball the strongest. With great luck one of them is a Mega.` : n < 7 ? 'Look it over, then open the next ball. You pick four when all seven are open.' : 'Tap a ball to look again, then pick your four.'}</p></div>
+    <div class="fdr">${R.offer.map((m, i) => i < n ? `<button type="button" class="fdb open${m.mega ? ' mega' : ''}${i === vi ? ' on' : ''}" data-a="fview" data-k="${i}" aria-label="${esc(mName(m))}">${spr(m.id, { mega: m.mega })}</button>` : `<span class="fdb b-${m.mega ? 'mega' : facBall(m)}${i === n ? ' next' : ''}${n === 0 ? ' drop' : ''}" style="--i:${i}">${ballEl(facBall(m))}</span>`).join('')}</div>
     ${cur ? sumCard(cur, fresh) : `<div class="fsum empty"><p class="mut">Nothing opened yet.</p></div>`}
     <div class="acts">${n < 7 ? `<button type="button" class="btn gold" data-a="fopen">${n === 0 ? 'Open the first ball' : n === 6 ? 'Open the last ball' : 'Open the next ball'} · ${n}/7</button>` : '<button type="button" class="btn gold" data-a="fteam">Pick your four</button>'}</div>`, 'tint', 'var(--t8)');
 }
@@ -1427,7 +1452,31 @@ const BA = {
   fpick: () => { if (BT.fsel.length !== 4) return; facPick(BT.fsel.slice()); BT.fsel = []; BT.fpick = false; BT.fview = null; sfx.ok(); facScreen(); },
   flead: el => { const R = S.fac.run, i = +el.dataset.k; if (i > 0) { R.team.unshift(R.team.splice(i, 1)[0]); save(); } facScreen(); },
   fgo: () => { if (!facOpen() || !S.fac.run || !S.fac.run.team) return; PACK.unlock(); sfx.start(); BT.busy = false; startBattle(facBattle()); },
-  fswp: el => { BT.fs = +el.dataset.k; overview(); },
-  fswb: () => { BT.fs = null; overview(); },
-  fswm: el => { const res = BT.res, x = res.swap[BT.fs]; if (!x) return; const old = S.fac.run.team[+el.dataset.k]; facSwap(+el.dataset.k, x); res.swap = null; BT.fs = null; sfx.ok(); toast(`${D(x.id)[0]} joined your rentals in place of ${D(old.id)[0]}.`); overview(); }
+  swopen: () => { if (!BT.res || !BT.res.swap || !S.fac.run) return; BT.sw = { a: null, b: null, view: null }; sfx.open(); facSwapScreen(); },
+  /* Ett trykk velger og viser sammendraget. Når én fra hvert lag er valgt, bytter de plass (foreløpig) med en liten animasjon. */
+  swtap: el => {
+    const W = BT.sw, side = el.dataset.s, k = +el.dataset.k; if (!W) return;
+    W.view = [side, k];
+    if (W.a != null && W.b != null) { sfx.tap(); return facSwapScreen(); }
+    if (side === 'th') W.a = W.a === k ? null : k; else W.b = W.b === k ? null : k;
+    if (W.a != null && W.b != null) {
+      const ea = $('#sw-th-' + W.a), eb = $('#sw-my-' + W.b), ra = ea && ea.getBoundingClientRect(), rb = eb && eb.getBoundingClientRect();
+      W.view = ['my', W.b]; facSwapScreen(); sfx.ok(); buzz([30, 40, 60]);
+      const na = $('#sw-th-' + W.a), nb2 = $('#sw-my-' + W.b);
+      if (ra && rb && na && nb2 && na.animate && !calm()) { const o = { duration: 560, easing: 'cubic-bezier(.2,.8,.2,1)' }, dx = ra.left - rb.left, dy = ra.top - rb.top;
+        nb2.animate([{ transform: `translate(${dx}px,${dy}px) scale(1.06)`, zIndex: 2 }, { transform: `translate(${dx * 0.5}px,${dy * 0.5 - 14}px) scale(1.14)`, zIndex: 2 }, { transform: 'none', zIndex: 2 }], o);
+        na.animate([{ transform: `translate(${-dx}px,${-dy}px) scale(1.06)` }, { transform: `translate(${-dx * 0.5}px,${-dy * 0.5 + 14}px) scale(.94)` }, { transform: 'none' }], o); }
+      return;
+    }
+    sfx.tap(); facSwapScreen();
+  },
+  swundo: () => { const W = BT.sw; if (!W) return; W.a = W.b = null; W.view = null; sfx.tap(); facSwapScreen(); },
+  swback: () => { BT.sw = null; overview(); },
+  /* Next låser laget: byttet gjennomføres (hvis det er gjort), og neste kamp venter. */
+  swnext: () => {
+    const W = BT.sw, res = BT.res, R = S.fac.run; if (!res || !R) return;
+    if (W && W.a != null && W.b != null && res.swap && res.swap[W.a]) { const x = res.swap[W.a], old = R.team[W.b]; facSwap(W.b, x); toast(`${D(x.id)[0]} joined your rentals in place of ${D(old.id)[0]}.`); }
+    res.swap = null; BT.sw = null; sfx.ok(); if (!facOpen()) { closeOv(); return render(); } BT.B = null; BT.busy = false; facScreen();
+  },
+  fstats: () => { const R = S.fac.run; if (!R || !R.team) return; sfx.open(); openSheet(`<h2 class="h" style="margin-top:0">Your rentals</h2><div class="stack">${R.team.map(m => sumCard(m)).join('')}</div><button type="button" class="btn wide" data-a="close" style="margin-top:12px">Close</button>`); }
 };

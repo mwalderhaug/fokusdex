@@ -1289,3 +1289,36 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .lgp.ten i{height:8px;border-radius:4px}
 .lgp.ten i.c1{background:var(--ink2)}.lgp.ten i.c2{background:var(--sage)}.lgp.ten i.c3{background:#c98a6a}.lgp.ten i.c4{background:var(--red)}.lgp.ten i.c5{background:var(--blue)}.lgp.ten i.c6{background:#7fd4c4}.lgp.ten i.c7{background:#b02030}.lgp.ten i.c8{background:var(--violet)}.lgp.ten i.c9{background:var(--gold)}
 .lgp.ten i.ul{flex:1.5;box-shadow:inset 0 0 0 1.5px var(--gold)}.lgp.ten i.ul.on{box-shadow:none}
+
+/* ---------- Battle Frontier: byttet etter en seier, og draften ---------- */
+.swprev{display:flex;gap:6px;justify-content:center}
+.swg{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:22px;background:var(--card);box-shadow:0 0 0 1px var(--line)}
+.swl{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;color:var(--ink2)}
+.swl b{font-size:12.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.swl.th b{color:var(--red)}.swl.my b{color:var(--sage)}
+.swr{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:6px;border-radius:16px}
+.swr.th{background:color-mix(in srgb,var(--red) 9%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--red) 30%,transparent)}
+.swr.my{background:color-mix(in srgb,var(--sage) 9%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--sage) 30%,transparent)}
+.swc{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;min-width:0;padding:6px 2px 7px;border:0;border-radius:13px;font:inherit;color:var(--ink);background:color-mix(in srgb,var(--tc) 14%,var(--card2));box-shadow:0 0 0 1px var(--line);cursor:pointer}
+.swc .sprb{--s:52px}
+.swc b{font-size:11.5px;font-weight:750;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.swc.on{box-shadow:0 0 0 1.5px var(--ink2)}
+.swc.sel{box-shadow:0 0 0 2.5px var(--gold)}
+.swc.moved{box-shadow:0 0 0 2.5px var(--sage);background:color-mix(in srgb,var(--sage) 18%,var(--card2))}
+.swr.th .swc.moved{box-shadow:0 0 0 2px var(--ink2);background:var(--card2);opacity:.75}
+.swc.mega{background:linear-gradient(135deg,#3a2a5a,#5a3a1a)}
+.swt{position:absolute;top:-7px;left:50%;transform:translateX(-50%);padding:1px 7px;border-radius:8px;font-size:9.5px;font-weight:900;letter-spacing:.06em;color:#2a2109;background:var(--gold)}
+.swc.moved .swt{background:var(--sage);color:#152013}.swr.th .swc.moved .swt{background:var(--ink2);color:#17130f}
+.swmid{display:flex;align-items:center;gap:10px;color:var(--ink2);font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.swmid i{flex:1;height:1px;background:var(--line)}
+.fstar{color:var(--gold);font-size:10.5px;letter-spacing:1px;line-height:1}
+.fstar i{font-style:normal;color:rgba(255,255,255,.16)}
+.fstar.sm{position:absolute;right:8px;top:8px}
+.fs-role{display:flex;align-items:center;gap:8px;margin-top:4px;font-size:12.5px}
+.fdb.drop{animation:fdDrop .5s cubic-bezier(.2,.9,.3,1.25) backwards;animation-delay:calc(var(--i)*.09s)}
+@keyframes fdDrop{from{transform:translateY(-46px) scale(.6);opacity:0}}
+.fdb.b-great{box-shadow:0 0 0 1px color-mix(in srgb,var(--blue) 55%,var(--line))}
+.fdb.b-ultra{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--gold) 65%,var(--line))}
+.fdb.b-mega{box-shadow:0 0 0 2px var(--gold),0 0 16px color-mix(in srgb,var(--violet) 60%,transparent)}
+.fdb.next{box-shadow:0 0 0 2px var(--gold)}
+@media (prefers-reduced-motion:reduce){.fdb.drop{animation:none}}

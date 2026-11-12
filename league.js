@@ -504,15 +504,35 @@ function doTrade(x, mine) {
 }
 
 /* ---------- Battle Frontier ---------- */
-/* Alt i Battle Frontier er på nivå 50, så alle stiller likt. En runde er seks vanlige trenere og en boss. For hver runde blir leie-Pokémonene
-   og motstanderne sterkere (høyere samlet styrke), ikke høyere i nivå. Internt heter modusen fortsatt «fac». */
-const FACLV = 50, FACN = 7, FACROUND = r => 200 + 100 * Math.min(4, r - 1);
-const FACBST = r => [[380, 500], [420, 530], [450, 560], [480, 600]][Math.min(3, r - 1)];
+/* Alt i Battle Frontier er på nivå 50, så alle stiller likt. En runde er FACN kamper: fire vanlige trenere og en boss. For hver runde blir
+   leie-Pokémonene og motstanderne sterkere (høyere samlet styrke), ikke høyere i nivå. Internt heter modusen fortsatt «fac».
+   LEIEPOOLEN (FACBST = laveste og høyeste samlede styrke per runde): bunnen er løftet så de helt svake er borte, og toppen holdt nede så ingen
+   bærer laget alene. Innenfor spennet trekkes de midterste oftest (facW), og blant de sju er det aldri mer enn to med samme hovedtype,
+   så det alltid er noe nytt å prøve. Motstanderne ligger tettere opp mot det du leier enn før (FACD). */
+const FACLV = 50, FACN = 5, FACROUND = r => 200 + 100 * Math.min(4, r - 1);
+const FACBST = r => [[430, 525], [455, 545], [475, 570], [495, 600]][Math.min(3, r - 1)];
+const FACD = [-55, -35, -15, 0];
+const facW = (s, a, b) => { const m = (a + b) / 2, h = (b - a) / 2 || 1; return 0.35 + 0.65 * (1 - Math.abs(s - m) / h); };
+/* Hvor sterk en leie-Pokémon er, i stjerner (1–5), og ballen den ligger i før den åpnes. Mega er alltid fem. */
+const facStars = m => { if (m.mega) return 5; const s = bstSum(m.id); return s < 455 ? 1 : s < 485 ? 2 : s < 515 ? 3 : s < 545 ? 4 : 5; };
+const facBall = m => { const n = facStars(m); return n >= 4 ? 'ultra' : n === 3 ? 'great' : 'poke'; };
+/* Rollen, lest av verdiene på nivå 50: til hjelp når laget velges. */
+function facRole(m) {
+  const st = statsOf(m), off = Math.max(st[1], st[3]), bulk = (st[0] - 60 + st[2] + st[4]) / 3, sp = st[5];
+  return sp >= 112 && off >= 112 ? 'Fast attacker' : off >= 128 ? (st[1] >= st[3] ? 'Heavy hitter' : 'Special cannon') : bulk >= 108 && off < 105 ? 'Wall' : sp >= 118 ? 'Speedster' : bulk >= 98 ? 'Tank' : 'All-rounder';
+}
 /* d flytter styrken opp eller ned: de første motstanderne i en runde er svakere enn det du leier. */
-function facMon(r, used, d) {
-  const [a, b] = FACBST(r), pool = [];
-  for (let id = 1; id <= 649; id++) { if (isLeg(id) || used.has(id) || (D(id)[6] & 4) || (EVO[id] && EVO[id].length)) continue; const s = bstSum(id); if (s >= a + d && s <= b + d && reqLv(id) <= FACLV + 12) pool.push(id); }
-  const id = pool[rnd(pool.length)]; used.add(id);
+function facMon(r, used, d, tys) {
+  const [a, b] = FACBST(r), pool = []; let tot = 0;
+  for (let id = 1; id <= 649; id++) {
+    if (isLeg(id) || used.has(id) || (D(id)[6] & 4) || (EVO[id] && EVO[id].length)) continue;
+    const s = bstSum(id); if (s < a + d || s > b + d || reqLv(id) > FACLV + 12) continue;
+    if (tys && (tys[D(id)[1]] || 0) >= 2) continue;
+    const w = facW(s, a + d, b + d); pool.push([id, w]); tot += w;
+  }
+  if (!pool.length) return facMon(r, used, d, null);
+  let x = Math.random() * tot, id = pool[pool.length - 1][0]; for (const [i, w] of pool) { x -= w; if (x <= 0) { id = i; break; } }
+  used.add(id); if (tys) tys[D(id)[1]] = (tys[D(id)[1]] || 0) + 1;
   return { id, lv: FACLV, sh: 0, iv: Array.from({ length: 6 }, () => Math.max(0, Math.min(31, 4 * r + Math.round(d / 5) + 6 + rnd(14)))), ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: foeMoves(id, FACLV, 1) };
 }
 /* Leie-Pokémon er alltid fullt utviklet. En sjelden gang (MEGAP) er én av de sju en Mega. Den trekkes blant alle Mega-former som ikke er legendariske,
@@ -525,7 +545,7 @@ function megaPick(used) {
   return c[0];
 }
 function facOffer(r) {
-  const used = new Set(), l = Array.from({ length: 7 }, () => facMon(r, used, 0));
+  const used = new Set(), tys = {}, l = Array.from({ length: 7 }, () => facMon(r, used, 0, tys));
   if (Math.random() < MEGAP) { const k = megaPick(used), g = MEGA[k], i = rnd(7); l[i] = { id: g[0], mega: k + 1, lv: FACLV, sh: 0, iv: l[i].iv, ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: foeMoves(g[0], FACLV, 1) }; }
   return l;
 }
@@ -535,6 +555,8 @@ function facPick(idx) { const R = S.fac.run; R.team = idx.map(i => R.offer[i]); 
    og en sjelden gang en toppboss (klasse 7 til 9), som gir mye bedre belønning. Sjansen for toppboss øker med rundene. */
 function facFoe() {
   const R = S.fac.run;
+  /* Et løp fra før runden ble kortere: står du lenger enn den nye runden rekker, er det bossen som venter. */
+  if (R.w > FACN - 1) { R.w = FACN - 1; R.foe = null; }
   if (R.foe && (R.foe.boss ? POOL[R.foe.k] && POOL[R.foe.k][R.foe.i] : R.foe.ci != null)) return R.foe;
   const boss = R.w === FACN - 1, used = new Set(R.team.map(m => m.id)), cnt = {};
   let f;
@@ -548,7 +570,7 @@ function facFoe() {
     const dd = diff(); st.iv = Math.round(st.iv * dd.iv); st.ev = Math.round(st.ev * dd.ev);
     f = { boss: 1, k, i, sk: Math.min(1, [0.76, 0.86, 0.94, 1][r - 1] - (k === 'brain' ? 0.06 : 0) + 0.06 * u), team: bossTeam(POOL[k][i], 4, FACLV, st, true), hint: POOL[k][i][3] };
   } else {
-    const d = [-90, -75, -55, -40, -25, -10][R.w], team = Array.from({ length: 4 }, () => facMon(R.round, used, d));
+    const d = FACD[Math.min(FACD.length - 1, R.w)], team = Array.from({ length: 4 }, () => facMon(R.round, used, d));
     team.forEach(m => { const t = D(m.id)[1]; cnt[t] = (cnt[t] || 0) + 1; });
     f = { ci: rnd(POOL.trainer.length), team, hint: +Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0] };
   }
@@ -558,7 +580,7 @@ function facFoe() {
 function facInfo(f) {
   const R = S.fac.run;
   if (f.boss) return trainerOf(f.k, f.i, { skill: (f.sk || 1) * diff().sk, fr: 1, arena: 'hall', int: f.k === 'brain' ? 3 : TCL[f.k].i - 1 });
-  return trainerOf('trainer', f.ci, { ty: f.hint, skill: Math.min(0.95, 0.25 + 0.1 * R.round + 0.05 * R.w) * diff().sk, fr: 1, arena: 'factory', v: 0, int: R.w >= 4 ? 1 : 0 });
+  return trainerOf('trainer', f.ci, { ty: f.hint, skill: Math.min(0.95, 0.3 + 0.1 * R.round + 0.08 * R.w) * diff().sk, fr: 1, arena: 'factory', v: 0, int: R.w >= 2 ? 1 : 0 });
 }
 function facBattle() {
   const R = S.fac.run, f = facFoe();
@@ -572,10 +594,10 @@ function finishFactory(B) {
   const sm = B.sm, bm = B.boost.mode === 'factory' ? B.boost.m : 1, r = R.round, roll = p => Math.random() < p * bm;
   const give = (it, n) => { if (n > 0) { S.items[it] += n; res.items.push(`${n} × ${SHOP[it].n}`); } };
   R.w++; R.streak++; res.w = R.w; res.streak = R.streak; S.fac.best = Math.max(S.fac.best || 0, R.streak);
-  res.coins = Math.round((20 + 8 * R.w + 15 * (r - 1)) * sm * (B.dc || 1)) + B.pay; S.coins += res.coins; evPerk(res);
+  res.coins = Math.round((30 + 12 * R.w + 15 * (r - 1)) * sm * (B.dc || 1)) + B.pay; S.coins += res.coins; evPerk(res);
   if (roll(0.4)) give(r >= 3 ? 'ultra' : r >= 2 ? 'great' : 'poke', r >= 2 ? 1 : 2);
-  if (R.w === 3) pushEnc(res, genEnc({ min: 1, luck: 1 }));
-  if (R.w === 5) { give('great', 2); if (!S.incOn) { S.incOn = 1; res.items.push('Incense for your next session'); } if (roll(0.5)) pushEnc(res, genEnc({ min: 2, luck: 1.2 })); }
+  if (R.w === 2) pushEnc(res, genEnc({ min: 1, luck: 1 }));
+  if (R.w === 4) { give('great', 2); if (!S.incOn) { S.incOn = 1; res.items.push('Incense for your next session'); } if (roll(0.5)) pushEnc(res, genEnc({ min: 2, luck: 1.2 })); }
   if (R.w >= FACN) {
     pushEnc(res, genEnc({ ty: [B.tr.ty], min: r >= 2 ? 3 : 2, luck: 1.5 })); pushEnc(res, genEnc({ min: 2, luck: 1.5 }));
     give('ultra', r >= 2 ? 2 : 1); give(Math.random() < 0.5 ? 'stone' : 'candy', 1);

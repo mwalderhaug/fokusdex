@@ -134,7 +134,7 @@ const PACK = (() => {
     else if (tr.kind === 'brain') { l = by('frontier', re); if (!l.length) l = by('frontier', /Frontier Brain/); }
     else if (tr.boss) { if (re) { l = by(tr.kind, re); for (const c of FALL[tr.kind] || []) if (!l.length) l = by(c, re); } if (!l.length) l = by(tr.kind); }
     /* Battle Frontier: de første trenerne får trenerlåter, de siste får de store. Alt i Frontier-mappa som ikke er en Brain-låt eller den rolige, hører til de store. */
-    else if (tr.fr) { l = (B.w || 0) >= 4 ? by('frontier').filter(x => !/Frontier Brain|Aether/.test(x.t)).concat(by('e4')) : by('frontier', /Aether/).concat(by('trainer')); h = (B.w || 0) + (B.round || 0) * 3; }
+    else if (tr.fr) { l = (B.w || 0) >= 2 ? by('frontier').filter(x => !/Frontier Brain|Aether/.test(x.t)).concat(by('e4')) : by('frontier', /Aether/).concat(by('trainer')); h = (B.w || 0) + (B.round || 0) * 3; }
     /* Vanlige trenere bytter mellom trenerlåtene fra kamp til kamp. */
     if (!l.length) { l = by('trainer'); if (l.length) { if (B.pick == null) B.pick = B.mode === 'league' ? (B.rd || 0) + (B.lap || 0) : Math.floor(Math.random() * 97); return l[B.pick % l.length].f; } }
     if (!l.length) return '';
