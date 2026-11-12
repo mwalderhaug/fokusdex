@@ -312,8 +312,13 @@ function migrate9() { for (const m of S.mons) if (m.sh && Array.isArray(m.iv)) m
    dagens kamper er ferdige (er de alt ferdige, står kortet der som før). */
 function migrate10() {
   const R = S.raid;
-  if (R && !R.at) { let done = false; try { done = !!S.lad.day && typeof dayDone === 'function' && dayDone(); } catch (_) {} R.tries = 0; R.day = ''; R.at = dayKey(); R.hid = done ? 0 : 1; R.nw = 0; delete R.seen; }
+  if (R && !R.at) { let done = false; try { done = !!S.lad.day && typeof dayDone === 'function' && dayDone(); } catch (_) {} R.tries = 0; R.day = ''; R.at = dayKey(); R.hid = done ? 0 : 1; R.nw = 0; delete R.seen; raidRelevel(R); }
   S.mig = 10;
+}
+/* Nivået til et raid som er stilt på nytt: det reglene gir for laget slik det er nå (raidLvFor), som for et raid som viser seg i dag. De gamle sto på
+   nivået fra eldre regler, langt over laget. hx settes samtidig, og er merket på at dette er gjort. Den mørke (dk) har sitt eget nivå og røres ikke. */
+function raidRelevel(R) {
+  try { if (!R || R.dk || R.hx != null || typeof LEG === 'undefined' || !LEG[R.id] || typeof raidLvFor !== 'function') return; const t = LEG[R.id].t; R.lv = raidLvFor(t); R.hx = +raidHx(t).toFixed(2); } catch (_) {}
 }
 function adopt(o) {
   S = Object.assign(fresh(), o);
@@ -334,6 +339,8 @@ function adopt(o) {
   /* Et forsøk kan ikke være eldre enn raidet selv (S.raid.at = dagen det kom). Et slikt merke kommer fra en eldre appversjon som flettet inn
      forsøkene fra et tidligere raid av samme art: de gjelder ikke dette. */
   if (S.raid && S.raid.at && S.raid.day && S.raid.day < S.raid.at) { S.raid.tries = 0; S.raid.day = ''; }
+  /* Raid som ble stilt på nytt av den første utgaven av migrate10 (ingen hx), fikk ikke nytt nivå: det får de her. */
+  if (S.raid && S.raid.at && S.raid.hx == null) raidRelevel(S.raid);
   S.routes = (S.routes || []).filter(r => S.regions.includes(r)); if (!S.routes.length) S.routes = [S.regions.includes(S.region) ? S.region : S.regions[0]];
   S.mons.forEach(ensure);
   unlockRegions();

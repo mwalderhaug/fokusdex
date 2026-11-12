@@ -175,7 +175,7 @@
     } });
 
   /* ================= DARK MEWTWO FORVANDLES ================= */
-  CINE.SIN = { eye: [[-0.4, -63.4], [-4.8, -62.4]], at: 20.4, drop: 13.84, loop: 34.22 };
+  CINE.SIN = { eye: [[0.5, -64], [-5.5, -64]], at: 20.4, drop: 13.84, loop: 34.22 };
   const SA = 0.18, SB = 3.61, SC = 7.1, SQ = 9.9, SD = 13.84;
   /* Skyen rundt den: svarte skyer som går i ring, stråler og rødt lys innenfra, og lyn inne i skyen. r = hvor stor, a = hvor tett, heat = gløden, out = hvor
      langt skyene er slengt utover (utbruddet). */
@@ -187,12 +187,19 @@
     for (let i = 0; i < 3; i++) { const q = floor(t * 5 + i * 2.3), an = rnd(q, i) * TAU; if (rnd(q, i + 9) < 0.35 + heat * 0.3) bolt(x + cos(an) * r * 0.2, y + sin(an) * r * 0.2, x + cos(an) * r * 1.15, y + sin(an) * r * 0.9, { seed: q * 7 + i, col: '#ff1a2a', core: '#ffc0b0', w: 1.6, a: 0.85 * a * (1 - o2), depth: 4, br: 1 }); }
   };
   /* Øynene som lyser. k = styrken. */
-  const sinEyes = (o, k, s) => { if (k <= 0.01) return; const fl = 0.85 + 0.15 * sin(K.T * 23); glow(o.ex, o.ey, 6.5 * s * fl * (0.6 + k * 0.4), '#ff4a1a', 0.95 * k, 1); glow(o.ex, o.ey, 2.2 * s, '#fff2d0', k, 1); if (o.ex2 != null) { glow(o.ex2, o.ey2, 4.2 * s * fl * (0.6 + k * 0.4), '#ff4a1a', 0.8 * k, 1); glow(o.ex2, o.ey2, 1.4 * s, '#fff2d0', 0.9 * k, 1); } };
+  /* Det nære øyet: et lite, avlangt skjær, en smal stripe tvers gjennom og en liten varm kjerne. Det bortre er bare en glipe (hodet er vendt bort). */
+  const sinFlare = (x, y, half, th, a) => { if (a <= 0 || half <= 0) return; const X = K.g, gr = X.createLinearGradient(-half, 0, half, 0); gr.addColorStop(0, 'rgba(255,80,24,0)'); gr.addColorStop(0.5, 'rgba(255,200,140,1)'); gr.addColorStop(1, 'rgba(255,80,24,0)'); X.save(); X.translate(x, y); X.rotate(-0.16); X.globalAlpha = c01(a); X.globalCompositeOperation = 'lighter'; X.fillStyle = gr; X.fillRect(-half, -th, half * 2, th * 2); X.restore(); };
+  const sinEyes = (o, k, s) => {
+    if (k <= 0.01) return; const fl = 0.8 + 0.2 * sin(K.T * 19), X = K.g;
+    X.save(); X.translate(o.ex, o.ey); X.rotate(-0.16); X.scale(1, 0.7); glow(0, 0, 5 * s * fl * (0.6 + k * 0.4), '#ff3a14', 0.8 * k, 1); X.restore();
+    sinFlare(o.ex, o.ey, 8.5 * s * (0.65 + 0.35 * fl) * k, 0.55 * s, 0.85 * k); glow(o.ex, o.ey, 1.5 * s, '#ffd9a0', 0.95 * k, 1);
+    if (o.ex2 != null) { glow(o.ex2, o.ey2, 2.3 * s * fl, '#ff3a14', 0.55 * k, 1); glow(o.ex2, o.ey2, 0.8 * s, '#ffc890', 0.7 * k, 1); }
+  };
   fx('ev:sin', { len: 16, use: ['smoke', 'redswirl', 'cracks'],
     cues: [[SA, 'boom'], [1.85, 'rumble'], [SB, 'boom'], [SB, 'cry'], [SC, 'hit'], [10.5, 'beat'], [11.5, 'beat'], [12.4, 'beat'], [13.1, 'beat'], [SD, 'boom'], [SD, 'sfx', 'Psystrike'], [SD, 'sin']],
     draw(t, o) {
       const s = o.s || 2, x = o.x, cy = o.y - 46 * s, R = 58 * s, pre = t < SD, after = t - SD;
-      if (o.ex == null) { o.ex = x - 0.4 * s; o.ey = o.y - 63.4 * s; }
+      if (o.ex == null) { o.ex = x + 0.5 * s; o.ey = o.y - 64 * s; }
       /* Mørket: tettere for hvert slag, nesten helt i stillheten, og så slipper det. */
       const dk = pre ? 0.3 * seg(t, 0, SA) + 0.22 * seg(t, SA, SB) + 0.14 * seg(t, SC, SQ) + 0.2 * seg(t, SQ, SQ + 1.6) : 0.62 * (1 - seg(t, SD + 0.15, 15.8));
       fill('#020003', dk);

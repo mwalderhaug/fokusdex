@@ -280,12 +280,42 @@ async function dkMusic(B, o) {
   PACK.music(''); music('evil', o);
 }
 /* Øynene som lyser: to merker oppå figuren, plassert etter øynene i bildet (CINE.SIN.eye). */
-const dkEyes = sp => { if (!sp || sp.querySelector('.sineye') || typeof CINE === 'undefined' || !CINE.SIN) return; CINE.SIN.eye.forEach((e, i) => { const el = document.createElement('i'); el.className = 'sineye' + (i ? ' b' : ''); el.style.setProperty('--ex', e[0] + 'px'); el.style.setProperty('--ey', e[1] + 'px'); sp.appendChild(el); }); };
+/* DKEYE: øyepikslene i det 96 × 96 store bildet av nr. 150 sett forfra. hot = det hvite i det nære øyet, core = pupillen, far = glipa som er alt
+   en ser av det bortre øyet (hodet er vendt mot venstre). dkEyePaint maler dem glødende i det mørke bildet og husker resultatet i DKC. */
+const DKEYE = { hot: [[47, 31], [48, 31], [49, 31], [48, 32], [49, 32]], core: [[47, 32], [46, 33]], far: [[42, 31], [42, 32]] };
+function dkEyePaint(img) {
+  if (!img || typeof DKC === 'undefined') return false;
+  const u = img.dataset.u || '', k = u + '#sin', have = DKC.get(k);
+  if (have) { if (img.src !== have) img.src = have; return true; }
+  if (!DKC.get(u) || img.classList.contains('dkf') || !img.complete || img.naturalWidth !== 96 || img.naturalHeight !== 96) return false;
+  try {
+    const c = document.createElement('canvas'), x = c.getContext('2d'); c.width = 96; c.height = 96; x.drawImage(img, 0, 0);
+    const put = (l, col) => { x.fillStyle = col; l.forEach(p => x.fillRect(p[0], p[1], 1, 1)); };
+    put(DKEYE.hot, '#fff3c8'); put(DKEYE.core, '#ff7a1e'); put(DKEYE.far, '#ff5a1a'); x.fillStyle = '#ffb060'; x.fillRect(DKEYE.far[1][0], DKEYE.far[1][1], 1, 1);
+    const d = c.toDataURL(); DKC.set(k, d); img.src = d; return true;
+  } catch (_) { return false; }
+}
+/* Øynene som lyser: pikslene males (dkEyePaint), og to svake skjær legges oppå, plassert etter øynene i bildet (CINE.SIN.eye). Er bildet ikke lastet
+   ennå, males det når det er klart. */
+const dkEyes = sp => {
+  if (!sp || typeof CINE === 'undefined' || !CINE.SIN) return;
+  const img = sp.querySelector('.sprb.dark img.spr');
+  if (img && !dkEyePaint(img) && !img.dataset.sinw) { img.dataset.sinw = '1'; img.addEventListener('load', () => { delete img.dataset.sinw; if (sp.classList.contains('sin')) setTimeout(() => dkEyePaint(img), 0); }, { once: true }); }
+  if (sp.querySelector('.sineye')) return;
+  CINE.SIN.eye.forEach((e, i) => { const el = document.createElement('i'); el.className = 'sineye' + (i ? ' b' : ''); el.style.setProperty('--ex', e[0] + 'px'); el.style.setProperty('--ey', e[1] + 'px'); sp.appendChild(el); });
+};
 /* Det som blir stående etter forvandlingen: rød glød rundt den og langs kanten av banen, øynene, og skyen bak den (lufta får vite hvor den står). */
 function dkLook(B) {
   const ar = $('#arena'), sp = $('#s-foe'); if (!ar || !sp || BT.B !== B) return;
   ar.classList.add('sinful'); ar.style.setProperty('--cc', '#ff2a2a'); sp.classList.add('sin'); dkEyes(sp);
   if (BT.airO) { const at = fxAt(B), cz = parseFloat(ar.style.getPropertyValue('--cz')) || 1.1, wx = 230.4 + (at.x - 230.4) / cz, wy = 307.2 + (at.y - 307.2) / cz, s = at.s / cz; BT.airO.sin = { x: wx, y: wy - 46 * s, r: 58 * s, fy: wy }; BT.airO.k = Math.max(BT.airO.k || 1, 1.5); }
+}
+/* Arceus svarer (darkShift, B.god): et gyllent lys stiger fra din side av banen, med skriket til Arceus. */
+async function godLight(B) {
+  const ar = $('#arena'); if (!ar || BT.B !== B) return;
+  if (!PACK.sfx('Judgment', 0.8)) BSFX.mv('beam', 3); cry(DKGOD, 0.15);
+  if (calm()) return bwait(500);
+  const el = document.createElement('i'); el.className = 'godl'; ar.appendChild(el); await bwait(1500); el.remove();
 }
 async function dkShift(B) {
   const s = B.dks; if (!s || s.ph !== 1 || BT.B !== B || B.over || !$('#arena')) return;
@@ -1017,6 +1047,7 @@ function abBanner(side, name) {
 async function playOne(B, e) {
   const side = e.side, sp = side ? $('#s-' + side) : null, v = side ? BT.v[side] : null;
   if (e.t === 'msg') return say(e.s, e.hold);
+  if (e.t === 'god') return godLight(B);
   if (e.t === 'env') return envFx(B, e);
   if (e.t === 'abil') { abBanner(e.side, e.n); buzz(20); return say(e.s); }
   if (e.t === 'anim') return playAnim(B, e);
@@ -1407,14 +1438,14 @@ function rulesSheet() {
       ${row('Coins per round', PWTCOIN.join(' · ') + ' × cup × bonus')}${row('Leaders cups · Elite Four · Champions', CUPS.slice(1, 2).concat(CUPS[6], CUPS[0]).map(c => '×' + c.f).join(' · '))}${row('Winner', `trophy · ${PWTCANDY} Rare Candy · a pack`)}</div>
     <div class="card stack"><b>Legendary raids</b><p class="sm">Rare, and never on a fixed day. One legendary against your whole team, and who it is stays secret until you stand in front of it. You get ${RAIDTRIES} attempts, one a day: the first without knowing who is waiting, the second knowing. Then it moves on. It stands well above your team's level and has ${RAIDHP[0]} to ${RAIDHP[4]} times the HP of a normal Pokémon. Beat it and it is yours: winning is the catch.</p>
       ${row('It appears', 'about once a week on Normal if you study every day<br>nearly twice as often on Hard, less often on Easy<br>likelier the longer since the last one')}
-      ${row('It shows itself', 'when the day\'s battles are played, simulated or skipped')}
+      ${row('It shows itself', 'when the day\'s battles are played, simulated or skipped')}${row('New ones first', 'never one you own<br>while its class has one you lack')}
       ${row('One more draw', 'reaching your daily goal<br>winning a League lap or a Frontier round')}
       ${row('Team level needed', `mythical ${RAIDGATE[2]} · the great ones ${RAIDGATE[1]} · Arceus, Deoxys ${RAIDGATE[3]}`)}
       ${row('Its place fights too', `an event every ${RAIDEV}rd turn<br>enraged below half HP`)}
       ${row('Coins', RAIDCOIN.map(nb).join(' · '))}${row('Rare Candy', RAIDCANDY.join(' · '))}
       ${row('Shiny', `1 in ${nb(SHINYN)} · 1 in ${Math.round(1 / PRISMP)} with a Prism Lure`)}${row('Sacred Ash', 'once in a raid: every fainted Pokémon is back at half HP')}
       <p class="sm">The five steps are: legendary, the great ones, mythical, Arceus and Deoxys, and Dark Mewtwo. A win also gives a lot of XP, and the legendary is yours.</p>
-      <p class="sm"><b>Dark Mewtwo</b> has no raid of its own. Beat Mewtwo, and there is a ${Math.round(DARKP * 100)} % chance that it rises again as Dark Mewtwo. You keep what Mewtwo gave, your team is restored, and you fight once more, right away.</p></div>
+      <p class="sm"><b>Dark Mewtwo</b> has no raid of its own. Beat Mewtwo, and there is a ${Math.round(DARKP * 100)} % chance that it rises again as Dark Mewtwo. You keep what Mewtwo gave, your team is restored, and you fight once more, right away. Partway through that fight it is provoked and restores its strength. With <b>Arceus</b> on your team and still standing at that moment, it cannot: the light holds the darkness back.</p></div>
     <div class="card stack"><b>Special events</b><p class="sm">Some battle days are special. You find out once you have chosen today's mode: the event shows as a symbol above it, and a tap tells you what it does. An event is only ever for you, never for your opponents: nothing gets harder, and a day you sit out costs nothing. They are counted in battle days, come about every third one, and never two days running.</p>
       ${Object.keys(EVENTS).map(k => row(k === 'type' ? 'Type Festival' : EVENTS[k].n, k === 'surge' ? 'your Pokémon with a Mega form start in it' : k === 'type' ? 'one type gets +15 % in every stat' : k === 'stars' ? 'three from your box: team level and +20 %' : k === 'little' ? '+35 % for those that can still evolve' : k === 'gold' ? 'coins ×1.5 from every battle' : k === 'wind' ? 'one more attempt in the League, one more run in the Frontier' : k === 'lucky' ? 'shiny odds ×5, one more encounter from bosses' : 'training costs 40 % less')).join('')}</div>
     <div class="card stack"><b>Mega Evolution</b><p class="sm">The first Champion or Supreme Boss you beat gives you the Mega Ring and a Mega Stone. A Pokémon that has a Mega form and holds a stone can Mega Evolve from the move menu: once a battle for your team, before it attacks, and it stays that way until the battle is over. Its HP is the same, its other stats and sometimes its types change. Stones are given on the Pokémon's card, and you get the stone back if you sell or trade it.</p>

@@ -917,12 +917,16 @@ const raidInfo = R => R && R.dk ? DARK : R ? LEG[R.id] : null;
 /* Det raidkortet viser før kampen. */
 const raidShow = R => ({ L: raidInfo(R), n: R.dk ? DARK.n : D(R.id)[0], sh: R.dk ? 2 : R.sh ? 1 : 0, lv: R.lv });
 const raidTitle = (id, dk) => dk ? DARK.title : id === 493 ? 'The Original One' : LEG[id].t === 3 || id === 386 ? 'Mythical Pokémon' : 'Legendary Pokémon';
+const legOwn = id => S.mons.some(m => m.id === id) || (S.pend || []).some(e => e.id === id);
 function raidPick() {
   const p4 = Math.min(0.25, 0.03 + 0.006 * (S.rpity || 0)), r = Math.random(), lv = leagueLv(), all = Object.keys(LEG).map(Number);
   let t = r < p4 ? 4 : r < p4 + 0.18 ? 2 : r < p4 + 0.4 ? 3 : 1;
   if (t === 4 && lv < RAIDGATE[3]) t = 2; if (t === 2 && lv < RAIDGATE[1]) t = 3; if (t === 3 && lv < RAIDGATE[2]) t = 1;
-  const c = all.filter(id => LEG[id].t === t && !S.mons.some(m => m.id === id));
-  const l = c.length ? c : all.filter(id => LEG[id].t === 1); return l[rnd(l.length)];
+  /* Innen klassen: aldri en du har (eller som venter i gresset) så lenge det finnes en ny. Har du alle i klassen, blir det en av dem om igjen. Klassen
+     byttes aldri: Arceus og de største er verken vanligere eller sjeldnere av at samlingen vokser, men den neste er nesten alltid ny. (Før ga en
+     komplett klasse en vilkårlig vanlig legendarisk, så en trekning på de største kunne ende som en av de vanlige.) */
+  const inT = all.filter(id => LEG[id].t === t), c = inT.filter(id => !legOwn(id));
+  const l = c.length ? c : inT.length ? inT : all.filter(id => LEG[id].t === 1); return l[rnd(l.length)];
 }
 /* En trekning om en legendarisk viser seg. Uten p: dagens trekning (RAIDP0 + RAIDPITY for hver studiedag utover RAIDCOOL siden forrige raid; S.rwait
    teller studiedagene og økes i grant). Med p: en ekstra trekning med den sjansen (en vunnet runde), men heller ikke den før RAIDCOOL dager er gått. */
@@ -994,11 +998,15 @@ function raidField(B, ev) {
 }
 /* Dark Mewtwo forvandles midt i kampen. Kampskjermen bestemmer når (dkShift i bui.js: når den første låta er slutt), reglene står her: helsa løftes til DKHP
    av full hvis den er lavere, og verdiene i DKUP går opp ett trinn. Skjer høyst én gang i en kamp (B.sin). */
-const DKHP = 0.75, DKUP = [[4, 1], [6, 1]];
+/* ARCEUS: står Arceus på laget ditt og er på beina når den blir «provoked», holder lyset mørket tilbake, og den får IKKE kreftene igjen (B.god;
+   Sp. Atk og Speed stiger som ellers). Det er helbredelsen som gjør forvandlingen så tung, så dette er en stor fordel. Låta som tar over, heter
+   «Where Is Your God Now»: er Arceus slått ut før det skjer, er det ingen som svarer. */
+const DKHP = 0.75, DKUP = [[4, 1], [6, 1]], DKGOD = 493;
 function darkShift(B, ev) {
   const f = B.foe[B.b]; if (!B.tr || !B.tr.dk || B.sin || B.over || !f || f.hp <= 0) return false;
-  B.sin = 1; const to = Math.ceil(f.max * DKHP);
-  if (f.hp < to) { f.hp = to; ev.push({ t: 'heal', side: 'foe', hp: f.hp }, { t: 'msg', s: `${f.name} restored its strength!` }); }
+  B.sin = 1; const to = Math.ceil(f.max * DKHP), god = B.me.find(b => b.id === DKGOD && b.hp > 0);
+  if (god) { B.god = 1; ev.push({ t: 'god' }, { t: 'msg', s: `${god.name} answers!` }, { t: 'msg', s: 'Its light holds the darkness back.' }, { t: 'msg', s: `${f.name} could not restore its strength!` }); }
+  else if (f.hp < to) { f.hp = to; ev.push({ t: 'heal', side: 'foe', hp: f.hp }, { t: 'msg', s: `${f.name} restored its strength!` }); }
   changeStats(B, 'foe', DKUP, ev); return true;
 }
 /* Formen en legendarisk forvandles til når den blir rasende i et raid (0 = ingen). Mewtwo har Dark Mewtwo som sin andre form og forvandles ikke. */

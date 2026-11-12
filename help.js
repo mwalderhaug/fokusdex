@@ -109,6 +109,7 @@ const HELP = [
     ${hRow(hSym('!', 'var(--gold)'), 'As a surprise', 'It shows itself when the day\'s battles are done: played, simulated or skipped. Until then you cannot know that one is waiting.')}
     ${hRow(hSym('◎', 'var(--sage)'), 'You reach your daily goal', 'One more draw that day.')}
     ${hRow('<span class="ficon hfi">L</span>', 'You win a League lap or a Frontier round', 'One more draw.')}
+    ${hRow(hSym('★', 'var(--gold)'), 'New ones first', 'A legendary you already own never comes again while its class still has one you lack. How rare each class is does not change, so nearly every raid is someone new.')}
     ${hH('The fight')}
     ${hP(`It is one Pokémon with ${RAIDHP[0]} to ${RAIDHP[3]} times the HP of a normal one, against your whole team, and you may use the Bag. Its place fights too: something happens on the field every third turn, and below half HP it becomes enraged.`)}
     ${hP(`You get <b>${RAIDTRIES} attempts</b>, one a day. The first time you do not know who is waiting. If you lose, you get one more attempt the next day, and now you know. Then it moves on. It stands well above your team, so a raid is meant to be hard.`)}
