@@ -33,6 +33,8 @@ const SHOP = {
   poke: { n: 'Poké Ball', p: 20, d: 'Standard ball', img: 'poke-ball', bc: '#d98f7e' },
   great: { n: 'Great Ball', p: 60, d: 'Better odds · trainer level 3', lv: 3, img: 'great-ball', bc: '#7fa8e6' },
   ultra: { n: 'Ultra Ball', p: 150, d: 'Best odds · trainer level 7', lv: 7, img: 'ultra-ball', bc: '#e3c577' },
+  dusk: { n: 'Dusk Ball', p: 350, d: 'Ultra Ball odds, and a third better on legendary Pokémon · trainer level 10', lv: 10, img: 'dusk-ball', bc: '#4f8a5b' },
+  master: { n: 'Master Ball', p: 25000, d: 'Never fails. You can carry one · trainer level 25', lv: 25, img: 'master-ball', bc: '#8a5fc0', max: 1 },
   /* Til kamp: brukes fra veska i ligakamper (bt = kampgjenstand). */
   potion: { n: 'Potion', p: 20, d: 'Heals 20 HP in battle', img: 'potion', bc: '#b28fe0', bt: 1 },
   super: { n: 'Super Potion', p: 45, d: 'Heals 60 HP in battle', img: 'super-potion', bc: '#e0845a', bt: 1 },
@@ -41,13 +43,31 @@ const SHOP = {
   heal: { n: 'Full Heal', p: 40, d: 'Cures poison, burn, sleep and the rest', img: 'full-heal', bc: '#e3c577', bt: 1 },
   revive: { n: 'Revive', p: 120, d: 'Brings back a fainted Pokémon with half its HP', img: 'revive', bc: '#e3c577', bt: 1 },
   maxrev: { n: 'Max Revive', p: 300, d: 'Brings back a fainted Pokémon with all its HP', img: 'max-revive', bc: '#e3c577', bt: 1 },
+  ash: { n: 'Sacred Ash', p: 4000, d: 'Raids only: every fainted Pokémon is back with half its HP. You can carry two · trainer level 16', lv: 16, img: 'sacred-ash', bc: '#e3c577', bt: 1, max: 2 },
   incense: { n: 'Incense', p: 80, d: 'Next session: one extra encounter and rarer finds', ic: 'smoke' },
+  lure: { n: 'Lure', p: 350, d: 'One more encounter in each of your next 3 sessions · trainer level 6', lv: 6, img: 'lure', bc: '#7fa8e6' },
+  slure: { n: 'Super Lure', p: 1200, d: 'Rarer Pokémon in your next 3 sessions · trainer level 12', lv: 12, img: 'super-lure', bc: '#e3c577' },
+  gberry: { n: 'Golden Razz Berry', p: 600, d: 'Feed it to a Pokémon you meet: one more throw and better odds · trainer level 14', lv: 14, img: 'golden-razz-berry', bc: '#e3c577' },
+  glint: { n: 'Glint Incense', p: 2000, d: 'Shiny odds ×2 for 24 hours: encounters, packs and eggs · trainer level 8', lv: 8, img: 'luck-incense', bc: '#e3c577', sb: [2, 24] },
+  gleam: { n: 'Gleam Incense', p: 6000, d: 'Shiny odds ×3 for 48 hours · trainer level 16', lv: 16, img: 'pure-incense', bc: '#e3c577', sb: [3, 48] },
+  radiant: { n: 'Radiant Incense', p: 18000, d: 'Shiny odds ×5 for 72 hours · trainer level 24', lv: 24, img: 'full-incense', bc: '#e3c577', sb: [5, 72] },
+  prism: { n: 'Prism Lure', p: 12000, d: 'The next legendary raid has a 1 in 5 chance of being shiny · trainer level 20', lv: 20, img: 'prism-scale', bc: '#b295e6' },
   candy: { n: 'Rare Candy', p: 150, d: 'One level up for one Pokémon', ic: 'candy' },
   mstone: { n: 'Mega Stone', p: 3000, d: 'Give it to one Pokémon that has a Mega form. It can then Mega Evolve once a battle', ic: 'gem', ring: 1 },
   stone: { n: 'Evolution Stone', p: 300, d: 'For those that do not evolve by level alone', ic: 'gem' },
   egg: { n: 'Egg', p: 250, d: 'Hatches after 120 focus minutes. Can be from any region', ic: 'egg' }
 };
-const BALLM = { poke: 1, great: 1.5, ultra: 2.2 };
+/* Hyllene i butikken, i den rekkefølgen de står. Det som er låst, vises med trenernivået det krever: noe å se fram til. */
+const SHELF = [['Balls', ['poke', 'great', 'ultra', 'dusk', 'master']], ['For the hunt', ['incense', 'lure', 'slure', 'gberry']], ['Shiny hunting', ['glint', 'gleam', 'radiant', 'prism']],
+  ['For your Pokémon', ['candy', 'stone', 'mstone', 'egg']], ['For battles', ['potion', 'super', 'hyper', 'maxp', 'heal', 'revive', 'maxrev', 'ash']]];
+/* Ballene. Dusk Ball er som en Ultra Ball, og LEGBALL ganger så god på legendariske (litt, ikke mye). Master Ball bommer aldri og velges aldri av seg selv.
+   Golden Razz Berry (feedBerry): ett kast til på møtet og BERRYM ganger så god sjanse, én per møte. */
+const BALLS = ['poke', 'great', 'ultra', 'dusk', 'master'];
+const BALLM = { poke: 1, great: 1.5, ultra: 2.2, dusk: 2.2, master: 1 }, LEGBALL = 1.35, BERRYM = 1.15;
+/* Lokkemidlene varer LUREN økter. Shiny-røkelsen (sb: [ganger, timer]) varer i timer på klokka, og bare én brenner om gangen. */
+const LUREN = 3;
+const shopOwn = k => k === 'egg' ? S.eggs.length : k === 'incense' ? (S.incOn ? 1 : 0) : k === 'lure' ? S.lure || 0 : k === 'slure' ? S.slure || 0 : k === 'prism' ? (S.prism ? 1 : 0) : SHOP[k].sb ? (S.shb && S.shb.k === k && shinyBoost() > 1 ? 1 : 0) : S.items[k] || 0;
+const shopFull = k => k === 'egg' ? S.eggs.length >= 3 : k === 'incense' ? !!S.incOn : k === 'lure' ? S.lure > 0 : k === 'slure' ? S.slure > 0 : k === 'prism' ? !!S.prism : SHOP[k].sb ? shinyBoost() > 1 : SHOP[k].max ? (S.items[k] || 0) >= SHOP[k].max : false;
 /* Encounter-pakker: kjøpes for mynter og åpnes med en gang, som å åpne en kortpakke. Tre møter i hver, og den siste plassen er den gode:
    jo dyrere pakke, jo bedre sjanser (min = laveste sjeldenhet, ps/leg = sjansen for en pseudo-legendarisk eller en legendarisk i den plassen,
    shm = så mye likere er en shiny). lv = trenernivået pakken krever. Alle pakker har en liten sjanse for en legendarisk, som et lodd: hvem som helst
@@ -176,12 +196,12 @@ const cleanNick = s => String(s || '').replace(/[^A-Za-z0-9 .\-?]/g, '').replace
 function setNick(m, s) { const n = cleanNick(s); if (n && n !== D(m.id)[0]) m.nn = n; else delete m.nn; save(); return m.nn || ''; }
 const mTypes = m => { const g = megaOf(m); return g ? [g[2], g[3]] : [D(m.id)[1], D(m.id)[2]]; };
 function statsOf(m) {
-  const b = m.mega ? MEGA[m.mega - 1][4] : BST[m.id - 1], up = natUp(m.nat), dn = natDn(m.nat);
+  const b = m.mega ? MEGA[m.mega - 1][4] : BST[m.id - 1], up = natUp(m.nat), dn = natDn(m.nat), sx = m.sh ? SHINYST : 1;
   return b.map((B, i) => {
     const core = Math.floor((2 * B + ivOf(m, i) + Math.floor(m.ev[i] / 4)) * m.lv / 100);
-    if (i === 0) return m.id === 292 ? 1 : core + m.lv + 10;
+    if (i === 0) return m.id === 292 ? 1 : Math.floor((core + m.lv + 10) * sx);
     const v = core + 5;
-    return up === dn ? v : i === up ? Math.floor(v * 1.1) : i === dn ? Math.floor(v * 0.9) : v;
+    return Math.floor((up === dn ? v : i === up ? Math.floor(v * 1.1) : i === dn ? Math.floor(v * 0.9) : v) * sx);
   });
 }
 /* Angrepene arten kan på dette nivået, i den rekkefølgen de læres. */
@@ -271,8 +291,9 @@ function wildLv(id, t) {
 const KEY = 'fokusdex.v1';
 function fresh() {
   return {
-    v: 1, mig: 7, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
-    items: { poke: 15, great: 0, ultra: 0, candy: 0, stone: 0, mstone: 0, incense: 0, potion: 0, super: 0, hyper: 0, maxp: 0, heal: 0, revive: 0, maxrev: 0 }, charm: 0, ring: 0, lst: {},
+    v: 1, mig: 9, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
+    items: { poke: 15, great: 0, ultra: 0, dusk: 0, master: 0, gberry: 0, candy: 0, stone: 0, mstone: 0, incense: 0, potion: 0, super: 0, hyper: 0, maxp: 0, heal: 0, revive: 0, maxrev: 0, ash: 0 }, charm: 0, ring: 0, lst: {},
+    lure: 0, slure: 0, prism: 0, shb: null,
     mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, routes: [1], eggs: [], pend: [], incOn: 0,
     log: {}, fm: {},
     fag: {}, extra: ['annet'],
@@ -284,6 +305,8 @@ function fresh() {
 }
 let S = fresh();
 /* Tar i bruk en lagring (fra enheten, synk eller sikkerhetskopi) og oppgraderer gamle lagringer der fagene var faste. */
+/* Versjon 9: en shiny har full IV i alt (det gjelder også dem som er fanget før). */
+function migrate9() { for (const m of S.mons) if (m.sh && Array.isArray(m.iv)) m.iv = [31, 31, 31, 31, 31, 31]; S.mig = 9; }
 function adopt(o) {
   S = Object.assign(fresh(), o);
   S.lad = Object.assign(fresh().lad, o.lad || {}); S.fac = Object.assign(fresh().fac, o.fac || {});
@@ -298,6 +321,7 @@ function adopt(o) {
   if (!o.mig || o.mig < 6) migrate6(o);
   if (!o.mig || o.mig < 7) migrate7();
   if (!o.mig || o.mig < 8) migrate8();
+  if (!o.mig || o.mig < 9) migrate9();
   S.routes = (S.routes || []).filter(r => S.regions.includes(r)); if (!S.routes.length) S.routes = [S.regions.includes(S.region) ? S.region : S.regions[0]];
   S.mons.forEach(ensure);
   unlockRegions();
@@ -357,7 +381,12 @@ function load() {
   buildFags();
 }
 let saveHook = null;
+/* Sandkassa (show.js, bare admin): SBX = { real: den ekte lagringen, cup } mens S står for en KOPI. Da lagres og synkes ingenting, og kamper som er
+   i gang, skrives ikke til enheten. Lukkes appen, er kopien borte og den ekte lagringen urørt. */
+let SBX = null;
 function save(quiet) {
+  /* Under en simulering av kampdagen (simDay i league.js) står S for en kopi: den skal aldri lagres. */
+  if ((typeof SIMRUN !== 'undefined' && SIMRUN) || SBX) return;
   S.rev++; S.at = new Date().toISOString();
   try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (_) {}
   if (!quiet && saveHook) saveHook();
@@ -455,10 +484,16 @@ const CHARM = { n: 5, m: 6 };
 /* Shiny: 1 av SHINYN, litt bedre for hver dag på rad (opp til ×1,5 etter ti dager), og mer i dyre pakker, på Lucky Day og med Shiny Charm.
    Før var grunnsjansen 1 av 150 og en Master Pack ga ×5 oppå ×2,5 for dager på rad: da var hver tjuende fangst shiny. */
 const SHINYN = 300;
-const shinyOdds = () => (1 / SHINYN) * (1 + Math.min(streak(), 10) * 0.05) * (S.charm > 0 ? CHARM.m : 1);
+/* Shiny-røkelsen fra butikken (S.shb = { k, m, until }) ganger sjansen i en periode, overalt unntatt i raid. SHINYCAP er taket uansett hvor mye som
+   legges oppå hverandre (røkelse, Shiny Charm, dyre pakker, Lucky Day): aldri oftere enn hver femtende.
+   EN SHINY ER BEDRE: den fødes med full IV i alt, og alle verdiene er SHINYST ganger så høye (se statsOf). En shiny av de beste artene er dermed det
+   sterkeste man kan ha, og det er verdt å jakte på dem. I et raid er sjansen 1 av SHINYN, eller PRISMP når en Prism Lure er kjøpt (S.prism). */
+const SHINYCAP = 1 / 15, SHINYST = 1.05, PRISMP = 0.2;
+const shinyBoost = () => S.shb && S.shb.until > Date.now() ? S.shb.m : 1;
+const shinyOdds = () => (1 / SHINYN) * (1 + Math.min(streak(), 10) * 0.05) * (S.charm > 0 ? CHARM.m : 1) * shinyBoost();
 
 function addMon(id, lv, sh, egg, g) {
-  const m = { u: S.uid++, id, lv, xp: xpAt(lv), sh: sh === 2 ? 2 : sh ? 1 : 0, fav: 0, at: Date.now(), iv: rollIv(egg), ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: defaultMoves(id, lv), g: g == null ? rollG(id) : g };
+  const m = { u: S.uid++, id, lv, xp: xpAt(lv), sh: sh === 2 ? 2 : sh ? 1 : 0, fav: 0, at: Date.now(), iv: sh ? [31, 31, 31, 31, 31, 31] : rollIv(egg), ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: defaultMoves(id, lv), g: g == null ? rollG(id) : g };
   if (defForm(id)) m.mega = defForm(id);
   S.mons.push(m);
   S.seen[id] = 1; S.caught[id] = 1; unlockRegions();
@@ -496,12 +531,12 @@ function genEnc(o = {}) {
   let x = Math.random() * tot, id = pool[pool.length - 1][0];
   for (const [i, w] of pool) { x -= w; if (x <= 0) { id = i; break; } }
   const lv = o.egg ? 1 : wildLv(id, tierOf(id));
-  return { id, lv, sh: Math.random() < shinyOdds() * (o.egg ? 4 : 1) * (o.shm || 1) * (typeof evShiny === 'function' ? evShiny() : 1) ? 1 : 0, t: tierOf(id), tr: isLeg(id) ? 4 : 3, g: rollG(id) };
+  return { id, lv, sh: Math.random() < Math.min(SHINYCAP, shinyOdds() * (o.egg ? 4 : 1) * (o.shm || 1) * (typeof evShiny === 'function' ? evShiny() : 1)) ? 1 : 0, t: tierOf(id), tr: isLeg(id) ? 4 : 3, g: rollG(id) };
 }
 /* Sjansen for fangst. zone: 0 = bom, 1 = grønn sone, 2 = gull. */
-const catchP = (id, ball, zone) => Math.min(0.97, Math.pow(D(id)[3] / 255, 0.45) * BALLM[ball] * [0.5, 1, 1.6][zone]);
+const catchP = (id, ball, zone, e) => ball === 'master' ? 1 : Math.min(0.97, Math.pow(D(id)[3] / 255, 0.45) * BALLM[ball] * (ball === 'dusk' && isLeg(id) ? LEGBALL : 1) * (e && e.fed ? BERRYM : 1) * [0.5, 1, 1.6][zone]);
 /* Sonene på timing-måleren i prosent: grønn bredde og gull bredde. Sjeldnere = smalere og raskere. */
-const zones = (e, ball) => ({ g: Math.max(14, 36 - e.t * 5 + (ball === 'great' ? 4 : ball === 'ultra' ? 8 : 0)), au: 7, sp: 0.9 + e.t * 0.22 });
+const zones = (e, ball) => ({ g: Math.max(14, 36 - e.t * 5 + (ball === 'great' ? 4 : ball === 'poke' ? 0 : 8)), au: 7, sp: 0.9 + e.t * 0.22 });
 /* Det en fangst gir utover Pokémonen: mynter for en ny art (NEWCOIN etter sjeldenhet), for et perfekt kast (PERFCOIN), og for flere fangster på rad uten
    at noen slipper unna (STREAKC per fangst fra den tredje, høyst STREAKMAX). S.cst = rekka akkurat nå.
    Kritisk fangst: en sjelden gang (critP, litt oftere jo flere arter du har) sitter ballen ekstra godt, og sjansen er CRITM ganger så stor. */
@@ -510,11 +545,11 @@ const NEWCOIN = [15, 30, 60, 120, 300], PERFCOIN = 10, STREAKC = 5, STREAKMAX = 
 const LEGSES = 0.0012, LEGSTIR = [0.003, 0.01], OPENMIN = 25;
 const critP = () => Math.min(0.1, 0.03 + Object.keys(S.caught).length * 0.0002);
 /* Hvor godt sjansen står med denne ballen i den grønne sonen: 2 = god, 1 = jevn, 0 = tøff. */
-const oddsOf = (e, ball) => { const p = catchP(e.id, ball, 1); return p >= 0.7 ? 2 : p >= 0.4 ? 1 : 0; };
+const oddsOf = (e, ball) => { const p = catchP(e.id, ball, 1, e); return p >= 0.7 ? 2 : p >= 0.4 ? 1 : 0; };
 function throwBall(e, ball, zone) {
   if (!(S.items[ball] > 0) || e.tr <= 0) return null;
   S.items[ball]--; e.tr--;
-  const crit = Math.random() < critP(), p = Math.min(0.97, catchP(e.id, ball, zone) * (crit ? CRITM : 1)), ok = Math.random() < p;
+  const crit = Math.random() < critP(), p = ball === 'master' ? 1 : Math.min(0.97, catchP(e.id, ball, zone, e) * (crit ? CRITM : 1)), ok = Math.random() < p;
   if (zone === 2) achInit().pf++;
   S.seen[e.id] = 1;
   let mon = null, isNew = false; const bonus = { c: 0, why: [] };
@@ -530,6 +565,8 @@ function throwBall(e, ball, zone) {
   save();
   return { ok, p, mon, isNew, fled: !ok && e.tr <= 0, crit: crit && ok, bonus };
 }
+/* Golden Razz Berry: ett kast til, og litt bedre sjanse resten av møtet. Én per møte. */
+function feedBerry(e) { if (!e || e.fed || !(S.items.gberry > 0) || e.tr <= 0) return false; S.items.gberry--; e.fed = 1; e.tr++; save(); return true; }
 function dropPend(e) { const i = S.pend.indexOf(e); if (i >= 0) S.pend.splice(i, 1); }
 /* Køen av encounters har et tak. De eldste vanlige ryker først; kjøpte (pakker) og legendariske blir aldri kastet. */
 function trimPend(max) { for (let i = 0; S.pend.length > max && i < S.pend.length;) { const e = S.pend[i]; if (e.pk || e.t >= 4) i++; else S.pend.splice(i, 1); } }
@@ -591,8 +628,9 @@ function grant(fag, real, full, plan) {
      og dagsmålet nådd gir én til. */
   if (typeof raidRoll === 'function' && S.party.length) {
     const g = goalMin();
-    if (day.m - min < OPENMIN && day.m >= OPENMIN) { S.rwait = (S.rwait || 0) + 1; if (raidRoll()) { R.raid = 1; R.gifts.push('A legendary Pokémon has shown itself. A raid is waiting.'); } }
-    if (!R.raid && day.m - min < g && day.m >= g && raidRoll()) { R.raid = 1; R.gifts.push('Daily goal reached: a legendary Pokémon has shown itself. A raid is waiting.'); }
+    /* Det sies ingenting her: raidet er skjult til dagens kamper er spilt, simulert eller hoppet over (raidUnhide), og kommer da som en overraskelse. */
+    if (day.m - min < OPENMIN && day.m >= OPENMIN) { S.rwait = (S.rwait || 0) + 1; if (raidRoll()) R.raid = 1; }
+    if (!R.raid && day.m - min < g && day.m >= g && raidRoll()) R.raid = 1;
   }
   R.tl1 = tlv();
   for (const n of unlockRegions()) R.gifts.push(`New area: ${n} is open. Its Pokémon now show up in your encounters.`);
@@ -610,7 +648,11 @@ function grant(fag, real, full, plan) {
   const encs = [];
   let n = Math.floor(okMin / 20) + (full && planned >= 25 && okMin >= planned ? 1 : 0), luck = Math.min(1.5, planned / 60);
   if (S.incOn && okMin > 0) { n++; luck += 0.5; S.incOn = 0; }
-  n = Math.min(n, 6);
+  /* Lure: ett møte til i LUREN økter. Super Lure: sjeldnere funn i LUREN økter. */
+  let cap = 6;
+  if (S.lure > 0 && okMin > 0) { n++; cap++; S.lure--; R.gifts.push(`Lure: one more encounter${S.lure ? ` · ${S.lure} more session${S.lure > 1 ? 's' : ''}` : ' · it is now used up'}`); }
+  if (S.slure > 0 && okMin > 0) { luck += 1; S.slure--; R.gifts.push(`Super Lure: rarer Pokémon this session${S.slure ? ` · ${S.slure} more session${S.slure > 1 ? 's' : ''}` : ' · it is now used up'}`); }
+  n = Math.min(n, cap);
   /* Hvert vanlig møte kan en sjelden gang være legendarisk: LEGSES i en kort økt, opp mot det dobbelte i en lang, litt mer med dager på rad.
      En hel økt på 45 minutter eller mer har i tillegg en liten sjanse (LEGSTIR) for at noe legendarisk rører seg. Begge er en tredel av det de var:
      de store kommer i raid, og et legendarisk møte i gresset skal være en sjelden overraskelse. */
@@ -750,10 +792,14 @@ function toggleParty(m) {
 function useCandy(m) { if (!(S.items.candy > 0) || m.lv >= 100) return false; S.items.candy--; m.lv++; m.xp = Math.max(m.xp, xpAt(m.lv)); learnUp(m, m.lv - 1); save(); return true; }
 function buy(k) {
   const it = SHOP[k];
-  if (!it || S.coins < it.p || (it.lv && tlv() < it.lv) || (it.ring && !S.ring)) return false;
-  if (k === 'egg') { if (S.eggs.length >= 3) return false; S.eggs.push({ need: 120, got: 0 }); }
-  else if (k === 'incense') { if (S.incOn) return false; S.incOn = 1; }
-  else S.items[k]++;
+  if (!it || S.coins < it.p || (it.lv && tlv() < it.lv) || (it.ring && !S.ring) || shopFull(k)) return false;
+  if (k === 'egg') S.eggs.push({ need: 120, got: 0 });
+  else if (k === 'incense') S.incOn = 1;
+  else if (k === 'lure') S.lure = LUREN;
+  else if (k === 'slure') S.slure = LUREN;
+  else if (k === 'prism') S.prism = 1;
+  else if (it.sb) S.shb = { k, m: it.sb[0], until: Date.now() + it.sb[1] * 36e5 };
+  else S.items[k] = (S.items[k] || 0) + 1;
   S.coins -= it.p; save(); return true;
 }
 /* Områdene åpnes av trenernivå eller antall arter fanget (REG). Nye områder slås på med en gang. Gir navnene på dem som ble åpnet nå;
@@ -804,7 +850,7 @@ const b64e = s => { const b = new TextEncoder().encode(s); let r = ''; for (let 
 const b64d = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, '')), c => c.charCodeAt(0)));
 function ghLoad() { try { GH = JSON.parse(localStorage.getItem(GHK) || 'null'); } catch (_) { GH = null; } if (GH && !(GH.t && GH.repo)) GH = null; }
 function ghStore() { try { if (GH) localStorage.setItem(GHK, JSON.stringify(GH)); else localStorage.removeItem(GHK); } catch (_) {} }
-/* Demoen (prøv hvilken som helst klasse, raid og pakke) er et testverktøy for den som eier appen. Den vises bare på enheter der Sync er koblet til
+/* Sandkassa (prøv hvilken som helst klasse, raid, film og pakke, og hele spillet på en kopi av lagringen) er et testverktøy for den som eier appen. Den vises bare på enheter der Sync er koblet til
    et lagringsrepo hos eieren (ADMIN = GitHub-brukere). Det ligger ingen hemmelighet i koden: tilkoblingen krever en nøkkel til det private repoet, og
    ok settes først når nøkkelen har virket. Appen har ingen tjener, så dette er en lukket dør, ikke en lås: den som endrer lagringen eller koden for
    hånd, kommer forbi – som med alt annet her. */
@@ -832,13 +878,14 @@ async function ghProbe() {
 /* use = 'remote': denne enheten tar over lagringen fra GitHub (den lokale legges til side som sikkerhetskopi). use = 'local': denne enheten laster opp sin og erstatter den. */
 const saveScore = o => (o.mons || []).reduce((a, m) => a + m.lv, 0) + (o.xp || 0) / 50 + Object.values(o.log || {}).reduce((a, d) => a + (d.m || 0), 0);
 async function ghLink(use, o) {
+  if (SBX) return;
   if (use === 'remote' && o) { const p = S; try { localStorage.setItem(KEY + '.bak', JSON.stringify(S)); } catch (_) {} adopt(o); carry(p); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (_) {} }
   else if (o) S.rev = Math.max(S.rev, o.rev || 0) + 1;
   GH.ok = 1; ghStore(); ghState = 'ok';
   if (use !== 'remote') await ghPush();
 }
 async function ghPull() {
-  if (!GH || !GH.ok || ghBusy || S.timer || (S.live && S.live.dev === devId())) return;
+  if (!GH || !GH.ok || ghBusy || SBX || S.timer || (S.live && S.live.dev === devId())) return;
   ghBusy = true;
   let push = false, adopted = false;
   try {
@@ -858,7 +905,7 @@ async function ghPull() {
   if (ghHook) ghHook(adopted);
 }
 async function ghPush() {
-  if (!GH || !GH.ok || ghBusy) return;
+  if (!GH || !GH.ok || ghBusy || SBX) return;
   ghBusy = true;
   let again = false;
   try {

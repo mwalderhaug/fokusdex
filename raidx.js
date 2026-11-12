@@ -341,7 +341,7 @@
   film('dk150', { len: 19.6, at: 0, R: DR, outc: '#000', sps: [150], use: ['vortex', 'redswirl', 'cracks', 'arcs', 'burst', 'smoke', 'curtain1', 'curtain2', 'sparkle', 'evilbg', 'rings', 'sphere'],
     cues: [[1.07, 'thud'], [3.74, 'boom'], [5.07, 'boom'], [6.4, 'boom'], [7.31, 'thud'], [7.48, 'thud'], [7.74, 'boom'], [9.07, 'boom'], [9.74, 'boom'], [10.41, 'boom'], [11.07, 'boom'], [DR, 'cry'], [DR, 'boom'], [13.07, 'thud'], [15.73, 'boom'], [17.07, 'boom']],
     draw(t, P, c) {
-      const cx = 256, cy = 184, sp = c.sp, ex = sp ? (0.4 - 0.5) * sp.bw : -6, ey = sp ? (0.13 - 0.5) * sp.bh : -26, crk = tintArt('cracks', '#ff8a2a'), X = K.g;
+      const cx = 256, cy = 184, sp = c.sp, ex = sp ? (0.45 - 0.5) * sp.bw : -3, ey = sp ? (0.225 - 0.5) * sp.bh : -18, crk = tintArt('cracks', '#ff8a2a'), X = K.g;
       if (t < DH[0]) {
         /* Mewtwo, og skyggen som tar den. */
         const on = seg(t, 1.07, 1.3), cor = seg(t, 3.74, 9.07), bh = hits(t, [3.74, 5.07, 6.4, 7.74], 0.45), q2 = hits(t, [7.31, 7.48], 0.25), y = cy - 8 + sin(t * 1.5) * 5, s = 3.0, sun = seg(t, 7.74, 9.07);

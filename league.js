@@ -32,11 +32,13 @@ const TCL = {
    for Rare Candy følger graden, så Hard lønner seg for et lag som tåler det, og Easy koster noe.
    På lavere grad stiller motstanderne svakere: lavere nivå (rel), dummere spill (sk), dårligere oppdrett (iv, ev), enklere angrep (q), færre Pokémon (mons)
    og senere utvikling (slack) – og du får flere gjenstander i veska (bag). Belønningen følger graden (coin, xp), så det lønner seg å gå opp når laget tåler det.
-   rlv/rhp = nivå og HP for de legendariske i raid. */
+   rlv/rhp = nivå og HP for de legendariske i raid. rf = hvor ofte en legendarisk viser seg (ganges med sjansen i raidRoll), rc = dager lagt til eller
+   trukket fra pausen etter et raid (RAIDCOOL), lg = sjansen for det legendariske møtet fra de aller største (rareLoot). Målt over 28 dager med tre timer
+   om dagen gir Hard rundt 30 % flere mynter og seks nivåer mer enn Normal, og nesten dobbelt så mange raid. */
 const DIFF = [
-  { n: 'Easy', rel: -0.1, sk: 0.6, iv: 0.4, ev: 0, q: 1, mons: -1, slack: 0.5, coin: 0.5, xp: 0.75, candy: 0.6, lives: 2, bag: 5, rlv: 0.96, rhp: 0.9 },
-  { n: 'Normal', rel: -0.05, sk: 0.85, iv: 0.75, ev: 0.5, q: 2, mons: 0, slack: 0.8, coin: 1, xp: 1, candy: 1, lives: 1, bag: 4, rlv: 1, rhp: 1 },
-  { n: 'Hard', rel: 0, sk: 1, iv: 1, ev: 1, q: 2, mons: 0, slack: 1, coin: 1.8, xp: 1.3, candy: 1.5, lives: 1, bag: 3, rlv: 1.05, rhp: 1.15 }
+  { n: 'Easy', rel: -0.1, sk: 0.6, iv: 0.4, ev: 0, q: 1, mons: -1, slack: 0.5, coin: 0.5, xp: 0.75, candy: 0.6, lives: 2, bag: 5, rlv: 0.96, rhp: 0.9, rf: 0.6, rc: 1, lg: 0.5 },
+  { n: 'Normal', rel: -0.05, sk: 0.85, iv: 0.75, ev: 0.5, q: 2, mons: 0, slack: 0.8, coin: 1, xp: 1, candy: 1, lives: 1, bag: 4, rlv: 1, rhp: 1, rf: 1, rc: 0, lg: 1 },
+  { n: 'Hard', rel: 0, sk: 1, iv: 1, ev: 1, q: 2, mons: 0, slack: 1, coin: 2.3, xp: 1.5, candy: 1.7, lives: 1, bag: 3, rlv: 1.02, rhp: 1.05, rf: 1.8, rc: -1, lg: 1 }
 ];
 const diff = () => DIFF[S.diff == null ? 2 : S.diff] || DIFF[2];
 const diffSt = st => { const d = diff(); return d.rel === 0 ? st : Object.assign({}, st, { mons: Math.max(st.i >= 2 ? 3 : 2, st.mons + d.mons), rel: st.rel + d.rel, sk: st.sk * d.sk, iv: Math.round(st.iv * d.iv), ev: Math.round(st.ev * d.ev), q: Math.min(st.q, d.q), slack: Math.round((st.slack || 0) * d.slack) }); };
@@ -189,9 +191,14 @@ const openNeed = () => Math.max(0, OPENMIN - todayMin());
 const BAGN = 3, bagN = () => diff().bag;
 const LIVES = 1, ladFails = () => { const t = S.lad.tries, d = S.lad.day || dayKey(); return t && t.d === d ? t.n : 0; };
 const FACLIVES = 2, facFails = () => { const t = S.fac.tries, d = S.lad.day || dayKey(); return t && t.d === d ? t.n : 0; };
-const ladderOpen = () => !!S.lad.day && !ladLost() && !ladDone() && modeOn('league');
+/* Kampdagen kan også stenges uten kamper: «Not today» (S.lad.skip) eller en godtatt simulering (S.lad.simd). Mens en simulering venter på svar
+   (simPending), står kampene stille. dayDone = alt som kan spilles denne kampdagen, er spilt, simulert eller hoppet over. */
+const dayShut = () => !!S.lad.day && (S.lad.skip === S.lad.day || S.lad.simd === S.lad.day);
+const simPending = () => S.sim && S.lad.day && S.sim.day === S.lad.day ? S.sim : null;
+const dayStop = () => dayShut() || !!simPending();
+const ladderOpen = () => !!S.lad.day && !dayStop() && !ladLost() && !ladDone() && modeOn('league');
 const facLost = () => !!S.fac.lost && S.fac.lost === (S.lad.day || dayKey());
-const facOpen = () => !!S.lad.day && !facLost() && modeOn('factory');
+const facOpen = () => !!S.lad.day && !dayStop() && !facLost() && modeOn('factory');
 /* Dagens bonus: datoen avgjør hvilken av de tre modusene som gir ekstra, likt for alle som spiller. Bonusen er DAYCOIN ganger mynter
    (i tillegg litt mer XP i ligaen og litt mer flaks i Frontier, som før). */
 const MODES = ['league', 'factory', 'pwt'], MODEN = { league: 'Trainer League', factory: 'Battle Frontier', pwt: 'World Tournament' }, DAYCOIN = 1.5;
@@ -226,12 +233,12 @@ const smFor = k => Math.round(studyMult() * evCoin() * (dayBoost().mode === k ? 
 const LIVEK = 'fokusdex.live';
 const liveMine = () => !!S.live && S.live.dev === devId();
 function liveBegin(B) {
-  if (!B || B.mode === 'lab') return;
+  if (!B || B.mode === 'lab' || SBX) return;
   S.live = { m: B.mode, d: B.mode === 'raid' ? dayKey() : (S.lad.day || dayKey()), dev: devId(), at: Date.now(), u: B.tr && B.tr.ultra ? 1 : 0, n: B.tr ? B.tr.n : '' };
   stamp(); liveSave(B); save();
 }
-function liveSave(B) { if (!B || B.mode === 'lab' || !liveMine()) return; try { localStorage.setItem(LIVEK, JSON.stringify({ v: 1, at: S.live.at, B: battleSnap(B) })); } catch (_) {} }
-function liveEnd() { if (S.live) { delete S.live; stamp(); } try { localStorage.removeItem(LIVEK); } catch (_) {} }
+function liveSave(B) { if (!B || B.mode === 'lab' || SBX || !liveMine()) return; try { localStorage.setItem(LIVEK, JSON.stringify({ v: 1, at: S.live.at, B: battleSnap(B) })); } catch (_) {} }
+function liveEnd() { if (SBX) { delete S.live; return; } if (S.live) { delete S.live; stamp(); } try { localStorage.removeItem(LIVEK); } catch (_) {} }
 /* Kampen som ble forlatt, hvis den finnes på denne enheten og hører til merket i lagringen. */
 function liveLoad() {
   if (!liveMine()) return null;
@@ -498,13 +505,15 @@ const pushEnc = (res, e) => { S.pend.push(e); trimPend(30); res.encs.push(e); };
 const PSEUDO = [147, 246, 371, 374, 443, 633];
 const giveCharm = res => { S.charm = (S.charm || 0) + CHARM.n; res.perks.push(`Shiny Charm: ${CHARM.m}× shiny odds in your next ${S.charm} focus sessions.`); };
 /* Det de sjeldne bossene gir i tillegg, likt i ligaen og i Battle Frontier. Belønningen følger sjeldenheten:
-   klasse 7 gir sjeldne møter og av og til et pseudo-legendarisk, klasse 8 alltid et pseudo-legendarisk, klasse 9 et legendarisk, et pseudo-legendarisk og en Shiny Charm. */
+   klasse 7 gir sjeldne møter og av og til et pseudo-legendarisk, klasse 8 alltid et pseudo-legendarisk, klasse 9 et legendarisk, et pseudo-legendarisk og en Shiny Charm.
+   De gir også det som trengs for å fange de aller sjeldneste: Dusk Balls, og fra klasse 8 av og til en Golden Razz Berry. De aller største kan gi Sacred Ash
+   (aldri flere enn du kan bære). På Easy er det legendariske møtet fra klasse 9 en sjanse (diff().lg), ikke en selvfølge. */
 function rareLoot(ci, res, give, ty) {
   const hit = p => Math.random() < p, enc = o => pushEnc(res, genEnc(o));
   if (hit(MSTONE[ci - 7] || 0)) give('mstone', 1);
-  if (ci === 7) { give('candy', 3); give('ultra', 2); give('stone', 1); give('maxp', 1); give('revive', 1); enc({ ty, min: 3, luck: 2 }); enc({ min: 3, luck: 2 }); enc({ min: 2, luck: 1.5 }); if (hit(0.35)) enc({ ids: PSEUDO }); }
-  if (ci === 8) { give('candy', 4); give('ultra', 3); give('stone', 1); give('maxrev', 1); enc({ ty, min: 3, luck: 2 }); enc({ min: 3, luck: 2 }); enc({ min: 2, luck: 1.5 }); enc({ ids: PSEUDO }); if (hit(0.25)) giveCharm(res); }
-  if (ci === 9) { give('candy', 6); give('ultra', 5); give('stone', 2); give('maxrev', 2); pushEnc(res, legEnc()); enc({ ids: PSEUDO }); enc({ ty, min: 3, luck: 2 }); enc({ min: 3, luck: 2 }); giveCharm(res); }
+  if (ci === 7) { if (hit(0.3)) give('dusk', 2); give('candy', 3); give('ultra', 2); give('stone', 1); give('maxp', 1); give('revive', 1); enc({ ty, min: 3, luck: 2 }); enc({ min: 3, luck: 2 }); enc({ min: 2, luck: 1.5 }); if (hit(0.35)) enc({ ids: PSEUDO }); }
+  if (ci === 8) { give('dusk', 2); if (hit(0.35)) give('gberry', 1); give('candy', 4); give('ultra', 3); give('stone', 1); give('maxrev', 1); enc({ ty, min: 3, luck: 2 }); enc({ min: 3, luck: 2 }); enc({ min: 2, luck: 1.5 }); enc({ ids: PSEUDO }); if (hit(0.25)) giveCharm(res); }
+  if (ci === 9) { give('dusk', 3); give('gberry', 1); if (hit(0.5) && (S.items.ash || 0) < SHOP.ash.max) give('ash', 1); give('candy', 6); give('ultra', 5); give('stone', 2); give('maxrev', 2); if (hit(diff().lg == null ? 1 : diff().lg)) pushEnc(res, legEnc()); else enc({ ids: PSEUDO }); enc({ ids: PSEUDO }); enc({ ty, min: 3, luck: 2 }); enc({ min: 3, luck: 2 }); giveCharm(res); }
 }
 /* Hva hver klasse gir ved seier (i tillegg til mynter og XP). Hver klasse har sin egen type belønning, alle bossene gir møter, og jo sjeldnere bossen er, jo mer. */
 function classLoot(B, res, give) {
@@ -527,7 +536,7 @@ function finishLeague(B) {
   grantXp(B, res);
   if (win) {
     /* Rare Candy fra ligaen er skåret ned (LGCANDY) og følger fokustiden og vanskelighetsgraden (candyRoll): brøkdelen som blir igjen, er sjansen for én til. */
-    const bm = B.boost.mode === 'league', give = (it, n) => { if (it === 'candy') n = candyRoll(n * LGCANDY); if (n > 0) { S.items[it] += n; res.items.push(`${n} × ${SHOP[it].n}`); } };
+    const bm = B.boost.mode === 'league', give = (it, n) => { if (it === 'candy') n = candyRoll(n * LGCANDY); if (n > 0) { S.items[it] = (S.items[it] || 0) + n; res.items.push(`${n} × ${SHOP[it].n}`); } };
     const fw = firstWin(); res.coins = Math.round(LGCOIN * st.coin * (B.dc || 1) * B.sm * lapCoin(B.lap) * (fw ? 2 : 1)) + B.pay; S.coins += res.coins;
     if (fw) { L.fw = L.day || dayKey(); res.perks.push('First win of the day: double coins.'); }
     classLoot(B, res, give); ringAward(clsI(k), res); evPerk(res);
@@ -544,10 +553,10 @@ function finishLeague(B) {
     L.best = (L.best || 0) + 1; (L.seen = L.seen || []).push(k + B.ti); L.next = null; L.c = Math.min(CLIMBTOP, clsI(k)); L.won = (L.won || 0) + 1;
     if (clsI(k) >= 8) achInit().ch++;
     /* Runden er vunnet: ligaen er ferdig for i dag (én runde per ligadag), og en legendarisk kan vise seg (RAIDWIN). */
-    if (++L.n >= LAPN) { L.lap++; L.n = 0; L.seen = []; L.c = 0; L.lapd = L.day || dayKey(); res.lapDone = true; if (raidRoll(RAIDWIN)) res.raid = S.raid.id; }
+    if (++L.n >= LAPN) { L.lap++; L.n = 0; L.seen = []; L.c = 0; L.lapd = L.day || dayKey(); res.lapDone = true; raidRoll(RAIDWIN); raidUnhide(); }
   } else {
     /* Et tap avslutter runden, uansett hvem det var mot (ladLose). res.at = kampen du røk ut i (0-basert), res.left = forsøk igjen i dag. */
-    res.at = L.n; res.left = ladLose(L.day || dayKey()); res.out = !res.left;
+    res.at = L.n; res.left = ladLose(L.day || dayKey()); res.out = !res.left; if (res.out) raidUnhide();
   }
   save();
   return res;
@@ -649,9 +658,9 @@ function facBattle() {
    Frontier stengt for dagen. En ferdig runde (FACN seire) gir en egen myntpremie. */
 function finishFactory(B) {
   const R = S.fac.run, win = B.over === 'win', res = { mode: 'fac', win, ups: [], items: [], encs: [], coins: 0, round: R.round, w: R.w, swap: null, roundDone: false, streak: R.streak, perks: [], note: '' };
-  if (!win) { const d = S.lad.day || dayKey(), n = facFails() + 1; S.fac.best = Math.max(S.fac.best || 0, R.streak); S.fac.tries = { d, n }; if (n >= facLives()) S.fac.lost = d; res.left = Math.max(0, facLives() - n); S.fac.run = null; save(); return res; }
+  if (!win) { const d = S.lad.day || dayKey(), n = facFails() + 1; S.fac.best = Math.max(S.fac.best || 0, R.streak); S.fac.tries = { d, n }; if (n >= facLives()) S.fac.lost = d; res.left = Math.max(0, facLives() - n); S.fac.run = null; raidUnhide(); save(); return res; }
   const sm = B.sm, bm = B.boost.mode === 'factory' ? B.boost.m : 1, r = R.round, roll = p => Math.random() < p * bm;
-  const give = (it, n) => { if (it === 'candy') n = candyRoll(n); if (n > 0) { S.items[it] += n; res.items.push(`${n} × ${SHOP[it].n}`); } };
+  const give = (it, n) => { if (it === 'candy') n = candyRoll(n); if (n > 0) { S.items[it] = (S.items[it] || 0) + n; res.items.push(`${n} × ${SHOP[it].n}`); } };
   R.w++; R.streak++; res.w = R.w; res.streak = R.streak; S.fac.best = Math.max(S.fac.best || 0, R.streak);
   res.coins = Math.round(FACCOIN * (30 + 12 * R.w + 15 * (r - 1)) * sm * (B.dc || 1)) + B.pay; S.coins += res.coins; evPerk(res);
   modeXp(res, 4, FACXP * (R.w >= FACN ? 1.5 : 1) * (1 + 0.08 * Math.min(4, r - 1)), xpMult() * diff().xp * (B.boost.mode === 'factory' ? B.boost.xp : 1));
@@ -667,11 +676,20 @@ function finishFactory(B) {
     /* Sjelden boss: klassens egen belønning på toppen, som i ligaen. */
     { const bonus = Math.round(FACROUND(r) * sm * (B.dc || 1)); res.coins += bonus; S.coins += bonus; res.perks.push(`Round ${r} cleared: ${bonus.toLocaleString('en-US')} coins on top.`); }
     if (B.tr.ultra) { const c = B.tr.ci, extra = Math.round([600, 1000, 2000][c - 7] * sm * (B.dc || 1)); res.coins += extra; S.coins += extra; rareLoot(c, res, give, [B.tr.ty]); ringAward(c, res); res.note = `${B.tr.cn}: extra rewards.`; }
-    res.roundDone = true; if (raidRoll(RAIDWIN)) res.raid = S.raid.id; R.round++; R.w = 0; R.team = null; R.offer = facOffer(R.round); R.open = 0;
+    res.roundDone = true; raidRoll(RAIDWIN); raidUnhide(); S.fac.keep = R.team.map(x => ({ id: x.id, sh: x.sh || 0, iv: (x.iv || []).slice(), nat: x.nat || 0 })); res.keep = 1; R.round++; R.w = 0; R.team = null; R.offer = facOffer(R.round); R.open = 0;
   } else res.swap = B.foe.map(f => f.src);
   R.foe = null;
   save();
   return res;
+}
+/* En klar runde i Battle Frontier lar deg beholde én av dem du leide (S.fac.keep venter til du har valgt, eller sagt nei). Den kommer på nivået
+   laget ditt tåler og i den formen nivået tillater, slik et bytte i ligaen gjør, med de samme IV-ene og naturen den hadde. Den selges som en fra en pakke. */
+function facKeepList() { const cap = Math.max(5, Math.min(FACLV, refLv())); return (S.fac.keep || []).map(x => ({ id: fitForm(x.id, cap, 0), lv: cap, sh: x.sh, iv: x.iv, nat: x.nat, from: x.id })); }
+function facKeep(i) {
+  const l = facKeepList(), x = l[i]; S.fac.keep = null;
+  if (!x) { save(); return null; }
+  const isNew = !S.caught[x.id], m = addMon(x.id, x.lv, x.sh, 0); if (!x.sh && x.iv && x.iv.length === 6) m.iv = x.iv.slice(); m.nat = x.nat; m.pk = 1;
+  save(); return { m, isNew };
 }
 /* Bytt en av dine leide mot en fra laget du nettopp slo. */
 function facSwap(mine, theirs) { const R = S.fac.run; if (R && R.team && R.team[mine] && theirs) { R.team[mine] = theirs; save(); } }
@@ -685,7 +703,7 @@ function facSwap(mine, theirs) { const R = S.fac.run; if (R && R.team && R.team[
    (samme trekning som pakken i butikken, uten de legendariske). */
 const PWTN = 3, PWTCOIN = [260, 520, 1040], PWTCANDY = 2, ROUNDN = ['Quarter-final', 'Semi-final', 'Final'];
 /* Stilt inn mot ligaen (se LGCOIN): mynter i Frontier (FACCOIN) og XP til eget lag per seier i Frontier (FACXP) og i cupen (PWTXP). */
-const FACCOIN = 3, FACXP = 1.05, PWTXP = 3.2;
+const FACCOIN = 3.9, FACXP = 1.25, PWTXP = 3.2;
 /* XP til ditt eget lag fra Battle Frontier og cupen, der det ikke kjemper selv (leielag) eller står på lånt nivå: hver seier gir hele laget like mye
    som en ligaseier mot n Pokémon på lagets eget nivå, ganger cx (modusens sats) og xm (studiebonus, vanskelighetsgrad og dagens bonus).
    Før var ligaen den eneste modusen som løftet laget, og da kunne ikke dagens bonus styre valget. */
@@ -704,10 +722,18 @@ const CUPS = [
   { n: 'Elite Four Cup', f: 1.5, pk: 'ultra', rounds: [['e4'], ['e4'], ['champ']] }
 ];
 const pwt = () => S.pwt || (S.pwt = { day: '', run: null, won: 0, cups: {} });
-const cupNow = () => CUPS[new Date((S.lad.day || dayKey()) + 'T12:00:00').getDay()] || CUPS[1];
+const cupNow = () => (SBX && SBX.cup != null && CUPS[SBX.cup]) || CUPS[new Date((S.lad.day || dayKey()) + 'T12:00:00').getDay()] || CUPS[1];
 /* Cupen som er i gang. Den gjelder bare dagen den ble startet. */
 const pwtRun = () => { const P = pwt(); if (P.run && P.run.day !== S.lad.day) { P.run = null; } return P.run; };
-const pwtOpen = () => !!S.lad.day && modeOn('pwt') && (!!pwtRun() || pwt().day !== S.lad.day);
+const pwtOpen = () => !!S.lad.day && !dayStop() && modeOn('pwt') && (!!pwtRun() || pwt().day !== S.lad.day);
+/* ---------- Kampdagen er ferdig ----------
+   modeDone(k) = modusen har ikke mer å gi denne kampdagen. Når dagen er ferdig (dayDone), viser raidet seg hvis et venter (raidUnhide).
+   En kampdag fra i går kan spilles helt til en ny økt starter. Er den ferdig, går forsiden tilbake til vanlig (se ladderCard). */
+const modeDone = k => k === 'league' ? ladLost() || ladDone() : k === 'factory' ? facLost() : pwt().day === S.lad.day && !pwtRun();
+const dayDone = () => !!S.lad.day && (dayShut() || (MODESN < MODES.length ? modeSt().ks.length >= MODESN && modeSt().ks.every(modeDone) : MODES.every(modeDone)));
+const dayOld = () => !!S.lad.day && S.lad.day !== dayKey();
+/* «Not today»: ingen kamper denne kampdagen. Kan ikke gjøres om. */
+function daySkip() { if (!S.lad.day || dayDone() || simPending() || S.live) return false; S.lad.skip = S.lad.day; raidUnhide(); stamp(); save(); return true; }
 const pwtLv = () => Math.max(10, Math.min(100, Math.round(leagueLv())));
 const pwtSize = () => Math.max(1, Math.min(PWTN, S.party.map(monBy).filter(Boolean).length));
 const pwtCoins = (c, r) => Math.round(PWTCOIN[r] * c.f * smFor('pwt') * diff().coin);
@@ -733,14 +759,14 @@ function finishPwt(B) {
   const P = pwt(), R = pwtRun(), win = B.over === 'win', res = { mode: 'pwt', win, ups: [], items: [], encs: [], coins: 0, trade: null, perks: [], note: '', r: B.r, cup: B.cup, done: false };
   if (!R) return res;
   const c = CUPS[R.wd];
-  if (!win) { P.run = null; res.note = `You are out of the ${c.n}. A new cup opens after your next day of focus.`; save(); return res; }
+  if (!win) { P.run = null; res.note = `You are out of the ${c.n}. A new cup opens after your next day of focus.`; raidUnhide(); save(); return res; }
   res.coins = Math.round(PWTCOIN[R.r] * c.f * B.sm * (B.dc || 1)); S.coins += res.coins; ringAward(clsI(B.k), res); evPerk(res);
   modeXp(res, R.n, PWTXP * [1, 1.3, 1.7][Math.min(2, R.r)] * Math.sqrt(c.f), xpMult() * diff().xp * (dayBoost().mode === 'pwt' ? dayBoost().xp : 1));
   R.r++; R.foe = null;
   /* Finaleplassen gir en Rare Candy, og vinneren PWTCANDY til. */
   if (R.r === PWTN - 1) { const n = candyRoll(1); if (n) { S.items.candy = (S.items.candy || 0) + n; res.items.push(`${n} × Rare Candy`); } }
   if (R.r >= PWTN) {
-    res.done = true; P.won = (P.won || 0) + 1; P.cups[c.n] = (P.cups[c.n] || 0) + 1; P.run = null;
+    res.done = true; raidUnhide(); P.won = (P.won || 0) + 1; P.cups[c.n] = (P.cups[c.n] || 0) + 1; P.run = null;
     { const n = Math.max(1, candyRoll(PWTCANDY)); S.items.candy = (S.items.candy || 0) + n; res.items.push(`${n} × Rare Candy`); }
     if (c.ms) { S.items.mstone = (S.items.mstone || 0) + c.ms; res.items.push(`${c.ms} × Mega Stone`); }
     const PK = PACKS[c.pk]; PK.slots.forEach(sl => pushEnc(res, genEnc({ min: sl.min || 0, luck: sl.luck || 0, shm: PK.shm })));
@@ -749,13 +775,88 @@ function finishPwt(B) {
   save(); return res;
 }
 
+/* ---------- Simulering av kampdagen ----------
+   Har du ikke tid til å slåss, kan spillet spille dagens kamper for deg: laget ditt mot dem som venter, med enkle valg (det angrepet som gjør mest
+   skade, bytte når den som står inne er sjanseløs, Mega når det går, ingen veske). Det gir SIMPAY av myntene og XP-en kampene ville gitt, og
+   ingenting annet: ikke Rare Candy, gjenstander, møter, bytter, medaljer, rundeseier eller raidtrekning. Det skal aldri lønne seg å la være å slåss.
+   SLIK: simDay() spiller kampene på en KOPI av lagringen (S byttes ut mens det pågår, og lagres aldri: SIMRUN) og legger resultatet i S.sim.
+   Der venter det til du godtar det (simAccept: myntene og XP-en kommer, og kampdagen er over) eller angrer (simUndo: ingenting skjer, men du kan
+   ikke simulere igjen den kampdagen, S.lad.simno: da må du slåss selv eller la være). Hvem du møtte, sies ikke: det ville røpet dem. */
+const SIMPAY = 0.4, SIMCAP = { league: 8, factory: 10, pwt: 3 };
+let SIMRUN = 0;
+const simMode = () => { const ks = modeSt().ks.filter(k => !modeDone(k)); return ks.length === 1 ? ks[0] : ''; };
+const simCan = () => !!S.lad.day && !S.live && !dayStop() && S.lad.simno !== S.lad.day && !!simMode() && S.party.map(monBy).filter(Boolean).length > 0;
+/* Valget til den som spiller for deg. */
+function autoMove(B) {
+  const u = B.me[B.a], t = B.foe[B.b];
+  if (canSwitch(B) && B.turn - (B.asw || -9) > 2 && B.me.some((x, j) => j !== B.a && x.hp > 0)) {
+    const threat = bestDmg(B, t, u) / Math.max(1, u.hp), mine = bestDmg(B, u, t) / Math.max(1, t.hp);
+    if (threat >= 0.6 && mine < 0.45) {
+      let best = -1, bs = 0;
+      B.me.forEach((c, i) => { if (i === B.a || c.hp <= 0) return; const inc = bestDmg(B, t, c) / Math.max(1, c.hp), out = bestDmg(B, c, t) / Math.max(1, t.hp), sc = out - inc * 1.2; if (inc < 0.34 && (out > mine + 0.15 || inc < threat * 0.4) && (best < 0 || sc > bs)) { best = i; bs = sc; } });
+      if (best >= 0) { B.asw = B.turn; return { t: 'switch', i: best }; }
+    }
+  }
+  let k = -1, bv = -1;
+  u.mv.forEach((x, i) => { if (!moveOk(B, i)) return; const m = MOVES[x.i], d = m[4] > 0 ? estDmg(B, u, t, m) : 0, v = (Math.min(100, d / Math.max(1, t.hp) * 100) + (d >= t.hp ? 30 : 0) + 1) * (0.85 + Math.random() * 0.3); if (v > bv) { bv = v; k = i; } });
+  return canMega(B, 'me') ? { t: 'move', k, mega: 1 } : { t: 'move', k };
+}
+function autoBench(B) {
+  const t = B.foe[B.b]; let bi = -1, bs = -1e9;
+  B.me.forEach((u, j) => { if (u.hp <= 0 || j === B.a) return; const out = bestDmg(B, u, t) / Math.max(1, t.hp), inc = bestDmg(B, t, u) / Math.max(1, u.hp), sc = out - inc * 0.8 + u.hp / u.max * 0.1; if (sc > bs) { bs = sc; bi = j; } });
+  return bi;
+}
+function autoBattle(B) {
+  let g = 0;
+  while (!B.over && g++ < 600) { if (B.need) { const j = autoBench(B); sendIn(B, j < 0 ? B.a : j); } else runTurn(B, autoAct(B) || autoMove(B)); }
+  if (!B.over) B.over = 'loss';
+  return B.over === 'win';
+}
+function simDay() {
+  if (!simCan()) return null;
+  const k = simMode(), real = S, day = S.lad.day; let out = null;
+  S = JSON.parse(JSON.stringify(real)); SIMRUN = 1;
+  try {
+    const c0 = S.coins, x0 = {}; S.mons.forEach(m => { x0[m.u] = m.xp; });
+    let played = 0, won = 0;
+    const one = (B, fin) => { autoBattle(B); const r = fin(B); played++; if (r.win) won++; };
+    if (k === 'league') while (ladderOpen() && played < SIMCAP.league) one(newBattle(S.party[0]), finishLeague);
+    else if (k === 'factory') while (facOpen() && played < SIMCAP.factory) {
+      if (!S.fac.run) facStart();
+      const R = S.fac.run; S.fac.keep = null;
+      if (!R.team) facPick(R.offer.map((m, i) => [i, (m.mega ? 900 : 0) + bstSum(m.id)]).sort((a, b) => b[1] - a[1]).slice(0, 4).map(x => x[0]));
+      one(facBattle(), finishFactory);
+    }
+    else while (pwtOpen() && played < SIMCAP.pwt) { if (!pwtRun()) pwtStart(); one(pwtBattle(S.party.map(monBy).filter(Boolean).sort((a, b) => b.lv - a.lv).slice(0, pwtSize()).map(m => m.u)), finishPwt); }
+    const xp = S.mons.filter(m => x0[m.u] != null && m.xp > x0[m.u]).map(m => [m.u, Math.round((m.xp - x0[m.u]) * SIMPAY)]).filter(x => x[1] > 0);
+    out = { day, k, played, won, coins: Math.max(0, Math.round((S.coins - c0) * SIMPAY)), xp };
+  } catch (_) { out = null; } finally { S = real; SIMRUN = 0; }
+  if (out) { S.sim = out; stamp(); save(); }
+  return out;
+}
+function simAccept() {
+  const R = simPending(); if (!R) { S.sim = null; return null; }
+  const ups = [];
+  S.coins += R.coins;
+  for (const [u, x] of R.xp) { const m = monBy(u); if (!m) continue; const l0 = m.lv, x0 = m.xp; m.xp += x; m.lv = lvOf(m.xp); ups.push(Object.assign({ u, xp: x, l0, l1: m.lv, x0 }, m.lv > l0 ? learnUp(m, l0) : {})); }
+  S.lad.simd = R.day; S.sim = null;
+  /* Det som sto åpent i modusen, er brukt: runden i ligaen starter på nytt neste gang, løpet i Frontier er over, og cupen er spilt. */
+  if (R.k === 'league') { const L0 = S.lad; L0.n = 0; L0.c = 0; L0.seen = []; L0.next = null; }
+  else if (R.k === 'factory') S.fac.run = null;
+  else { const P = pwt(); P.run = null; P.day = R.day; }
+  raidUnhide(); stamp(); save();
+  return { R, ups };
+}
+function simUndo() { const R = S.sim; if (!R) return false; S.sim = null; S.lad.simno = R.day; stamp(); save(); return true; }
+
 /* ---------- Demo ---------- */
-/* Prøvekamp mot en valgfri klasse. Gir ingenting og rører verken ligaen eller Frontier. rent = leide Pokémon på nivå 50 i stedet for ditt eget lag. */
-function labBattle(k, rent, pi) {
+/* Prøvekamp mot en valgfri klasse. Gir ingenting og rører verken ligaen eller Frontier. rent = leide Pokémon på nivå 50 i stedet for ditt eget lag.
+   team = et ferdig leielag (oppvisningskampen i omvisningen har sitt eget, sterkere). */
+function labBattle(k, rent, pi, team) {
   const i = pi == null ? rnd(POOL[k].length) : pi, d = POOL[k][i], c = TCL[k], rd = 2;
   let me, foes, tr;
   if (rent) {
-    const used = new Set(); me = Array.from({ length: 4 }, () => facMon(2, used, 0));
+    const used = new Set(team ? team.map(m => m.id) : []); me = team || Array.from({ length: 4 }, () => facMon(2, used, 0));
     const st = { iv: ULTRA.has(k) ? 31 : 22, ev: ULTRA.has(k) ? 60 : 24, q: 2, slack: 99, mg: c.i >= 8 };
     foes = k === 'trainer' ? Array.from({ length: 4 }, () => facMon(2, used, -20)) : k === 'evilteam' ? regTeam(d[4], 4, FACLV, Object.assign({}, c, st), true) : bossTeam(d, 4, FACLV, st, true);
     tr = trainerOf(k, i, { fr: 1, arena: k === 'trainer' ? 'factory' : 'hall' });
@@ -774,7 +875,7 @@ function labMega(B) { B.me.forEach(b => { if (!b.mg && !b.mega) { const o = mega
    Når en runde i ligaen eller i Battle Frontier er fullført, viser en legendarisk Pokémon seg. Den er på et høyt nivå og har flere ganger så mye HP
    som vanlig, så den er umulig i starten. Slår du den, venter den i gresset, og da kan du prøve å fange den.
    LEGD: art, trinn (1 legendarisk, 2 de største, 3 mytisk, 4 Arceus), søk etter låta i pakken, bane, tema på banen, farge, scenen i filmsnutten og kjennetegnet der. */
-const LEGD = '144,1,Lugia,snowy_tall_grass,snow,#bfe6ff,ice,|145,1,Raikou,mountain,spark,#ffe14a,bolt,|146,1,Ho-oh,mountain,flame,#ff9a3a,magma,|150,2,Origins>>Mewtwo,cave,shard,#c79bff,void,rings|151,3,Origins>>Mewtwo,tall_grass,petal,#ffb3d9,forest,|243,1,Raikou,mountain,spark,#ffe14a,bolt,|244,1,Entei>>Raikou,cave,flame,#ff7a2a,magma,|245,1,Raikou,shallow_water,bubble,#7ad0ff,sea,|249,2,Lugia,water,bubble,#cfe6ff,sea,whirl|250,2,Ho-oh,mountain,flame,#ffb23a,sky,rainbow|251,3,Ho-oh,pinwheel_road,petal,#9be07a,forest,|377,1,Heatran,cave,shard,#c9a45c,stone,|378,1,Heatran,kyurem_cave,snow,#bfe6ff,ice,|379,1,Heatran,cave,shard,#b4c0d2,stone,|380,1,Rayquaza,mountain,spark,#ff7a8a,sky,|381,1,Rayquaza,mountain,spark,#6aa8ff,sky,|382,2,Kyogre,water,bubble,#3f8cff,sea,glyph|383,2,Kyogre,cave,flame,#ff5a2a,magma,glyph|384,2,Rayquaza,mountain,spark,#3fe08a,sky,streak|385,3,Deoxys,mountain,spark,#ffe680,space,|386,4,Deoxys,black_tower_10,shard,#ff7a4a,space,rings|480,1,Uxie,shallow_water,bubble,#ffe680,sea,|481,1,Uxie,shallow_water,bubble,#ff8ab0,sea,|482,1,Uxie,shallow_water,bubble,#6aa8ff,sea,|483,2,Palkia,black_tower_10,shard,#6aa8ff,time,rings|484,2,Palkia,black_tower_10,shard,#ff8ad0,space,rift|485,1,Heatran,cave,flame,#ff7a2a,magma,|486,1,Heatran,cave,shard,#e8e0c0,stone,|487,2,Giratina,kyurem_cave,evil,#e0b030,void,stripes|488,1,Uxie,mountain,shard,#ffb3ea,space,|490,3,Uxie,water,bubble,#5ad0ff,sea,|491,3,Giratina,kyurem_cave,evil,#b03060,void,|492,3,Uxie,tall_grass,petal,#8be07a,forest,|493,4,Arceus,black_tower_10,,#ffe9a8,origin,wheel|494,3,Reshiram,pwt,flame,#ff9a3a,magma,|638,1,Cobalion,mountain,shard,#6ac0e8,stone,|639,1,Cobalion,cave,shard,#c9a45c,stone,|640,1,Cobalion,pinwheel_road,petal,#8be07a,forest,|641,1,Reshiram,mountain,spark,#8be0a0,sky,|642,1,Reshiram,mountain,spark,#6aa8ff,bolt,|643,2,Reshiram,black_tower_10,flame,#fff2e0,flame,pillar|644,2,Reshiram,black_tower_10,spark,#4ad0ff,bolt,pillar|645,1,Reshiram,cave,shard,#e0903a,stone,|646,2,Reshiram,kyurem_cave,snow,#bfe6ff,ice,pillar|647,3,Cobalion,shallow_water,bubble,#6ac0ff,sea,|648,3,Reshiram,pwt,petal,#9be07a,forest,|649,3,Reshiram,black_tower_3_5,shard,#c79bff,space,';
+const LEGD = '144,1,Lugia,snowy_tall_grass,snow,#bfe6ff,ice,|145,1,Raikou,mountain,spark,#ffe14a,bolt,|146,1,Ho-oh,mountain,flame,#ff9a3a,magma,|150,2,Origins>>Mewtwo,cave,shard,#c79bff,void,rings|151,3,Origins>>Mewtwo,tall_grass,petal,#ffb3d9,forest,|243,1,Raikou,mountain,spark,#ffe14a,bolt,|244,1,Entei>>Raikou,cave,flame,#ff7a2a,magma,|245,1,Raikou,shallow_water,bubble,#7ad0ff,sea,|249,2,Lugia,water,bubble,#cfe6ff,sea,whirl|250,2,Ho-oh,mountain,flame,#ffb23a,sky,rainbow|251,3,Ho-oh,pinwheel_road,petal,#9be07a,forest,|377,1,Heatran,cave,shard,#c9a45c,stone,|378,1,Heatran,kyurem_cave,snow,#bfe6ff,ice,|379,1,Heatran,cave,shard,#b4c0d2,stone,|380,1,Rayquaza,mountain,spark,#ff7a8a,sky,|381,1,Rayquaza,mountain,spark,#6aa8ff,sky,|382,2,Kyogre,water,bubble,#3f8cff,sea,glyph|383,2,Kyogre,cave,flame,#ff5a2a,magma,glyph|384,2,Rayquaza,mountain,spark,#3fe08a,sky,streak|385,3,Deoxys,mountain,spark,#ffe680,space,|386,4,Deoxys,black_tower_10,shard,#ff7a4a,space,rings|480,1,Uxie,shallow_water,bubble,#ffe680,sea,|481,1,Uxie,shallow_water,bubble,#ff8ab0,sea,|482,1,Uxie,shallow_water,bubble,#6aa8ff,sea,|483,2,Palkia,black_tower_10,shard,#6aa8ff,time,rings|484,2,Palkia,black_tower_10,shard,#ff8ad0,space,rift|485,1,Heatran,cave,flame,#ff7a2a,magma,|486,1,Heatran,cave,shard,#e8e0c0,stone,|487,2,Giratina,kyurem_cave,evil,#e0b030,void,stripes|488,1,Uxie,mountain,shard,#ffb3ea,space,|490,3,Uxie,water,bubble,#5ad0ff,sea,|491,3,Darkrai>>Giratina,kyurem_cave,evil,#b03060,night,|492,3,Uxie,tall_grass,petal,#8be07a,forest,|493,4,Arceus,black_tower_10,,#ffe9a8,origin,wheel|494,3,Reshiram,pwt,flame,#ff9a3a,magma,|638,1,Cobalion,mountain,shard,#6ac0e8,stone,|639,1,Cobalion,cave,shard,#c9a45c,stone,|640,1,Cobalion,pinwheel_road,petal,#8be07a,forest,|641,1,Reshiram,mountain,spark,#8be0a0,sky,|642,1,Reshiram,mountain,spark,#6aa8ff,bolt,|643,2,Reshiram,black_tower_10,flame,#fff2e0,flame,pillar|644,2,Reshiram,black_tower_10,spark,#4ad0ff,bolt,pillar|645,1,Reshiram,cave,shard,#e0903a,stone,|646,2,Reshiram,kyurem_cave,snow,#bfe6ff,ice,pillar|647,3,Cobalion,shallow_water,bubble,#6ac0ff,sea,|648,3,Reshiram,pwt,petal,#9be07a,forest,|649,3,Reshiram,black_tower_3_5,shard,#c79bff,space,';
 const LEG = {}; LEGD.split('|').forEach(r => { const q = r.split(','); LEG[+q[0]] = { t: +q[1], mre: q[2], sc: q[3], th: q[4], cc: q[5], bg: q[6], sig: q[7] }; });
 /* ---------- Raid-reglene ----------
    NÅR en legendarisk viser seg: sjelden, og aldri til fast tid (raidRoll). Hver studiedag (dagens første OPENMIN minutter) trekkes det én gang:
@@ -814,7 +915,7 @@ const DARK = { id: 150, t: 5, mre: 'X & Y - Mewtwo>>Mewtwo', sc: 'cave', th: 'ev
 const hasDark = () => S.mons.some(m => m.id === 150 && m.sh === 2);
 const raidInfo = R => R && R.dk ? DARK : R ? LEG[R.id] : null;
 /* Det raidkortet viser før kampen. */
-const raidShow = R => ({ L: raidInfo(R), n: R.dk ? DARK.n : D(R.id)[0], sh: R.dk ? 2 : 0, lv: R.lv });
+const raidShow = R => ({ L: raidInfo(R), n: R.dk ? DARK.n : D(R.id)[0], sh: R.dk ? 2 : R.sh ? 1 : 0, lv: R.lv });
 const raidTitle = (id, dk) => dk ? DARK.title : id === 493 ? 'The Original One' : LEG[id].t === 3 || id === 386 ? 'Mythical Pokémon' : 'Legendary Pokémon';
 function raidPick() {
   const p4 = Math.min(0.25, 0.03 + 0.006 * (S.rpity || 0)), r = Math.random(), lv = leagueLv(), all = Object.keys(LEG).map(Number);
@@ -827,13 +928,13 @@ function raidPick() {
    teller studiedagene og økes i grant). Med p: en ekstra trekning med den sjansen (en vunnet runde), men heller ikke den før RAIDCOOL dager er gått. */
 function raidRoll(p) {
   if (S.raid || !S.party.length) return false;
-  const w = (S.rwait || 0) - RAIDCOOL; if (w < 0) return false;
-  return Math.random() < (p != null ? p : RAIDP0 + RAIDPITY * w) ? raidSpawn() : false;
+  const w = (S.rwait || 0) - RAIDCOOL - (diff().rc || 0); if (w < 0) return false;
+  return Math.random() < (p != null ? p : RAIDP0 + RAIDPITY * w) * (diff().rf || 1) ? raidSpawn() : false;
 }
 /* Seieren er fangsten: den legendariske blir med deg i det raidet er vunnet, uten kast. Nivået er som for et møte i gresset (etter laget ditt),
    ikke raidnivået. res.got = { u, isNew } til oppsummeringen. */
-function raidCatch(id, dk, res) {
-  const e = genEnc({ ids: [id] }), isNew = !S.caught[id], m = addMon(id, e.lv, dk ? 2 : e.sh, 0, e.g);
+function raidCatch(id, dk, res, sh) {
+  const e = genEnc({ ids: [id] }), isNew = !S.caught[id], m = addMon(id, e.lv, dk ? 2 : sh ? 1 : 0, 0, e.g);
   if (res) { res.cau = { u: m.u, isNew }; if (isNew) { res.cau.c = NEWCOIN[tierOf(id)] || 0; S.coins += res.cau.c; } }
   return m;
 }
@@ -843,11 +944,15 @@ function raidSpawn(res) {
   /* Mewtwo har sin egen trekning (MEWP) helt til du eier Dark Mewtwo, også om du alt har den vanlige: det er bare gjennom den du kan møte den mørke. */
   const id = !hasDark() && lv >= RAIDGATE[1] && Math.random() < MEWP ? 150 : raidPick(), t = LEG[id].t;
   S.rpity = t >= 4 ? 0 : (S.rpity || 0) + 1;
-  S.raid = { id, lv: raidLvFor(t), hx: +raidHx(t).toFixed(2), day: '', tries: 0, at: dayKey(), nw: 1 }; S.rwait = 0;
+  /* hid = ikke vist ennå: den viser seg først når dagens kamper er spilt, simulert eller hoppet over (raidUnhide), som en overraskelse.
+     sh = shiny: 1 av SHINYN, eller PRISMP når en Prism Lure er kjøpt (den brukes opp her). */
+  const sh = Math.random() < (S.prism ? PRISMP : 1 / SHINYN) ? 1 : 0; S.prism = 0;
+  S.raid = { id, lv: raidLvFor(t), hx: +raidHx(t).toFixed(2), day: '', tries: 0, at: dayKey(), nw: 0, hid: 1, sh }; S.rwait = 0;
   if (res) res.raid = id;
   return true;
 }
-const raidOpen = () => !!S.raid && !!LEG[S.raid.id] && S.raid.day !== dayKey();
+function raidUnhide() { const R = S.raid; if (!R || !R.hid) return false; R.hid = 0; R.nw = 1; return true; }
+const raidOpen = () => !!S.raid && !S.raid.hid && !!LEG[S.raid.id] && S.raid.day !== dayKey();
 /* ---------- Stedet kjemper med ----------
    Hver legendarisk har et «domene» etter stedet sitt (LEG.bg). Hver RAIDEV-te runde skjer det noe der: din Pokémon mister litt HP (1/RAIDCHIP, og typer som tåler
    stedet slipper), får senket en verdi ett trinn, eller den legendariske henter seg litt inn. Første gang den legendariske er nede i halv HP, blir den rasende:
@@ -865,6 +970,7 @@ const DOM = {
   time: { n: 'Time Warp', k: 'drop', st: 6, s: 'Time slows around {N}!', d: "the warp lowers your Pokémon's Speed", up: [[3, 1]] },
   forest: { n: 'Life Spring', k: 'heal', s: '{F} draws strength from the land!', d: 'the land restores a little of its HP', up: [[5, 1]] },
   origin: { n: 'Judgment', k: 'chip', imm: [], s: 'Pillars of light fall on {N}!', d: 'pillars of light hurt your Pokémon a little', up: [[2, 1], [4, 1]] },
+  night: { n: 'Nightmare', k: 'chip', imm: [], s: 'A nightmare closes around {N}!', d: 'a nightmare hurts your Pokémon a little (nothing is safe from it)', up: [[4, 1]] },
   dark: { n: 'Shadow Field', k: 'both', st: 5, imm: [], s: 'Shadows tear at {N}!', d: "the shadows hurt your Pokémon a little and lower its Sp. Def", up: [[2, 1], [4, 1]] }
 };
 const domKey = tr => tr.dk ? 'dark' : tr.lbg === 'flame' ? 'magma' : tr.lbg, raidDom = tr => DOM[domKey(tr)] || null;
@@ -885,6 +991,15 @@ function raidField(B, ev) {
     else { b.hp = Math.max(0, b.hp - Math.max(1, Math.floor(b.max / RAIDCHIP))); ev.push({ t: 'hit', side: 'me', hp: b.hp, e: 1, quiet: 1 }); settle(B, ev); }
   }
   if (D0.k !== 'chip' && b.hp > 0 && !B.over) changeStats(B, 'me', [[D0.st, -1]], ev, true);
+}
+/* Dark Mewtwo forvandles midt i kampen. Kampskjermen bestemmer når (dkShift i bui.js: når den første låta er slutt), reglene står her: helsa løftes til DKHP
+   av full hvis den er lavere, og verdiene i DKUP går opp ett trinn. Skjer høyst én gang i en kamp (B.sin). */
+const DKHP = 0.75, DKUP = [[4, 1], [6, 1]];
+function darkShift(B, ev) {
+  const f = B.foe[B.b]; if (!B.tr || !B.tr.dk || B.sin || B.over || !f || f.hp <= 0) return false;
+  B.sin = 1; const to = Math.ceil(f.max * DKHP);
+  if (f.hp < to) { f.hp = to; ev.push({ t: 'heal', side: 'foe', hp: f.hp }, { t: 'msg', s: `${f.name} restored its strength!` }); }
+  changeStats(B, 'foe', DKUP, ev); return true;
 }
 /* Formen en legendarisk forvandles til når den blir rasende i et raid (0 = ingen). Mewtwo har Dark Mewtwo som sin andre form og forvandles ikke. */
 const raidMega = R => R.dk || R.id === 150 ? 0 : megaOpts(R.id)[0] || 0;
@@ -913,7 +1028,7 @@ function raidBattle(lead, demo) {
   /* Hvem som venter, er hemmelig til filmen har gått: fra første forsøk er den kjent (R.seen), og kortet viser den. */
   if (!demo && S.raid && !S.raid.seen) { S.raid.seen = 1; save(); }
   /* Vanskelighetsgraden senker nivået og HP-en til den legendariske (Hard = som før). */
-  const dd = diff(), lv = Math.max(10, Math.round(R.lv * dd.rlv)), e = Math.round((R.dk ? 85 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : 0, g: rollG(R.id), mega: defForm(R.id), ms: raidMega(R), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: raidMoves(R.id, lv) };
+  const dd = diff(), lv = Math.max(10, Math.round(R.lv * dd.rlv)), e = Math.round((R.dk ? 85 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : R.sh ? 1 : 0, g: rollG(R.id), mega: defForm(R.id), ms: raidMega(R), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: raidMoves(R.id, lv) };
   const B = mkBattle(demo ? party : party.map(evSrc), [foe], legTr(R.id, R.dk), { mode: demo ? 'lab' : 'raid', raid: 1, st: TCL.supreme, k: 'legend', rd: 0, n: 0, lap: 0, ti: 0, bag: bagN(), xm: 3 * dd.xp, sm: 1, dc: dd.coin, boost: { mode: '', m: 1, xp: 1 } });
   B.tr.skill = dd.sk; if (demo) labMega(B); else evApply(B);
   const f = B.foe[0]; f.max = f.hp = Math.round(f.max * RAIDHP[L.t - 1] * dd.rhp * (R.hx || 1)); if (R.dk) f.short = 'D.Mewtwo';
@@ -935,7 +1050,7 @@ function finishRaid(B) {
       S.raid = { id: 150, dk: 1, seen: 1, lv: raidLvFor(5), hx: +raidHx(5).toFixed(2), day: '', tries: R.tries || 0, won1: 1, r1: `${res.coins.toLocaleString('en-US')} coins, ${res.items.join(', ')}` };
       res.dark = 1; res.note = 'Mewtwo is not finished.';
     } else {
-      raidCatch(id, B.tr.dk, res); S.raid = null; res.note = `${nm} is yours.`;
+      raidCatch(id, B.tr.dk, res, R && R.sh); S.raid = null; res.note = `${nm} is yours.`;
       if (R && R.r1) res.perks.push(`Mewtwo gave its rewards before it changed: ${R.r1}.`);
     }
   } else if (R) {

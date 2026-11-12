@@ -49,7 +49,7 @@ const HELP = [
     ${hRow(hSym('★', 'var(--gold)'), `Today's bonus mode: ×${DAYCOIN}`, 'One of the three battle modes pays extra each day. You see which when you choose.')}
     ${hRow(hSym('◎', 'var(--gold)'), `Gold Rush event: ×${EVCOIN}`, 'One of the special events.')}
     ${hRow(hSym('2×', 'var(--sage)'), 'First League win of the day', 'Pays double.')}
-    ${hRow(hSym('⚑', 'var(--red)'), 'Difficulty', DIFF.map(d => `${d.n} ×${d.coin}`).join(' · ') + '. Change it under Profile.')}` ; } },
+    ${hRow(hSym('⚑', 'var(--red)'), 'Difficulty', DIFF.map(d => `${d.n} ×${d.coin}`).join(' · ') + '. Hard pays the most of everything: coins, XP, Rare Candy, and legendary raids come nearly twice as often. Change it under Profile.')}` ; } },
 
   { k: 'catch', n: 'Encounters and catching', s: 'Rarity, throws, and what a catch gives', ic: () => ballEl('poke', '30px'), body: () => `
     ${hH('Where they come from')}
@@ -63,10 +63,13 @@ const HELP = [
     ${hRow(ballEl('poke', '30px'), 'Poké Ball', 'The standard ball.')}
     ${hRow(ballEl('great', '30px'), `Great Ball · ×${BALLM.great}`, 'Better odds and a wider zone. In the Shop from trainer level 3.')}
     ${hRow(ballEl('ultra', '30px'), `Ultra Ball · ×${BALLM.ultra}`, 'The best odds. From trainer level 7.')}
+    ${hRow(ballEl('dusk', '30px'), 'Dusk Ball', `Ultra Ball odds, and a third better on legendary Pokémon. From trainer level ${SHOP.dusk.lv}.`)}
+    ${hRow(ballEl('master', '30px'), 'Master Ball', `Never fails. You can carry one, and it is never thrown unless you pick it. From trainer level ${SHOP.master.lv}.`)}
+    ${hRow(hSym('+', 'var(--gold)'), 'Golden Razz Berry', 'Feed it to the Pokémon in front of you: one more throw, and better odds on every throw.')}
     ${hH('After the catch')}
     ${hRow(hStars(4), 'Potential · IVs', `The stars show how good the Pokémon was born: one star is plain, five is flawless. From Lv ${HTLV} Hyper Training can make up for low ones.`)}
     ${hRow(coinEl(PERFCOIN), 'Small bonuses', `A perfect throw gives +${PERFCOIN} coins, and from the third catch in a row you get a little more for each one.`)}
-    ${hRow(hSym('✦', 'var(--gold)'), 'Shiny Pokémon', 'A rare other colour. Worth five times as much, and mostly just nice to own.')}
+    ${hRow(hSym('✦', 'var(--gold)'), 'Shiny Pokémon', `A rare other colour. It is born with perfect IVs and has ${Math.round((SHINYST - 1) * 100)} % higher stats, so a trained shiny is the best of its kind. Incense from the Shop raises the odds for a while.`)}
     <div class="hmore">${hLink('train', 'IVs, EVs and training')}${hLink('shop', 'Balls and packs')}</div>` },
 
   { k: 'team', n: 'Your team', s: 'Partner, levels, evolution and moves', ic: () => hSym('☗', 'var(--blue)'), body: () => `
@@ -87,7 +90,11 @@ const HELP = [
     ${hRow(hSym('⚔', 'var(--red)'), 'Fight, Bag, Pokémon', 'Pick a move, use an item from the Shop, or switch to another Pokémon. The move menu shows the type and how well it will hit.')}
     ${hRow(hSym('⏸', 'var(--ink2)'), 'Pause menu', 'Battle speed, music, and giving up are in the Pause menu. FAST runs the battle at more than double speed, sounds included.')}
     ${hRow(hSym('⟲', 'var(--sage)'), 'A battle you leave', 'Is saved after every turn and goes on where it was. Giving up counts as a loss.')}
-    ${hRow(hSym('▶', 'var(--blue)'), 'See it first', 'Show the game, under Profile, plays a battle for you: rental Pokémon against a Champion. You can take over whenever you like, and nothing is at stake.')}
+    ${hH('No time today?')}
+    ${hRow(hSym('–', 'var(--ink2)'), 'Not today', 'Closes the day without battles. Nothing is lost but the battles themselves.')}
+    ${hRow(hSym('▸', 'var(--gold)'), `Simulate · ${Math.round(SIMPAY * 100)} %`, 'The game plays the day\'s battles with your team. You get a good deal less: part of the coins and XP, and none of the items, Rare Candy, medals or lap wins. You see the result before you accept, and you can undo it once.')}
+    ${hRow(hSym('☾', 'var(--blue)'), 'Tomorrow', 'The battles wait until you start your next session. They are marked as yesterday\'s and pay yesterday\'s bonus.')}
+    ${hRow(hSym('▶', 'var(--blue)'), 'See it first', 'Show the game, under Profile, plays a battle for you: a strong rental team against a Champion. You can take over whenever you like, or play it yourself from the start, and nothing is at stake.')}
     <div class="hmore">${hLink('events', 'Special events')}${hLink('raids', 'Legendary raids')}${hLink('bonus', 'The battle bonus')}</div>` },
 
   { k: 'events', n: 'Special events', s: 'Some days come with a gift', ic: () => `<span class="evc-ic hev" style="--ec:${EVENTS.surge.c}">${EVENTS.surge.ic}</span>`, body: () => `
@@ -98,14 +105,18 @@ const HELP = [
   { k: 'raids', n: 'Legendary raids', s: 'One huge Pokémon against your whole team', ic: () => '<span class="raid-sp qm hqm"><i>?</i></span>', body: () => `
     ${hP('Now and then a legendary Pokémon shows itself. Who it is stays <b>secret</b> until you stand in front of it.')}
     ${hH('When it appears')}
-    ${hRow(hSym('?', 'var(--gold)'), 'Rarely, and never on a fixed day', 'About once a week if you study every day. The longer since the last one, the better the odds.')}
+    ${hRow(hSym('?', 'var(--gold)'), 'Rarely, and never on a fixed day', 'About once a week on Normal if you study every day, more often on Hard and less often on Easy. The longer since the last one, the better the odds.')}
+    ${hRow(hSym('!', 'var(--gold)'), 'As a surprise', 'It shows itself when the day\'s battles are done: played, simulated or skipped. Until then you cannot know that one is waiting.')}
     ${hRow(hSym('◎', 'var(--sage)'), 'You reach your daily goal', 'One more draw that day.')}
     ${hRow('<span class="ficon hfi">L</span>', 'You win a League lap or a Frontier round', 'One more draw.')}
     ${hH('The fight')}
     ${hP(`It is one Pokémon with ${RAIDHP[0]} to ${RAIDHP[3]} times the HP of a normal one, against your whole team, and you may use the Bag. Its place fights too: something happens on the field every third turn, and below half HP it becomes enraged.`)}
     ${hP(`You get <b>${RAIDTRIES} attempts</b>, one a day. The first time you do not know who is waiting. If you lose, you get one more attempt the next day, and now you know. Then it moves on. It stands well above your team, so a raid is meant to be hard.`)}
     ${hH('If you win')}
-    ${hP('It is yours. Winning the raid is the catch: no throws. You also get a pile of coins, Rare Candy and XP for the whole team.')}` },
+    ${hP('It is yours. Winning the raid is the catch: no throws. You also get a pile of coins, Rare Candy and XP for the whole team.')}
+    ${hH('Help from the Shop')}
+    ${hRow(hSym('✚', 'var(--gold)'), 'Sacred Ash', `Once in a raid: every fainted Pokémon is back with half its HP. From trainer level ${SHOP.ash.lv}.`)}
+    ${hRow(hSym('✦', 'var(--violet)'), 'Prism Lure', `The next raid has a 1 in ${Math.round(1 / PRISMP)} chance of being shiny. From trainer level ${SHOP.prism.lv}.`)}` },
 
   { k: 'train', n: 'Training: IVs and EVs', s: 'What they are, why they matter, and their caps', ic: () => hSym('▲', 'var(--red)'), body: () => `
     ${helpTrain()}
@@ -132,7 +143,8 @@ const HELP = [
     ${hRow(hSym('⚔', 'var(--red)'), 'Battles', 'Most of your coins. Multiplied by today\'s battle bonus.')}
     ${hRow(ballEl('poke', '30px'), 'Catching and selling', 'New species give coins, and duplicates can be sold from the Box.')}
     ${hH('What to buy')}
-    ${hRow(ballEl('great', '30px'), 'Balls', 'You always need some. Better balls for rarer Pokémon.')}
+    ${hRow(ballEl('great', '30px'), 'Balls', 'You always need some. Better balls for rarer Pokémon, and a Dusk Ball for a legendary.')}
+    ${hRow(hSym('❋', 'var(--sage)'), 'For the hunt', 'Lures give more or rarer encounters for three sessions. Incense raises the shiny odds for one to three days.')}
     ${hRow(hSym('+', 'var(--violet)'), 'Potions and Revives', 'Used from the Bag in League battles and raids.')}
     ${hRow(hSym('▲', 'var(--red)'), 'Training', 'The big one. It is what makes the hardest bosses possible.')}
     ${hH('Encounter packs')}
@@ -170,7 +182,7 @@ const HEV = { surge: 'Your Pokémon that have a Mega form start every battle in 
 /* De tre modusene, kort. (Hentes fra reglene, så teksten følger med når de endres.) */
 function helpModes() {
   return hRow('<span class="ficon hfi">L</span>', 'Trainer League', `Your own team, ${LAPN} battles a lap. A trainer first, then the class rises as you go, and a Champion waits at the end. You never see who is next before the intro. Every win gives the whole team XP, and bosses give Rare Candy and items. One loss ends the lap, and the next lap starts from battle 1. One lap a day.`)
-    + hRow('<span class="ficon hfi">F</span>', 'Battle Frontier', `You rent Pokémon instead of using your own, and everything is Lv ${FACLV}. ${FACN} battles a round. You win coins, items and encounters, and your own team gets XP for every win. ${FACLIVES} runs a day.`)
+    + hRow('<span class="ficon hfi">F</span>', 'Battle Frontier', `You rent Pokémon instead of using your own, and everything is Lv ${FACLV}. ${FACN} battles a round. You win coins, items and encounters, and your own team gets XP for every win. Clear a round, and you keep one of your four rentals. ${FACLIVES} runs a day.`)
     + hRow('<span class="ficon hfi">W</span>', 'World Tournament', `A knockout cup, three rounds, three on three, and a new cup each weekday. Coins and XP for every round, and a pack of encounters for the winner.`);
 }
 /* IV og EV. Brukes både i hubben og første gang Train åpnes. */
@@ -192,7 +204,7 @@ function helpOpen(k) {
        <p class="sm">Pick a topic. Short answers, with pictures.</p>
        <div class="hlist">${HELP.map(t => `<button type="button" class="hitem" data-a="help" data-k="${t.k}"><span class="hic">${t.ic()}</span><span class="sp"><b>${t.n}</b><span class="sm">${t.s}</span></span><span class="hgo">›</span></button>`).join('')}</div>
        <button type="button" class="btn wide" data-a="tour">Show the guide again</button>
-       <button type="button" class="btn wide" data-a="show">Show the game · trailer and tour</button>
+       <button type="button" class="btn wide" data-a="show">Show the game · trailer and overview</button>
        <button type="button" class="btn wide nf" data-a="rules">Rules and rewards · every number</button>`;
   const sh = document.querySelector('#sheet .sheet.helpsh');
   if (sh) { sh.innerHTML = `<span class="grab"></span>${html}`; sh.scrollTop = 0; }
@@ -215,11 +227,11 @@ function tourSteps() {
     { pic: `<span class="go tr-go">Start 45 min</span><span class="tr-sub"><span class="grass live"><i></i><i></i><i></i><i></i></span> every 20 minutes</span>`, n: '2 · Start the timer', t: 'Choose a length and press Start. Then study. You can lock your phone, the timer keeps going. Every 20 minutes a wild Pokémon shows up.' },
     { pic: `<div class="tr-rew"><span><b class="tn">+450</b><span class="sm">XP</span></span><span><b class="tn">${coinEl(135)}</b><span class="sm">coins</span></span><span>${ballEl('poke', '34px')}<span class="sm">encounters</span></span></div>${hMeter()}`, n: '3 · Collect your rewards', t: 'After a session you get XP and coins, and the Pokémon you found wait in the grass. Stop the marker in the green zone to catch them.' },
     { pic: `<div class="tr-bar">${hBar(0.62, 0.5, top)}<span class="sm">today's battle bonus</span></div>`, n: '4 · Study raises the battle bonus', t: `Every minute you study today raises today's bonus, from ×0.5 up to ×${top} at your goal of ${hrs(g)} hours. It multiplies the coins you win in battles, and lifts the XP and the Rare Candy too.` },
-    { pic: `<div class="tr-modes"><span class="ficon hfi">L</span><span class="ficon hfi">F</span><span class="ficon hfi">W</span><span class="evc-ic hev" style="--ec:${EVENTS.gold.c}">${EVENTS.gold.ic}</span></div>`, n: '5 · Battle when you are done', t: `After ${OPENMIN} minutes of focus you can press Done for today and choose one of three battle modes. All three give your own team XP. Some days a special event shows up, with a bonus just for you.` },
+    { pic: `<div class="tr-modes"><span class="ficon hfi">L</span><span class="ficon hfi">F</span><span class="ficon hfi">W</span><span class="evc-ic hev" style="--ec:${EVENTS.gold.c}">${EVENTS.gold.ic}</span></div>`, n: '5 · Battle when you are done', t: `After ${OPENMIN} minutes of focus you can press Done for today and choose one of three battle modes. All three give your own team XP. Some days a special event shows up, with a bonus just for you. No time to battle? Let the game simulate the day for a smaller reward, or skip it.` },
     { pic: `<div class="tr-lap">${Array.from({ length: LAPN }, (_, n) => `<i class="${n < 5 ? 'on' : n === 5 ? 'cur' : ''}${n === LAPN - 1 ? ' ul' : ''}"></i>`).join('')}</div><span class="sm">${LAPN} battles to a Champion</span>`, n: '6 · The League is one clean run', t: `The class rises as you go, and a Champion waits in battle ${LAPN}. One loss ends the lap, and the next lap starts from battle 1. So build your team before you go for the final.` },
     { pic: `<div class="tr-iv"><span><b>IV</b><span class="tb g hbx"><i style="width:60%"></i></span><span class="sm tn">max 31</span></span><span><b>EV</b><span class="tb hbx"><i style="width:40%"></i></span><span class="sm tn">max ${EVMAX}</span></span></div>`, n: '7 · Train your team', t: `Open a Pokémon and press Train. EVs are what training adds: up to ${EVMAX} in a stat, enough to max two. IVs are what it was born with, and Hyper Training can lift them from Lv ${HTLV}.` },
-    { pic: '<span class="raid-sp qm hqm tr-raid"><i>?</i></span>', n: '8 · Legendary raids', t: `Now and then a legendary shows itself. You do not know who it is until you stand in front of it, and you get ${RAIDTRIES} attempts. Beat it, and it is yours.` },
-    { pic: '<span class="helpb tr-q" aria-hidden="true">?</span>', n: 'Questions?', t: 'The ? in the top corner has short answers with pictures, and Rules and rewards on the Focus page has every number. This guide is under Profile, next to the showcase: a trailer and a tour for showing a friend.' }
+    { pic: '<span class="raid-sp qm hqm tr-raid"><i>?</i></span>', n: '8 · Legendary raids', t: `Now and then a legendary shows itself, once the day's battles are done. You do not know who it is until you stand in front of it, and you get ${RAIDTRIES} attempts. Beat it, and it is yours.` },
+    { pic: '<span class="helpb tr-q" aria-hidden="true">?</span>', n: 'Questions?', t: 'The ? in the top corner has short answers with pictures, and Rules and rewards on the Focus page has every number. This guide is under Profile, next to the showcase: a trailer and an overview for showing a friend.' }
   ];
 }
 function tourShow(i) {

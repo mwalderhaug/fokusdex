@@ -208,7 +208,7 @@ function render() {
   renderNav();
   /* På en eventdag får forsiden eventets farger og en annen oppstilling (se VIEW.fokus). Eventet trekkes når dagens modus velges (modePick). */
   const E = U.tab === 'fokus' && S.party.length && typeof evNow === 'function' ? evNow() : null, EI = E ? evInfo(E) : null;
-  $('#main').innerHTML = `<div class="wrap${E ? ' evpage ev-' + E.k : ''}"${E ? ` style="--ec:${EI.c};--ec2:${EI.c2 || EI.c}"` : ''}>${helpBtn()}${VIEW[U.tab]()}</div>`;
+  $('#main').innerHTML = `<div class="wrap${E ? ' evpage ev-' + E.k : ''}${SBX ? ' insbx' : ''}"${E ? ` style="--ec:${EI.c};--ec2:${EI.c2 || EI.c}"` : ''}>${typeof sbxBar === 'function' ? sbxBar() : ''}${helpBtn()}${VIEW[U.tab]()}</div>`;
   /* Et område som nettopp ble åpnet (av nivå eller antall arter), sies fra om én gang. */
   if (S.nreg && S.nreg.length) { const l = S.nreg; S.nreg = []; save(true); setTimeout(() => toast(`New area: ${l.join(' and ')} ${l.length > 1 ? 'are' : 'is'} open. See Shop · Routes.`), 400); }
 }
@@ -321,7 +321,7 @@ VIEW.fokus = () => {
   const p = partner(), fag = FAGS[U.fag] ? U.fag : curFag(), min = U.min || S.last.min, td = todayMin(), left = Math.max(0, S.cap - td);
   /* Andre aktiviteter enn fagene teller halvt (rateOf): em = det økta er verdt. */
   const w = rateOf(fag), em = Math.round(min * w), subj = Object.keys(FAGS).filter(isSubj), oth = Object.keys(FAGS).filter(k => !isSubj(k)), chip = k => `<button type="button" class="chip" data-a="fag" data-k="${k}" aria-pressed="${fag === k}">${esc(F(k).n)}</button>`;
-  const n = Math.floor(Math.min(em, left) / 20) + (min * w >= 25 && left >= em ? 1 : 0) + (S.incOn ? 1 : 0);
+  const n = Math.floor(Math.min(em, left) / 20) + (min * w >= 25 && left >= em ? 1 : 0) + (S.incOn ? 1 : 0) + (S.lure > 0 ? 1 : 0);
   const rested = !(S.log[dayKey()] || {}).s, dx = (S.log[dayKey()] || {}).x || 0;
   let top = topBar(), h = '';
   if (p) {
@@ -342,7 +342,7 @@ VIEW.fokus = () => {
     ${mulBox(td)}
     <div class="quests">${QUESTS.map(q => `<span class="${td >= q.m ? 'on' : ''}"><b>${td >= q.m ? '✓ ' : ''}${q.n}</b>${q.r}</span>`).join('')}</div>
     ${S.eggs.length ? `<div class="row" style="margin-top:14px"><span class="egg"></span><div class="sp"><div class="row sm tn" style="justify-content:space-between"><span>Egg${S.eggs.length > 1 ? ' (' + S.eggs.length + ')' : ''}</span><span>${S.eggs[0].need - S.eggs[0].got} min left</span></div><div class="bar gold" style="margin-top:5px"><i style="width:${Math.round(S.eggs[0].got / S.eggs[0].need * 100)}%"></i></div></div></div>` : ''}
-    ${S.incOn ? '<p class="sm" style="margin-top:10px">Incense is lit for your next session.</p>' : ''}${S.boost ? `<p class="sm" style="margin-top:10px;color:var(--gold)">Boss perk: ${S.boost.m}× coins for your next ${S.boost.n} session${S.boost.n > 1 ? 's' : ''}.</p>` : ''}</div>`;
+    ${S.incOn ? '<p class="sm" style="margin-top:10px">Incense is lit for your next session.</p>' : ''}${S.lure > 0 ? `<p class="sm" style="margin-top:10px">Lure: one more encounter in your next ${S.lure} session${S.lure > 1 ? 's' : ''}.</p>` : ''}${S.slure > 0 ? `<p class="sm" style="margin-top:10px">Super Lure: rarer Pokémon in your next ${S.slure} session${S.slure > 1 ? 's' : ''}.</p>` : ''}${shinyBoost() > 1 ? `<p class="sm" style="margin-top:10px;color:var(--gold)">${SHOP[S.shb.k] ? SHOP[S.shb.k].n : 'Shiny incense'}: shiny odds ×${shinyBoost()} for ${hLeft(S.shb.until - Date.now())} more.</p>` : ''}${S.prism ? '<p class="sm" style="margin-top:10px;color:var(--gold)">Prism Lure: the next raid has a 1 in 5 chance of being shiny.</p>' : ''}${S.boost ? `<p class="sm" style="margin-top:10px;color:var(--gold)">Boss perk: ${S.boost.m}× coins for your next ${S.boost.n} session${S.boost.n > 1 ? 's' : ''}.</p>` : ''}</div>`;
   /* En vanlig dag ligger kampene nederst. På en eventdag står eventet og kampene øverst, og det som har med studeringen å gjøre, under. */
   const CL = clockLock(); if (CL) top += clockCard(CL);
   const battles = S.party.length ? raidCard() + ladderCard() : '', E = battles && typeof evNow === 'function' ? evNow() : null;
@@ -373,6 +373,13 @@ VIEW.lag = () => {
     <p class="sm">Green dot = in team. Colored frame = rare or better. ! = a new move to look at.${evb && (evb.k === 'surge' || EVSTAT[evb.k]) ? ` A glowing corner = gets today's ${esc(evInfo(evb).n)} bonus.` : ''}</p>`;
 };
 /* Sekskanten: hver akse viser staten målt mot en sterk art (base 130) på samme nivå. */
+/* Base stats, vist som på pokemondb.net: tallet og en farget stolpe for hver verdi, og summen nederst. Fargen følger verdien (rød under 30, oransje
+   til 59, gul til 89, lysegrønn til 119, grønn til 149, turkis fra 150), og stolpen er full ved 180. */
+const BSC = v => v < 30 ? '#e2574c' : v < 60 ? '#e8913d' : v < 90 ? '#e6c84f' : v < 120 ? '#a5cf3f' : v < 150 ? '#3fbf6e' : '#31b8b0';
+function bstEl(id, mega, sh) {
+  const b = mega ? MEGA[mega - 1][4] : BST[id - 1], tot = b.reduce((a, c) => a + c, 0);
+  return `<div class="bst" role="table" aria-label="Base stats">${['HP', 'Attack', 'Defense', 'Sp. Atk', 'Sp. Def', 'Speed'].map((n, i) => `<div role="row"><span role="cell">${n}</span><b class="tn" role="cell">${b[i]}</b><span class="bst-b" role="cell" aria-hidden="true"><i style="width:${Math.min(100, Math.round(b[i] / 180 * 100))}%;background:${BSC(b[i])}"></i></span></div>`).join('')}<div class="bst-t" role="row"><span role="cell">Total</span><b class="tn" role="cell">${tot}</b><span class="sm" role="cell">${sh ? 'Shiny: every stat is 5 % higher' : ''}</span></div></div>`;
+}
 function hexEl(m) {
   const st = statsOf(m), up = natUp(m.nat), dn = natDn(m.nat), cx = 130, cy = 104, R = 64;
   const ref = i => i === 0 ? Math.floor(291 * m.lv / 100) + m.lv + 10 : Math.floor(291 * m.lv / 100) + 5;
@@ -405,7 +412,8 @@ function monSheet(m) {
   openSheet(`<div class="shead">${spr(m.id, { ani: 1, sh: m.sh, mega: m.mega })}<div class="sp"><div class="sm tn">No. ${m.id} · ${REG[regOf(m.id)].n}${m.sh === 2 ? ' · <b style="color:#ff8a2a">Dark</b>' : m.sh ? ' · <b style="color:var(--gold)">Shiny</b>' : ''}</div>${ed ? `<div class="nkrow"><input class="nkin" id="nkin" maxlength="12" value="${esc(m.nn || '')}" placeholder="${esc(d[0])}" autocomplete="off" autocapitalize="words" aria-label="Nickname"><button type="button" class="btn sm2 pri" data-a="nicksave" data-u="${m.u}">Save</button></div>` : `<div class="pn">${esc(mName(m))}${gs(m)}<button type="button" class="nkb" data-a="nick" data-u="${m.u}" aria-label="Give a nickname">✎</button></div>`}${m.nn && !ed ? `<div class="sm">${esc(spName(m))}</div>` : ''}<div class="row" style="margin-top:6px;flex-wrap:wrap;gap:6px">${types(m.id)} ${tierEl(m.id)}${fm && fm[1] === 'Origin' ? ' <span class="pill">Origin Forme</span>' : canForm ? ' <span class="pill">Altered Forme</span>' : ''}</div></div></div>
     <div><div class="row sm tn" style="justify-content:space-between"><span>Level ${m.lv}</span><span>${n > 1 ? 'You have ' + n + ' of these' : 'Your only one'}</span></div><div class="bar" style="margin-top:6px"><i style="width:${Math.round((m.xp - a) / (b - a) * 100)}%"></i></div></div>
     <div class="card2" style="--tc:var(--t${d[1]})">${hexEl(m)}
-      <div class="row" style="flex-wrap:wrap;gap:6px;justify-content:center"><span class="pill">${NAT[m.nat]}${up !== dn ? ` · +${SN[up]} −${SN[dn]}` : ' · neutral'}</span><span class="pill" style="color:${j.sum >= 121 ? 'var(--gold)' : j.sum >= 91 ? 'var(--sage)' : 'var(--ink2)'}">Judge: ${j.t}${j.sum >= 186 ? '' : ' · best ' + SN[j.best]}</span><span class="pill tn">EVs ${evt} of 510</span></div>${abLine(m.id, m.mega)}<button type="button" class="btn sm2 wide" data-a="train" data-u="${m.u}" style="margin-top:6px">Train · raise its stats for coins</button></div>
+      <div class="row" style="flex-wrap:wrap;gap:6px;justify-content:center"><span class="pill">${NAT[m.nat]}${up !== dn ? ` · +${SN[up]} −${SN[dn]}` : ' · neutral'}</span><span class="pill" style="color:${j.sum >= 121 ? 'var(--gold)' : j.sum >= 91 ? 'var(--sage)' : 'var(--ink2)'}">Judge: ${j.t}${j.sum >= 186 ? '' : ' · best ' + SN[j.best]}</span><span class="pill tn">EVs ${evt} of 510</span></div>${abLine(m.id, m.mega)}<button type="button" class="btn sm2 wide" data-a="train" data-u="${m.u}" style="margin-top:6px">Train · raise its stats for coins</button><button type="button" class="btn sm2 wide" data-a="candy" data-u="${m.u}"${S.items.candy > 0 && m.lv < 100 ? '' : ' disabled'}>Rare Candy · one level up (${S.items.candy})</button></div>
+    <div><div class="lab">Base stats${isMega(m) ? ' · Mega form' : ''}</div>${bstEl(m.id, m.mega, m.sh)}</div>
     <div><div class="row" style="justify-content:space-between;margin-bottom:7px"><div class="lab" style="margin:0">Moves${fresh ? ' · <b style="color:var(--gold)">new move learned</b>' : ''}</div>${more ? `<button type="button" class="btn sm2" data-a="mvpick" data-u="${m.u}">Change moves</button>` : ''}</div>
       ${(m.nm || []).length ? `<button type="button" class="newmv" data-a="mlearn" data-u="${m.u}" style="width:100%;text-align:left;margin-bottom:8px"><span class="bang">!</span><span class="sm" style="color:var(--ink)">Wants to learn <b>${esc(MOVES[m.nm[0]][0])}</b>${m.nm.length > 1 ? ' and ' + (m.nm.length - 1) + ' more' : ''}. Tap to decide.</span></button>` : ''}<div class="mvg">${m.mv.map(x => moveEl(x)).join('')}</div>
       ${nx ? `<p class="sm tn" style="margin-top:7px">Next move: ${esc(MOVES[nx.mv][0])} at level ${nx.lv}</p>` : ''}</div>
@@ -416,7 +424,6 @@ function monSheet(m) {
     ${megaCard(m)}
     ${lead ? '' : `<button type="button" class="btn sage wide" data-a="lead" data-u="${m.u}">Make partner</button>`}
     <div class="row"><button type="button" class="btn sp" data-a="party" data-u="${m.u}"${(inP && S.party.length < 2) || (!inP && S.party.length >= 6) ? ' disabled' : ''}>${inP ? 'Remove from team' : 'Add to team'}</button><button type="button" class="btn sp" data-a="fav" data-u="${m.u}">${m.fav ? 'Unfavorite' : 'Favorite'}</button></div>
-    <button type="button" class="btn wide" data-a="candy" data-u="${m.u}"${S.items.candy > 0 ? '' : ' disabled'}>Use Rare Candy (${S.items.candy})</button>
     <button type="button" class="btn wide danger" data-a="sell" data-u="${m.u}"${S.mons.length > 1 ? '' : ' disabled'}>Sell for ${coinEl(sellValue(m))}</button></div>`);
 }
 /* Mega på kortet: hva arten kan bli, og det som mangler (ring, stein). Med ringen gis steinen her, og de med to former bytter fritt mellom dem. */
@@ -484,13 +491,23 @@ function specSheet(id) {
   const d = D(id), got = S.caught[id];
   openSheet(`<div class="shead">${spr(id, { ani: got ? 1 : 0, sil: !got })}<div class="sp"><div class="sm tn">No. ${id} · ${REG[regOf(id)].n}</div><div class="pn">${got ? esc(d[0]) : '???'}</div><div class="row" style="margin-top:6px;flex-wrap:wrap;gap:6px">${got ? types(id) : ''} ${tierEl(id)}</div></div></div>
     <p class="sm">${got ? `You have ${countOf(id)}.` : 'Seen, but not caught yet.'}</p>${got ? abLine(id) : ''}
+    ${got ? `<div><div class="lab">Base stats</div>${bstEl(id, defForm(id), 0)}</div>` : ''}
     ${evoLine(id, id)}
     <button type="button" class="btn wide" data-a="close">Close</button>`);
 }
 
 /* ---------- Butikk ---------- */
+/* Det raden sier om det du har: antall, eller hvor lenge noe virker. */
+const hLeft = ms => { const h = Math.max(1, Math.ceil(ms / 36e5)); return h >= 48 ? Math.ceil(h / 24) + ' days' : h + ' h'; };
+const shopHave = k => k === 'lure' || k === 'slure' ? (S[k] > 0 ? `${S[k]} session${S[k] > 1 ? 's' : ''} left` : 'not in use') : k === 'prism' ? (S.prism ? 'waiting for the next raid' : 'not in use') : SHOP[k].sb ? (S.shb && S.shb.k === k && shinyBoost() > 1 ? `burning · ${hLeft(S.shb.until - Date.now())} left` : 'not lit') : k === 'incense' ? (S.incOn ? 'lit' : 'not lit') : `own ${shopOwn(k)}`;
+const shopFullTxt = k => SHOP[k].sb || k === 'lure' || k === 'slure' || k === 'incense' || k === 'prism' ? 'Active' : 'Full';
+const SHELFD = {
+  'For the hunt': () => 'More and better encounters from your focus sessions, and help with the ones that are hard to catch.',
+  'Shiny hunting': () => `A shiny is born with perfect IVs, and every stat is 5 % higher: a shiny of a strong species is the best Pokémon there is. Your odds right now: 1 in ${nb(Math.round(1 / Math.min(SHINYCAP, shinyOdds())))}${shinyBoost() > 1 ? ` (×${shinyBoost()} from the incense)` : ''}. The incense works on encounters, packs and eggs, not on raids.`,
+  'For battles': () => 'Use these from the Bag in League battles and raids. Using one takes your turn, and the Bag has a limit per battle.'
+};
 VIEW.butikk = () => {
-  const l = tlv(), own = k => k === 'egg' ? S.eggs.length : k === 'incense' ? (S.incOn ? 1 : 0) : S.items[k];
+  const l = tlv();
   const ic = k => SHOP[k].img ? ballEl(k, '30px') : SHOP[k].ic === 'egg' ? '<span class="egg" style="transform:scale(.7)"></span>' : `<span class="${SHOP[k].ic}${k === 'mstone' ? ' mg' : ''}"></span>`;
   const full = S.pend.length > PACKMAX;
   return `<div class="row" style="justify-content:space-between"><h1 class="big">Shop</h1>${coinEl(S.coins)}</div>
@@ -498,8 +515,8 @@ VIEW.butikk = () => {
     <div class="packs">${Object.keys(PACKS).map(k => { const P = PACKS[k], lock = P.lv && l < P.lv, can = S.coins >= P.p && !lock && !full;
       return `<button type="button" class="pkb${can ? '' : ' off'}" data-a="pack" data-k="${k}" style="--pc:${P.c}"${can ? '' : ' disabled'}><span class="pk-ic"><i></i></span><b>${P.n}</b><span class="sm">${P.d}</span><span class="pk-p tn">${lock ? 'Trainer level ' + P.lv : coinEl(P.p)}</span></button>`; }).join('')}</div>
     <p class="sm">${full ? 'Catch some of the encounters that are waiting before you open more packs.' : 'Three encounters in every pack, opened on the spot. The last slot is the good one: the dearer the pack, the better the odds of something rare. Pokémon from packs sell for less than wild ones. The greatest legendaries are not in packs; they have to be met in raids.'}</p>
-    ${[0, 1].map(g => `${g ? '<h2 class="h">For battles</h2><p class="sm">Use these from the Bag in League battles. Using one takes your turn, and you can use three per battle.</p>' : ''}<div class="card" style="padding-top:6px;padding-bottom:6px">${Object.keys(SHOP).filter(k => !!SHOP[k].bt === !!g).map(k => { const it = SHOP[k], lock = (it.lv && l < it.lv) || (it.ring && !S.ring), full = (k === 'egg' && S.eggs.length >= 3) || (k === 'incense' && S.incOn);
-      return `<div class="item"><span class="ic">${ic(k)}</span><div class="sp"><b>${it.n}</b> <span class="sm tn">· own ${own(k)}</span><div class="sm">${it.d}</div></div><button type="button" class="btn sm2 ${S.coins >= it.p && !lock && !full ? 'pri' : ''}" data-a="buy" data-k="${k}"${S.coins < it.p || lock || full ? ' disabled' : ''}>${lock ? (it.ring && !S.ring ? 'Mega Ring' : 'Level ' + it.lv) : full ? 'Full' : nb(it.p)}</button></div>`; }).join('')}</div>`).join('')}
+    ${SHELF.map(([name, ks]) => `<h2 class="h">${name}</h2>${SHELFD[name] ? `<p class="sm">${SHELFD[name]()}</p>` : ''}<div class="card" style="padding-top:6px;padding-bottom:6px">${ks.map(k => { const it = SHOP[k], lock = (it.lv && l < it.lv) || (it.ring && !S.ring), full = shopFull(k);
+      return `<div class="item${lock ? ' lk' : ''}"><span class="ic">${ic(k)}</span><div class="sp"><b>${it.n}</b> <span class="sm tn">· ${shopHave(k)}</span><div class="sm">${it.d}</div></div><button type="button" class="btn sm2 ${S.coins >= it.p && !lock && !full ? 'pri' : ''}" data-a="buy" data-k="${k}"${S.coins < it.p || lock || full ? ' disabled' : ''}>${lock ? (it.ring && !S.ring ? 'Mega Ring' : 'Level ' + it.lv) : full ? shopFullTxt(k) : nb(it.p)}</button></div>`; }).join('')}</div>`).join('')}
     <h2 class="h">Routes</h2>
     <div class="card" style="padding-top:6px;padding-bottom:6px">${[1, 2, 3, 4, 5].map(r => { const g = REG[r], has = S.regions.includes(r);
       return `<div class="item"><span class="ic"><span class="map"></span></span><div class="sp"><b>${g.n}</b><div class="sm tn">${g.b - g.a + 1} species · ${dexCount(r)} caught</div>${has ? '' : `<div class="sm tn" style="margin-top:4px">Opens at trainer level ${g.lv} (you are ${tlv()}) or ${g.dex} species caught (you have ${dexAll()})</div><div class="bar" style="margin-top:6px"><i style="width:${Math.round(Math.min(1, Math.max((tlv() - 1) / Math.max(1, g.lv - 1), dexAll() / g.dex)) * 100)}%"></i></div>`}</div>${has ? `<button type="button" class="btn sm2${S.routes.includes(r) ? ' sage' : ''}" data-a="reg" data-k="${r}">${S.routes.includes(r) ? 'On' : 'Off'}</button>` : '<span class="pill">Locked</span>'}</div>`; }).join('')}</div>
@@ -522,7 +539,7 @@ VIEW.profil = () => {
       return `<div class="card avcard" style="--rk:${R.c}"><button type="button" class="avpb" data-a="ach" aria-label="Achievements. Rank: ${R.n}">${avFrame(R, 'lg', 1)}</button><span class="sp"><span class="sm">${S.av ? esc(avName()) : 'No character yet'}</span><b>${R.n}</b>
         <span class="bar"><i style="width:${pct}%;background:${R.c}"></i></span><span class="sm tn">${R.p} of ${achTotal()} medals${R.nn ? ` · ${R.next - R.p} more to ${R.nn}` : ''}</span></span></div>
       <div class="row"><button type="button" class="btn sp${as.open ? ' gold' : ''}" data-a="ach">${as.open ? `${as.open} reward${as.open > 1 ? 's' : ''} ready` : 'Achievements'}</button><button type="button" class="btn sp" data-a="avatar">${S.av ? 'Change character' : 'Pick a character'}</button></div>`; })()}
-    <div class="card stack shwc"><div><b>Show the game</b><p class="sm" style="margin-top:4px">A trailer and a tour of what is in here: the intros, the legendaries, the battles, the events and your collection. Made for showing a friend.</p></div><div class="row"><button type="button" class="btn sp gold" data-a="show">Open the showcase</button><button type="button" class="btn sp" data-a="tour">Start guide</button></div></div>
+    <div class="card stack shwc"><div><b>Show the game</b><p class="sm" style="margin-top:4px">A trailer and an overview of what is in here, without giving away what is waiting. Made for showing a friend.</p></div><div class="row"><button type="button" class="btn sp gold" data-a="show">Open the showcase</button><button type="button" class="btn sp" data-a="tour">Start guide</button></div></div>
     <h2 class="h">Badges</h2><div class="card" style="padding-top:6px;padding-bottom:6px">${badges}</div>
     <p class="sm">Each badge fills with focus hours in that subject. 25, 50 and 75% give an epic encounter, and a full badge gives a legendary one. A reward needs time logged here in the app: ${MSGATE / 60} hours in the subject for each one, and ${BADGEGATE / 60} hours in all for the legendary.</p>
     <h2 class="h">Stats</h2>
@@ -718,7 +735,8 @@ function fairCard() {
 
 /* ---------- Møte og fangst ---------- */
 const E = { e: null, ball: 'poke', c: 50, pos: 50, raf: 0, t0: 0, busy: false, done: null };
-function bestBall() { return ['poke', 'great', 'ultra'].find(k => S.items[k] > 0) || 'poke'; }
+/* Master Ball velges aldri av seg selv, bare når den er den eneste som er igjen. */
+function bestBall() { return ['poke', 'great', 'ultra', 'dusk'].find(k => S.items[k] > 0) || (S.items.master > 0 ? 'master' : 'poke'); }
 function encQuiet() { if (E.mus) { E.mus = 0; if (typeof stopMusic === 'function') stopMusic(); } }
 function hunt() {
   encQuiet();
@@ -746,7 +764,7 @@ async function mystIntro(e) {
 }
 function drawEnc(reveal) {
   if (!(S.items[E.ball] > 0)) E.ball = bestBall();
-  const e = E.e, d = D(e.id), n = countOf(e.id), noBalls = !['poke', 'great', 'ultra'].some(k => S.items[k] > 0), call = e.sh ? (e.sh === 2 ? 'Dark' : 'Shiny') : e.t >= 2 ? TIERS[e.t] : '';
+  const e = E.e, d = D(e.id), n = countOf(e.id), noBalls = !BALLS.some(k => S.items[k] > 0), call = e.sh ? (e.sh === 2 ? 'Dark' : 'Shiny') : e.t >= 2 ? TIERS[e.t] : '';
   /* Køen: en prikk for hvert møte som venter, i sjeldenhetens farge. Hvem det er, ser du først når du møter det. */
   const q = S.pend.filter(x => x !== e).slice(0, 10).map(x => `<i class="r${x.myst ? 4 : x.t}${x.myst ? ' my' : ''}"></i>`).join('');
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="later">Save for later</button><span class="row" style="gap:8px">${(S.cst || 0) >= 2 ? `<span class="pill tn estk">${S.cst} in a row</span>` : ''}<span class="pill tn" id="e-left">${S.pend.length} ${S.pend.length === 1 ? 'encounter' : 'encounters'} left</span></span></div>
@@ -754,11 +772,12 @@ function drawEnc(reveal) {
     <div class="mid r${e.t}${e.sh ? ' shy' : ''}"><div class="stage${reveal ? ' rev' : ''}" id="e-stage">${spr(e.id, { ani: 1, sh: e.sh, mega: defForm(e.id) })}<span class="tball">${ballEl(E.ball, '54px')}</span><span class="stars" id="e-stars"></span><span class="egrass" aria-hidden="true">${'<i></i>'.repeat(15)}</span>${reveal && call ? `<span class="ecall">${call}!</span>` : ''}</div>
       <div><div class="ename">${e.sh === 2 ? 'Dark ' : e.sh ? 'Shiny ' : ''}${esc(d[0])}${gs(e)}</div><div class="row" style="justify-content:center;margin-top:8px;flex-wrap:wrap;gap:6px">${tierEl(e.id)} ${types(e.id)} <span class="pill tn">Level ${e.lv}</span></div>
       <div id="e-info"><p class="sm" style="margin-top:8px" id="e-msg">${S.caught[e.id] ? (n ? `You already have ${n}.` : 'You have had it before.') : `<b style="color:var(--sage)">New to your collection</b> · +${NEWCOIN[e.t]} coins if you catch it`}</p>
-      <div class="hearts" id="e-hearts" aria-label="Attempts left" style="margin-top:10px">${Array.from({ length: isLeg(e.id) ? 4 : 3 }, (_, i) => `<i class="${i < e.tr ? '' : 'off'}"></i>`).join('')}</div></div></div></div>
+      <div class="hearts" id="e-hearts" aria-label="Attempts left" style="margin-top:10px">${Array.from({ length: (isLeg(e.id) ? 4 : 3) + (e.fed ? 1 : 0) }, (_, i) => `<i class="${i < e.tr ? '' : 'off'}"></i>`).join('')}</div>${e.fed ? '<p class="sm tn" style="margin-top:6px;color:var(--gold)">It ate a Golden Razz Berry: one more throw, and better odds.</p>' : ''}</div></div></div>
     <div id="e-ctl" style="display:flex;flex-direction:column;gap:12px">${noBalls ? `<p class="sm" style="text-align:center">You are out of balls. Buy more in the shop and the encounter will wait here.</p><div class="acts"><button type="button" class="btn pri" data-a="toshop">To the shop</button><button type="button" class="btn nf" data-a="skip">Let it go</button></div>` : `
       <div class="row sm tn" style="justify-content:space-between;gap:10px"><span id="e-odds">${oddsEl(e)}</span><span style="text-align:right">green = good · gold = perfect</span></div>
       <button type="button" class="meter" data-a="throw" aria-label="Throw when the marker is in the green zone"><span class="z" id="e-z"></span><span class="g" id="e-g"></span><span class="m" id="e-m"></span></button>
-      <div class="balls">${['poke', 'great', 'ultra'].map(k => `<button type="button" data-a="ball" data-k="${k}" aria-pressed="${E.ball === k}" aria-label="${SHOP[k].n}"${S.items[k] > 0 ? '' : ' disabled'}>${ballEl(k, '28px')}<span class="tn">${S.items[k]}</span></button>`).join('')}</div>
+      <div class="balls">${BALLS.filter(k => S.items[k] > 0 || k === 'poke' || k === 'great' || k === 'ultra').map(k => `<button type="button" data-a="ball" data-k="${k}" aria-pressed="${E.ball === k}" aria-label="${SHOP[k].n}"${S.items[k] > 0 ? '' : ' disabled'}>${ballEl(k, '28px')}<span class="tn">${S.items[k]}</span></button>`).join('')}</div>
+      ${S.items.gberry > 0 && !e.fed ? `<button type="button" class="btn sm2 wide" data-a="berry">Feed a Golden Razz Berry · one more throw (${S.items.gberry})</button>` : ''}
       <div class="acts"><button type="button" class="btn gold" data-a="throw">Throw</button><button type="button" class="btn nf" data-a="skip">Let it go</button></div>`}</div>`, 'tint', `var(--r${e.t})`);
 }
 /* Hvor god sjansen er med ballen som er valgt (i den grønne sonen). */
@@ -789,7 +808,7 @@ function doThrow() {
   E.busy = true; cancelAnimationFrame(E.raf);
   const st = $('#e-stage'), msg = $('#e-msg'), hearts = $('#e-hearts').children;
   for (let i = 0; i < hearts.length; i++) hearts[i].className = i < e.tr ? '' : 'off';
-  msg.innerHTML = zone === 2 ? '<b style="color:var(--gold)">Perfect throw</b>' : zone === 1 ? 'Nice throw' : 'Outside the zone';
+  msg.innerHTML = r.p >= 1 ? '<b style="color:var(--gold)">Master Ball</b>' : zone === 2 ? '<b style="color:var(--gold)">Perfect throw</b>' : zone === 1 ? 'Nice throw' : 'Outside the zone';
   st.className = 'stage in'; sfx.thr(); buzz(30);
   const wobs = r.crit ? 1 : r.ok ? 3 : 1 + (Math.random() < r.p ? 1 : 0);
   if (r.crit) { st.classList.add('crit'); setTimeout(() => { tone(1568, 0, 0.09, 0.05, 'square'); tone(2093, 0.09, 0.14, 0.05, 'square'); buzz([30, 30, 90]); }, 300); }
@@ -832,7 +851,7 @@ const A = {
   fag: el => { U.fag = el.dataset.k; render(); },
   min: el => { U.min = +el.dataset.k; render(); },
   reg: el => { const r = +el.dataset.k, was = S.routes.includes(r); toggleRoute(r); if (was && S.routes.includes(r)) toast('At least one route has to stay on.'); render(); },
-  start: () => { if (fairGate()) return; const why = honestWhy(); if (why) return honestAsk(why); startTimer(FAGS[U.fag] ? U.fag : curFag(), U.min || S.last.min); sfx.start(); showTimer(); },
+  start: el => { if (fairGate()) return; if (typeof SBX !== 'undefined' && SBX) return toast('Leave the sandbox before you start a session: nothing in here is saved.'); if (!(el && el.dataset.ok) && typeof dayOld === 'function' && dayOld() && (simPending() || !dayDone())) return openSheet(`<h2 class="h" style="margin-top:0">Yesterday's battles are still open</h2><p class="sm">${simPending() ? 'A simulated result is waiting for your answer. ' : ''}Starting a focus session closes the battles from your last battle day, and what you have not played or accepted is lost.</p><div class="acts"><button type="button" class="btn gold" data-a="close">Back to the battles</button><button type="button" class="btn nf" data-a="start" data-ok="1">Start the session anyway</button></div>`); closeSheet(); const why = honestWhy(); if (why) return honestAsk(why); startTimer(FAGS[U.fag] ? U.fag : curFag(), U.min || S.last.min); sfx.start(); showTimer(); },
   honyes: el => { honestOk(el.dataset.k); closeOv(); startTimer(FAGS[U.fag] ? U.fag : curFag(), U.min || S.last.min); sfx.start(); showTimer(); },
   clkagain: async el => { el.disabled = true; el.textContent = 'Checking…'; await netTime(); closeSheet(); render(); const L = clockCheck(); if (L) clockSheet(L); else { sfx.ok(); toast('The clock is fine.'); } },
   pause: () => { togglePause(); paintTimer(); },
@@ -844,6 +863,7 @@ const A = {
   skip: () => { if (E.busy) return; cancelAnimationFrame(E.raf); dropPend(E.e); S.cst = 0; save(); hunt(); },
   toshop: () => { closeOv(); U.tab = 'butikk'; render(); },
   ball: el => { if (E.busy) return; E.ball = el.dataset.k; drawEnc(false); aim(); },
+  berry: () => { if (E.busy || !E.e || E.done) return; if (feedBerry(E.e)) { sfx.coin(); buzz(25); drawEnc(false); aim(); } },
   throw: () => doThrow(),
   mon: el => { const m = monBy(+el.dataset.u); if (m) { U.nick = 0; cry(m.id, 0, 0.35); monSheet(m); } },
   spec: el => specSheet(+el.dataset.k),
@@ -914,7 +934,7 @@ const A = {
   snext: () => { if (!pick) return; U.step = 2; if (!U.sd) U.sd = [{ k: '', n: '', ty: [], t: '', h: '', d: '' }]; intro(); $('#ov').scrollTop = 0; },
   sback: () => { U.step = 1; intro(); },
   sestart: () => { const r = seRead(); if (typeof r === 'string') { $('#se-err').textContent = r; return; } setSubjects(r); const c = begin(pick); S.tour = 0; save(true); sfx.evo(); closeOv(); render(); tourShow(0); if (c) toast(`${nb(c)} coins for the hours you have already done.`); },
-  sync: () => syncSheet(),
+  sync: () => SBX ? toast('Leave the sandbox first: Sync is paused in here.') : syncSheet(),
   synclb: () => { try { const lb = JSON.parse(localStorage.getItem('lb.gh')); $('#gh-r').value = lb.repo; $('#gh-t').value = lb.t; } catch (_) {} },
   syncsave: async () => {
     const t = $('#gh-t').value.trim(), r = $('#gh-r').value.trim();
@@ -936,7 +956,7 @@ const A = {
   syncuse: async el => { if (el.dataset.warn === '1' && el.dataset.ok !== '1') { el.dataset.ok = '1'; el.querySelector('b').textContent = 'Tap again: this device has more progress'; return; } await ghLink('remote', U.remote); PACK.init(true); closeSheet(); if (!$('#ov').hidden) closeOv(); render(); toast('Loaded the save from GitHub. Sync is on.'); },
   syncup: async () => { await ghLink('local', U.remote); PACK.init(true); closeSheet(); render(); toast(ghState === 'ok' ? 'This game replaced the save on GitHub. Sync is on.' : ghState); },
   syncoff: () => { ghSet('', ''); closeSheet(); render(); toast('Sync turned off.'); },
-  backup: () => backupSheet(),
+  backup: () => SBX ? toast('Leave the sandbox first.') : backupSheet(),
   bkcopy: () => { const txt = b64e(JSON.stringify(S)); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Copied.'), () => { $('#bk-in').value = txt; toast('Copy the text in the field.'); }); },
   bkload: () => {
     let o = null; try { o = JSON.parse(b64d($('#bk-in').value.trim())); if (!o || o.v !== 1 || !Array.isArray(o.mons)) o = null; } catch (_) { o = null; }

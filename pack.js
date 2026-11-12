@@ -263,6 +263,9 @@ const PACK = (() => {
   P.stinging = () => !!sting;
   P.stingOut = sec => { if (sting) { fadeOut(sting, sec == null ? 1.2 : sec); sting = null; } };
   P.playing = () => !!cur;
+  /* Låtene i «special» velges aldri av trackFor: de hentes ved navn (Dark Mewtwo sine to). lenOf = lengden i sekunder når manifestet oppgir den (d). */
+  P.special = re => { const e = P.ok && P.man.music && P.man.music.find(x => x.c === 'special' && re.test(x.t)); return e ? e.f : ''; };
+  P.lenOf = path => { const e = path && ent(path); return e && e.d ? e.d : 0; };
   /* Musikkskyveren flyttes mens en låt spiller. */
   P.vol = () => { try { if (node && mode === 'wa') node.g.gain.setTargetAtTime(Math.min(1, mvol() * tgain(cur)), AC.currentTime, 0.05); else if (au && mode === 'el') au.volume = Math.min(1, mvol() * tgain(cur)); } catch (_) {} };
   /* Sekunder siden låta som spiller nå ble startet (til å holde raid-filmene i takt med den), justert for forsinkelsen ut til høyttaleren. −1 hvis ingen låt spiller. */
@@ -297,6 +300,7 @@ const PACK = (() => {
     const tk = P.trackFor(B); if (tk) P.cue(tk);
     const it = B.tr.ultra && B.mode !== 'fac' ? P.introFor(B) : ''; if (it) P.cue(it);
     if (B.tr.wild && typeof CINE !== 'undefined') CINE.prep(B.tr.dk ? 'dk' + B.tr.leg : B.tr.leg, 6000);
+    if (B.tr.dk) { const v = P.special(/Villain/); if (v) P.cue(v); }
     const pt = P.man.trainers && P.man.trainers[B.tr.img.split('|')[0]]; if (pt) jobs.push(P.url(pt));
     const sc = P.sceneFor(B); if (sc) jobs.push(P.url(sc));
     jobs.push(loadHud()); jobs.push(loadMenu()); jobs.push(loadFont()); jobs.push(loadVs());

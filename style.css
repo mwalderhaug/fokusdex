@@ -529,6 +529,18 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 @keyframes rageEdge{50%{opacity:.35}}
 .arena.raging::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 calc(var(--u,1.5px)*34) color-mix(in srgb,var(--cc) 70%,transparent);animation:rageEdge 1.1s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.arena .bs.foe.rage .spr,.arena.raging::after{animation:none}}
+/* Dark Mewtwo etter forvandlingen: skyen ligger i lufta bak den (darkf.js), kanten av banen gløder rødt, og øynene lyser. */
+.arena.sinful::before{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 calc(var(--u,1.5px)*30) rgba(190,8,20,.55),inset 0 0 calc(var(--u,1.5px)*84) rgba(0,0,0,.72);animation:sinEdge 2.8s ease-in-out infinite}
+@keyframes sinEdge{50%{opacity:.55}}
+.arena .bs.foe.sin .spr{filter:drop-shadow(0 0 5px #ff2a1a) drop-shadow(0 0 13px #8a0010) contrast(1.12) brightness(.9);animation:sinPulse 1.5s ease-in-out infinite}
+@keyframes sinPulse{50%{filter:drop-shadow(0 0 9px #ff3a20) drop-shadow(0 0 22px #b00014) contrast(1.18) brightness(.82)}}
+.bs .sineye{position:absolute;left:calc(var(--ex)*var(--z)*var(--k,1)*var(--cz));top:calc(var(--ey)*var(--z)*var(--k,1)*var(--cz));width:0;height:0;pointer-events:none;--d:calc(5.6px*var(--z)*var(--k,1)*var(--cz))}
+.bs .sineye.b{--d:calc(3.8px*var(--z)*var(--k,1)*var(--cz));opacity:.85}
+.bs .sineye::before{content:"";position:absolute;width:var(--d);height:var(--d);left:calc(var(--d)/-2);top:calc(var(--d)/-2);border-radius:50%;background:radial-gradient(circle,#fff 0 16%,#ffc070 28%,rgba(255,60,20,.7) 50%,rgba(255,30,10,0) 72%);mix-blend-mode:screen;animation:sinEye 1.1s ease-in-out infinite}
+@keyframes sinEye{50%{transform:scale(1.28);filter:brightness(1.3)}}
+/* Darkrai: de to som står på banen, er litt dempet, som resten av natten. */
+.arena.lg491 .bs{filter:brightness(.86)}
+@media (prefers-reduced-motion:reduce){.arena.sinful::before,.arena .bs.foe.sin .spr,.bs .sineye::before{animation:none}}
 .bs.away{opacity:0;transition:opacity .2s}
 .bs.subd{opacity:.55}
 @keyframes hurt{0%,40%,80%{opacity:.1}20%,60%,100%{opacity:1}25%{transform:translateX(6px)}55%{transform:translateX(-6px)}}
@@ -631,8 +643,10 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 @keyframes megaIn{0%{filter:brightness(0) invert(1)}100%{filter:none}}
 @media (prefers-reduced-motion:reduce){.megafx.gather::before,.megafx.burst::before{animation-duration:.01s}}
 .tyb span{font-family:var(--dsf,var(--pix));font-weight:var(--fw,600);font-size:calc(var(--u,1.5px)*8.5*var(--fz,1));line-height:calc(var(--u,1.5px)*8);height:calc(var(--u,1.5px)*8);padding:0 calc(var(--u,1.5px)*2.5);border-radius:calc(var(--u,1.5px)*2);color:#fff;text-transform:uppercase;text-shadow:calc(var(--u,1.5px)*.7) calc(var(--u,1.5px)*.7) 0 rgba(0,0,0,.75);box-shadow:0 0 0 calc(var(--u,1.5px)*.8) rgba(8,8,14,.9)}
-.hpb.pk.foe .tyb{left:calc(var(--u,1.5px)*108);top:calc(var(--u,1.5px)*5)}
-.hpb.pk.me .tyb{right:calc(var(--u,1.5px)*6);bottom:calc(100% - var(--u,1.5px)*3)}
+.hpb.pk.foe .tyb{left:calc(var(--u,1.5px)*9);bottom:calc(100% - var(--u,1.5px)*2)}
+/* Dine egne typer: på den nederste skjermen, øverst til høyre (hovedmenyen, angrepsmenyen og mens runden spilles). */
+.bw-ty{right:calc(var(--u)*5);top:calc(var(--u)*4.5);z-index:3}
+.bw-idle .bw-ty{filter:brightness(1.5) saturate(1.3)}
 .hpb:not(.pk) .tyb{position:static;margin-top:5px}
 .hpb:not(.pk) .tyb span{font-family:var(--pix);font-size:9px;line-height:13px;height:13px;padding:0 5px;border-radius:3px;text-shadow:1px 1px 0 rgba(0,0,0,.6);box-shadow:0 0 0 1px rgba(8,8,14,.8)}
 /* Kjønnssymbolet ved navnet. */
@@ -1445,5 +1459,115 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .shw-b{margin-top:12px;color:var(--ink2);font-size:16px;max-width:30ch}
 @keyframes shwIn{from{opacity:0;transform:translateY(8px) scale(.98)}}
 .exb{margin-left:auto;background:var(--gold);color:#2a2109;font-weight:800;min-height:28px}
+.exx{margin-left:auto;background:rgba(255,255,255,.1);color:var(--ink);font-weight:800;min-height:28px;padding:0 14px;box-shadow:0 0 0 1px rgba(255,255,255,.28)}
+.exx:active{background:rgba(255,255,255,.22)}
+.exb+.exx{margin-left:6px}
+.sbxp{background:var(--gold);color:#2a2109;font-weight:800}
+/* Omvisningen: gangen i spillet, og skyggene av dem som venter. */
+.shw-st{display:flex;flex-direction:column;gap:10px}
+.shw-st>div{display:flex;gap:12px;align-items:flex-start}
+.shw-st .cno{flex:none;width:28px;height:28px;border-radius:9px;background:color-mix(in srgb,var(--sage) 34%,var(--soft));display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px}
+.shw-st .sp{display:flex;flex-direction:column;gap:1px}.shw-st b{font-size:14.5px}
+.shw-sil{display:flex;justify-content:space-between;align-items:flex-end;gap:2px;padding:6px 0 2px;overflow:hidden}
+.shw-sil .tsb{width:auto;flex:1 1 0;min-width:0;height:60px;background:none;border-radius:0;box-shadow:none!important}
+.tsb.sil img{filter:brightness(0) opacity(.62)}
+.shw-sil.leg{justify-content:center;gap:6px;align-items:center}
+.shw-sil.leg .sprb{--s:60px}.shw-sil.leg .sprb.sil .spr{filter:brightness(0) opacity(.7)}
+.shw-sil.leg .raid-sp.qm{width:44px;height:44px;margin:0 0 0 6px}.shw-sil.leg .raid-sp.qm i{font-size:24px}
+/* Sandkassa: stripa øverst mens kopien er i bruk, og kortet som åpner den. */
+.sbxbar{display:flex;align-items:center;gap:8px;margin-right:42px;padding:9px 10px 9px 14px;border-radius:16px;background:color-mix(in srgb,var(--gold) 16%,var(--card));box-shadow:0 0 0 1.5px color-mix(in srgb,var(--gold) 55%,transparent)}
+.sbxbar .sp{display:flex;flex-direction:column;flex:1 1 auto;min-width:0}.sbxbar b{color:var(--gold);font-size:14px;letter-spacing:.02em}
+.sbxbar .btn.gold{background:var(--gold);color:#2a2109}
+.sbxc{box-shadow:0 0 0 1px color-mix(in srgb,var(--gold) 40%,transparent)}
+/* ---------- Traileren ---------- */
+.tlr{position:absolute;inset:0;background:radial-gradient(120% 80% at 50% 18%,#1d1a16,#0b0a09 72%);display:flex;align-items:center;justify-content:center;overflow:hidden;text-align:center;transition:background .6s}
+.tlr[data-k=legend]{background:radial-gradient(90% 60% at 50% 34%,#1a1407,#000 70%)}
+.tlr-st{position:relative;width:min(100%,440px)}
+.tlr-s{position:relative;padding:24px;display:flex;flex-direction:column;align-items:center;gap:14px;animation:trlIn .55s ease both}
+.tlr-s.out{animation:trlOut .26s ease both}
+@keyframes trlIn{from{opacity:0;transform:translateY(10px) scale(.985)}}
+@keyframes trlOut{to{opacity:0;transform:translateY(-8px)}}
+.tlr-k{font-size:50px;font-weight:900;letter-spacing:-.045em;line-height:1}
+.tlr-h{font-size:28px;font-weight:850;letter-spacing:-.03em;line-height:1.12;max-width:15ch;margin:0}
+.tlr-p{color:var(--ink2);font-size:15.5px;line-height:1.4;max-width:30ch;margin:0}
+.tlr-p.tlr-lead{font-size:18px;font-weight:650;color:var(--ink)}
+.tlr-p.late,.tlr-chips span,.tlr-e,.tlr-ar,.tlr-vs span,.tlr-n>div{opacity:0;animation:trlPop .5s cubic-bezier(.2,.9,.3,1.25) var(--d,0s) forwards}
+@keyframes trlPop{from{opacity:0;transform:translateY(8px) scale(.94)}to{opacity:1;transform:none}}
+.tlr-v{position:relative;height:150px;width:100%;display:flex;align-items:flex-end;justify-content:center;gap:8px}
+.tlr-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.tlr-chips span{padding:6px 12px;border-radius:999px;background:var(--card);box-shadow:0 0 0 1px var(--line);font-weight:750;font-size:13.5px}
+.tlr-chips.tlr-gold span{background:color-mix(in srgb,var(--gold) 18%,var(--card));box-shadow:0 0 0 1px color-mix(in srgb,var(--gold) 45%,transparent)}
+/* Klokka */
+.tlr-ring{position:relative;width:150px;height:150px;display:flex;align-items:center;justify-content:center}
+.tlr-ring svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.tlr-ring circle{fill:none;stroke-width:7;stroke-linecap:round}.tlr-ring .a{stroke:rgba(255,255,255,.08)}
+.tlr-ring .b{stroke:var(--sage);stroke-dasharray:327;stroke-dashoffset:0;animation:trlRing 4.4s linear .3s both}
+@keyframes trlRing{from{stroke-dashoffset:0}to{stroke-dashoffset:327}}
+.tlr-ring b{font-size:34px;font-weight:800;letter-spacing:-.03em}
+/* Gresset og fangsten */
+.tlr-gr{position:absolute;left:6%;right:6%;bottom:0;height:40px;background:linear-gradient(#4f7a44,#2c4a28);z-index:2}
+.tlr-enc{position:relative;z-index:1;animation:trlSuck .4s ease-in 3.5s forwards}
+.tlr-enc .spr{animation:trlReveal 1.1s ease 1s both}
+@keyframes trlReveal{from{filter:brightness(0)}to{filter:none}}
+@keyframes trlSuck{to{transform:scale(0);opacity:0}}
+.tlr-ball{position:absolute;left:50%;bottom:34px;margin-left:-27px;opacity:0;z-index:3;animation:trlBall 2.6s ease 3s forwards}
+@keyframes trlBall{0%{opacity:0;transform:translate(-150px,-130px) rotate(-320deg)}16%{opacity:1;transform:none}30%{transform:translateY(-10px)}38%{transform:none}52%{transform:rotate(-16deg)}60%{transform:rotate(14deg)}68%{transform:rotate(-10deg)}76%{transform:none}88%{transform:scale(1.14);filter:drop-shadow(0 0 10px #fff)}100%{opacity:1;transform:none;filter:drop-shadow(0 0 6px rgba(255,255,255,.5))}}
+/* Vekst */
+.tlr-v.v-evo{align-items:flex-end;gap:2px}
+.tlr-ar{font-style:normal;font-size:30px;font-weight:800;color:var(--sage);align-self:center;margin:0 2px}
+.tlr-lv{display:flex;align-items:baseline;gap:6px;color:var(--ink2);font-weight:750}.tlr-lv b{font-size:34px;color:var(--ink);font-weight:850;letter-spacing:-.03em;min-width:2ch;text-align:left}
+/* Shiny og Mega: to bilder oppå hverandre, det andre tar over */
+.tlr-a,.tlr-b{position:absolute;left:50%;bottom:0;transform:translateX(-50%)}
+.tlr-b{opacity:0}
+.tlr-v.v-shy .tlr-a .spr{animation:megaWhite 1s ease-in 1.5s forwards}
+.tlr-v.v-shy .tlr-a{animation:trlGone .01s linear 2.5s forwards}
+.tlr-v.v-shy .tlr-b{animation:trlShow .3s ease 2.5s forwards}
+.tlr-v.v-shy .tlr-b .spr{animation:megaIn .7s ease-out 2.5s both;filter:drop-shadow(0 0 8px rgba(255,236,150,.55))}
+@keyframes trlGone{to{opacity:0}}@keyframes trlShow{to{opacity:1}}
+.tlr-spk{position:absolute;left:50%;top:50%;width:0;height:0}
+.tlr-spk i{position:absolute;left:-6px;top:-6px;width:12px;height:12px;background:#ffe9a0;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);opacity:0;animation:trlSpk 1.3s ease-out calc(2.5s + var(--d,0s)) forwards}
+@keyframes trlSpk{0%{opacity:0;transform:scale(.2)}25%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.2) rotate(140deg)}}
+.tlr-v.v-mega.mg1 .tlr-a .spr{animation:megaWhite 1.15s ease-in forwards}
+.tlr-v.v-mega.mg2 .tlr-a{opacity:0}.tlr-v.v-mega.mg2 .tlr-b{opacity:1}.tlr-v.v-mega.mg2 .tlr-b .spr{animation:megaIn .8s ease-out}
+.tlr-anc{position:absolute;left:50%;bottom:0;width:0;height:0}
+/* Kampene */
+.tlr-vs{display:flex;align-items:center;justify-content:center;gap:10px;width:100%}
+.tlr-vs>div{display:flex;align-items:flex-end}.tlr-vs .l span{margin-right:-18px}.tlr-vs .r span{position:relative;margin-left:-14px}
+.tlr-vs>b{font-size:30px;font-weight:900;font-style:italic;color:var(--gold);margin:0 16px 0 22px;animation:trlVs .5s cubic-bezier(.2,.9,.3,1.4) .55s both}
+@keyframes trlVs{from{opacity:0;transform:scale(2.4)}}
+.tlr-vs .tsb{width:64px;height:70px;background:none;border-radius:0;box-shadow:none!important}
+.tlr-vs .r i{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);font-style:normal;font-weight:900;font-size:20px;color:var(--gold);text-shadow:0 0 8px #000}
+/* Det legendariske */
+.tlr-leg{position:relative;height:170px;width:100%;display:flex;align-items:center;justify-content:center}
+.tlr-leg>span:not(.raid-sp){position:absolute;bottom:0;opacity:0;animation:trlLeg 5s ease .4s forwards}
+.tlr-leg .s0{left:50%;margin-left:-75px}.tlr-leg .s1{left:2%;animation-delay:1.1s!important}.tlr-leg .s2{right:2%;animation-delay:1.8s!important}
+.tlr-leg .sprb.sil .spr{filter:brightness(0) drop-shadow(0 0 10px rgba(227,197,119,.55))}
+@keyframes trlLeg{0%{opacity:0;transform:scale(.9)}30%{opacity:.9}100%{opacity:.75;transform:scale(1.06)}}
+.tlr-leg .raid-sp.qm{position:relative;z-index:2;animation:qmBreathe 2.2s ease-in-out infinite}
+/* Tallene */
+.tlr-n{width:100%}.tlr-n>div{text-align:left}
+.tlr-sil{width:100%;opacity:0;animation:trlShow .8s ease 1.8s forwards}
+@media (prefers-reduced-motion:reduce){.tlr-s,.tlr-enc,.tlr-enc .spr,.tlr-ball,.tlr-spk i,.tlr-vs>b,.tlr-leg>span:not(.raid-sp),.tlr-ring .b{animation-duration:.01s!important;animation-delay:0s!important}}
 @media (prefers-reduced-motion:reduce){.rarr-c .raid-sp.qm,.shw-t>div{animation:none}}
 .tr-iv .tb.hbx{width:100%}.tr-iv>span:first-child .tb.hbx{width:50%}
+
+/* ---------- Base stats (som på pokemondb.net) ---------- */
+.bst{display:flex;flex-direction:column;gap:5px}
+.bst>div{display:grid;grid-template-columns:62px 34px minmax(0,1fr);align-items:center;gap:8px;font-size:13px}
+.bst>div>span:first-child{color:var(--ink2)}
+.bst b{text-align:right;font-weight:750}
+.bst-b{height:10px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden}
+.bst-b i{display:block;height:100%;border-radius:5px}
+.bst-t{border-top:1px solid rgba(255,255,255,.08);padding-top:7px;margin-top:2px}
+.bst-t>span:first-child{color:var(--ink)!important;font-weight:650}
+.bst-t .sm{color:var(--gold)}
+.item.lk .sp,.item.lk .ic{opacity:.55}
+
+/* ---------- Kampdagen: i går, simulering, «Not today» ---------- */
+.card.oldday{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--gold) 45%,transparent)}
+.card.simc{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--gold) 55%,transparent)}
+.simrow{margin-top:2px}
+.simrow .btn{font-size:13px;padding-top:9px;padding-bottom:9px}
+.simw{background:color-mix(in srgb,var(--gold) 12%,var(--card2))}
+.chk{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--ink2);padding:4px 2px}
+.chk input{width:20px;height:20px;accent-color:var(--sage)}

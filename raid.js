@@ -286,7 +286,7 @@ const CINE = (() => {
     need(f.use || []);
     const step = ts => {
       if (!on || !out.isConnected) return; raf = requestAnimationFrame(step); if (ts - last < 30) return; last = ts;
-      T = (ts - t0) / 1000 + 100; frameNo = floor(T * 60); P = newP(); cur = { id, f, sp: null, sps: {}, cc: o.cc || '#fff' };
+      T = (ts - t0) / 1000 + 100; frameNo = floor(T * 60); P = newP(); cur = { id, f, sp: null, sps: {}, cc: o.cc || '#fff', o };
       /* Stedet bak (ugjennomsiktig, bak plattformene) tegnes annenhver gang: det beveger seg sakte. */
       if (bgc && n++ % 2 === 0) { g = bgc.getContext('2d'); g.setTransform(bgc.width / W, 0, 0, bgc.height / H, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.imageSmoothingEnabled = true; try { f.bg(T, o.k == null ? 1 : o.k, cur.cc); } catch (e) { C.err = String(e && e.stack || e); } }
       g = out.getContext('2d'); g.setTransform(out.width / W, 0, 0, out.height / H, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, W, H);
