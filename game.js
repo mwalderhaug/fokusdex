@@ -60,6 +60,60 @@ const SHOP = {
 /* Hyllene i butikken, i den rekkefølgen de står. Det som er låst, vises med trenernivået det krever: noe å se fram til. */
 const SHELF = [['Balls', ['poke', 'great', 'ultra', 'dusk', 'master']], ['For the hunt', ['incense', 'lure', 'slure', 'gberry']], ['Shiny hunting', ['glint', 'gleam', 'radiant', 'prism']],
   ['For your Pokémon', ['candy', 'stone', 'mstone', 'egg']], ['For battles', ['potion', 'super', 'hyper', 'maxp', 'heal', 'revive', 'maxrev', 'ash']]];
+/* ---------- Gjenstander en Pokémon kan HOLDE (HELD) ----------
+   Hver Pokémon kan holde én (m.item). De ligger i sekken som alt annet (S.items[k]) til de gis til noen (giveHeld), og kommer tilbake dit når de tas av.
+   Tre grupper (g): 'once' = brukes opp når den virker (bær og Focus Sash; da er den borte for godt) · 'plate' og 'gear' = varer.
+   Virkningen leser kampmotoren (battle.js) fra feltene:
+     ty: t     plate: angrep av typen × PLATEX. Arceus blir selv den typen (Multitype, se mTypes), og Judgment følger med.
+     res: t    bær: halverer ett supereffektivt treff av typen (Chilan: ett Normal-treff)
+     heal: f · hp: n   bær: gir tilbake f av full HP (eller n HP) når HP er nede på halvparten
+     cure      Lum Berry: fjerner en tilstand eller forvirring, én gang
+     pinch: i  bær: +1 i verdien i (som changeStats teller: 2 Attack … 6 Speed) når HP er nede på en firedel
+     sash      Focus Sash: med full HP overlever den et slag som ville slått den ut
+     left Leftovers · bell Shell Bell · lo Life Orb · belt Expert Belt · band Muscle Band · glass Wise Glasses · scope Scope Lens · helm Rocky Helmet · evio Eviolite
+   Gjelder i ligaen, turneringen og raid (ditt eget lag). Leie-Pokémon i Battle Frontier holder ingenting, og motstanderne heller ikke. */
+const PLATEX = 1.2, HELD = {};
+{
+  const add = (k, n, p, lv, g, fx, d) => { HELD[k] = Object.assign({ n, p, lv, g, d, img: n.toLowerCase().replace(/ /g, '-') }, fx); };
+  add('oran', 'Oran Berry', 60, 2, 'once', { hp: 10 }, 'Restores 10 HP when its HP falls to half');
+  add('sitrus', 'Sitrus Berry', 350, 6, 'once', { heal: 0.25 }, 'Restores a quarter of its HP when its HP falls to half');
+  add('lum', 'Lum Berry', 450, 8, 'once', { cure: 1 }, 'Cures a status condition or confusion');
+  add('sash', 'Focus Sash', 900, 12, 'once', { sash: 1 }, 'At full HP it survives a hit that would knock it out');
+  [['Liechi', 2, 'Attack'], ['Ganlon', 3, 'Defense'], ['Petaya', 4, 'Sp. Atk'], ['Apicot', 5, 'Sp. Def'], ['Salac', 6, 'Speed']].forEach(([n, i, s]) => add(n.toLowerCase(), n + ' Berry', 300, 10, 'once', { pinch: i }, `${s} rises when its HP falls to a quarter`));
+  ['Chilan', 'Chople', 'Coba', 'Kebia', 'Shuca', 'Charti', 'Tanga', 'Kasib', 'Babiri', 'Occa', 'Passho', 'Rindo', 'Wacan', 'Payapa', 'Yache', 'Haban', 'Colbur', 'Roseli'].forEach((n, t) => add('r' + t, n + ' Berry', 250, 9, 'once', { res: t }, t ? `Halves one super effective ${TYN[t]} hit` : 'Halves one Normal hit'));
+  [null, 'Fist', 'Sky', 'Toxic', 'Earth', 'Stone', 'Insect', 'Spooky', 'Iron', 'Flame', 'Splash', 'Meadow', 'Zap', 'Mind', 'Icicle', 'Draco', 'Dread', 'Pixie'].forEach((n, t) => { if (n) add('p' + t, n + ' Plate', 5000, 10, 'plate', { ty: t }, `${TYN[t]} moves hit ${Math.round((PLATEX - 1) * 100)} % harder`); });
+  add('eviolite', 'Eviolite', 5000, 8, 'gear', { evio: 1 }, 'Defense and Sp. Def ×1.5 for a Pokémon that can still evolve');
+  add('muscleband', 'Muscle Band', 4000, 9, 'gear', { band: 1 }, 'Physical moves hit 10 % harder');
+  add('wiseglasses', 'Wise Glasses', 4000, 9, 'gear', { glass: 1 }, 'Special moves hit 10 % harder');
+  add('scopelens', 'Scope Lens', 5000, 11, 'gear', { scope: 1 }, 'Critical hits come more often');
+  add('expertbelt', 'Expert Belt', 6000, 12, 'gear', { belt: 1 }, 'Super effective moves hit 20 % harder');
+  add('shellbell', 'Shell Bell', 6000, 12, 'gear', { bell: 1 }, 'Restores an eighth of the damage it deals');
+  add('rockyhelmet', 'Rocky Helmet', 6000, 13, 'gear', { helm: 1 }, 'An attacker that makes contact loses a sixth of its HP');
+  add('leftovers', 'Leftovers', 9000, 14, 'gear', { left: 1 }, 'Restores a sixteenth of its HP every turn');
+  add('lifeorb', 'Life Orb', 12000, 18, 'gear', { lo: 1 }, 'Moves hit 30 % harder, and every attack costs a tenth of its HP');
+}
+const HELDG = [['once', 'Berries · used up when they work'], ['plate', 'Plates · they last'], ['gear', 'Gear · it lasts']];
+const heldOf = m => (m && m.item && HELD[m.item]) || null;
+/* Gir m gjenstanden k fra sekken; den m holdt fra før, går tilbake dit. k = '' tar den av. */
+function giveHeld(m, k) {
+  if (!m || (m.item || '') === (k || '') || (k && (!HELD[k] || !(S.items[k] > 0)))) return false;
+  if (heldOf(m)) S.items[m.item] = (S.items[m.item] || 0) + 1;
+  if (k) { S.items[k]--; m.item = k; } else delete m.item;
+  save(); return true;
+}
+/* Den som selges eller byttes bort, legger fra seg det den holder. */
+function dropHeld(m) { if (heldOf(m)) S.items[m.item] = (S.items[m.item] || 0) + 1; if (m) delete m.item; }
+/* BÆR FRA ØKTENE: en økt på minst BERRYMIN minutter kan gi et bær. Sjansen vokser med lengden (BERRYP per time, høyst BERRYTOP). De vanligste
+   er Oran og Sitrus; så bærene mot en type, de som løfter en verdi, og sjelden Lum. Platene kommer fra raid (den legendariskes type) og butikken. */
+const BERRYMIN = 25, BERRYP = 0.3, BERRYTOP = 0.6, PINCH = ['liechi', 'ganlon', 'petaya', 'apicot', 'salac'];
+function berryFind(min) {
+  if (!(min >= BERRYMIN) || Math.random() >= Math.min(BERRYTOP, BERRYP * min / 60)) return '';
+  const r = Math.random(), k = r < 0.4 ? 'oran' : r < 0.65 ? 'sitrus' : r < 0.85 ? 'r' + rnd(18) : r < 0.95 ? PINCH[rnd(5)] : 'lum';
+  S.items[k] = (S.items[k] || 0) + 1; return k;
+}
+/* Alt du eier av gjenstanden: i sekken og det Pokémonene dine holder. */
+const heldTotal = k => (S.items[k] || 0) + S.mons.filter(m => m.item === k).length;
+function buyHeld(k) { const it = HELD[k]; if (!it || S.coins < it.p || tlv() < it.lv) return false; S.coins -= it.p; S.items[k] = (S.items[k] || 0) + 1; save(); return true; }
 /* Ballene. Dusk Ball er som en Ultra Ball, og LEGBALL ganger så god på legendariske (litt, ikke mye). Master Ball bommer aldri og velges aldri av seg selv.
    Golden Razz Berry (feedBerry): ett kast til på møtet og BERRYM ganger så god sjanse, én per møte. */
 const BALLS = ['poke', 'great', 'ultra', 'dusk', 'master'];
@@ -194,7 +248,9 @@ const mName = m => m.nn || spName(m);
 /* Kallenavn: bokstaver, tall og noen få tegn (de som finnes i skrifta på HP-boksene), høyst 12. Tomt navn fjerner kallenavnet. */
 const cleanNick = s => String(s || '').replace(/[^A-Za-z0-9 .\-?]/g, '').replace(/\s+/g, ' ').trim().slice(0, 12);
 function setNick(m, s) { const n = cleanNick(s); if (n && n !== D(m.id)[0]) m.nn = n; else delete m.nn; save(); return m.nn || ''; }
-const mTypes = m => { const g = megaOf(m); return g ? [g[2], g[3]] : [D(m.id)[1], D(m.id)[2]]; };
+/* Arceus med en plate er den typen (Multitype). */
+const ARCEUS = 493, plateTy = m => { const h = m && m.id === ARCEUS && m.item ? HELD[m.item] : null; return h && h.ty != null ? h.ty : -1; };
+const mTypes = m => { const g = megaOf(m), p = plateTy(m); return p >= 0 ? [p, -1] : g ? [g[2], g[3]] : [D(m.id)[1], D(m.id)[2]]; };
 function statsOf(m) {
   const b = m.mega ? MEGA[m.mega - 1][4] : BST[m.id - 1], up = natUp(m.nat), dn = natDn(m.nat), sx = m.sh ? SHINYST : 1;
   return b.map((B, i) => {
@@ -291,7 +347,7 @@ function wildLv(id, t) {
 const KEY = 'fokusdex.v1';
 function fresh() {
   return {
-    v: 1, mig: 10, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
+    v: 1, mig: 11, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
     items: { poke: 15, great: 0, ultra: 0, dusk: 0, master: 0, gberry: 0, candy: 0, stone: 0, mstone: 0, incense: 0, potion: 0, super: 0, hyper: 0, maxp: 0, heal: 0, revive: 0, maxrev: 0, ash: 0 }, charm: 0, ring: 0, lst: {},
     lure: 0, slure: 0, prism: 0, shb: null,
     mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, routes: [1], eggs: [], pend: [], incOn: 0,
@@ -315,6 +371,17 @@ function migrate10() {
   if (R && !R.at) { let done = false; try { done = !!S.lad.day && typeof dayDone === 'function' && dayDone(); } catch (_) {} R.tries = 0; R.day = ''; R.at = dayKey(); R.hid = done ? 0 : 1; R.nw = 0; delete R.seen; raidRelevel(R); }
   S.mig = 10;
 }
+/* Det første raidet skal være Mewtwo eller Arceus (S.humb, se raidPick i league.js). Venter det alt et raid du verken har sett eller prøvd deg på, og
+   du aldri har vunnet et raid, er det dette som blir det første møtet. Har du vunnet et raid før, er du forbi det. */
+function migrate11() {
+  const R = S.raid;
+  if (S.st && S.st.rw > 0) S.humb = 1;
+  else if (R && !R.dk && !R.seen && !R.tries && !S.humb && typeof LEG !== 'undefined') {
+    const two = [150, 493].filter(id => !S.mons.some(m => m.id === id));
+    if (two.length) { R.id = two[rnd(two.length)]; delete R.hx; R.sh = 0; raidRelevel(R); S.humb = 1; }
+  }
+  S.mig = 11;
+}
 /* Nivået til et raid som er stilt på nytt: det reglene gir for laget slik det er nå (raidLvFor), som for et raid som viser seg i dag. De gamle sto på
    nivået fra eldre regler, langt over laget. hx settes samtidig, og er merket på at dette er gjort. Den mørke (dk) har sitt eget nivå og røres ikke. */
 function raidRelevel(R) {
@@ -336,6 +403,7 @@ function adopt(o) {
   if (!o.mig || o.mig < 8) migrate8();
   if (!o.mig || o.mig < 9) migrate9();
   if (!o.mig || o.mig < 10) migrate10();
+  if (!o.mig || o.mig < 11) migrate11();
   /* Et forsøk kan ikke være eldre enn raidet selv (S.raid.at = dagen det kom). Et slikt merke kommer fra en eldre appversjon som flettet inn
      forsøkene fra et tidligere raid av samme art: de gjelder ikke dette. */
   if (S.raid && S.raid.at && S.raid.day && S.raid.day < S.raid.at) { S.raid.tries = 0; S.raid.day = ''; }
@@ -719,6 +787,7 @@ function grant(fag, real, full, plan, re) {
   const legP = LEGSES * (1 + luck * 0.5) + Math.min(streak(), 10) * 0.0001;
   for (let i = 0; i < n; i++) encs.push(Math.random() < legP ? legEnc() : genEnc({ fag, luck }));
   if (full && planned >= 45 && okMin >= planned && Math.random() < Math.min(LEGSTIR[1], LEGSTIR[0] + 0.0015 * streak())) { encs.push(legEnc()); R.gifts.push('Something legendary is stirring in the grass.'); }
+  { const bk = berryFind(okMin); if (bk) R.gifts.push(`Your team found ${/^[AEIOU]/.test(HELD[bk].n) ? 'an' : 'a'} ${HELD[bk].n}. A Pokémon can hold it in battle.`); }
   const fg = S.fag[fag];
   if (fg) {
     /* Milepælene regnes av hele planen (med timene du hadde fra før), men belønningen krever tid som er logget her: MSGATE minutter for hver
@@ -832,7 +901,7 @@ const PKSELL = 0.3;
 const sellValue = m => Math.round(SELL[tierOf(m.id)] * (m.sh ? 5 : 1) * (m.pk ? PKSELL : 1));
 function sell(m) {
   if (S.mons.length <= 1) return 0;
-  const v = sellValue(m); unbond(m);
+  const v = sellValue(m); unbond(m); dropHeld(m);
   S.mons = S.mons.filter(x => x !== m); S.party = S.party.filter(u => u !== m.u);
   if (!S.party.length && S.mons.length) S.party.push(S.mons[0].u);
   S.coins += v; return v;

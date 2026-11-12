@@ -4,7 +4,8 @@
    2. Raidet er vunnet: ballen lukker seg rundt den, uten kast (raidCaught), og så kommer oppsummeringen.
    3. Sandkassa (bare for admin, se isAdmin i game.js): enkeltkamper mot hvem du vil (labPick), raid, filmer, pakker (packLab), og en kopi av lagringen
       der hele spillet kan prøves uten at noe lagres (sbxEnter).
-   4. «Show the game» (åpen for alle): en trailer og en oversikt som viser gangen i spillet uten å røpe hva som venter, og en oppvisningskamp.
+   4. «Show the game» (åpen for alle): en trailer (med et klipp fra en kamp og én av filmene), en oversikt som viser gangen i spillet uten å røpe hvem
+      som venter, og en oppvisningskamp.
    Lastes etter bui.js og help.js. Handlingene ligger i XA (kobles inn i klikk-håndteringen i ui.js). */
 const XT = ms => new Promise(r => setTimeout(r, ms));
 
@@ -91,7 +92,8 @@ function packLab(k) {
 
 /* ---------- Show the game ----------
    Åpen for alle, og laget for ikke å røpe: traileren viser gangen i spillet (studere, fange, trene, kjempe), og oversikten viser tallene. Bossene og de
-   legendariske vises bare som skygger. Filmene, pakkene og alt annet som viser hva som faktisk venter, ligger i sandkassa (bare admin). */
+   legendariske vises bare som skygger, med ett unntak: traileren slutter med filmen til Dialga. De andre filmene, pakkene og alt annet som viser hva som
+   faktisk venter, ligger i sandkassa (bare admin). */
 let SHW = null;
 const showNums = () => ({ mons: DEX.length, moves: MOVES.length, megas: MEGA.filter(g => g[1] !== 'Origin').length, bosses: ORDER.filter(k => k !== 'trainer' && k !== 'evilteam').reduce((n, k) => n + POOL[k].length, 0), raids: Object.keys(LEG).length + 1, medals: achTotal(), events: Object.keys(EVENTS).length });
 /* De legendariske som har sin egen store film (ikke de rolige): til sandkassa. */
@@ -107,7 +109,7 @@ function showcase() {
   const num = (n, s) => `<div><b class="tn">${nb(n)}</b><span class="sm">${s}</span></div>`, step = (n, a, b) => `<div><span class="cno">${n}</span><span class="sp"><b>${a}</b><span class="sm">${b}</span></span></div>`;
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Showcase</span></div>
     <div class="shw-hero"><div class="shw-k">Fokusdex</div><p class="mut">Study time becomes a Pokémon adventure. Every minute you focus feeds the game: you catch, train and battle with what you earned.</p>
-      <button type="button" class="go gold" data-a="showplay">Play the trailer</button><p class="sm tn">About a minute, with sound · it shows how the game goes, not what is waiting</p></div>
+      <button type="button" class="go gold" data-a="showplay">Play the trailer</button><p class="sm tn">A little over a minute, with sound · clips from the game, and a glimpse of what is waiting</p></div>
     <div class="shw-n">${num(N.mons, 'Pokémon')}${num(N.moves, 'moves')}${num(N.megas, 'Mega forms')}${num(N.bosses, 'named bosses')}${num(N.raids, 'legendary raids')}${num(N.medals, 'medals')}</div>
     <div class="card stack"><div class="lab">How it goes</div><div class="shw-st">${step(1, 'Study', '10 XP and 3 coins a minute. Your subjects count in full.')}${step(2, 'Catch', 'Every 20 minutes something waits in the grass. Some are rare. A few are shiny.')}${step(3, 'Train', 'Levels, evolutions, IVs, EVs and Mega forms: your team is built from your own hours.')}${step(4, 'Battle', 'When the day\'s studying is done, the battles open. The more you studied, the more they pay.')}</div></div>
     <div class="card stack"><div class="lab">Battles</div><b>${nb(N.moves)} moves, each with its own animation</b><p class="sm">Abilities, weather, status, Mega Evolution and type matchups work as in the games.</p>
@@ -140,65 +142,145 @@ async function showFilm(kind, arg) {
 }
 
 /* ---------- Traileren ----------
-   Ti korte bilder på én låt (pakka: finalelåta fra World Tournament i Frontier-mappa; ellers den innebygde Frontier-låta). Tidene er sekunder fra låta
+   Korte bilder på én låt (pakka: finalelåta fra World Tournament i Frontier-mappa; ellers den innebygde Frontier-låta). Tidene er sekunder fra låta
    starter og følger delene i den: rolig åpning til 17, lettere parti til 29, så setter den inn for fullt, med det store slaget på 41,6 og full styrke fra 49.
-   Den viser gangen i spillet og hinter til det som venter: ingen filmer, ingen navn på bosser, og de legendariske bare som skygger. */
-const TRLEND = 64;
+   Den er en trailer og ikke en innføring: hvert bilde har én kort linje, og ingenting forklares.
+   Fra TRLCLIP til det store slaget vises et klipp fra en ekte kamp (tlrBattle, tlrClip): kampskjermen selv, med et angrep som treffer, Mega Evolution og
+   en motstander som besvimer. På TRLOUT tones låta ut, filmen til Dialga spilles slik den er i raidet (legendIntro, med låta si), og rett etter filmen
+   står tittelen der. Bossene vises bare som skygger, og av de legendariske er Dialga den eneste som vises. */
+const TRLCLIP = 32.2, TRLOUT = 56.6, TRLLEG = 483;
 const tlrStars = n => Array.from({ length: n }, (_, k) => { const a = k / n * 6.283 + 0.3, d = 54 + (k * 37 % 46); return `<i style="--dx:${Math.round(Math.cos(a) * d)}px;--dy:${Math.round(Math.sin(a) * d * 0.8)}px;--d:${(k * 0.045).toFixed(2)}s"></i>`; }).join('');
 const tlrGrass = () => { let p = '0% 100%'; for (let i = 0; i <= 26; i++) p += `,${(i / 26 * 100).toFixed(1)}% ${i % 2 ? 0 : 46 + (i * 7 % 30)}%`; return `<i class="tlr-gr" style="clip-path:polygon(${p},100% 100%)"></i>`; };
 const TRL = [
   { t: 0.4, k: 'title', h: () => `<div class="tlr-k">Fokusdex</div><p class="tlr-p tlr-lead">Your study time is the game.</p>` },
   { t: 4.6, k: 'focus', h: () => `<div class="tlr-ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="52" class="a"/><circle cx="60" cy="60" r="52" class="b"/></svg><b class="tn" id="tlr-cl">25:00</b></div>
       <div class="tlr-chips"><span style="--d:1.5s">+250 XP</span><span style="--d:2.3s">+75 coins</span><span style="--d:3.1s">1 encounter</span></div>
-      <h2 class="tlr-h">Start a focus session.</h2><p class="tlr-p">Every minute you study feeds the game.</p>`,
+      <h2 class="tlr-h">It starts with focus.</h2>`,
     run: (root, at) => { for (let i = 1; i <= 25; i++) at(300 + i * 168, () => { const e = root.querySelector('#tlr-cl'); if (e) e.textContent = `${String(25 - i).padStart(2, '0')}:00`; }); } },
   { t: 10.4, k: 'grass', h: () => `<div class="tlr-v"><span class="tlr-enc">${spr(133, { ani: 1, s: '112px' })}</span><span class="tlr-ball">${ballEl('poke', '54px')}</span>${tlrGrass()}</div>
-      <h2 class="tlr-h">Something waits in the grass.</h2><p class="tlr-p">Every 20 minutes of focus is an encounter. Throw well, and it is yours.</p>` },
+      <h2 class="tlr-h">Something waits in the grass.</h2>` },
   { t: 17.0, k: 'grow', h: () => `<div class="tlr-v v-evo">${[4, 5, 6].map((id, i) => `<span class="tlr-e" style="--d:${(0.4 + i * 1.5).toFixed(1)}s">${spr(id, { ani: 1, s: [64, 84, 116][i] + 'px' })}</span>${i < 2 ? `<i class="tlr-ar" style="--d:${(1.3 + i * 1.5).toFixed(1)}s">›</i>` : ''}`).join('')}</div>
-      <div class="tlr-lv"><span>Lv</span><b class="tn" id="tlr-lv">5</b></div><h2 class="tlr-h">It grows with what you put in.</h2><p class="tlr-p">Levels, training and evolution all come from your own hours.</p>`,
+      <div class="tlr-lv"><span>Lv</span><b class="tn" id="tlr-lv">5</b></div><h2 class="tlr-h">It grows with what you put in.</h2>`,
     run: (root, at) => { for (let i = 1; i <= 31; i++) at(350 + i * 120, () => { const e = root.querySelector('#tlr-lv'); if (e) e.textContent = 5 + i; }); } },
   { t: 23.1, k: 'shiny', h: () => `<div class="tlr-v v-shy"><span class="tlr-a">${spr(130, { ani: 1, s: '124px' })}</span><span class="tlr-b">${spr(130, { ani: 1, sh: 1, s: '124px' })}</span><span class="tlr-spk">${tlrStars(12)}</span></div>
-      <h2 class="tlr-h">Some are far rarer than others.</h2><p class="tlr-p">A shiny can hide in any patch of grass. Hunters learn how to raise the odds.</p>` },
-  { t: 29.0, k: 'battle', h: () => `<div class="tlr-vs"><div class="l">${[445, 6, 448].map((id, i) => `<span style="--d:${(0.15 + i * 0.17).toFixed(2)}s">${spr(id, { s: '76px' })}</span>`).join('')}</div><b>VS</b><div class="r">${[POOL.gym[2], POOL.e4[1], POOL.champ[0]].map((d, i) => `<span style="--d:${(0.7 + i * 0.17).toFixed(2)}s">${tsprite(d[1], 'sil')}<i>?</i></span>`).join('')}</div></div>
-      <div class="tlr-chips tlr-gold"><span style="--d:1.4s">Trainer League</span><span style="--d:2.1s">Battle Frontier</span><span style="--d:2.8s">World Tournament</span></div>
-      <h2 class="tlr-h">Then you battle with them.</h2><p class="tlr-p">Nine classes of opponents. Real moves, abilities and type matchups.</p>` },
-  { t: 35.4, k: 'mega', h: () => `<div class="tlr-v v-mega"><span class="tlr-a">${spr(448, { ani: 1, s: '118px' })}</span><span class="tlr-b">${spr(448, { ani: 1, mega: megaOpts(448)[0] || 0, s: '130px' })}</span><span class="tlr-anc" id="tlr-anc"></span></div>
-      <h2 class="tlr-h">Mega Evolution.</h2><p class="tlr-p">Earn the ring. Find the stones. Turn the fight.</p>`,
-    run: (root, at) => { const fx = c => { const a = root.querySelector('#tlr-anc'); if (a) { const i = document.createElement('i'); i.className = 'megafx ' + c; i.style.setProperty('--h', '118px'); a.appendChild(i); } };
-      at(1250, () => { fx('gather'); root.querySelector('.tlr-v').classList.add('mg1'); BSFX.mega(); }); at(2400, () => { root.querySelector('.tlr-v').classList.add('mg2'); fx('burst'); }); } },
+      <h2 class="tlr-h">Some are far rarer than others.</h2>` },
+  { t: 29.0, k: 'battle', h: () => `<div class="tlr-vs"><div class="l">${[445, 6, 9].map((id, i) => `<span style="--d:${(0.15 + i * 0.17).toFixed(2)}s">${spr(id, { s: '76px' })}</span>`).join('')}</div><b>VS</b><div class="r">${[POOL.gym[2], POOL.e4[1], POOL.champ[0]].map((d, i) => `<span style="--d:${(0.7 + i * 0.17).toFixed(2)}s">${tsprite(d[1], 'sil')}<i>?</i></span>`).join('')}</div></div>
+      <div class="tlr-chips tlr-gold"><span style="--d:1.2s">Trainer League</span><span style="--d:1.55s">Battle Frontier</span><span style="--d:1.9s">World Tournament</span></div>
+      <h2 class="tlr-h">Then you battle.</h2>` },
+  { t: TRLCLIP, k: 'clip' },
   { t: 41.6, k: 'legend', h: () => `<div class="tlr-leg">${[384, 150, 249].map((id, i) => `<span class="s${i}">${spr(id, { sil: 1, s: '150px' })}</span>`).join('')}<span class="raid-sp qm" aria-hidden="true"><i>?</i></span></div>
-      <h2 class="tlr-h">And sometimes…</h2><p class="tlr-p late" style="--d:2.2s">…something legendary shows itself. Who it is stays secret until you face it.</p>` },
+      <h2 class="tlr-h">And sometimes…</h2><p class="tlr-p late" style="--d:2.2s">…something legendary shows itself.</p>` },
   { t: 49.0, k: 'nums', h: () => { const N = showNums(); return `<div class="shw-n tlr-n">${[[N.mons, 'Pokémon'], [N.moves, 'moves'], [N.megas, 'Mega forms'], [N.bosses, 'named bosses'], [N.raids, 'legendary raids'], [N.medals, 'medals']].map(([n, s], i) => `<div style="--d:${(i * 0.12).toFixed(2)}s"><b class="tn" data-n="${n}">0</b><span class="sm">${s}</span></div>`).join('')}</div>
       <div class="shw-sil tlr-sil" id="tlr-sil">${showSil(7)}</div><h2 class="tlr-h">All of it is in here.</h2>`; },
-    run: (root, at) => { showSilFill('#tlr-sil', 7); for (let i = 1; i <= 24; i++) at(200 + i * 55, () => root.querySelectorAll('.tlr-n b').forEach(b => { b.textContent = nb(Math.round(+b.dataset.n * (1 - Math.pow(1 - i / 24, 3)))); })); } },
-  { t: 57.4, k: 'end', h: () => `<div class="tlr-k">Fokusdex</div><p class="tlr-p tlr-lead">Study. Catch. Train. Battle.</p><p class="tlr-p late" style="--d:1.6s">What waits at the top is worth the hours.</p>` }
+    run: (root, at) => { showSilFill('#tlr-sil', 7); for (let i = 1; i <= 24; i++) at(200 + i * 55, () => root.querySelectorAll('.tlr-n b').forEach(b => { b.textContent = nb(Math.round(+b.dataset.n * (1 - Math.pow(1 - i / 24, 3)))); })); } }
 ];
+/* Kampen klippet er hentet fra: Blastoise mot en Ace Trainer med Luxray. Den er bestemt på forhånd, så klippet er likt hver gang: Luxray treffer med
+   Thunderbolt, Blastoise blir Mega Blastoise og svarer med Hydro Pump, og Luxray besvimer. Det er den vanlige kampmotoren som regner (useMove,
+   megaEvolve) og den vanlige kampskjermen som viser. Modus «lab»: ingenting lagres, og ingenting gis. clip = ingen meny og intet oppgjør etterpå,
+   pace og quick = klippets egen fart uansett hva spilleren har valgt (tlrClip), tag = merkelappen øverst. */
+function tlrBattle() {
+  const mv = l => l.map(n => MOVES.findIndex(m => m[0] === n)).filter(i => i >= 0), iv = [31, 31, 31, 31, 31, 31], no = [0, 0, 0, 0, 0, 0];
+  const me = [{ id: 9, lv: 50, sh: 0, iv, ev: [0, 0, 0, 252, 0, 252], nat: 0, mv: mv(['Hydro Pump']), ms: megaOpts(9)[0] || 0 }];
+  const foe = [{ id: 405, lv: 50, sh: 0, iv, ev: no, nat: 0, mv: mv(['Thunderbolt']) }, { id: 149, lv: 50, sh: 0, iv, ev: no, nat: 0, mv: mv(['Dragon Claw']) }];
+  if (!me[0].mv.length || foe.some(f => !f.mv.length)) return null;
+  const ti = Math.max(0, POOL.trainer.findIndex(d => d[0] === 'Ace Trainer')), tr = trainerOf('trainer', ti);
+  const B = mkBattle(me, foe, tr, { mode: 'lab', st: TCL.trainer, k: 'trainer', rd: 2, n: 0, lap: 0, ti, rent: 1, bag: 0, xm: 1, sm: 1, boost: { mode: '', m: 1, xp: 1 }, clip: 1, pace: 1.5, quick: 1, tag: 'Trainer League' });
+  labMega(B); B.foe[0].hp = Math.round(B.foe[0].max * 0.7);
+  return B;
+}
+/* Hendelsene i klippet, én bit om gangen: 1 = motstanderens angrep, 2 = Mega Evolution, 3 = svaret. Terningen holdes fast på midten mens motoren
+   regner, så ingenting bommer og ingenting blir kritisk. Regnes ut når skjermen viser stillingen før biten (som i en vanlig kamp), for motoren endrer
+   kampen med en gang. */
+function tlrTurn(B, n) {
+  const R0 = Math.random, ev = [];
+  try {
+    Math.random = () => 0.5; B.turn = n < 2 ? 1 : 2; GRAV = 0; WILD = false; B.intent = { me: B.me[0].mv[0].i, foe: B.foe[0].mv[0].i }; B.moved = { me: 0, foe: 0 }; B.pivot = null; B.rest = null;
+    if (n === 1) { useMove(B, 'foe', 0, ev, 0); B.moved.foe = 1; settle(B, ev); }
+    else if (n === 2) megaEvolve(B, 'me', ev);
+    else { useMove(B, 'me', 0, ev, 1); B.moved.me = 1; settle(B, ev); }
+  } finally { Math.random = R0; }
+  return ev;
+}
+/* Viser klippet: kampskjermen slik den står midt i en kamp (som når en forlatt kamp hentes fram igjen), og så de tre bitene. Traileren klipper videre
+   når tiden er inne (left() = sekunder til da), og klippet skal da være framme ved at motstanderen har besvimt, med et lite pusterom (TLRREST).
+   Første bit går i fast fart. Før hver av de neste regnes farten ut fra tiden som er igjen: arbeidet (sekunder ved fart 1) delt på tiden, når det
+   meldingene tar uansett fart er trukket fra. Aldri saktere enn vanlig fart, aldri fortere enn FAST.
+   - Animasjonene er ulike lange med og uten pakke, så lengden på den siste (an) anslås fra den første, som nettopp ble målt.
+   - Blir det tid til overs selv i vanlig fart, står «What will … do?» der så lenge, som mellom to runder ellers.
+   - Mega Evolution har en kjent lengde. Tok den lengre tid enn den skulle, er enheten treg, og siste bit regnes like mye opp (slow).
+   Tallene er målt i nettleseren (pw/t_j7c.js): angrepet = (0,92 + animasjonen) / farten + 0,6 s · Mega Evolution = 2,53 / farten + 0,7 s ·
+   svaret = (2,42 + animasjonen) / farten + 0,57 s. */
+const TLRREST = 0.7;
+async function tlrClip(B, left) {
+  const gone = () => BT.B !== B || !$('#arena'), ask = `What will ${B.me[0].name} do?`;
+  const play = async ev => { const t = performance.now(); await playEv(ev); return (performance.now() - t) / 1000; }, pace = p => { B.pace = Math.max(1.25, Math.min(2.6, p)); FX.speed = spdF(); return B.pace; };
+  BT.B = B; BT.menu = 'main'; BT.res = null; BT.ty = 0; BT.busy = true; BT.live = null;
+  BT.v = { me: { i: 0, hp: B.me[0].hp, st: '' }, foe: { i: 0, hp: B.foe[0].hp, st: '' } };
+  drawBattle(); drawMenu();
+  const o = document.querySelector('#ov .ovin'); if (o) o.insertAdjacentHTML('beforeend', '<button type="button" class="lgi-skip" data-a="showstop">Stop</button>');
+  if ($('#trn')) $('#trn').classList.add('out');
+  for (const side of ['foe', 'me']) { paintSprite(side, ''); paintBox(side); }
+  setText(ask);
+  await bwait(500); if (gone()) return;
+  const p1 = B.pace, d1 = await play(tlrTurn(B, 1)); if (gone() || B.me[0].hp <= 0) return;
+  const an = 1.12 + 0.75 * (Math.max(0.6, Math.min(2.6, (d1 - 0.6) * p1 - 0.92)) - 0.92), wait = left() - TLRREST - 1.27 - (4.95 + an) / 1.25;
+  if (wait > 0.15) { setText(ask); await XT(wait * 1000); if (gone()) return; }
+  const p2 = pace((4.95 + an) / Math.max(0.4, left() - TLRREST - 1.27)), d2 = await play(tlrTurn(B, 2)); if (gone()) return;
+  const slow = Math.max(1, Math.min(2, (d2 - 0.7) * p2 / 2.53));
+  pace(slow * (2.42 + an) / Math.max(0.3, left() - TLRREST - 0.57));
+  await playEv(tlrTurn(B, 3));
+}
 async function showTrailer() {
-  const my = SHW = { on: 1 }, alive = () => SHW === my && my.on && !!$('#tlr');
-  ov(`<div class="tlr" id="tlr"><div class="tlr-st" id="tlr-st"></div><button type="button" class="lgi-skip" data-a="showstop">Stop</button></div>`, 'battle shwtov');
-  BT.B = null; PACK.unlock();
-  /* Én låt gjennom hele: finalelåta fra Frontier-mappa i pakka, ellers den rolige derfra, ellers den innebygde Frontier-låta. */
+  /* my.B = kampen i klippet mens det vises: da er det kampskjermen som står der, og ikke trailerens egen flate. */
+  const my = SHW = { on: 1, B: null }, alive = () => SHW === my && my.on && (my.B ? BT.B === my.B && !!$('#arena') : !!$('#tlr'));
+  const stage = () => ov(`<div class="tlr" id="tlr"><div class="tlr-st" id="tlr-st"></div><button type="button" class="lgi-skip" data-a="showstop">Stop</button></div>`, 'battle shwtov');
+  /* Klippet er over: kampen ryddes bort, og trailerens flate kommer tilbake. */
+  const cut = () => { if (!my.B) return; my.B = null; BT.B = null; BT.busy = false; BT.tap = null; clearInterval(BT.goldT); try { FX.show(null); } catch (_) {} if (BT.air) { BT.air(); BT.air = null; } stage(); };
+  stage(); BT.B = null; PACK.unlock();
+  /* Én låt gjennom bildene: finalelåta fra Frontier-mappa i pakka, ellers den rolige derfra, ellers den innebygde Frontier-låta. */
   const M = (PACK.ok && PACK.man.music) || [], tk = M.find(x => x.c === 'frontier' && /World Champion Final/.test(x.t)) || M.find(x => x.c === 'frontier' && /Aether/.test(x.t));
   /* Bildene til skyggene hentes først (pakken), så de står klare når bildet kommer. */
   if (PACK.ok) try { await Promise.race([PACK.portraits([POOL.gym[2], POOL.e4[1], POOL.champ[0]].map(d => d[1].split('|')[0]).concat(showSilK(7).map(k => k.split('|')[0]))), XT(1500)]); } catch (_) {}
   if (!alive()) return;
   let started = false; if (tk) started = await PACK.music(tk.f, { loop: false, fade: 0.4 }); if (!alive()) return;
   if (started) music(''); else { PACK.music(''); music('frontier'); }
+  /* Det klippet og filmen trenger (bane, animasjoner, lyder, bilder, låta til Dialga), hentes mens de første bildene går. */
+  let CB = null; try { CB = tlrBattle(); } catch (_) {}
+  if (CB) try { PACK.prep(CB).catch(() => {}); preSpr(9, { ani: 1, back: 1 }); preSpr(9, { ani: 1, back: 1, mega: CB.me[0].mg }); preSpr(405, { ani: 1 }); } catch (_) {}
+  const FB = typeof CINE !== 'undefined' && LEG[TRLLEG] && CINE.has(TRLLEG) ? { tr: legTr(TRLLEG), foe: [{ id: TRLLEG, lv: 0 }], me: [], mode: 'lab', lap: 0, raid: 1, show: 1 } : null;
+  if (FB) try { CINE.prep(TRLLEG, 6000); PACK.cue(PACK.trackFor(FB)); } catch (_) {}
   const t0 = performance.now(), now = () => { const c = started ? PACK.clock() : -1, w = (performance.now() - t0) / 1000; return c >= 0 && Math.abs(c - w) < 2 ? c : w; }, timers = [];
   const at = (ms, f) => timers.push(setTimeout(() => { if (alive()) try { f(); } catch (_) {} }, ms));
   for (let i = 0; i < TRL.length && alive(); i++) {
     const sc = TRL[i];
     while (alive() && now() < sc.t) await XT(40);
     if (!alive()) break;
+    /* Klippet går ved siden av: traileren venter bare på neste tidspunkt. Går noe galt i det, kommer flaten tilbake og traileren går videre. */
+    if (sc.k === 'clip') { if (CB) { const end = TRL[i + 1].t; my.B = CB; tlrClip(CB, () => end - now()).catch(() => { if (SHW === my && my.on) cut(); }); } continue; }
+    if (my.B) cut();
     const st = $('#tlr-st'), old = st.firstElementChild; if (old) { old.classList.add('out'); await XT(260); if (!alive()) break; }
     $('#tlr').dataset.k = sc.k; st.innerHTML = `<div class="tlr-s sc-${sc.k}">${sc.h()}</div>`;
     if (sc.run) sc.run(st.firstElementChild, at);
     if (sc.k === 'legend') { BSFX.dread(); buzz([40, 60, 40, 60, 200]); } else if (sc.k !== 'title') buzz(14);
   }
-  while (alive() && now() < TRLEND - 2.4) await XT(60);
+  while (alive() && now() < TRLOUT) await XT(60);
   timers.forEach(clearTimeout);
   if (!alive()) return;
-  stopMusic(2.4); await XT(2300); if (!alive()) return;
+  /* Slutten: låta og bildet tones ut, filmen til Dialga spilles (den kan hoppes over), og så står tittelen der mens låta til Dialga klinger ut. */
+  const last = $('#tlr-st').firstElementChild; if (last) last.classList.add('fade');
+  stopMusic(2.2); await XT(2500); if (!alive()) return;
+  if (FB) {
+    BT.B = FB; BT.busy = false;
+    try { await legendIntro(FB); } catch (_) {}
+    if (SHW !== my || !my.on || BT.B !== FB) return;
+    BT.B = null;
+  }
+  stage(); $('#tlr').dataset.k = 'end';
+  $('#tlr-st').innerHTML = `<div class="tlr-s sc-end"><div class="tlr-k">Fokusdex</div><p class="tlr-p tlr-lead">Study. Catch. Train. Battle.</p></div>`;
+  if (FB) $('#tlr').insertAdjacentHTML('beforeend', '<i class="tlr-fl"></i>');
+  buzz(14);
+  await XT(3600); if (!alive()) return;
+  stopMusic(2.6); await XT(2500); if (!alive()) return;
   SHW = null; showcase();
 }
 
@@ -260,12 +342,13 @@ function sbxDay(only) {
 function sbxFinal(k, i) { const L = S.lad; L.n = LAPN - 1; L.c = CLIMBTOP; L.seen = []; const t = { n: L.n, lap: L.lap, k, i, sup: 0 }; if ((POOL[k][i][6] || {}).fx) t.v = drawTeam(POOL[k][i]); L.next = t; }
 function sbxFac(r) { S.fac.run = { round: r, w: 0, streak: (r - 1) * FACN, offer: facOffer(r), open: 0, team: null, foe: null }; }
 function sbxRaid(id, sh, show) { const t = LEG[id].t; S.raid = { id, lv: raidLvFor(t), hx: +raidHx(t).toFixed(2), day: '', tries: 0, at: dayKey(), nw: 0, hid: 1, sh: sh ? 1 : 0 }; if (show) raidUnhide(); }
-const SBXT = [['coins', '+100 000 coins'], ['level', 'Trainer level +10'], ['items', '5 of every item in the Shop'], ['team', 'My team to Lv 100'], ['enc', 'A legendary encounter in the grass'], ['shenc', 'A shiny encounter in the grass'], ['raid', 'A legendary raid · hidden until the battles are done'], ['raidnow', 'A legendary raid · shown now'], ['shraid', 'A shiny legendary raid · shown now'], ['day', 'A new battle day · all three modes open'], ['dayl', 'A new battle day · League only (Simulate works)'], ['dayf', 'A new battle day · Frontier only'], ['dayp', 'A new battle day · Tournament only']];
+const SBXT = [['coins', '+100 000 coins'], ['level', 'Trainer level +10'], ['items', '5 of every item in the Shop'], ['held', 'One of everything a Pokémon can hold'], ['team', 'My team to Lv 100'], ['enc', 'A legendary encounter in the grass'], ['shenc', 'A shiny encounter in the grass'], ['raid', 'A legendary raid · hidden until the battles are done'], ['raidnow', 'A legendary raid · shown now'], ['shraid', 'A shiny legendary raid · shown now'], ['day', 'A new battle day · all three modes open'], ['dayl', 'A new battle day · League only (Simulate works)'], ['dayf', 'A new battle day · Frontier only'], ['dayp', 'A new battle day · Tournament only']];
 function sbxTool(k) {
   if (!SBX) return;
   if (k === 'coins') S.coins += 100000;
   else if (k === 'level') S.xp = 300 * Math.pow(tlv() + 9, 2);
   else if (k === 'items') BALLS.concat(['gberry', 'candy', 'stone', 'mstone', 'potion', 'super', 'hyper', 'maxp', 'heal', 'revive', 'maxrev', 'ash']).forEach(x => { if (SHOP[x]) S.items[x] = (S.items[x] || 0) + 5; });
+  else if (k === 'held') Object.keys(HELD).forEach(x => { S.items[x] = (S.items[x] || 0) + 1; });
   else if (k === 'team') S.party.map(monBy).filter(Boolean).forEach(m => { m.xp = Math.max(m.xp, xpAt(100)); m.lv = 100; });
   else if (k === 'enc') S.pend.push(legEnc());
   else if (k === 'shenc') { const e = genEnc({ luck: 2 }); e.sh = 1; S.pend.push(e); }
@@ -328,7 +411,8 @@ const XA = {
   pkrun: el => { const k = el.dataset.k; if (!isAdmin() || !PACKS[k]) return; U.pls = packStats(k, PKN); sfx.ok(); packLab(k); },
   show: () => { closeSheet(); if (SHW) SHW.on = 0; SHW = null; BT.B = null; BT.busy = false; stopMusic(); sfx.open(); showcase(); },
   showplay: () => { sfx.start(); showTrailer(); },
-  showstop: () => { if (SHW) SHW.on = 0; SHW = null; BT.B = null; stopMusic(0.4); showcase(); },
+  /* Stop i traileren, også mens klippet fra kampen står der: kampen ryddes bort som når en kamp er over. */
+  showstop: () => { if (SHW) SHW.on = 0; SHW = null; BT.B = null; BT.busy = false; BT.tap = null; clearInterval(BT.goldT); try { FX.show(null); } catch (_) {} if (BT.air) { BT.air(); BT.air = null; } stopMusic(0.4); showcase(); },
   showfilm: async el => { if (!isAdmin()) return; const k = el.dataset.k, a = k === 'leg' && el.dataset.i !== 'dk' ? +el.dataset.i : el.dataset.i; SHW = null; sfx.start(); const ok = await showFilm(k, a); if (ok && $('#lgi')) sbxScreen(); },
   exhib: el => { if (SHW) SHW.on = 0; SHW = null; sfx.start(); exhibition(el && el.dataset.k === 'play'); },
   exstop: () => { const B = BT.B; if (B) B.watch = 0; const b = $('#exb'); if (b) b.remove(); toast('You are in control now.'); },

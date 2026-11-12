@@ -80,7 +80,7 @@ const HELP = [
     ${hRow(hSym('▦', 'var(--ink2)'), 'The Box', 'Everything else you have caught. Duplicates can be sold for coins.')}
     ${hH('Types')}
     ${hP('Every move and every Pokémon has a type. A move that is <b>super effective</b> does double damage, and one that is not very effective does half. Water beats Fire, Fire beats Grass, Grass beats Water, and so on. In battle the move menu shows how each move will hit.')}
-    <div class="hmore">${hLink('train', 'Training')}${hLink('mega', 'Mega Evolution')}</div>` },
+    <div class="hmore">${hLink('train', 'Training')}${hLink('held', 'Items to hold')}${hLink('mega', 'Mega Evolution')}</div>` },
 
   { k: 'modes', n: 'Battles', s: 'Three modes, one a day', ic: () => '<span class="ficon hfi">L</span>', body: () => `
     ${hP('When you are done studying, press <b>Done for today</b>. You then choose <b>one</b> of three modes for that day. The other two wait for your next battle day.')}
@@ -109,9 +109,11 @@ const HELP = [
     ${hRow(hSym('!', 'var(--gold)'), 'As a surprise', 'It shows itself when the day\'s battles are done: played, simulated or skipped. Until then you cannot know that one is waiting.')}
     ${hRow(hSym('◎', 'var(--sage)'), 'You reach your daily goal', 'One more draw that day.')}
     ${hRow('<span class="ficon hfi">L</span>', 'You win a League lap or a Frontier round', 'One more draw.')}
-    ${hRow(hSym('★', 'var(--gold)'), 'New ones first', 'A legendary you already own never comes again while its class still has one you lack. How rare each class is does not change, so nearly every raid is someone new.')}
+    ${hRow(hSym('★', 'var(--gold)'), 'New ones first', 'A legendary you already own never comes again while there is one you lack, so nearly every raid is someone new.')}
+    ${hRow(hSym('▲', 'var(--sage)'), 'It grows with your collection', 'The more legendaries you own, the more often the great ones and Arceus show themselves, and the less often the common and the mythical ones. Your very first raid is far above you. It is meant to be.')}
     ${hH('The fight')}
     ${hP(`It is one Pokémon with ${RAIDHP[0]} to ${RAIDHP[3]} times the HP of a normal one, against your whole team, and you may use the Bag. Its place fights too: something happens on the field every third turn, and below half HP it becomes enraged.`)}
+    ${hP('It cannot be knocked out in one hit, and moves that count in shares of HP (poison, a burn, Leech Seed, Super Fang) take no more from it than from any Pokémon. Sleep, paralysis and lowered stats work as usual, and a berry or a plate on the right Pokémon helps.')}
     ${hP(`You get <b>${RAIDTRIES} attempts</b>, one a day. The first time you do not know who is waiting. If you lose, you get one more attempt the next day, and now you know. Then it moves on. It stands well above your team, so a raid is meant to be hard.`)}
     ${hH('If you win')}
     ${hP('It is yours. Winning the raid is the catch: no throws. You also get a pile of coins, Rare Candy and XP for the whole team.')}
@@ -131,6 +133,22 @@ const HELP = [
     ${hRow(coinEl(EVP), 'One EV', `A vitamin is 10 EVs. All ${EVTOT} cost ${nb(EVTOT * EVP)} coins.`)}
     ${hRow(coinEl(HTP), 'Hyper Training, one stat', `The same price whatever the IV was. Only from Lv ${HTLV}, as in the games.`)}
     ${hNote('Neither can go past its cap, so a fully trained Pokémon here is exactly as strong as a fully trained one in the games. Start with the one or two you use the most.')}` },
+
+  { k: 'held', n: 'Items to hold', s: 'Berries, plates and gear for your team', ic: () => heldEl('sitrus', '30px'), body: () => `
+    ${hP('Each Pokémon can hold <b>one item</b>. It works by itself in battle: in the League, the tournament and raids. The rentals in the Battle Frontier hold nothing, and neither do your opponents.')}
+    ${hH('Three kinds')}
+    ${hRow(heldEl('sitrus', '30px'), 'Berries', 'Used up when they work. A Sitrus Berry gives back a quarter of its HP at half HP, a Lum Berry cures a status condition, and there is a berry against every type that halves one super effective hit. The Focus Sash is used up the same way.')}
+    ${hRow(heldEl('p9', '30px'), 'Plates', `They last. One type of move hits ${Math.round((PLATEX - 1) * 100)} % harder. There is one for every type but Normal.`)}
+    ${hRow(heldEl('leftovers', '30px'), 'Gear', 'It lasts. Leftovers heal a little every turn, a Life Orb makes every move hit harder at a cost, an Eviolite toughens a Pokémon that can still evolve, and so on.')}
+    ${hH('Where they come from')}
+    ${hRow('<span class="coin hcoin"><i></i></span>', 'The Shop', 'Under <b>To hold in battle</b>. Berries are cheap, and plates and gear are something to save for. More opens as your trainer level rises.')}
+    ${hRow(hSym('◷', 'var(--sage)'), 'Focus sessions', `A session of ${BERRYMIN} minutes or more can turn up a berry. The longer the session, the better the odds.`)}
+    ${hRow('<span class="raid-sp qm hqm"><i>?</i></span>', 'Raids', 'A legendary you beat leaves the plate of its type.')}
+    ${hH('How to use them')}
+    ${hP('Open <b>Team</b>, tap a Pokémon, and press <b>Give</b> under Holding. A plate that matches one of its moves is marked. Plates and gear can be moved between your Pokémon as often as you like, and they come back to the bag if you sell the one holding them.')}
+    ${hH('Arceus')}
+    ${hP('Arceus takes the type of the plate it holds: its colour changes, and Judgment becomes that type too.')}
+    <div class="hmore">${hLink('team', 'Your team')}${hLink('raids', 'Legendary raids')}${hLink('shop', 'The Shop')}</div>` },
 
   { k: 'mega', n: 'Mega Evolution', s: 'One stronger form a battle', ic: () => '<span class="gem mg hgem"></span>', body: () => `
     ${hRow('<span class="gem mg hgem"></span>', 'The Mega Ring', 'The first Champion you beat gives you the ring and a Mega Stone.')}

@@ -71,6 +71,7 @@ function mvEff(B, u, m) {
   let ty = m[1];
   if (m[0] === 'Hidden Power' && u && u.src && u.src.iv) ty = hpType(u.src.iv);
   else if (m[0] === 'Weather Ball' && B && WXT[B.wx.k] != null) ty = WXT[B.wx.k];
+  else if (m[0] === 'Judgment' && u && u.src && plateTy(u.src) >= 0) ty = plateTy(u.src);
   if (ty === m[1]) return m;
   const c = m.slice(); c[1] = ty; return c;
 }
@@ -81,7 +82,34 @@ const FOEU = new Set(['Psycho Shift', 'Transform', 'Mimic', 'Sketch', 'Guard Spl
 function bmon(src) {
   const st = statsOf(src);
   return { src, id: src.id, lv: src.lv, sh: src.sh || 0, name: mName(src), short: src.nn || D(src.id)[0], mega: src.mega || 0, mg: megaForm(src), g: src.g == null ? 2 : src.g, st, max: st[0], hp: st[0], mv: src.mv.map(i => ({ i, pp: MOVES[i][18] || 10, max: MOVES[i][18] || 10 })),
-    sg: Z8(), status: '', slp: 0, tox: 0, ty: mTypes(src), out: 0, v: {} };
+    sg: Z8(), status: '', slp: 0, tox: 0, ty: mTypes(src), out: 0, v: {}, item: src.item && HELD[src.item] ? src.item : '' };
+}
+/* ---------- Det en Pokémon holder (HELD i game.js) ----------
+   b.item = det den holder nå. Magic Room og Embargo slår det av så lenge de varer. En gjenstand som brukes opp (bær, Focus Sash), er borte for godt:
+   den tas også fra den ekte Pokémonen (heldUse). Knock Off slår den bare ut av hendene for resten av kampen (b.lost). */
+/* EN LEGENDARISK I RAID (b.big = hvor mange ganger så mye HP den har som ellers): skade som regnes i andeler av full HP (gift, brann, forbannelse,
+   Leech Seed, vær, feller, Rough Skin, Rocky Helmet), regnes av HP-en den ville hatt uten raidet (mx). Ellers ville gift tatt like stor del av den
+   enorme HP-streken hver runde som av en vanlig, og det gjorde raidene til et spørsmål om Toxic. Angrep som slår ut med ett slag, virker ikke på den,
+   og heller ikke Super Fang, Endeavor, Pain Split, Destiny Bond, Perish Song og Grudge. Tilstander (søvn, lammelse) og senkede verdier virker som ellers. */
+const mx = b => b.big ? b.max / b.big : b.max;
+const BIGNO = new Set(['Super Fang', 'Endeavor']);
+const hi = (B, b) => b && b.item && !(B && B.mroom) && !b.v.embargo ? HELD[b.item] : null;
+function heldUse(B, s, b, ev) {
+  const k = b.item, h = HELD[k]; if (!h) return null;
+  b.item = ''; b.used = k; ev.push({ t: 'held', side: s, n: h.n });
+  if (h.g === 'once' && s === 'me' && b.src && b.src.u && typeof monBy === 'function') { const m = monBy(b.src.u); if (m && m.item === k) delete m.item; if (b.src.item === k) delete b.src.item; }
+  return h;
+}
+/* Bær som virker når HP-en er lav: Oran og Sitrus ved halv HP, de fem som løfter en verdi ved en firedel. */
+function berryCheck(B, s, ev) {
+  const b = act(B, s), h = hi(B, b); if (!h || b.hp <= 0 || B.over) return;
+  if ((h.heal || h.hp) && b.hp <= b.max / 2 && !b.v.hblock) { heldUse(B, s, b, ev); b.hp = Math.min(b.max, b.hp + Math.max(1, h.hp || Math.floor(b.max * h.heal))); ev.push({ t: 'heal', side: s, hp: b.hp }, { t: 'msg', s: `${nmOf(s, b)} restored its health using its ${h.n}!` }); }
+  else if (h.pinch && b.hp <= b.max / 4 && b.sg[h.pinch - 1] < 6) { heldUse(B, s, b, ev); ev.push({ t: 'msg', s: `${nmOf(s, b)} ate its ${h.n}!` }); changeStats(B, s, [[h.pinch, 1]], ev); }
+}
+/* Lum Berry: fjerner tilstanden eller forvirringen med en gang den kommer. */
+function lumCheck(B, s, ev) {
+  const b = act(B, s), h = hi(B, b); if (!h || !h.cure || b.hp <= 0 || !(b.status || b.v.conf)) return false;
+  heldUse(B, s, b, ev); b.status = ''; b.tox = 0; b.slp = 0; b.v.conf = 0; b.v.night = 0; ev.push({ t: 'status', side: s, st: '' }, { t: 'msg', s: `${nmOf(s, b)}'s ${h.n} cured it!` }); return true;
 }
 const newSide = () => ({ ref: 0, ls: 0, safe: 0, mist: 0, tail: 0, lucky: 0, spikes: 0, tsp: 0, rock: 0, wish: null });
 /* tr = { n, title, img, ty, kind, skill, boss }. x = ekstra felter for modusen (liga, Battle Frontier eller demo). */
@@ -210,7 +238,7 @@ function abHit(B, s, o, u, t, m, ev) {
   const a = ab(t); if (!a) return;
   if (a === 'justified' && m[1] === 16 && t.hp > 0 && t.sg[1] < 6) { abSay(ev, o, t); changeStats(B, o, [[2, 1]], ev); }
   if (m[4] !== 1 || NOCON.has(m[0]) || u.hp <= 0) return;
-  if (a === 'roughskin' || a === 'ironbarbs') { abSay(ev, o, t); u.hp = Math.max(0, u.hp - Math.max(1, Math.floor(u.max / 8))); ev.push({ t: 'hit', side: s, hp: u.hp, e: 1, quiet: 1 }, { t: 'msg', s: `${nmOf(s, u)} was hurt!` }); return; }
+  if (a === 'roughskin' || a === 'ironbarbs') { abSay(ev, o, t); u.hp = Math.max(0, u.hp - Math.max(1, Math.floor(mx(u) / 8))); ev.push({ t: 'hit', side: s, hp: u.hp, e: 1, quiet: 1 }, { t: 'msg', s: `${nmOf(s, u)} was hurt!` }); return; }
   const ail = a === 'static' ? 1 : a === 'flamebody' ? 4 : a === 'poisonpoint' ? 5 : a === 'effectspore' ? [5, 1, 2][rnd(3)] : 0;
   if (ail && Math.random() < 0.3) { const tmp = []; if (applyAil(B, s, ail, tmp, false)) { abSay(ev, o, t); ev.push(...tmp); } }
 }
@@ -220,7 +248,7 @@ function powOf(B, u, t, m, ord) {
   if (n === 'Eruption' || n === 'Water Spout') p = Math.max(1, Math.floor(p * u.hp / u.max));
   if (n === 'Stored Power') p = 20 + 20 * boosts(u);
   if ((n === 'Facade' && u.status) || (n === 'Hex' && t.status) || (n === 'Venoshock' && t.status === 'psn') || (n === 'Brine' && t.hp <= t.max / 2) || (n === 'Wake-Up Slap' && t.status === 'slp') || (n === 'Smelling Salts' && t.status === 'par')
-    || (n === 'Payback' && ord === 1) || ((n === 'Revenge' || n === 'Avalanche') && u.v.hit) || n === 'Acrobatics' || (n === 'Weather Ball' && B.wx.k) || (n === 'Assurance' && t.v.hit) || (n === 'Retaliate' && B.sd[sideOf(B, u)].fell === B.turn - 1)) p *= 2;
+    || (n === 'Payback' && ord === 1) || ((n === 'Revenge' || n === 'Avalanche') && u.v.hit) || (n === 'Acrobatics' && !u.item) || (n === 'Weather Ball' && B.wx.k) || (n === 'Assurance' && t.v.hit) || (n === 'Retaliate' && B.sd[sideOf(B, u)].fell === B.turn - 1)) p *= 2;
   if ((m[1] === 12 && u.v.charge) || (ROLL.has(n) && u.v.curl)) p *= 2;
   if (u.v.mefirst) p = Math.floor(p * 1.5);
   if (n === 'Solar Beam' && B.wx.k && B.wx.k !== 'sun') p = Math.floor(p / 2);
@@ -236,9 +264,12 @@ function dmgOf(B, u, t, m, pow, crit, roll) {
   let a = (n === 'Foul Play' ? t : u).st[ai] * (crit && u.sg[ai] < 0 ? 1 : stgM((n === 'Foul Play' ? t : u).sg[ai])), d = t.st[di] * ((crit && t.sg[di] > 0) || raw ? 1 : stgM(t.sg[di]));
   if (phys && n !== 'Foul Play') { if (u.v.slow) a *= 0.5; const ua = ab(u); if (ua === 'hugepower' || ua === 'purepower') a *= 2; }
   if (B.wx.k === 'sand' && di === 4 && t.ty.includes(5)) d *= 1.5;
+  const uh = hi(B, u), th = hi(B, t);
+  if (th && th.evio && (EVO[t.id] || []).length) d *= 1.5;
   const base = Math.floor(Math.floor((Math.floor(2 * u.lv / 5) + 2) * pow * a / d) / 50) + 2;
   let mod = (crit ? 1.5 : 1) * (roll ? 0.85 + Math.random() * 0.15 : 0.925) * (u.ty.includes(m[1]) ? 1.5 : 1) * typeEff(m[1], t) * (phys && u.status === 'brn' && n !== 'Facade' ? 0.5 : 1);
   if (u.v.ff && m[1] === 9) mod *= 1.5;
+  if (uh) mod *= (uh.ty === m[1] ? PLATEX : 1) * (uh.lo ? 1.3 : 1) * (uh.belt && typeEff(m[1], t) > 1 ? 1.2 : 1) * (uh.band && phys ? 1.1 : 1) * (uh.glass && !phys ? 1.1 : 1);
   if (B.wx.k === 'rain') mod *= m[1] === 10 ? 1.5 : m[1] === 9 ? 0.5 : 1;
   if (B.wx.k === 'sun') mod *= m[1] === 9 ? 1.5 : m[1] === 10 ? 0.5 : 1;
   const sd = B.sd[sideOf(B, t)];
@@ -253,12 +284,13 @@ function applyAil(B, s, id, ev, loud, bad) {
   if (b.hp <= 0) return false;
   if (b.v.sub) return no();
   if (B.sd[s].safe) return no(`${N} is protected by Safeguard!`);
-  if (id === 6) { if (b.v.conf) return no(); b.v.conf = 2 + rnd(4); ev.push({ t: 'status', side: s, st: b.status, fx: 'conf' }, { t: 'msg', s: `${N} became confused!` }); return true; }
+  if (id === 6) { if (b.v.conf) return no(); b.v.conf = 2 + rnd(4); ev.push({ t: 'status', side: s, st: b.status, fx: 'conf' }, { t: 'msg', s: `${N} became confused!` }); lumCheck(B, s, ev); return true; }
   const st = AIL[id];
   if (!st) return no();
   if (!ailOk(b, st)) return no(b.status ? 'But it failed!' : `It doesn't affect ${lc(N)}…`);
   b.status = st; b.tox = bad && st === 'psn' ? 1 : 0; if (st === 'slp') b.slp = 1 + rnd(3);
   ev.push({ t: 'status', side: s, st, fx: st }, { t: 'msg', s: `${N} ${b.tox ? 'was badly poisoned!' : AILTXT[st]}` });
+  lumCheck(B, s, ev);
   return true;
 }
 function changeStats(B, s, list, ev, byFoe) {
@@ -357,7 +389,7 @@ const UM = {
   'Spite': c => { const tv = c.t.v, x = tv.last != null && tv.last >= 0 ? c.t.mv[tv.last] : null; if (!x || !x.pp) return fail(c); x.pp = Math.max(0, x.pp - 4); c.say(`It reduced the PP of ${lc(nmOf(c.o, c.t))}'s ${MOVES[x.i][0]}!`); },
   'Belly Drum': c => { const u = c.u; if (u.hp <= u.max / 2 || u.sg[1] >= 6) return fail(c); u.hp -= Math.floor(u.max / 2); u.sg[1] = 6; c.ev.push({ t: 'hit', side: c.s, hp: u.hp, e: 1, quiet: 1 }, { t: 'stat', side: c.s, up: true }); c.say(`${c.N} cut its own HP and maximized its Attack!`); },
   'Wish': c => { const sd = c.B.sd[c.s]; if (sd.wish) return fail(c); sd.wish = { n: 2, hp: Math.floor(c.u.max / 2) }; c.say(`${c.N} made a wish!`); },
-  'Pain Split': c => { const a = Math.floor((c.u.hp + c.t.hp) / 2); c.u.hp = Math.min(c.u.max, a); c.t.hp = Math.min(c.t.max, a); c.ev.push({ t: 'heal', side: c.s, hp: c.u.hp, q: 1 }, { t: 'heal', side: c.o, hp: c.t.hp, q: 1 }); c.say('The battlers shared their pain!'); },
+  'Pain Split': c => { if (c.t.big || c.u.big) return fail(c); const a = Math.floor((c.u.hp + c.t.hp) / 2); c.u.hp = Math.min(c.u.max, a); c.t.hp = Math.min(c.t.max, a); c.ev.push({ t: 'heal', side: c.s, hp: c.u.hp, q: 1 }, { t: 'heal', side: c.o, hp: c.t.hp, q: 1 }); c.say('The battlers shared their pain!'); },
   'Substitute': c => { const u = c.u, d = Math.floor(u.max / 4); if (c.V.sub || u.hp <= d) return fail(c); u.hp -= d; c.V.sub = d; c.ev.push({ t: 'hit', side: c.s, hp: u.hp, e: 1, quiet: 1 }, { t: 'sub', side: c.s, on: 1 }); c.say(`${c.N} put in a substitute!`); },
   'Trick Room': c => { c.B.troom = c.B.troom ? 0 : 5; c.say(c.B.troom ? `${c.N} twisted the dimensions!` : 'The twisted dimensions returned to normal!'); },
   'Water Sport': c => { c.B.wsp = 5; c.say("Fire's power was weakened!"); }, 'Mud Sport': c => { c.B.mud = 5; c.say("Electricity's power was weakened!"); },
@@ -403,7 +435,7 @@ const AILX = {
   15: c => { if (c.t.v.hblock) return fail(c); c.t.v.hblock = 5; c.say(`${nmOf(c.o, c.t)} was prevented from healing!`); },
   17: c => { c.t.v.fore = c.m[0] === 'Miracle Eye' ? 2 : 1; c.say(`${nmOf(c.o, c.t)} was identified!`); },
   19: c => { if (c.t.v.embargo) return fail(c); c.t.v.embargo = 5; c.say(`${nmOf(c.o, c.t)} can't use items anymore!`); },
-  20: c => { for (const s of ['me', 'foe']) { const b = act(c.B, s); if (b.hp > 0 && !b.v.perish) b.v.perish = 4; } c.say('All Pokémon that heard the song will faint in three turns!'); }
+  20: c => { for (const s of ['me', 'foe']) { const b = act(c.B, s); if (b.hp > 0 && !b.v.perish && !b.big) b.v.perish = 4; } c.say('All Pokémon that heard the song will faint in three turns!'); }
 };
 const CALLS = new Set(['Metronome', 'Sleep Talk', 'Copycat', 'Mirror Move', 'Me First', 'Assist', 'Nature Power']), HEALS = new Set(['Rest', 'Wish', 'Swallow', 'Pain Split', 'Aqua Ring', 'Ingrain', 'Healing Wish', 'Lunar Dance']), PIVOT = new Set(['U-turn', 'Volt Switch']);
 const handled = m => m[4] > 0 || !!UM[m[0]] || CALLS.has(m[0]) || (m[6] === 1 && (!!AIL[m[7]] || m[7] === 6 || !!AILX[m[7]])) || m[6] === 3 || m[6] === 5 || m[12].length > 0;
@@ -497,17 +529,18 @@ function useMove(B, s, k, ev, ord) {
     let hit = true;
     if (V.lockon || (t.v.tele && m[6] !== 9) || (STOMP.has(m[0]) && t.v.mini && !t.v.away)) hit = true;
     else if (t.v.away && !reaches(m, t)) hit = false;
-    else if (m[6] === 9) hit = u.lv >= t.lv && Math.random() < (30 + u.lv - t.lv) / 100;
+    else if (m[6] === 9) hit = !t.big && u.lv >= t.lv && Math.random() < (30 + u.lv - t.lv) / 100;
     else if (m[3] && !((m[0] === 'Thunder' || m[0] === 'Hurricane') && B.wx.k === 'rain') && !(m[0] === 'Blizzard' && B.wx.k === 'hail')) hit = Math.random() < m[3] / 100 * accM(clampS(u.sg[6] - (t.v.fore ? Math.min(0, t.sg[7]) : t.sg[7]))) * (B.grav ? 5 / 3 : 1);
     V.lockon = 0;
     if (!hit) {
-      say(t.v.away ? `${nmOf(o, t)} avoided the attack!` : `${N}'s attack missed!`);
-      if (m[0] === 'High Jump Kick' || m[0] === 'Jump Kick') { u.hp = Math.max(0, u.hp - Math.floor(u.max / 2)); ev.push({ t: 'hit', side: s, hp: u.hp, e: 1 }); say(`${N} kept going and crashed!`); }
+      say(m[6] === 9 && t.big ? `${nmOf(o, t)} is far too strong for that!` : t.v.away ? `${nmOf(o, t)} avoided the attack!` : `${N}'s attack missed!`);
+      if (m[0] === 'High Jump Kick' || m[0] === 'Jump Kick') { u.hp = Math.max(0, u.hp - Math.floor(mx(u) / 2)); ev.push({ t: 'hit', side: s, hp: u.hp, e: 1 }); say(`${N} kept going and crashed!`); }
       return stop();
     }
   }
   if (m[4] > 0) {
     const fixed = FIXED[m[0]], te = m === STRUGGLE ? 1 : typeEff(m[1], t), e = fixed ? 1 : te;
+    if (t.big && BIGNO.has(m[0])) { say(`${nmOf(o, t)} is far too strong for that!`); return stop(); }
     if (te === 0) { say(`It doesn't affect ${lc(nmOf(o, t))}…`); return stop(); }
     if (m !== STRUGGLE) { const imm = abImm(u, t, m); if (imm) { abBlock(B, o, t, imm, ev); return stop(); } }
     if (fixed && !(fixed(u, t, B) > 0)) { say('But it failed!'); return stop(); }
@@ -515,8 +548,8 @@ function useMove(B, s, k, ev, ord) {
     if (CHAIN.has(m[0])) V.chain = V.cm === m[0] ? Math.min(m[0] === 'Echoed Voice' ? 4 : 2, (V.chain || 0) + 1) : 0;
     V.cm = CHAIN.has(m[0]) ? m[0] : '';
     ev.push({ t: 'anim', side: s, mi, self: 0, roll: V.roll || 0, ty: m[1] });
-    const bu = m[0] === 'Beat Up' ? beatUp(B, u) : null, hits = hitsFor(B, u, m), cs = Math.min(3, m[16] + (V.focus ? 2 : 0));
-    let total = 0, n = 0, crit = false, sub = false, held = false, sturdy = false;
+    const bu = m[0] === 'Beat Up' ? beatUp(B, u) : null, hits = hitsFor(B, u, m), cs = Math.min(3, m[16] + (V.focus ? 2 : 0) + ((hi(B, u) || {}).scope ? 1 : 0));
+    let total = 0, n = 0, crit = false, sub = false, held = false, sturdy = false, sash = false, weak = '';
     for (; n < hits && t.hp > 0 && u.hp > 0; n++) {
       /* Kritisk treff: 1 av 24 til vanlig, 1 av 8 for angrep med høy sjanse, og halvparten eller alltid over det. Skaden er × 1,5. */
       crit = !fixed && m[6] !== 9 && m !== STRUGGLE && !B.sd[o].lucky && Math.random() < [1 / 24, 1 / 8, 1 / 2, 1][cs];
@@ -529,8 +562,11 @@ function useMove(B, s, k, ev, ord) {
         if (t.v.sub <= 0) { t.v.sub = 0; ev.push({ t: 'sub', side: o, on: 0 }); say(`${nmOf(o, t)}'s substitute faded!`); }
         continue;
       }
+      /* Bær som halverer ett supereffektivt treff av sin type (Chilan: ett Normal-treff). */
+      { const tb = hi(B, t); if (tb && tb.res === m[1] && !fixed && m[6] !== 9 && m !== STRUGGLE && (e > 1 || tb.res === 0)) { d = Math.max(1, Math.floor(d / 2)); weak = tb.n; heldUse(B, o, t, ev); } }
       d = Math.min(t.hp, d);
       if (d >= t.hp && (t.v.endure || m[0] === 'False Swipe')) { d = t.hp - 1; held = !!t.v.endure; }
+      else if (d >= t.hp && t.hp === t.max && t.max > 1 && (hi(B, t) || {}).sash) { d = t.hp - 1; sash = true; heldUse(B, o, t, ev); }
       else if (d >= t.hp && t.hp === t.max && t.max > 1 && ab(t) === 'sturdy' && !mold(u)) { d = t.hp - 1; sturdy = true; }
       t.hp -= d; total += d; t.v.hit = { d: (t.v.hit ? t.v.hit.d : 0) + d, p: m[4] }; if (t.v.bide != null) t.v.bide += d;
       ev.push({ t: 'hit', side: o, hp: t.hp, e, crit });
@@ -543,12 +579,29 @@ function useMove(B, s, k, ev, ord) {
     if (hits > 1) say(`Hit ${n} time${n > 1 ? 's' : ''}!`);
     if (held) say(`${nmOf(o, t)} endured the hit!`);
     if (sturdy) abSay(ev, o, t, `${nmOf(o, t)} endured the hit with Sturdy!`);
+    if (weak) say(`The ${weak} weakened the damage to ${lc(nmOf(o, t))}!`);
+    if (sash) say(`${nmOf(o, t)} hung on using its Focus Sash!`);
     if (total > 0 && !sub) abHit(B, s, o, u, t, m, ev);
     if (t.status === 'frz' && (m[1] === 9 || m[0] === 'Scald') && t.hp > 0) { t.status = ''; ev.push({ t: 'status', side: o, st: '' }); say(`${nmOf(o, t)} thawed out!`); }
     /* Smack Down slår målet i bakken: Ground-angrep treffer det, og det mister svevingen. Den som var i lufta, kommer ned. */
     if (m[0] === 'Smack Down' && t.hp > 0 && (total > 0 || sub)) { const up = t.ty.includes(2) || t.v.mag || t.v.tele || t.v.away; t.v.smack = 1; t.v.mag = 0; t.v.tele = 0; if (t.v.away) { t.v.away = 0; t.v.lock = null; ev.push({ t: 'vanish', side: o, on: 0 }); } if (up) say(`${nmOf(o, t)} fell straight down!`); }
     if (m[9] > 0 && total > 0 && u.hp < u.max) { u.hp = Math.min(u.max, u.hp + Math.max(1, Math.floor(total * m[9] / 100))); ev.push({ t: 'heal', side: s, hp: u.hp }); say(`${nmOf(o, t)} had its energy drained!`); }
-    if (m[9] < 0 && total > 0) { u.hp = Math.max(0, u.hp - Math.max(1, m === STRUGGLE ? Math.floor(u.max / 4) : Math.floor(total * -m[9] / 100))); ev.push({ t: 'hit', side: s, hp: u.hp, e: 1, quiet: 1 }); say(`${N} is hit with recoil!`); }
+    if (m[9] < 0 && total > 0) { u.hp = Math.max(0, u.hp - Math.max(1, m === STRUGGLE ? Math.floor(mx(u) / 4) : Math.floor(total * -m[9] / 100))); ev.push({ t: 'hit', side: s, hp: u.hp, e: 1, quiet: 1 }); say(`${N} is hit with recoil!`); }
+    /* Det de holder: Shell Bell og Life Orb hos den som slo, Rocky Helmet hos den som ble truffet, og angrepene som tar eller ødelegger det motstanderen holder. */
+    if (total > 0 && m !== STRUGGLE) {
+      const uh = hi(B, u), th = hi(B, t);
+      if (uh && uh.bell && u.hp > 0 && u.hp < u.max && !V.hblock) { u.hp = Math.min(u.max, u.hp + Math.max(1, Math.floor(total / 8))); ev.push({ t: 'heal', side: s, hp: u.hp, q: 1 }); say(`${N} restored a little HP using its Shell Bell!`); }
+      if (uh && uh.lo && u.hp > 0) { u.hp = Math.max(0, u.hp - Math.max(1, Math.floor(u.max / 10))); ev.push({ t: 'hit', side: s, hp: u.hp, e: 1, quiet: 1 }); say(`${N} lost some of its HP!`); }
+      if (th && th.helm && !sub && m[4] === 1 && !NOCON.has(m[0]) && u.hp > 0) { u.hp = Math.max(0, u.hp - Math.max(1, Math.floor(mx(u) / 6))); ev.push({ t: 'held', side: o, n: th.n }, { t: 'hit', side: s, hp: u.hp, e: 1, quiet: 1 }); say(`${N} was hurt by the Rocky Helmet!`); }
+      if (t.item && !sub && HELD[t.item]) {
+        const tn = HELD[t.item].n, once = HELD[t.item].g === 'once' && !HELD[t.item].sash;
+        if (m[0] === 'Knock Off' && t.hp > 0 && !(t.id === ARCEUS && HELD[t.item].ty != null)) { t.lost = t.item; t.item = ''; say(`${N} knocked off ${lc(nmOf(o, t))}'s ${tn}!`); }
+        else if ((m[0] === 'Bug Bite' || m[0] === 'Pluck') && once && u.hp > 0) { const h = heldUse(B, o, t, ev); say(`${N} stole and ate ${lc(nmOf(o, t))}'s ${tn}!`); if ((h.heal || h.hp) && u.hp < u.max) { u.hp = Math.min(u.max, u.hp + Math.max(1, h.hp || Math.floor(u.max * h.heal))); ev.push({ t: 'heal', side: s, hp: u.hp, q: 1 }); } }
+        else if (m[0] === 'Incinerate' && once) { heldUse(B, o, t, ev); say(`${nmOf(o, t)}'s ${tn} was burnt up!`); }
+      }
+      if (t.hp > 0) berryCheck(B, o, ev);
+      if (u.hp > 0) berryCheck(B, s, ev);
+    }
     if (RECHARGE.has(m[0]) && t.hp > 0) V.rech = 1;
     if (BOOM.has(m[0]) || m[0] === 'Final Gambit') { u.hp = 0; ev.push({ t: 'hit', side: s, hp: 0, e: 1, quiet: 1 }); }
     if (u.hp > 0 && m[6] === 7 && m[12].length && Math.random() * 100 < (m[11] || 100)) changeStats(B, s, m[12], ev);
@@ -572,9 +625,9 @@ function useMove(B, s, k, ev, ord) {
       else if (--V.lock.n <= 0) { V.lock = null; if (!V.conf) { V.conf = 2 + rnd(4); say(`${N} became confused due to fatigue!`); } }
     }
     if (m[0] === 'Uproar' && u.hp > 0) { if (!cont) { V.lock = { k, kind: 'uproar', n: 2 }; say(`${N} caused an uproar!`); } else if (--V.lock.n <= 0) { V.lock = null; say(`${N} calmed down.`); } }
-    if (t.hp <= 0 && t.v.grudge && slot && u.hp > 0) { slot.pp = 0; say(`${N}'s ${m[0]} lost all its PP due to the grudge!`); }
+    if (t.hp <= 0 && t.v.grudge && slot && u.hp > 0 && !u.big) { slot.pp = 0; say(`${N}'s ${m[0]} lost all its PP due to the grudge!`); }
     if (PIVOT.has(m[0]) && (total > 0 || sub) && u.hp > 0 && (s === 'me' ? B.me : B.foe).some(b => b !== u && b.hp > 0)) B.pivot = s;
-    if (t.hp <= 0 && t.v.dbond && u.hp > 0) { u.hp = 0; ev.push({ t: 'hit', side: s, hp: 0, e: 1, quiet: 1 }); say(`${nmOf(o, t)} took its attacker down with it!`); }
+    if (t.hp <= 0 && t.v.dbond && u.hp > 0 && !u.big) { u.hp = 0; ev.push({ t: 'hit', side: s, hp: 0, e: 1, quiet: 1 }); say(`${nmOf(o, t)} took its attacker down with it!`); }
     return;
   }
   /* Statusangrep */
@@ -629,7 +682,7 @@ function endTurn(B, ev) {
     if (--B.wx.n <= 0) { B.wx = { k: '', n: 0 }; ev.push({ t: 'wx', k: '' }); say(WXTXT[k][1]); }
     else if (k === 'sand' || k === 'hail') for (const s of sides) {
       const b = act(B, s); if (b.hp <= 0 || B.over || b.v.away) continue;
-      if (k === 'sand' ? !(b.ty.includes(5) || b.ty.includes(4) || b.ty.includes(8)) : !b.ty.includes(14)) hurt(s, b, b.max / 16, `${nmOf(s, b)} is ${k === 'sand' ? 'buffeted by the sandstorm' : 'pelted by hail'}!`);
+      if (k === 'sand' ? !(b.ty.includes(5) || b.ty.includes(4) || b.ty.includes(8)) : !b.ty.includes(14)) hurt(s, b, mx(b) / 16, `${nmOf(s, b)} is ${k === 'sand' ? 'buffeted by the sandstorm' : 'pelted by hail'}!`);
     }
   }
   for (const s of sides) {
@@ -645,18 +698,19 @@ function endTurn(B, ev) {
     if (sd.wish && --sd.wish.n <= 0) { heal(s, b, sd.wish.hp, `${N}'s wish came true!`); sd.wish = null; }
     if (V.ingrain && !V.hblock) heal(s, b, b.max / 16, `${N} absorbed nutrients with its roots!`);
     if (V.aqua && !V.hblock) heal(s, b, b.max / 16, `A veil of water restored ${lc(N)}'s HP!`);
+    if ((hi(B, b) || {}).left && !V.hblock && b.hp < b.max) { b.hp = Math.min(b.max, b.hp + Math.max(1, Math.floor(b.max / 16))); ev.push({ t: 'heal', side: s, hp: b.hp, q: 1 }, { t: 'msg', s: `${N} restored a little HP using its Leftovers!` }); }
     if (V.seed && f.hp > 0) {
-      const d = Math.min(b.hp, Math.max(1, Math.floor(b.max / 8)));
+      const d = Math.min(b.hp, Math.max(1, Math.floor(mx(b) / 8)));
       hurt(s, b, d, `${N}'s health is sapped by Leech Seed!`);
       if (f.hp < f.max && !f.v.hblock) { f.hp = Math.min(f.max, f.hp + d); ev.push({ t: 'heal', side: o, hp: f.hp }); }
       if (b.hp <= 0) continue;
     }
-    if (b.status === 'psn') { hurt(s, b, b.tox ? b.max * Math.min(15, b.tox++) / 16 : b.max / 8, `${N} is hurt by poison!`); if (b.hp <= 0) continue; }
-    if (b.status === 'brn') { hurt(s, b, b.max / 8, `${N} is hurt by its burn!`); if (b.hp <= 0) continue; }
-    if (V.night && b.status === 'slp') { hurt(s, b, b.max / 4, `${N} is locked in a nightmare!`); if (b.hp <= 0) continue; }
-    if (V.curse) { hurt(s, b, b.max / 4, `${N} is afflicted by the curse!`); if (b.hp <= 0) continue; }
-    if (V.trap) { if (--V.trap <= 0) say(`${N} was freed from ${V.trapn}!`); else { hurt(s, b, b.max / 16, `${N} is hurt by ${V.trapn}!`); if (b.hp <= 0) continue; } }
-    if (V.yawn && --V.yawn <= 0 && ailOk(b, 'slp') && !sd.safe) { b.status = 'slp'; b.slp = 1 + rnd(3); ev.push({ t: 'status', side: s, st: 'slp', fx: 'slp' }); say(`${N} fell asleep!`); }
+    if (b.status === 'psn') { hurt(s, b, b.tox ? mx(b) * Math.min(15, b.tox++) / 16 : mx(b) / 8, `${N} is hurt by poison!`); if (b.hp <= 0) continue; }
+    if (b.status === 'brn') { hurt(s, b, mx(b) / 8, `${N} is hurt by its burn!`); if (b.hp <= 0) continue; }
+    if (V.night && b.status === 'slp') { hurt(s, b, mx(b) / 4, `${N} is locked in a nightmare!`); if (b.hp <= 0) continue; }
+    if (V.curse) { hurt(s, b, mx(b) / 4, `${N} is afflicted by the curse!`); if (b.hp <= 0) continue; }
+    if (V.trap) { if (--V.trap <= 0) say(`${N} was freed from ${V.trapn}!`); else { hurt(s, b, mx(b) / 16, `${N} is hurt by ${V.trapn}!`); if (b.hp <= 0) continue; } }
+    if (V.yawn && --V.yawn <= 0 && ailOk(b, 'slp') && !sd.safe) { b.status = 'slp'; b.slp = 1 + rnd(3); ev.push({ t: 'status', side: s, st: 'slp', fx: 'slp' }); say(`${N} fell asleep!`); lumCheck(B, s, ev); }
     if (V.perish) { V.perish--; say(`${N}'s perish count fell to ${V.perish}!`); if (!V.perish) { b.hp = 0; ev.push({ t: 'hit', side: s, hp: 0, e: 1, quiet: 1 }); settle(B, ev); continue; } }
     if (V.taunt && --V.taunt <= 0) say(`${N}'s taunt wore off!`);
     if (V.enc && --V.enc.n <= 0) { V.enc = null; say(`${N}'s encore ended!`); }
@@ -669,6 +723,7 @@ function endTurn(B, ev) {
     else if (ba === 'shedskin' && b.status && Math.random() < 0.33) { b.status = ''; b.tox = 0; ev.push({ t: 'status', side: s, st: '' }); abSay(ev, s, b, `${N}'s Shed Skin cured its status!`); }
     else if (ba === 'baddreams' && f.hp > 0 && f.status === 'slp') { abSay(ev, s, b); hurt(o, f, f.max / 8, `${nmOf(o, f)} is tormented!`); }
     if (V.slow && --V.slow <= 0) say(`${N} finally got its act together!`);
+    berryCheck(B, s, ev);
     V.t = (V.t || 0) + 1;
   }
   for (const s of ['me', 'foe']) { const sd = B.sd[s]; for (const [k, x] of [['ref', 'Reflect'], ['ls', 'Light Screen'], ['safe', 'Safeguard'], ['mist', 'Mist'], ['tail', 'Tailwind'], ['lucky', 'Lucky Chant']]) if (sd[k] && --sd[k] <= 0 && !B.over) say(`${s === 'me' ? 'Your' : "The foe's"} ${x} wore off!`); }
@@ -689,7 +744,7 @@ function estDmg(B, u, t, m) {
   m = mvEff(B, u, m);
   if (FIXED[m[0]]) return typeEff(m[1], t) === 0 && m[0] !== 'Bide' ? 0 : FIXED[m[0]](u, t, B) || 0;
   if (typeEff(m[1], t) === 0 || abImm(u, t, m)) return 0;
-  if (m[6] === 9) return u.lv >= t.lv ? t.hp * 0.3 : 0;
+  if (m[6] === 9) return u.lv >= t.lv && !t.big ? t.hp * 0.3 : 0;
   let d = dmgOf(B, u, t, m, powOf(B, u, t, m, 1), false, false) * hitsFor(B, u, m, true) * (m[3] ? m[3] / 100 : 1);
   if (CHARGE[m[0]] || RECHARGE.has(m[0])) d *= 0.6;
   if (m[0] === 'Focus Punch') d *= 0.4;

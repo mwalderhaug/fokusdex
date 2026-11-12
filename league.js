@@ -433,6 +433,36 @@ function ringAward(ci, res) {
   S.ring = 1; S.items.mstone = (S.items.mstone || 0) + 1; res.ring = 1;
   res.perks.push('You earned the Mega Ring, and a Mega Stone to go with it.');
 }
+/* SJELDNE PREMIER fra de to vanskeligste, Champion og Supreme Boss (ligaen, Battle Frontier og turneringen). Hver seier gir én trekning, i tillegg til
+   alt klassen ellers gir. RAREP = sjansen for at det blir noe (Champion, Supreme Boss). Hva det blir, trekkes etter vektene i RAREW:
+     purse  pengepungen: kampene NESTE kampdag betaler PURSEM ganger så mange mynter (S.purse; purseOpen slår den på når den dagen åpnes)
+     gold   en pose mynter: RAREGOLD ganger det kampen betalte
+     gear   en varig gjenstand å holde som du ikke eier fra før (de dyreste først), ellers en plate
+     lure   en Prism Lure: neste raid er shiny 1 av 5
+     master en Master Ball
+     shiny  en shiny Pokémon venter i gresset
+   Passer ikke premien (du har alt en Master Ball, en Prism Lure er alt i bruk, eller en pung venter alt), blir det en pose mynter. */
+const RAREP = [0.25, 0.6], RAREW = [['purse', 28], ['gold', 26], ['gear', 24], ['lure', 8], ['master', 7], ['shiny', 7]], PURSEM = 1.5, RAREGOLD = 2;
+const purseM = () => (S.purse && S.purse.day && S.purse.day === S.lad.day ? S.purse.m : 1);
+/* En kampdag åpnes: en pung som venter (vunnet en tidligere dag), gjelder i dag. En som alt er brukt en annen dag, er tom. */
+function purseOpen() { const p = S.purse, d = S.lad.day; if (!p || !d) return; if (!p.day) { if (p.from !== d) p.day = d; } else if (p.day !== d) S.purse = null; }
+function rarePrize(ci, res) {
+  if (ci < 8 || Math.random() >= RAREP[ci - 8]) return '';
+  let x = Math.random() * RAREW.reduce((a, w) => a + w[1], 0), k = 'gold'; for (const w of RAREW) { x -= w[1]; if (x <= 0) { k = w[0]; break; } }
+  if ((k === 'master' && S.items.master >= 1) || (k === 'lure' && S.prism) || (k === 'purse' && S.purse && !S.purse.day)) k = 'gold';
+  const who = ci === 9 ? 'Supreme Boss' : 'Champion';
+  if (k === 'purse') { S.purse = { m: PURSEM, day: '', from: S.lad.day || dayKey() }; res.perks.push(`A rare prize: the ${who}'s purse. Your next battle day pays ${Math.round((PURSEM - 1) * 100)} % more coins.`); }
+  else if (k === 'gold') { const c = Math.round((res.coins || 0) * RAREGOLD); S.coins += c; res.coins = (res.coins || 0) + c; res.perks.push(`A rare prize: a bag of ${c.toLocaleString('en-US')} coins.`); }
+  else if (k === 'gear') {
+    const free = g => Object.keys(HELD).filter(x => HELD[x].g === g && !heldTotal(x)), gear = free('gear').sort((a, b) => HELD[b].p - HELD[a].p), pl = free('plate');
+    const it = gear.length ? gear[rnd(Math.min(3, gear.length))] : pl.length ? pl[rnd(pl.length)] : 'p' + (1 + rnd(17));
+    S.items[it] = (S.items[it] || 0) + 1; res.items.push(HELD[it].n); res.perks.push(`A rare prize: ${/^[AEIOU]/.test(HELD[it].n) ? 'an' : 'a'} ${HELD[it].n} for a Pokémon to hold.`);
+  }
+  else if (k === 'lure') { S.prism = 1; res.perks.push('A rare prize: a Prism Lure. Your next legendary raid has a 1 in 5 chance of being shiny.'); }
+  else if (k === 'master') { S.items.master = 1; res.items.push('1 × Master Ball'); res.perks.push('A rare prize: a Master Ball.'); }
+  else { const e = genEnc({ luck: 2, min: 2 }); e.sh = 1; pushEnc(res, e); res.perks.push('A rare prize: a shiny Pokémon is waiting in the grass.'); }
+  res.rare = k; return k;
+}
 /* Det en kamp trenger å vite om treneren. k = klassen, i = hvem i klassen. int = hvor mye show kampen får (0 til 8, følger klassen).
    ultra = de sjeldne (klasse 7 til 9), gold = bare klasse 9. sc/th/cc = egen bane, eget tema og egen farge (mesterne har hver sin). */
 function trainerOf(k, i, x) {
@@ -537,9 +567,9 @@ function finishLeague(B) {
   if (win) {
     /* Rare Candy fra ligaen er skåret ned (LGCANDY) og følger fokustiden og vanskelighetsgraden (candyRoll): brøkdelen som blir igjen, er sjansen for én til. */
     const bm = B.boost.mode === 'league', give = (it, n) => { if (it === 'candy') n = candyRoll(n * LGCANDY); if (n > 0) { S.items[it] = (S.items[it] || 0) + n; res.items.push(`${n} × ${SHOP[it].n}`); } };
-    const fw = firstWin(); res.coins = Math.round(LGCOIN * st.coin * (B.dc || 1) * B.sm * lapCoin(B.lap) * (fw ? 2 : 1)) + B.pay; S.coins += res.coins;
+    const fw = firstWin(); res.coins = Math.round(LGCOIN * st.coin * (B.dc || 1) * B.sm * lapCoin(B.lap) * (fw ? 2 : 1) * purseM()) + B.pay; S.coins += res.coins;
     if (fw) { L.fw = L.day || dayKey(); res.perks.push('First win of the day: double coins.'); }
-    classLoot(B, res, give); ringAward(clsI(k), res); evPerk(res);
+    classLoot(B, res, give); ringAward(clsI(k), res); rarePrize(clsI(k), res); evPerk(res);
     if (evIs('lucky') && B.tr.boss) { pushEnc(res, genEnc({ ty: [B.tr.ty], min: 2, luck: 1.5 })); res.perks.push('Lucky Day: one more encounter.'); }
     if (bm && B.tr.boss && Math.random() < 0.5) give('candy', 1);
     /* Byttetilbud: tilfeldig, ikke hver gang (rivaler tilbyr oftest). Den du får, er på ditt nivå og i den formen nivået tillater. */
@@ -563,7 +593,7 @@ function finishLeague(B) {
 }
 /* Bytte etter en boss: du gir fra deg en fra laget og får en av deres. Sier du nei, får du et møte i stedet. */
 function doTrade(x, mine) {
-  const i = S.party.indexOf(mine.u); unbond(mine);
+  const i = S.party.indexOf(mine.u); unbond(mine); dropHeld(mine);
   S.mons = S.mons.filter(m => m !== mine); S.party = S.party.filter(u => u !== mine.u);
   const m = addMon(x.id, x.lv, 0, 0, x.g); m.iv = x.iv; m.nat = x.nat;
   S.party = S.party.filter(u => u !== m.u); S.party.splice(i < 0 ? S.party.length : i, 0, m.u);
@@ -662,7 +692,7 @@ function finishFactory(B) {
   const sm = B.sm, bm = B.boost.mode === 'factory' ? B.boost.m : 1, r = R.round, roll = p => Math.random() < p * bm;
   const give = (it, n) => { if (it === 'candy') n = candyRoll(n); if (n > 0) { S.items[it] = (S.items[it] || 0) + n; res.items.push(`${n} × ${SHOP[it].n}`); } };
   R.w++; R.streak++; res.w = R.w; res.streak = R.streak; S.fac.best = Math.max(S.fac.best || 0, R.streak);
-  res.coins = Math.round(FACCOIN * (30 + 12 * R.w + 15 * (r - 1)) * sm * (B.dc || 1)) + B.pay; S.coins += res.coins; evPerk(res);
+  res.coins = Math.round(FACCOIN * (30 + 12 * R.w + 15 * (r - 1)) * sm * (B.dc || 1) * purseM()) + B.pay; S.coins += res.coins; evPerk(res);
   modeXp(res, 4, FACXP * (R.w >= FACN ? 1.5 : 1) * (1 + 0.08 * Math.min(4, r - 1)), xpMult() * diff().xp * (B.boost.mode === 'factory' ? B.boost.xp : 1));
   if (roll(0.4)) give(r >= 3 ? 'ultra' : r >= 2 ? 'great' : 'poke', r >= 2 ? 1 : 2);
   if (R.w === 2) pushEnc(res, genEnc({ min: 1, luck: 1 }));
@@ -675,7 +705,7 @@ function finishFactory(B) {
     if (r >= 3 && roll(0.12)) pushEnc(res, legEnc());
     /* Sjelden boss: klassens egen belønning på toppen, som i ligaen. */
     { const bonus = Math.round(FACROUND(r) * sm * (B.dc || 1)); res.coins += bonus; S.coins += bonus; res.perks.push(`Round ${r} cleared: ${bonus.toLocaleString('en-US')} coins on top.`); }
-    if (B.tr.ultra) { const c = B.tr.ci, extra = Math.round([600, 1000, 2000][c - 7] * sm * (B.dc || 1)); res.coins += extra; S.coins += extra; rareLoot(c, res, give, [B.tr.ty]); ringAward(c, res); res.note = `${B.tr.cn}: extra rewards.`; }
+    if (B.tr.ultra) { const c = B.tr.ci, extra = Math.round([600, 1000, 2000][c - 7] * sm * (B.dc || 1)); res.coins += extra; S.coins += extra; rareLoot(c, res, give, [B.tr.ty]); ringAward(c, res); rarePrize(c, res); res.note = `${B.tr.cn}: extra rewards.`; }
     res.roundDone = true; raidRoll(RAIDWIN); raidUnhide(); S.fac.keep = R.team.map(x => ({ id: x.id, sh: x.sh || 0, iv: (x.iv || []).slice(), nat: x.nat || 0 })); res.keep = 1; R.round++; R.w = 0; R.team = null; R.offer = facOffer(R.round); R.open = 0;
   } else res.swap = B.foe.map(f => f.src);
   R.foe = null;
@@ -760,7 +790,7 @@ function finishPwt(B) {
   if (!R) return res;
   const c = CUPS[R.wd];
   if (!win) { P.run = null; res.note = `You are out of the ${c.n}. A new cup opens after your next day of focus.`; raidUnhide(); save(); return res; }
-  res.coins = Math.round(PWTCOIN[R.r] * c.f * B.sm * (B.dc || 1)); S.coins += res.coins; ringAward(clsI(B.k), res); evPerk(res);
+  res.coins = Math.round(PWTCOIN[R.r] * c.f * B.sm * (B.dc || 1) * purseM()); S.coins += res.coins; ringAward(clsI(B.k), res); rarePrize(clsI(B.k), res); evPerk(res);
   modeXp(res, R.n, PWTXP * [1, 1.3, 1.7][Math.min(2, R.r)] * Math.sqrt(c.f), xpMult() * diff().xp * (dayBoost().mode === 'pwt' ? dayBoost().xp : 1));
   R.r++; R.foe = null;
   /* Finaleplassen gir en Rare Candy, og vinneren PWTCANDY til. */
@@ -895,8 +925,8 @@ const LEG = {}; LEGD.split('|').forEach(r => { const q = r.split(','); LEG[+q[0]
         og hver gang Mewtwo viser seg, er det DARKP sjanse for at den blir til Dark Mewtwo foran øynene dine.
    BELØNNING: mynter (RAIDCOIN × vanskelighetsgrad), Rare Candy (RAIDCANDY), mye XP til hele laget, og den legendariske selv: seieren er fangsten
    (raidCatch). Før måtte den fanges med kast etterpå, og da slapp fire av ti unna etter et vunnet raid. */
-const RAIDLV = [75, 88, 82, 96, 100], RAIDHP = [2.4, 3.2, 2.8, 3.4, 4.4], RAIDCOIN = [1800, 3800, 2700, 7500, 12000], RAIDCANDY = [3, 5, 4, 8, 10], RAIDOFF = [8, 12, 10, 13, 16], RAIDREL = [0.22, 0.32, 0.27, 0.36, 0.45], RAIDCAPHP = 0.025;
-const RAIDTRIES = 2, RAIDP0 = 0.08, RAIDPITY = 0.035, RAIDWIN = 0.25, RAIDCOOL = 3, MEWP = 0.08, DARKP = 0.3;
+const RAIDLV = [75, 88, 82, 96, 100], RAIDHP = [2.4, 3.2, 2.8, 3.4, 3.6], RAIDCOIN = [1800, 3800, 2700, 7500, 12000], RAIDCANDY = [3, 5, 4, 8, 10], RAIDOFF = [8, 12, 10, 13, 16], RAIDREL = [0.22, 0.32, 0.27, 0.36, 0.45], RAIDCAPHP = 0.025;
+const RAIDTRIES = 2, RAIDP0 = 0.08, RAIDPITY = 0.035, RAIDWIN = 0.25, RAIDCOOL = 3, MEWP = 0.08, MEWP1 = 0.16, DARKP = 0.3;
 /* De sterkeste viser seg bare for lag som kan gi dem kamp: de mytiske fra lagnivå 25, de største fra 35, og Arceus og Deoxys fra 45. (Dark Mewtwo kommer bare ut av en slått Mewtwo.) */
 const RAIDGATE = [0, 35, 25, 45, 45];
 /* Nivået den ville hatt uten tak: laget ditt + RAIDOFF nivåer, eller + RAIDREL i andel (det som er høyest, så den står like langt over et sterkt lag som
@@ -905,7 +935,9 @@ const RAIDGATE = [0, 35, 25, 45, 45];
 const raidWant = t => { const l = leagueLv(); return Math.round(Math.max(l + RAIDOFF[t - 1], l * (1 + RAIDREL[t - 1]))); };
 const raidCap = t => Math.min(100, RAIDLV[t - 1] + 3 * Math.min(5, S.lad.lap || 0));
 const raidLvFor = t => Math.max(15, Math.min(raidCap(t), raidWant(t)));
-const raidHx = t => 1 + RAIDCAPHP * Math.max(0, raidWant(t) - Math.max(15, raidCap(t)));
+/* Dark Mewtwo (5) får ikke dette tillegget: den står alltid på toppnivået sitt, og med tillegget hadde den nær ti ganger vanlig HP mot et lag på
+   nivå 100. Da var den umulig for alle, uansett lag. Nå er den RAIDHP[4] ganger vanlig HP, og fortsatt den hardeste i spillet. */
+const raidHx = t => t === 5 ? 1 : 1 + RAIDCAPHP * Math.max(0, raidWant(t) - Math.max(15, raidCap(t)));
 /* Dark Mewtwo (Shadow Mewtwo i Pokkén Tournament, «Dark Mewtwo» på japansk): den sjeldneste og sterkeste av alle. Samme art som Mewtwo, men mørk (sh: 2),
    på et høyere nivå enn Arceus og med mer HP. Den finnes ikke som eget raid: den er RUNDE TO. Slår du Mewtwo i et raid, er det DARKP sjanse for at den
    reiser seg igjen som Dark Mewtwo (finishRaid). Da har du fått belønningen for Mewtwo, laget ditt er friskt igjen (en ny kamp), og du må slåss en gang til,
@@ -918,20 +950,36 @@ const raidInfo = R => R && R.dk ? DARK : R ? LEG[R.id] : null;
 const raidShow = R => ({ L: raidInfo(R), n: R.dk ? DARK.n : D(R.id)[0], sh: R.dk ? 2 : R.sh ? 1 : 0, lv: R.lv });
 const raidTitle = (id, dk) => dk ? DARK.title : id === 493 ? 'The Original One' : LEG[id].t === 3 || id === 386 ? 'Mythical Pokémon' : 'Legendary Pokémon';
 const legOwn = id => S.mons.some(m => m.id === id) || (S.pend || []).some(e => e.id === id);
+/* HVEM SOM KOMMER, følger samlingen din (legN = antall legendariske arter du eier):
+   - Klassene veies etter RAIDW0 når du ikke eier noen, og etter RAIDW1 når du eier RAIDFAR arter eller flere, jevnt imellom: de vanlige og de mytiske
+     viker for de største og for Arceus og Deoxys, så du bygger deg gradvis opp mot dem. Klasse 4 har i tillegg sin egen ventetid (S.rpity) som før.
+   - Lagnivået må være høyt nok for klassen (RAIDGATE); ellers går vekten til klassen under.
+   - Innen klassen: aldri en du har (eller som venter i gresset) så lenge det finnes en ny. En klasse du har ALLE i, gir plassen sin til de klassene der
+     du mangler noen, så langt ute er det nesten bare de største igjen. Først når du eier alle, kommer de om igjen (Mewtwo ikke, om du har den mørke).
+   - Mewtwo sin egen trekning (til du har den mørke) går fra MEWP til MEWP1 på samme måte.
+   - DET FØRSTE RAIDET (S.humb) er Mewtwo eller Arceus, uansett lagnivå, og det kommer tidlig (HUMBDAY studiedager): man skal møte veggen først.
+     Etterpå er alt som beskrevet over. Den som alt har vunnet et raid, er forbi dette. */
+const RAIDW0 = [0, 57, 18, 22, 3], RAIDW1 = [0, 30, 42, 16, 12], RAIDFAR = 24, HUMBDAY = 3, HUMB = [150, 493];
+const legN = () => Object.keys(LEG).filter(id => S.mons.some(m => m.id === +id)).length;
+const raidFar = () => Math.min(1, legN() / RAIDFAR);
 function raidPick() {
-  const p4 = Math.min(0.25, 0.03 + 0.006 * (S.rpity || 0)), r = Math.random(), lv = leagueLv(), all = Object.keys(LEG).map(Number);
-  let t = r < p4 ? 4 : r < p4 + 0.18 ? 2 : r < p4 + 0.4 ? 3 : 1;
-  if (t === 4 && lv < RAIDGATE[3]) t = 2; if (t === 2 && lv < RAIDGATE[1]) t = 3; if (t === 3 && lv < RAIDGATE[2]) t = 1;
-  /* Innen klassen: aldri en du har (eller som venter i gresset) så lenge det finnes en ny. Har du alle i klassen, blir det en av dem om igjen. Klassen
-     byttes aldri: Arceus og de største er verken vanligere eller sjeldnere av at samlingen vokser, men den neste er nesten alltid ny. (Før ga en
-     komplett klasse en vilkårlig vanlig legendarisk, så en trekning på de største kunne ende som en av de vanlige.) */
-  const inT = all.filter(id => LEG[id].t === t), c = inT.filter(id => !legOwn(id));
-  const l = c.length ? c : inT.length ? inT : all.filter(id => LEG[id].t === 1); return l[rnd(l.length)];
+  const p = raidFar(), lv = leagueLv(), all = Object.keys(LEG).map(Number), w = [0, 1, 2, 3, 4].map(t => RAIDW0[t] + (RAIDW1[t] - RAIDW0[t]) * p);
+  w[4] = Math.min(25, w[4] + 0.6 * (S.rpity || 0));
+  if (lv < RAIDGATE[3]) { w[2] += w[4]; w[4] = 0; } if (lv < RAIDGATE[1]) { w[3] += w[2]; w[2] = 0; } if (lv < RAIDGATE[2]) { w[1] += w[3]; w[3] = 0; }
+  const inT = t => all.filter(id => LEG[id].t === t), fresh = t => inT(t).filter(id => !legOwn(id));
+  const open = [1, 2, 3, 4].filter(t => w[t] > 0 && fresh(t).length), use = open.length ? open : [1, 2, 3, 4].filter(t => w[t] > 0);
+  let x = Math.random() * use.reduce((a, t) => a + w[t], 0), t = use[use.length - 1];
+  for (const k of use) { x -= w[k]; if (x <= 0) { t = k; break; } }
+  /* Har du den mørke, er historien om Mewtwo ferdig: den kommer ikke igjen, heller ikke når alt er samlet. */
+  const c = fresh(t), again = inT(t).filter(id => !(id === 150 && hasDark())), pick = c.length ? c : again.length ? again : inT(t);
+  return pick[rnd(pick.length)];
 }
 /* En trekning om en legendarisk viser seg. Uten p: dagens trekning (RAIDP0 + RAIDPITY for hver studiedag utover RAIDCOOL siden forrige raid; S.rwait
    teller studiedagene og økes i grant). Med p: en ekstra trekning med den sjansen (en vunnet runde), men heller ikke den før RAIDCOOL dager er gått. */
 function raidRoll(p) {
   if (S.raid || !S.party.length) return false;
+  /* Det første raidet kommer tidlig, uten trekning. */
+  if (!S.humb && (S.rwait || 0) >= HUMBDAY) return raidSpawn();
   const w = (S.rwait || 0) - RAIDCOOL - (diff().rc || 0); if (w < 0) return false;
   return Math.random() < (p != null ? p : RAIDP0 + RAIDPITY * w) * (diff().rf || 1) ? raidSpawn() : false;
 }
@@ -946,7 +994,9 @@ function raidSpawn(res) {
   if (S.raid) return false;
   const lv = leagueLv();
   /* Mewtwo har sin egen trekning (MEWP) helt til du eier Dark Mewtwo, også om du alt har den vanlige: det er bare gjennom den du kan møte den mørke. */
-  const id = !hasDark() && lv >= RAIDGATE[1] && Math.random() < MEWP ? 150 : raidPick(), t = LEG[id].t;
+  let first = 0;
+  if (!S.humb) { S.humb = 1; const two = HUMB.filter(x => !legOwn(x)); if (!(S.st && S.st.rw > 0) && two.length) first = two[rnd(two.length)]; }
+  const id = first || (!hasDark() && lv >= RAIDGATE[1] && Math.random() < MEWP + (MEWP1 - MEWP) * raidFar() ? 150 : raidPick()), t = LEG[id].t;
   S.rpity = t >= 4 ? 0 : (S.rpity || 0) + 1;
   /* hid = ikke vist ennå: den viser seg først når dagens kamper er spilt, simulert eller hoppet over (raidUnhide), som en overraskelse.
      sh = shiny: 1 av SHINYN, eller PRISMP når en Prism Lure er kjøpt (den brukes opp her). */
@@ -1022,6 +1072,10 @@ function legTr(id, dk) {
 /* Den helbreder seg heller ikke: med flere ganger så mye HP som en vanlig Pokémon ville Rest eller Recover gjort kampen håpløs. */
 const SELFKO = new Set(['Explosion', 'Self-Destruct', 'Final Gambit', 'Memento', 'Healing Wish', 'Lunar Dance', 'Destiny Bond', 'Perish Song',
   'Rest', 'Recover', 'Roost', 'Soft-Boiled', 'Synthesis', 'Moonlight', 'Morning Sun', 'Milk Drink', 'Slack Off', 'Heal Order', 'Wish', 'Swallow', 'Pain Split', 'Leech Seed', 'Ingrain', 'Aqua Ring']);
+/* Dark Mewtwo har sitt eget sett: Psystrike, Shadow Ball, Aura Sphere og Dark Pulse treffer alle typer med minst ett angrep. Med det arten lærer av seg
+   selv (Future Sight, Aura Sphere, Swift, Psystrike) var en Ghost/Dark-type som Sableye helt urørlig, og den sterkeste i spillet kunne bare stå og se på. */
+const DKMOVES = ['Psystrike', 'Shadow Ball', 'Aura Sphere', 'Dark Pulse'];
+const dkMoves = () => { const l = DKMOVES.map(n => MOVES.findIndex(m => m[0] === n)).filter(i => i >= 0); return l.length === 4 ? l : null; };
 function raidMoves(id, lv) {
   /* Og den bygger seg ikke opp med Cosmic Power, Calm Mind og lignende: den angriper. */
   const ok = x => { const m = MOVES[x]; return !SELFKO.has(m[0]) && !(m[4] === 0 && m[17] === 1 && m[12].length); }, mv = foeMoves(id, lv, 2).filter(ok);
@@ -1036,10 +1090,10 @@ function raidBattle(lead, demo) {
   /* Hvem som venter, er hemmelig til filmen har gått: fra første forsøk er den kjent (R.seen), og kortet viser den. */
   if (!demo && S.raid && !S.raid.seen) { S.raid.seen = 1; save(); }
   /* Vanskelighetsgraden senker nivået og HP-en til den legendariske (Hard = som før). */
-  const dd = diff(), lv = Math.max(10, Math.round(R.lv * dd.rlv)), e = Math.round((R.dk ? 85 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : R.sh ? 1 : 0, g: rollG(R.id), mega: defForm(R.id), ms: raidMega(R), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: raidMoves(R.id, lv) };
+  const dd = diff(), lv = Math.max(10, Math.round(R.lv * dd.rlv)), e = Math.round((R.dk ? 85 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : R.sh ? 1 : 0, g: rollG(R.id), mega: defForm(R.id), ms: raidMega(R), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: (R.dk && dkMoves()) || raidMoves(R.id, lv) };
   const B = mkBattle(demo ? party : party.map(evSrc), [foe], legTr(R.id, R.dk), { mode: demo ? 'lab' : 'raid', raid: 1, st: TCL.supreme, k: 'legend', rd: 0, n: 0, lap: 0, ti: 0, bag: bagN(), xm: 3 * dd.xp, sm: 1, dc: dd.coin, boost: { mode: '', m: 1, xp: 1 } });
   B.tr.skill = dd.sk; if (demo) labMega(B); else evApply(B);
-  const f = B.foe[0]; f.max = f.hp = Math.round(f.max * RAIDHP[L.t - 1] * dd.rhp * (R.hx || 1)); if (R.dk) f.short = 'D.Mewtwo';
+  const f = B.foe[0], big = RAIDHP[L.t - 1] * dd.rhp * (R.dk ? 1 : R.hx || 1); f.max = f.hp = Math.round(f.max * big); f.big = big; if (R.dk) f.short = 'D.Mewtwo';
   return B;
 }
 function finishRaid(B) {
@@ -1052,6 +1106,8 @@ function finishRaid(B) {
     if (t >= 4) giveCharm(res);
     /* Mega: en vanlig stein fra de store (noen ganger fra de vanlige legendariske), og den legendariskes egen stein første gang den slås. */
     if (t >= 2 || Math.random() < 0.25) { S.items.mstone = (S.items.mstone || 0) + 1; res.items.push('1 × Mega Stone'); }
+    /* Plata til typen den legendariske har (den mørke: Dread Plate; de av Normal-type, som Arceus: en tilfeldig). */
+    { const ty = B.tr.dk ? 16 : D(id)[1], pk = 'p' + (ty > 0 ? ty : 1 + rnd(17)); S.items[pk] = (S.items[pk] || 0) + 1; res.items.push(HELD[pk].n); }
     if (megaOpts(id).length && !hasStone(id)) { (S.lst || (S.lst = {}))[id] = 1; res.items.push(legStone(id).replace(/^the /, '')); res.perks.push(`You found ${legStone(id)}. Every ${D(id)[0]} you own can now ${id === 382 || id === 383 ? 'revert to its primal form' : 'Mega Evolve'} in battle${S.ring ? '' : ', once you have the Mega Ring'}.`); }
     if (id === 150 && !B.tr.dk && R && !hasDark() && Math.random() < DARKP) {
       /* Den reiser seg igjen. Belønningen for Mewtwo er gitt; r1 husker den til oppsummeringen etter runde to. */

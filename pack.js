@@ -317,7 +317,7 @@ const PACK = (() => {
   P.prep = async B => {
     if (!(await P.init())) return;
     const jobs = [loadAnims(), loadEbx()];
-    const tk = P.trackFor(B); if (tk) P.cue(tk);
+    const tk = B.clip ? '' : P.trackFor(B); if (tk) P.cue(tk);
     const it = B.tr.ultra && B.mode !== 'fac' ? P.introFor(B) : ''; if (it) P.cue(it);
     if (B.tr.wild && typeof CINE !== 'undefined') CINE.prep(B.tr.dk ? 'dk' + B.tr.leg : B.tr.leg, 6000);
     if (B.tr.dk) { const v = P.special(/Villain/); if (v) P.cue(v); }
