@@ -186,19 +186,52 @@ const PACK = (() => {
   }
   /* Gjør en låt klar på forhånd, så den starter med en gang når kampen begynner. */
   P.cue = path => { if (path && S.sound && S.music !== 0) decode(path); };
+  /* Sløyfa. Låtene er klipp av spillmusikk: en intro, og så en runde som gjentas. Manifestet kan si hvor runden begynner og slutter
+     (l: [start, slutt] i sekunder, x: sekunder overgang), funnet ved å lete etter stedet der lyden gjentar seg selv. Da hopper spilleren
+     tilbake dit uten at det høres, og introen spilles bare første gang. Uten slike punkter spilles hele låta om igjen, men slutten glir
+     over i begynnelsen i stedet for å stoppe brått. Overgangen skrives inn i den dekodede lyden én gang: de siste sekundene før
+     sløyfeslutten tones over i de siste sekundene før sløyfestarten, så det som kommer etter hoppet, følger rett på. */
+  function loopPrep(path, d) {
+    if (d._lp) return d._lp;
+    const e = ent(path), sr = d.sampleRate, n = d.length; let S0, E, N, pow = false;
+    if (e && e.l && e.l[1] - e.l[0] > 8 && e.l[0] >= 0.3 && Math.round(e.l[1] * sr) <= n) { S0 = Math.round(e.l[0] * sr); E = Math.round(e.l[1] * sr); N = Math.round((e.x || 0.05) * sr); }
+    else {
+      const ch = d.getChannelData(0); let last = n - 1, first = 0;
+      while (last > sr && Math.abs(ch[last]) < 0.004) last--;
+      while (first < n - sr && Math.abs(ch[first]) < 0.004) first++;
+      if ((last - first) / sr < 12) return (d._lp = { ls: 0, le: d.duration });
+      N = Math.round(Math.min(3, (last - first) / sr / 8) * sr); E = last; S0 = first + N; pow = true;
+    }
+    N = Math.max(0, Math.min(N, S0, E - S0 - 1));
+    for (let c = 0; c < d.numberOfChannels; c++) {
+      const ch = d.getChannelData(c);
+      for (let i = 0; i < N; i++) { const w = (i + 1) / (N + 1), a = E - N + i, b = S0 - N + i; ch[a] = pow ? ch[a] * Math.cos(w * Math.PI / 2) + ch[b] * Math.sin(w * Math.PI / 2) : ch[a] * (1 - w) + ch[b] * w; }
+    }
+    return (d._lp = { ls: S0 / sr, le: E / sr });
+  }
+  /* Til testene: sløyfepunktene som brukes, og den dekodede lyden. */
+  P.loopOf = path => { const d = dec.get(path); return d && d._lp ? d._lp : null; };
+  P.bufOf = path => dec.get(path) || null;
   function startBuf(d, o) {
     try {
       const a = ac(); if (!a) return false;
       const s = a.createBufferSource(), g2 = a.createGain(), v = Math.min(1, mvol() * (o.tg || 1)), t = a.currentTime;
-      s.buffer = d; s.loop = o.loop !== false; s.connect(g2); g2.connect(a.destination);
+      if (o.loop !== false) { let lp = null; try { lp = loopPrep(o.path || '', d); } catch (_) {} s.buffer = d; s.loop = true; if (lp && lp.le > lp.ls) { s.loopStart = lp.ls; s.loopEnd = lp.le; } }
+      else s.buffer = d;
+      s.connect(g2); g2.connect(a.destination);
       if (o.fade) { g2.gain.setValueAtTime(Math.max(0.0001, v * (o.from || 0)), t); g2.gain.linearRampToValueAtTime(v, t + o.fade); } else g2.gain.setValueAtTime(v, t);
       s.start(0, Math.max(0, Math.min(d.duration - 0.2, o.at || 0)));
       return { s, g: g2, t0: t };
     } catch (_) { return null; }
   }
+  /* En lang uttoning (etter en kamp) dukker først raskt, så seierslyden slipper til, og klinger så ut. */
   function fadeOut(h, sec) {
     if (!h) return;
-    try { const t = AC.currentTime, f = Math.max(0.03, sec); h.g.gain.cancelScheduledValues(t); h.g.gain.setValueAtTime(Math.max(0.0001, h.g.gain.value), t); h.g.gain.linearRampToValueAtTime(0.0001, t + f); h.s.stop(t + f + 0.05); } catch (_) { try { h.s.stop(); } catch (_) {} }
+    try {
+      const t = AC.currentTime, f = Math.max(0.03, sec), v = Math.max(0.0001, h.g.gain.value); h.g.gain.cancelScheduledValues(t); h.g.gain.setValueAtTime(v, t);
+      if (f > 1) h.g.gain.linearRampToValueAtTime(v * 0.42, t + 0.4);
+      h.g.gain.linearRampToValueAtTime(0.0001, t + f); h.s.stop(t + f + 0.05);
+    } catch (_) { try { h.s.stop(); } catch (_) {} }
   }
   /* Spiller en låt i sløyfe. o.fade = sekunder den toner inn over (så den glir inn i stedet for å smelle på), o.out = sekunder den forrige toner ut over.
      Gir true når låta spiller, og false hvis den ikke finnes eller musikken er slått av. */
@@ -211,7 +244,7 @@ const PACK = (() => {
     if (!path || !S.sound || S.music === 0) return false;
     const my = job, d = await decode(path);
     if (my !== job) return cur === path;
-    const h = d && startBuf(d, Object.assign({ tg: tgain(path) }, o));
+    const h = d && startBuf(d, Object.assign({ tg: tgain(path), path }, o));
     if (h) { node = h; mode = 'wa'; return true; }
     const u = await P.url(path);
     if (my !== job || !u) return false;
@@ -226,7 +259,7 @@ const PACK = (() => {
     const re = new RegExp('(^|[^A-Za-z])' + n + '([^A-Za-z]|$)', 'i'), hit = P.man.music.find(x => x.c === 'intro' && re.test(x.t));
     return hit ? hit.f : '';
   };
-  P.sting = async (path, loop) => { const my = job, d = await decode(path); if (!d || my !== job) return false; P.stingOut(0.05); sting = startBuf(d, { loop: !!loop, tg: tgain(path) }); return !!sting; };
+  P.sting = async (path, loop) => { const my = job, d = await decode(path); if (!d || my !== job) return false; P.stingOut(0.05); sting = startBuf(d, { loop: !!loop, tg: tgain(path), path }); return !!sting; };
   P.stinging = () => !!sting;
   P.stingOut = sec => { if (sting) { fadeOut(sting, sec == null ? 1.2 : sec); sting = null; } };
   P.playing = () => !!cur;
@@ -235,6 +268,10 @@ const PACK = (() => {
   /* Sekunder siden låta som spiller nå ble startet (til å holde raid-filmene i takt med den), justert for forsinkelsen ut til høyttaleren. −1 hvis ingen låt spiller. */
   P.clock = () => { try { return node && mode === 'wa' && AC.state === 'running' ? AC.currentTime - node.t0 - (AC.outputLatency || AC.baseLatency || 0) : -1; } catch (_) { return -1; } };
   /* Korte lyder (angrep, treff, status) dekodes og spilles gjennom appens vanlige lydutgang, så volumknappen gjelder. Gir false hvis lyden ikke er klar. */
+  /* Den siste lyden som ble startet, så angrepslyden kan klippes når animasjonen er over (sfxTrim). */
+  let last = null;
+  const sfxCut = (h, sec) => { try { const t = h.t0 + Math.max(0.15, sec); h.g.gain.cancelScheduledValues(t); h.g.gain.setValueAtTime(h.v, t); h.g.gain.linearRampToValueAtTime(0.0001, t + 0.16); h.s.stop(t + 0.2); } catch (_) {} };
+  P.sfxTrim = sec => { const h = last; if (!h || !S.bfast || typeof AC === 'undefined' || !AC || AC.currentTime - h.t0 > 0.12 || h.len <= sec + 0.2) return; sfxCut(h, sec); };
   P.sfxPath = name => (P.ok && P.man.sfx && P.man.sfx[name]) || '';
   P.warm = name => { const f = P.sfxPath(name); if (!f || bufs.has(f) || !S.sound) return; bufs.set(f, null); P.url(f).then(u => u && fetch(u)).then(r => r && r.arrayBuffer()).then(b => b && ac() && AC.decodeAudioData(b)).then(d => { if (d) bufs.set(f, d); else bufs.delete(f); }).catch(() => bufs.delete(f)); };
   P.sfx = (name, vol) => {
@@ -243,7 +280,15 @@ const PACK = (() => {
     if (!d) { P.warm(name); return false; }
     /* Lydene i pakken er tatt opp mye sterkere enn musikken. Hver lyd får derfor et tak: det sterkeste øyeblikket skal ikke ligge over SFXCAP (LUFS),
        som er så vidt over musikknivået. Svake lyder løftes ikke, så de stille effektene forblir stille. */
-    try { const o = out(); if (!o) return false; const s = AC.createBufferSource(), g = AC.createGain(), L = loudOf(d); s.buffer = d; g.gain.value = (vol == null ? 0.8 : vol) * (L > SFXCAP ? Math.pow(10, (SFXCAP - L) / 20) : 1); s.connect(g); g.connect(o); s.start(); return true; } catch (_) { return false; }
+    try {
+      const o = out(); if (!o) return false; const s = AC.createBufferSource(), g = AC.createGain(), L = loudOf(d), v = (vol == null ? 0.8 : vol) * (L > SFXCAP ? Math.pow(10, (SFXCAP - L) / 20) : 1), t = AC.currentTime;
+      /* I FAST spilles kamplydene litt raskere og får et tak på lengden, så de ikke henger igjen inn i neste trekk (sfxFast i bui.js). */
+      const F = typeof sfxFast === 'function' ? sfxFast() : null;
+      s.buffer = d; g.gain.setValueAtTime(v, t); if (F) s.playbackRate.value = F.rate; s.connect(g); g.connect(o); s.start();
+      last = { s, g, v, t0: t, len: d.duration / (F ? F.rate : 1) };
+      if (F && last.len > F.max + 0.2) sfxCut(last, F.max);
+      return true;
+    } catch (_) { return false; }
   };
   /* Gjør klart til en kamp: bane, animasjonsdata, arkene til alle angrepene på begge lag, baller og lyder. Venter høyst noen sekunder. */
   P.prep = async B => {

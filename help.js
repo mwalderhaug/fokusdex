@@ -85,7 +85,7 @@ const HELP = [
     ${hNote(`One of the three pays bonus coins each day (×${DAYCOIN}). It is shown when you choose.`)}
     ${hH('In a battle')}
     ${hRow(hSym('⚔', 'var(--red)'), 'Fight, Bag, Pokémon', 'Pick a move, use an item from the Shop, or switch to another Pokémon. The move menu shows the type and how well it will hit.')}
-    ${hRow(hSym('⏸', 'var(--ink2)'), 'Pause menu', 'Battle speed, music, and giving up are in the Pause menu.')}
+    ${hRow(hSym('⏸', 'var(--ink2)'), 'Pause menu', 'Battle speed, music, and giving up are in the Pause menu. FAST runs the battle at more than double speed, sounds included.')}
     ${hRow(hSym('⟲', 'var(--sage)'), 'A battle you leave', 'Is saved after every turn and goes on where it was. Giving up counts as a loss.')}
     ${hRow(hSym('?', 'var(--blue)'), 'Practice', 'The demo battle (Focus page or Profile) lets you try any class without rewards and without using an attempt.')}
     <div class="hmore">${hLink('events', 'Special events')}${hLink('raids', 'Legendary raids')}${hLink('bonus', 'The battle bonus')}</div>` },

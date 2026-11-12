@@ -5,7 +5,10 @@
 const BT = { B: null, busy: false, v: null, menu: 'main', res: null, ty: 0, tap: null, lead: 0, fsel: [], tp: null, fs: null };
 /* Farten i kampene: vanlig fart er satt opp en fjerdedel etter tilbakemelding om at angrepene gikk for sakte, og FAST er litt over det dobbelte.
    FXSLOW er bare til testing: et tall under 1 spiller alt i sakte film. */
-const spdF = () => (S.bfast ? 2.2 : 1.25) * (window.FXSLOW || 1);
+/* Farten i kamp. FAST er godt over det dobbelte. Lydene følger med: de innebygde krympes (SFXT), og pakkens spilles litt raskere og kuttes
+   når animasjonen er over, så ingen lyd henger igjen inn i neste trekk. */
+const spdF = () => (S.bfast ? 2.6 : 1.25) * (window.FXSLOW || 1);
+const sfxFast = () => (S.bfast && BT.B && document.getElementById('arena') ? { rate: 1.22, max: 0.9 } : null);
 const bwait = ms => new Promise(r => setTimeout(r, ms / spdF()));
 /* Hvor mye pynt en klasse får i kort og lister: vanlig trener, boss, toppboss, og de tre sjeldne som har hver sin stil:
    de onde lederne (mørkt og rødt), mesterne (hver sin farge) og de aller største (gull, bare klasse 9). */
@@ -84,6 +87,10 @@ const BSFX = {
   win: () => [523, 523, 523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.11, 0.16, 0.05, 'triangle')),
   lose: () => [392, 370, 349, 330, 262].forEach((f, i) => tone(f, i * 0.2, 0.3, 0.05, 'triangle'))
 };
+/* I FAST krympes de innebygde kamplydene like mye som animasjonene, så ingen lyd henger igjen inn i neste trekk. Seier, tap og de store
+   øyeblikkene (Mega Evolution, introer) spilles som de er. */
+{ const KEEP = new Set(['win', 'lose', 'dread', 'mega', 'megaArm', 'vs', 'ace', 'beat']);
+  for (const k of Object.keys(BSFX)) { if (KEEP.has(k)) continue; const f = BSFX[k]; BSFX[k] = (...a) => { const o = SFXT; SFXT = sfxFast() ? 0.58 : 1; try { return f(...a); } finally { SFXT = o; } }; } }
 /* Den episke introen til de sjeldne bossene (klasse 7 til 9), laget med lyd-API-et og uten lydfiler: en dyp drone som vokser, krigstrommer som tetner,
    et kor som stiger, et sus som bygger seg opp, og et drønn i det bossen viser seg. Da toner kamplåta inn over etterklangen.
    kind: 'evil' (mørk og skjev, med hjerteslag), 'champ' (staselig) eller 'ultra' (størst, med fanfare). T = sekunder fram til drønnet.
@@ -129,42 +136,19 @@ function epicIntro(kind, T, bare, key) {
     return () => { try { const t = a.currentTime; bus.gain.cancelScheduledValues(t); bus.gain.setValueAtTime(bus.gain.value, t); bus.gain.linearRampToValueAtTime(0.0001, t + 0.15); } catch (_) {} };
   } catch (_) { return () => {}; }
 }
-/* Enkel kampmusikk (beta): en liten sekvenser med bass, melodi og hi-hat. Egne lydfiler per trener kommer senere. */
-const TUNE = {
-  battle: { bpm: 152, bass: [45, 0, 45, 57, 45, 0, 45, 57, 45, 0, 45, 57, 45, 0, 45, 57, 41, 0, 41, 53, 41, 0, 41, 53, 43, 0, 43, 55, 43, 0, 43, 55], lead: [69, 72, 76, 72, 69, 72, 76, 81, 79, 76, 72, 76, 79, 76, 72, 69, 65, 69, 72, 69, 65, 69, 72, 77, 74, 71, 67, 71, 74, 71, 67, 71] },
-  boss: { bpm: 168, bass: [40, 40, 52, 40, 40, 52, 40, 47, 40, 40, 52, 40, 40, 52, 43, 45, 36, 36, 48, 36, 36, 48, 36, 43, 38, 38, 50, 38, 42, 42, 54, 47], lead: [76, 0, 79, 76, 83, 0, 79, 76, 74, 0, 76, 79, 76, 0, 71, 0, 72, 0, 76, 72, 79, 0, 76, 72, 74, 0, 78, 74, 81, 78, 83, 0] },
-  top: { bpm: 184, bass: [38, 50, 38, 50, 38, 50, 41, 53, 36, 48, 36, 48, 36, 48, 40, 52, 34, 46, 34, 46, 34, 46, 38, 50, 33, 45, 33, 45, 37, 49, 40, 52], lead: [74, 77, 81, 86, 81, 77, 74, 77, 72, 76, 79, 84, 79, 76, 72, 76, 70, 74, 77, 82, 77, 74, 70, 74, 69, 73, 76, 81, 85, 81, 88, 85], hi: 1 }
-};
-const MUS = { id: 0, t: 0, step: 0, k: '' };
-function music(k) {
-  clearInterval(MUS.id); MUS.id = 0; MUS.k = '';
-  if (!k || !S.sound || S.music === 0 || !ac()) return;
-  MUS.k = k; MUS.step = 0; MUS.t = AC.currentTime + 0.06;
-  MUS.id = setInterval(() => {
-    const T = TUNE[MUS.k], spb = 60 / T.bpm / 4, f = n => 440 * Math.pow(2, (n - 69) / 12);
-    /* Den innebygde musikken går gjennom effektutgangen, men skal følge musikkskyveren: forskjellen mellom de to skyverne legges på her. */
-    const mk = Math.min(4, Math.pow((S.mvol == null ? 70 : S.mvol) / 100, 1.6) / Math.max(0.01, Math.pow((S.vol == null ? 70 : S.vol) / 100, 1.6)));
-    while (MUS.t < AC.currentTime + 0.2) {
-      const s = MUS.step, at = Math.max(0, MUS.t - AC.currentTime), b = T.bass[s % T.bass.length], l = T.lead[s % T.lead.length];
-      if (b) tone(f(b), at, spb * 0.9, 0.035 * mk, 'triangle');
-      if (l) tone(f(l), at, spb * 0.75, 0.016 * mk, 'square');
-      if (T.hi && l) tone(f(l + 12), at, spb * 0.4, 0.007 * mk, 'square');
-      if (s % 2 === 0) noise(at, 0.03, (s % 8 === 4 ? 0.02 : 0.008) * mk, 6000, 5000);
-      MUS.t += spb; MUS.step++;
-    }
-  }, 50);
-}
-/* Hvilken musikk som hører til kampen. Her kobles egne lydfiler per trener inn senere. */
-const musicKey = B => ({ reg: 'battle', boss: 'boss', top: 'top', ultra: 'top' })[TIER(B.tr.kind)];
+/* Hvilken innebygd låt som hører til kampen (music.js har sju: én for hver type motstander). Brukes når pakken ikke har en egen låt. */
+const MKIND = { gym: 'gym', e4: 'gym', evilteam: 'evil', eviladmin: 'evil', evilboss: 'evil', rival: 'rival', champ: 'champ', supreme: 'champ', brain: 'champ', legend: 'legend' };
+const musicKey = B => MKIND[B.tr.kind] || (B.tr.fr || B.mode === 'fac' || B.mode === 'pwt' ? 'frontier' : 'trainer');
 /* Kampmusikken: trenerens egen låt fra ressurspakken hvis den finnes, ellers den innebygde. */
 async function battleMusic(B, o) {
   const tk = PACK.trackFor(B);
   if (tk && await PACK.music(tk, o)) return music('');
   if (BT.B !== B || B.over) return;
-  PACK.music(''); music(musicKey(B));
+  PACK.music(''); music(musicKey(B), o);
 }
-const stopMusic = () => { PACK.music(''); PACK.stingOut(0.2); music(''); };
-document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible') stopMusic(); else if (BT.B && !BT.B.over && $('#arena')) battleMusic(BT.B); });
+/* Musikken stopper aldri brått: den tones ut. sec = hvor lenge (kort når skjermen byttes, lang etter en kamp). */
+const stopMusic = sec => { const f = sec == null ? 0.35 : sec; PACK.music('', { out: f }); PACK.stingOut(Math.min(f, 1.2)); music('', { out: f }); };
+document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible') stopMusic(0.05); else if (BT.B && !BT.B.over && $('#arena')) battleMusic(BT.B); });
 
 /* ---------- Forsiden ---------- */
 const leagueTag = () => { const L = S.lad; return `${L.lap ? 'Lap ' + (L.lap + 1) + ' · ' : ''}Battle ${L.n + 1}/${LAPN}`; };
@@ -644,7 +628,7 @@ async function typeOut(s) {
   const el = $('#btx'), B = BT.B; if (!el) return;
   let i = 0, skip = false; BT.tap = () => { skip = true; };
   $('#btext').classList.remove('wait', 'hid');
-  while (i < s.length && !skip) { i = Math.min(s.length, i + (S.bfast ? 3 : 1)); el.textContent = s.slice(0, i); await new Promise(r => setTimeout(r, 17)); if (BT.B !== B || !el.isConnected) return; }
+  while (i < s.length && !skip) { i = Math.min(s.length, i + (S.bfast ? 4 : 1)); el.textContent = s.slice(0, i); await new Promise(r => setTimeout(r, 17)); if (BT.B !== B || !el.isConnected) return; }
   el.textContent = s; BT.tap = null;
 }
 async function say(s, hold) {
@@ -652,7 +636,7 @@ async function say(s, hold) {
   const b = $('#btext'); if (!b) return;
   if (hold) { await new Promise(r => { const id = setTimeout(r, hold / spdF()); BT.tap = () => { clearTimeout(id); r(); }; }); BT.tap = null; return; }
   b.classList.add('wait');
-  await new Promise(r => { const id = setTimeout(r, (S.bfast ? 380 : 760)); BT.tap = () => { clearTimeout(id); r(); }; });
+  await new Promise(r => { const id = setTimeout(r, (S.bfast ? 320 : 760)); BT.tap = () => { clearTimeout(id); r(); }; });
   BT.tap = null; b.classList.remove('wait');
 }
 /* Menyen under banen er bygd som den nederste skjermen i Black og White: den store ballen med FIGHT, og BAG, RUN og POKÉMON under.
@@ -898,12 +882,14 @@ async function playAnim(B, e) {
     const T = PACK.frames(an) * 50, hit = m[4] ? PACK.hitAt(an) * 50 : T;
     if (K.style === 'dash' && PACK.movesUser(an)) K.style = 'own';
     K.done = PACK.play(an, $('#axc'), { x: a.x * 2, y: a.y * 2 }, { x: b.x * 2, y: b.y * 2 }, side === 'foe', spdF(), animHooks(side, self));
+    PACK.sfxTrim(T / spdF() / 1000 + 0.15);
     launch(K, sp, d, hit);
     if (kind === 'quake' || kind === 'boom') shake(T / spdF(), kind === 'boom' ? 8 : 4 + tier * 1.5, 1);
     else if (kind === 'beam' && tier >= 2) shake(hit / spdF(), 1 + tier * 0.8, 1);
     await bwait(hit);
   } else {
     const r = FX.move(m, a, b, { roll: e.roll, self: BOOM.has(m[0]), tier, wobble: ms => wob(opp(side), ms) });
+    PACK.sfxTrim(r.ms / spdF() / 1000 + 0.15);
     launch(K, sp, d, r.hit);
     K.done = bwait(r.ms);
     await bwait(m[4] ? r.hit : r.ms);
@@ -1114,7 +1100,8 @@ async function startBattle(B) {
   BT.busy = false; setText(`What will ${B.me[B.a].name} do?`); drawMenu();
 }
 function endBattle() {
-  const B = BT.B; stopMusic(); BT.busy = false;
+  /* Kampmusikken klinger ut over et par sekunder i stedet for å stoppe: først dukker den, så seierslyden slipper til. */
+  const B = BT.B; stopMusic(2.6); BT.busy = false;
   if (B.mode !== 'lab') liveEnd();
   clearInterval(BT.goldT); FX.show(null); if (BT.air) { BT.air(); BT.air = null; }
   const res = BT.res = B.mode === 'fac' ? finishFactory(B) : B.mode === 'lab' ? finishLab(B) : B.mode === 'raid' ? finishRaid(B) : B.mode === 'pwt' ? finishPwt(B) : finishLeague(B);

@@ -89,14 +89,17 @@ function loudOf(buf) {
     return (buf._lk = ms > 1e-12 ? -0.691 + 10 * Math.log10(ms) : -99);
   } catch (_) { return (buf._lk = -99); }
 }
+/* SFXT krymper tidene i de innebygde lydene (1 = som skrevet). Kampen setter den lavere i FAST, så lydene blir like raske som animasjonene. */
+let SFXT = 1;
 /* f2: tonen glir mot f2 i løpet av d sekunder. */
 function tone(f, at, d, v = 0.05, type = 'square', f2 = 0) {
   if (!S.sound) return;
   try {
     const m = out(); if (!m) return;
+    at *= SFXT; d *= SFXT;
     const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime + at;
     o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + Math.min(0.015, d * 0.4)); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
     o.connect(g); g.connect(m); o.start(t); o.stop(t + d + 0.02);
   } catch (_) {}
 }
@@ -105,10 +108,11 @@ function noise(at, d, v = 0.05, f1 = 2400, f2 = 500) {
   if (!S.sound) return;
   try {
     const m = out(); if (!m) return;
+    at *= SFXT; d *= SFXT;
     if (!NB) { NB = AC.createBuffer(1, AC.sampleRate * 0.6, AC.sampleRate); const ch = NB.getChannelData(0); for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1; }
     const s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain(), t = AC.currentTime + at;
     s.buffer = NB; f.type = 'bandpass'; f.Q.value = 1.2; f.frequency.setValueAtTime(f1, t); f.frequency.exponentialRampToValueAtTime(f2, t + d);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + Math.min(0.02, d * 0.4)); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
     s.connect(f); f.connect(g); g.connect(m); s.start(t); s.stop(t + d + 0.05);
   } catch (_) {}
 }
@@ -953,7 +957,7 @@ document.addEventListener('input', ev => {
   if (!v) return;
   S[v] = +ev.target.value; $('#vv-' + v).textContent = S[v] + '%';
   const now = performance.now(); if (now - volT < 180) return; volT = now;
-  if (v === 'mvol') { if (typeof PACK !== 'undefined' && PACK.vol) PACK.vol(); } else if (v === 'vol') sfx.chip(); else { const p = partner(); if (p && now - (window.cryT || 0) > 700) { window.cryT = now; cry(p.id, 0, 0.45); } }
+  if (v === 'mvol') { if (typeof PACK !== 'undefined' && PACK.vol) PACK.vol(); if (typeof MUSIC !== 'undefined') MUSIC.vol(); } else if (v === 'vol') sfx.chip(); else { const p = partner(); if (p && now - (window.cryT || 0) > 700) { window.cryT = now; cry(p.id, 0, 0.45); } }
 });
 document.addEventListener('change', ev => { if (ev.target.dataset && ev.target.dataset.v) save(); });
 document.addEventListener('input', ev => { const t = ev.target; if (t.dataset && t.dataset.f && U.sd && U.sd[+t.dataset.i]) { U.sd[+t.dataset.i][t.dataset.f] = t.value; const e = $('#se-err'); if (e) e.textContent = ''; } });
