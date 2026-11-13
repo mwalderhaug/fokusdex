@@ -46,4 +46,5 @@ belønninger) · `bfx`, `ebx`, `ebxp` (effekter, EBDX-animasjoner) · `raid`, `r
 
 ## Ny økt
 Klon appen til `/home/claude/fokusdex` og eierens private repo til `/home/claude/pokemon_save`, og kjør `sh /home/claude/pokemon_save/dev/setup.sh`.
-Les så `work/HANDOFF.md`, og `work/MONDAY.md` hvis oppgaven er layout, raidintroer, raidkamper eller traileren.
+Les så `work/HANDOFF.md`, `work/MONDAY.md` hvis oppgaven er layout, raidkamper eller traileren, og `work/RAIDS.md` hvis den er
+raidintroer eller arenaene (der står også `pw/t_film.js`, som lager video av en film).
