@@ -32,7 +32,7 @@ function raidCaught(B, res) {
   const m = monBy(res.cau.u); if (!m) return overview();
   ov(`<div class="row" style="justify-content:space-between"><span></span><span class="pill tn">Legendary raid</span></div>
     <div class="mid r4${m.sh ? ' shy' : ''}"><div class="stage" id="rc-stage">${spr(m.id, { ani: 1, sh: m.sh, mega: m.mega })}<span class="tball">${ballEl('ultra', '54px')}</span><span class="stars" id="rc-stars"></span></div>
-      <div><div class="ename">${m.sh === 2 ? 'Dark ' : m.sh ? 'Shiny ' : ''}${esc(D(m.id)[0])}</div><div id="rc-info"><p class="sm" style="margin-top:8px">It has no fight left in it. The ball closes around it.</p></div></div></div>
+      <div><div class="ename">${m.sh === 2 ? 'Dark ' : m.sh ? 'Shiny ' : ''}${esc(D(m.id)[0])}</div><div id="rc-info"><p class="sm" style="margin-top:8px">${res.cau.took ? 'It has no fight left in it. The shadow sinks into the ball where your Mewtwo rests.' : 'It has no fight left in it. The ball closes around it.'}</p></div></div></div>
     <div class="acts" id="rc-act" style="visibility:hidden"><button type="button" class="btn gold" data-a="rcdone">Continue</button></div>`, 'tint', 'var(--gold)');
   const st = $('#rc-stage'), at = (ms, f) => setTimeout(() => { if (BT.res === res && st.isConnected) f(); }, ms);
   at(750, () => { st.className = 'stage in'; sfx.thr(); buzz(30); });
@@ -40,7 +40,7 @@ function raidCaught(B, res) {
   at(1950, () => {
     st.className = 'stage held'; sfx.caught(); buzz([60, 40, 60, 40, 140]);
     $('#rc-stars').innerHTML = Array.from({ length: 10 }, (_, k) => { const a = k / 10 * 6.283, d = 70 + Math.random() * 50; return `<i style="--dx:${Math.round(Math.cos(a) * d)}px;--dy:${Math.round(Math.sin(a) * d)}px;animation-delay:${k * 0.02}s"></i>`; }).join('');
-    $('#rc-info').innerHTML = catchCard({ mon: m, crit: 0, bonus: { c: res.cau.c || 0, why: res.cau.c ? [`New species +${res.cau.c}`] : [] }, isNew: res.cau.isNew }, { id: m.id });
+    $('#rc-info').innerHTML = catchCard({ mon: m, crit: 0, bonus: { c: res.cau.c || 0, why: res.cau.c ? [`New species +${res.cau.c}`] : [] }, isNew: res.cau.isNew, took: res.cau.took }, { id: m.id });
     cry(m.id, 500); $('#rc-act').style.visibility = 'visible';
   });
 }
@@ -95,7 +95,7 @@ function packLab(k) {
    legendariske vises bare som skygger, med ett unntak: traileren slutter med filmen til Dialga. De andre filmene, pakkene og alt annet som viser hva som
    faktisk venter, ligger i sandkassa (bare admin). */
 let SHW = null;
-const showNums = () => ({ mons: DEX.length, moves: MOVES.length, megas: MEGA.filter(g => g[1] !== 'Origin').length, bosses: ORDER.filter(k => k !== 'trainer' && k !== 'evilteam').reduce((n, k) => n + POOL[k].length, 0), raids: Object.keys(LEG).length + 1, medals: achTotal(), events: Object.keys(EVENTS).length });
+const showNums = () => ({ mons: DEX.length, moves: MOVES.length, megas: MEGA.filter(g => !FORMS.has(g[1])).length, bosses: ORDER.filter(k => k !== 'trainer' && k !== 'evilteam').reduce((n, k) => n + POOL[k].length, 0), raids: Object.keys(LEG).length + 1, medals: achTotal(), events: Object.keys(EVENTS).length });
 /* De legendariske som har sin egen store film (ikke de rolige): til sandkassa. */
 const showLegs = () => [384, 150, 493, 487, 382, 383, 249, 250, 483, 484, 643, 644, 646].filter(id => LEG[id] && typeof CINE !== 'undefined' && CINE.has(id));
 /* Skygger: bossene (bildet deres helt svart) og noen av de legendariske. Hvem de er, finner man ut selv. */

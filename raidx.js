@@ -436,6 +436,8 @@
   /* Arceus: for hvert slag slår bildet sprekker av lys og en strek av lys skjærer over. Fra 11.6 skyter platenes farger inn fra alle kanter, tettere og tettere.
      Etter dommen slår søyler i de seksten fargene ned langs kantene, én etter én, mens bølger av gull går ut fra hjulet. */
   const AB2 = [6.4, 8.39, 10.0, 11.6, 13.2];
+  /* Mewtwo står i samme klasse som Arceus og varsles også først (filmen er som den var). */
+  if (F[150]) F[150].omen = 1;
   amp(493, ['cracks'], (t, P) => {
     const cx = 256, cy = 176, X = K.g, crk = tintArt('cracks', '#ffe9a8'), bh = hits(t, AB2, 0.5);
     if (t < 0.39) return;

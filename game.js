@@ -125,7 +125,7 @@ const shopFull = k => k === 'egg' ? S.eggs.length >= 3 : k === 'incense' ? !!S.i
 /* Encounter-pakker: kjøpes for mynter og åpnes med en gang, som å åpne en kortpakke. Tre møter i hver, og den siste plassen er den gode:
    jo dyrere pakke, jo bedre sjanser (min = laveste sjeldenhet, ps/leg = sjansen for en pseudo-legendarisk eller en legendarisk i den plassen,
    shm = så mye likere er en shiny). lv = trenernivået pakken krever. Alle pakker har en liten sjanse for en legendarisk, som et lodd: hvem som helst
-   av dem du ikke eier, i områdene dine. Vekten per art (PKLEGW, etter sjeldenhet): vanlige 1, mytiske 1,3, de største 0,25, Arceus og Deoxys 0,1 –
+   av dem du ikke eier, i områdene dine. Vekten per art (PKLEGW, etter sjeldenhet): vanlige 1, mytiske 1,3, de største 0,25, Mewtwo og Arceus 0,1 –
    så de mytiske kommer litt oftere, og de aller største er sjeldne her og kommer heller i raid. Kortet viser ikke hvem det er (myst = 1):
    det får du vite i gresset, i introen. */
 const PKLEGW = [0, 1, 0.25, 1.3, 0.1];
@@ -206,15 +206,23 @@ const MEGA = [[3, '', 11, 3, [80, 100, 123, 122, 120, 80], 10033], [6, 'X', 9, 1
 /* Giratina i Origin Forme ligger i samme liste (den er en form, ikke en Mega): [.., bildenummer, 1 = har animert bilde fra Black/White, høyde i dm]. */
 MEGA.push([487, 'Origin', 7, 15, [150, 120, 100, 120, 100, 90], 10007, 1, 69]);
 const ORIGIN = MEGA.length;
+/* Deoxys sine former ligger her også. I raid åpner den i Attack Forme, går i Defense Forme når kampen er i gang, og tilbake i Attack Forme når den blir rasende (raidForm). */
+const DEOXYS = 386;
+MEGA.push([DEOXYS, 'Defense', 13, -1, [50, 70, 160, 70, 160, 90], 10002, 1, 17]);
+const DEOXD = MEGA.length;
+MEGA.push([DEOXYS, 'Attack', 13, -1, [50, 180, 20, 180, 20, 150], 10001, 1, 17]);
+const DEOXA = MEGA.length;
+/* Former som ikke er Mega: de teller ikke som Mega Evolution, og navnet står som det er. */
+const FORMS = new Set(['Origin', 'Defense', 'Attack']);
 /* Formen en art har når den dukker opp (Giratina kommer i Origin Forme og kan byttes på kortet). */
 const defForm = id => id === 487 ? ORIGIN : 0;
 const megaOf = m => m && m.mega ? MEGA[m.mega - 1] : null;
-const isMega = m => { const g = megaOf(m); return !!g && g[1] !== 'Origin'; };
+const isMega = m => { const g = megaOf(m); return !!g && !FORMS.has(g[1]); };
 /* Mega Evolution i kamp. megaOpts = formene en art har (plass i MEGA + 1; Charizard og Mewtwo har to). En egen Pokémon kan mega-utvikle seg når
    du har Mega Ring (S.ring, fra den første Champion du slår) og den har fått en Mega Stone (m.ms = formen; S.items.mstone er steinene du har).
    De legendariske bruker ikke vanlige steiner: deres vinnes ved å slå dem i raid (S.lst[art] = 1), og gjelder alle du eier av arten.
    Motstandere og raid-bosser bærer formen sin i ms. Én Mega per side per kamp; formen varer kampen ut. */
-const megaOpts = id => MEGA.reduce((a, g, k) => { if (g[0] === id && g[1] !== 'Origin') a.push(k + 1); return a; }, []);
+const megaOpts = id => MEGA.reduce((a, g, k) => { if (g[0] === id && !FORMS.has(g[1])) a.push(k + 1); return a; }, []);
 const megaName = k => spName({ id: MEGA[k - 1][0], mega: k });
 const hasStone = id => !!(S.lst && S.lst[id]);
 function megaForm(src) {
@@ -243,7 +251,7 @@ const rollG = (id, r) => { const q = +GR[id - 1]; return q === 9 || isNaN(q) ? 2
 const GSYM = ['♂', '♀', ''];
 const megaBst = k => MEGA[k][4].reduce((a, c) => a + c, 0);
 /* Artsnavnet med form (Dark, Mega, Primal). mName gir kallenavnet hvis Pokémonen har fått et. */
-const spName = m => { const g = megaOf(m), n = (m.sh === 2 ? 'Dark ' : '') + D(m.id)[0]; return g ? (g[1] === 'Primal' ? 'Primal ' + n : g[1] === 'Origin' ? n : 'Mega ' + n + (g[1] ? ' ' + g[1] : '')) : n; };
+const spName = m => { const g = megaOf(m), n = (m.sh === 2 ? 'Dark ' : '') + D(m.id)[0]; return g ? (g[1] === 'Primal' ? 'Primal ' + n : FORMS.has(g[1]) ? n : 'Mega ' + n + (g[1] ? ' ' + g[1] : '')) : n; };
 const mName = m => m.nn || spName(m);
 /* Kallenavn: bokstaver, tall og noen få tegn (de som finnes i skrifta på HP-boksene), høyst 12. Tomt navn fjerner kallenavnet. */
 const cleanNick = s => String(s || '').replace(/[^A-Za-z0-9 .\-?]/g, '').replace(/\s+/g, ' ').trim().slice(0, 12);
@@ -252,7 +260,7 @@ function setNick(m, s) { const n = cleanNick(s); if (n && n !== D(m.id)[0]) m.nn
 const ARCEUS = 493, plateTy = m => { const h = m && m.id === ARCEUS && m.item ? HELD[m.item] : null; return h && h.ty != null ? h.ty : -1; };
 const mTypes = m => { const g = megaOf(m), p = plateTy(m); return p >= 0 ? [p, -1] : g ? [g[2], g[3]] : [D(m.id)[1], D(m.id)[2]]; };
 function statsOf(m) {
-  const b = m.mega ? MEGA[m.mega - 1][4] : BST[m.id - 1], up = natUp(m.nat), dn = natDn(m.nat), sx = m.sh ? SHINYST : 1;
+  const b = m.mega ? MEGA[m.mega - 1][4] : BST[m.id - 1], up = natUp(m.nat), dn = natDn(m.nat), sx = m.sh ? (m.sh === 1 && m.id === ARCEUS ? SHINYARC : SHINYST) : 1;
   return b.map((B, i) => {
     const core = Math.floor((2 * B + ivOf(m, i) + Math.floor(m.ev[i] / 4)) * m.lv / 100);
     if (i === 0) return m.id === 292 ? 1 : Math.floor((core + m.lv + 10) * sx);
@@ -382,6 +390,16 @@ function migrate11() {
   }
   S.mig = 11;
 }
+/* Mewtwo og Deoxys har byttet klasse (Mewtwo står nå sammen med Arceus, Deoxys er mytisk): et raid som venter, får nivået den nye klassen gir.
+   En Dark Mewtwo du alt eier, får det den mørke alltid har (IV 31, Timid, og EV fullt ut hvis den ikke er trent ferdig). */
+function migrate12() {
+  const R = S.raid;
+  if (R && !R.dk && (R.id === 150 || R.id === 386) && typeof LEG !== 'undefined') { delete R.hx; raidRelevel(R); }
+  /* En mørk som venter etter de gamle reglene (Mewtwo var ikke gitt ennå): Mewtwo er din nå, og den mørke tar plassen dens hvis du vinner. */
+  if (R && R.dk && R.won1) { delete R.won1; const own = S.mons.filter(m => m.id === 150 && m.sh !== 2).sort((a, b) => (a.sh ? 1 : 0) - (b.sh ? 1 : 0) || b.lv - a.lv)[0]; try { const m = own || (typeof raidCatch === 'function' ? raidCatch(150, 0) : null); if (m && !m.sh) R.mu = m.u; } catch (_) {} }
+  for (const m of S.mons) if (m.id === 150 && m.sh === 2) { m.iv = [31, 31, 31, 31, 31, 31]; m.nat = 10; if (m.ev.reduce((a, b) => a + b, 0) < EVTOT) m.ev = [6, 0, 0, 252, 0, 252]; }
+  S.mig = 12;
+}
 /* Nivået til et raid som er stilt på nytt: det reglene gir for laget slik det er nå (raidLvFor), som for et raid som viser seg i dag. De gamle sto på
    nivået fra eldre regler, langt over laget. hx settes samtidig, og er merket på at dette er gjort. Den mørke (dk) har sitt eget nivå og røres ikke. */
 function raidRelevel(R) {
@@ -404,6 +422,7 @@ function adopt(o) {
   if (!o.mig || o.mig < 9) migrate9();
   if (!o.mig || o.mig < 10) migrate10();
   if (!o.mig || o.mig < 11) migrate11();
+  if (!o.mig || o.mig < 12) migrate12();
   /* Et forsøk kan ikke være eldre enn raidet selv (S.raid.at = dagen det kom). Et slikt merke kommer fra en eldre appversjon som flettet inn
      forsøkene fra et tidligere raid av samme art: de gjelder ikke dette. */
   if (S.raid && S.raid.at && S.raid.day && S.raid.day < S.raid.at) { S.raid.tries = 0; S.raid.day = ''; }
@@ -614,6 +633,8 @@ const SHINYN = 300;
    EN SHINY ER BEDRE: den fødes med full IV i alt, og alle verdiene er SHINYST ganger så høye (se statsOf). En shiny av de beste artene er dermed det
    sterkeste man kan ha, og det er verdt å jakte på dem. I et raid er sjansen 1 av SHINYN, eller PRISMP når en Prism Lure er kjøpt (S.prism). */
 const SHINYCAP = 1 / 15, SHINYST = 1.05, PRISMP = 0.2;
+/* En shiny Arceus er den eneste som får mer: SHINYARC i stedet for SHINYST, så den står over alt annet i spillet, også Mega-formene. */
+const SHINYARC = 1.1;
 const shinyBoost = () => S.shb && S.shb.until > Date.now() ? S.shb.m : 1;
 const shinyOdds = () => (1 / SHINYN) * (1 + Math.min(streak(), 10) * 0.05) * (S.charm > 0 ? CHARM.m : 1) * shinyBoost();
 

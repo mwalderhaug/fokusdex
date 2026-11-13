@@ -256,7 +256,7 @@ function liveLoss() {
   } else if (L.m === 'pwt') { pwt().run = null; what = 'cup';
   } else if (L.m === 'raid') {
     const R = S.raid; what = 'raid';
-    if (R) { R.day = dayKey(); R.tries = (R.tries || 0) + 1; R.told = 1; if (R.tries >= RAIDTRIES) { S.raid = null; if (R.won1) raidCatch(150, 0); } }
+    if (R) { R.day = dayKey(); R.tries = (R.tries || 0) + 1; R.told = 1; if (R.tries >= RAIDTRIES) S.raid = null; }
   }
   stamp(); save();
   return what;
@@ -924,8 +924,8 @@ function labMega(B) { B.me.forEach(b => { if (!b.mg && !b.mega) { const o = mega
 /* ---------- Legendariske kamper ----------
    Når en runde i ligaen eller i Battle Frontier er fullført, viser en legendarisk Pokémon seg. Den er på et høyt nivå og har flere ganger så mye HP
    som vanlig, så den er umulig i starten. Slår du den, venter den i gresset, og da kan du prøve å fange den.
-   LEGD: art, trinn (1 legendarisk, 2 de største, 3 mytisk, 4 Arceus), søk etter låta i pakken, bane, tema på banen, farge, scenen i filmsnutten og kjennetegnet der. */
-const LEGD = '144,1,Lugia,snowy_tall_grass,snow,#bfe6ff,ice,|145,1,Raikou,mountain,spark,#ffe14a,bolt,|146,1,Ho-oh,mountain,flame,#ff9a3a,magma,|150,2,Origins>>Mewtwo,cave,shard,#c79bff,void,rings|151,3,Origins>>Mewtwo,tall_grass,petal,#ffb3d9,forest,|243,1,Raikou,mountain,spark,#ffe14a,bolt,|244,1,Entei>>Raikou,cave,flame,#ff7a2a,magma,|245,1,Raikou,shallow_water,bubble,#7ad0ff,sea,|249,2,Lugia,water,bubble,#cfe6ff,sea,whirl|250,2,Ho-oh,mountain,flame,#ffb23a,sky,rainbow|251,3,Ho-oh,pinwheel_road,petal,#9be07a,forest,|377,1,Heatran,cave,shard,#c9a45c,stone,|378,1,Heatran,kyurem_cave,snow,#bfe6ff,ice,|379,1,Heatran,cave,shard,#b4c0d2,stone,|380,1,Rayquaza,mountain,spark,#ff7a8a,sky,|381,1,Rayquaza,mountain,spark,#6aa8ff,sky,|382,2,Kyogre,water,bubble,#3f8cff,sea,glyph|383,2,Kyogre,cave,flame,#ff5a2a,magma,glyph|384,2,Rayquaza,mountain,spark,#3fe08a,sky,streak|385,3,Deoxys,mountain,spark,#ffe680,space,|386,4,Deoxys,black_tower_10,shard,#ff7a4a,space,rings|480,1,Uxie,shallow_water,bubble,#ffe680,sea,|481,1,Uxie,shallow_water,bubble,#ff8ab0,sea,|482,1,Uxie,shallow_water,bubble,#6aa8ff,sea,|483,2,Palkia,black_tower_10,shard,#6aa8ff,time,rings|484,2,Palkia,black_tower_10,shard,#ff8ad0,space,rift|485,1,Heatran,cave,flame,#ff7a2a,magma,|486,1,Heatran,cave,shard,#e8e0c0,stone,|487,2,Giratina,kyurem_cave,evil,#e0b030,void,stripes|488,1,Uxie,mountain,shard,#ffb3ea,space,|490,3,Uxie,water,bubble,#5ad0ff,sea,|491,3,Darkrai>>Giratina,kyurem_cave,evil,#b03060,night,|492,3,Uxie,tall_grass,petal,#8be07a,forest,|493,4,Arceus,black_tower_10,,#ffe9a8,origin,wheel|494,3,Reshiram,pwt,flame,#ff9a3a,magma,|638,1,Cobalion,mountain,shard,#6ac0e8,stone,|639,1,Cobalion,cave,shard,#c9a45c,stone,|640,1,Cobalion,pinwheel_road,petal,#8be07a,forest,|641,1,Reshiram,mountain,spark,#8be0a0,sky,|642,1,Reshiram,mountain,spark,#6aa8ff,bolt,|643,2,Reshiram,black_tower_10,flame,#fff2e0,flame,pillar|644,2,Reshiram,black_tower_10,spark,#4ad0ff,bolt,pillar|645,1,Reshiram,cave,shard,#e0903a,stone,|646,2,Reshiram,kyurem_cave,snow,#bfe6ff,ice,pillar|647,3,Cobalion,shallow_water,bubble,#6ac0ff,sea,|648,3,Reshiram,pwt,petal,#9be07a,forest,|649,3,Reshiram,black_tower_3_5,shard,#c79bff,space,';
+   LEGD: art, trinn (1 legendarisk, 2 de største, 3 mytisk, 4 Mewtwo og Arceus: de to vanskeligste), søk etter låta i pakken, bane, tema på banen, farge, scenen i filmsnutten og kjennetegnet der. */
+const LEGD = '144,1,Lugia,snowy_tall_grass,snow,#bfe6ff,ice,|145,1,Raikou,mountain,spark,#ffe14a,bolt,|146,1,Ho-oh,mountain,flame,#ff9a3a,magma,|150,4,Origins>>Mewtwo,cave,shard,#c79bff,void,rings|151,3,Origins>>Mewtwo,tall_grass,petal,#ffb3d9,forest,|243,1,Raikou,mountain,spark,#ffe14a,bolt,|244,1,Entei>>Raikou,cave,flame,#ff7a2a,magma,|245,1,Raikou,shallow_water,bubble,#7ad0ff,sea,|249,2,Lugia,water,bubble,#cfe6ff,sea,whirl|250,2,Ho-oh,mountain,flame,#ffb23a,sky,rainbow|251,3,Ho-oh,pinwheel_road,petal,#9be07a,forest,|377,1,Heatran,cave,shard,#c9a45c,stone,|378,1,Heatran,kyurem_cave,snow,#bfe6ff,ice,|379,1,Heatran,cave,shard,#b4c0d2,stone,|380,1,Rayquaza,mountain,spark,#ff7a8a,sky,|381,1,Rayquaza,mountain,spark,#6aa8ff,sky,|382,2,Kyogre,water,bubble,#3f8cff,sea,glyph|383,2,Kyogre,cave,flame,#ff5a2a,magma,glyph|384,2,Rayquaza,mountain,spark,#3fe08a,sky,streak|385,3,Deoxys,mountain,spark,#ffe680,space,|386,3,Deoxys,black_tower_10,shard,#ff7a4a,space,rings|480,1,Uxie,shallow_water,bubble,#ffe680,sea,|481,1,Uxie,shallow_water,bubble,#ff8ab0,sea,|482,1,Uxie,shallow_water,bubble,#6aa8ff,sea,|483,2,Palkia,black_tower_10,shard,#6aa8ff,time,rings|484,2,Palkia,black_tower_10,shard,#ff8ad0,space,rift|485,1,Heatran,cave,flame,#ff7a2a,magma,|486,1,Heatran,cave,shard,#e8e0c0,stone,|487,2,Giratina,kyurem_cave,evil,#e0b030,void,stripes|488,1,Uxie,mountain,shard,#ffb3ea,space,|490,3,Uxie,water,bubble,#5ad0ff,sea,|491,3,Darkrai>>Giratina,kyurem_cave,evil,#b03060,night,|492,3,Uxie,tall_grass,petal,#8be07a,forest,|493,4,Arceus,black_tower_10,,#ffe9a8,origin,wheel|494,3,Reshiram,pwt,flame,#ff9a3a,magma,|638,1,Cobalion,mountain,shard,#6ac0e8,stone,|639,1,Cobalion,cave,shard,#c9a45c,stone,|640,1,Cobalion,pinwheel_road,petal,#8be07a,forest,|641,1,Reshiram,mountain,spark,#8be0a0,sky,|642,1,Reshiram,mountain,spark,#6aa8ff,bolt,|643,2,Reshiram,black_tower_10,flame,#fff2e0,flame,pillar|644,2,Reshiram,black_tower_10,spark,#4ad0ff,bolt,pillar|645,1,Reshiram,cave,shard,#e0903a,stone,|646,2,Reshiram,kyurem_cave,snow,#bfe6ff,ice,pillar|647,3,Cobalion,shallow_water,bubble,#6ac0ff,sea,|648,3,Reshiram,pwt,petal,#9be07a,forest,|649,3,Reshiram,black_tower_3_5,shard,#c79bff,space,';
 const LEG = {}; LEGD.split('|').forEach(r => { const q = r.split(','); LEG[+q[0]] = { t: +q[1], mre: q[2], sc: q[3], th: q[4], cc: q[5], bg: q[6], sig: q[7] }; });
 /* ---------- Raid-reglene ----------
    NÅR en legendarisk viser seg: sjelden, og aldri til fast tid (raidRoll). Hver studiedag (dagens første OPENMIN minutter) trekkes det én gang:
@@ -940,14 +940,21 @@ const LEG = {}; LEGD.split('|').forEach(r => { const q = r.split(','); LEG[+q[0]
         Det som gjør et raid tungt, er ikke nivået, men at den legendariske har flere ganger så mye HP (RAIDHP) og de sterkeste artene i spillet.
         Stilt inn med simulerte kamper (med stedets hendelser og raseriet): et jevnt lag uten veske slår de vanlige omtrent annenhver gang på Hard, de største bare av og til.
    STEDET: hver legendarisk har et domene som kjemper med (se DOM lenger ned): en liten hendelse hver tredje runde, og raseri under halv HP.
-   HVEM: oftest en vanlig legendarisk (1), så de mytiske (3) og de største (2). De aller sjeldneste (4: Arceus og Deoxys) starter på 3 %,
+   HVEM: oftest en vanlig legendarisk (1), så de mytiske (3) og de største (2). De aller sjeldneste (4: Mewtwo og Arceus, de to vanskeligste) starter på 3 %,
         og sjansen vokser litt for hvert raid uten en av dem (S.rpity), så de kommer før eller siden. Mewtwo har egen trekning (MEWP) til du har den mørke,
-        og hver gang Mewtwo viser seg, er det DARKP sjanse for at den blir til Dark Mewtwo foran øynene dine.
+        og hver gang du slår Mewtwo, reiser skyggen seg: runde to, mot Dark Mewtwo.
    BELØNNING: mynter (RAIDCOIN × vanskelighetsgrad), Rare Candy (RAIDCANDY), mye XP til hele laget, og den legendariske selv: seieren er fangsten
    (raidCatch). Før måtte den fanges med kast etterpå, og da slapp fire av ti unna etter et vunnet raid. */
 const RAIDLV = [75, 88, 82, 96, 100], RAIDHP = [2.4, 3.2, 2.8, 3.4, 3.6], RAIDCOIN = [1800, 3800, 2700, 7500, 12000], RAIDCANDY = [3, 5, 4, 8, 10], RAIDOFF = [8, 12, 10, 13, 16], RAIDREL = [0.22, 0.32, 0.27, 0.36, 0.45], RAIDCAPHP = 0.025;
-const RAIDTRIES = 2, RAIDP0 = 0.08, RAIDPITY = 0.035, RAIDWIN = 0.25, RAIDCOOL = 3, MEWP = 0.08, MEWP1 = 0.16, DARKP = 0.3;
-/* De sterkeste viser seg bare for lag som kan gi dem kamp: de mytiske fra lagnivå 25, de største fra 35, og Arceus og Deoxys fra 45. (Dark Mewtwo kommer bare ut av en slått Mewtwo.) */
+const RAIDTRIES = 2, RAIDP0 = 0.08, RAIDPITY = 0.035, RAIDWIN = 0.25, RAIDCOOL = 3, MEWP = 0.08, MEWP1 = 0.16;
+/* Egen HP-faktor for enkelte arter, oppå klassens (RAIDHP). Innen «de største» var spredningen for stor: Dialga, Palkia, Zekrom og Reshiram var nesten
+   uslåelige for alle lag uten legendariske, og hardere enn Mewtwo og Arceus, som skal være de to vanskeligste. Stilt inn med sim/perleg.js. */
+const RAIDX = { 150: [1.3, 1], 493: [0.85, 1], 386: [1.6, 1], 483: [0.6, 0.94], 484: [0.6, 0.94], 644: [0.75, 0.97], 643: [0.7, 0.96] };
+const raidX = id => RAIDX[id] || [1, 1];
+/* Mewtwo, Arceus og den mørke går ikke tomme: de har RAIDPP ganger så mange PP. De andre har vanlige PP, så de sterkeste angrepene deres tar slutt i en
+   lang kamp (det er en del av hvorfor en lang kamp kan vinnes). */
+const RAIDPP = 4;
+/* De sterkeste viser seg bare for lag som kan gi dem kamp: de mytiske fra lagnivå 25, de største fra 35, og Mewtwo og Arceus fra 45. (Dark Mewtwo kommer bare ut av en slått Mewtwo.) */
 const RAIDGATE = [0, 35, 25, 45, 45];
 /* Nivået den ville hatt uten tak: laget ditt + RAIDOFF nivåer, eller + RAIDREL i andel (det som er høyest, så den står like langt over et sterkt lag som
    over et svakt). Taket er artens toppnivå (RAIDLV, tre nivåer høyere for hver runde du har vunnet, høyst 100). Mangler den nivåer på grunn av taket,
@@ -959,10 +966,10 @@ const raidLvFor = t => Math.max(15, Math.min(raidCap(t), raidWant(t)));
    nivå 100. Da var den umulig for alle, uansett lag. Nå er den RAIDHP[4] ganger vanlig HP, og fortsatt den hardeste i spillet. */
 const raidHx = t => t === 5 ? 1 : 1 + RAIDCAPHP * Math.max(0, raidWant(t) - Math.max(15, raidCap(t)));
 /* Dark Mewtwo (Shadow Mewtwo i Pokkén Tournament, «Dark Mewtwo» på japansk): den sjeldneste og sterkeste av alle. Samme art som Mewtwo, men mørk (sh: 2),
-   på et høyere nivå enn Arceus og med mer HP. Den finnes ikke som eget raid: den er RUNDE TO. Slår du Mewtwo i et raid, er det DARKP sjanse for at den
-   reiser seg igjen som Dark Mewtwo (finishRaid). Da har du fått belønningen for Mewtwo, laget ditt er friskt igjen (en ny kamp), og du må slåss en gang til,
-   med en gang. Vinner du, er det den mørke som venter i gresset. Taper du, står den igjen som raid med forsøkene du hadde igjen, og går også de tapt,
-   slipper skyggen taket og den vanlige Mewtwo du slo, venter i gresset. */
+   på et høyere nivå enn Arceus og med mer HP. Den finnes ikke som eget raid: den er RUNDE TO. Slår du Mewtwo i et raid, er Mewtwo din
+   med en gang, og skyggen reiser seg ALLTID som Dark Mewtwo (finishRaid), helt til du eier den mørke. Laget ditt er friskt igjen (en ny kamp), og du må slåss
+   en gang til, med en gang. Vinner du, tar den mørke plassen til Mewtwoen din (darkTake): du har aldri begge fra samme raid. Taper du, står den igjen som raid
+   med RAIDTRIES forsøk, og går også de tapt, slipper skyggen taket. Mewtwo beholder du uansett, og neste gang du slår en Mewtwo, reiser skyggen seg igjen. */
 const DARK = { id: 150, t: 5, mre: 'X & Y - Mewtwo>>Mewtwo', sc: 'cave', th: 'evil', cc: '#ff8a2a', bg: 'void', sig: 'rings', n: 'Dark Mewtwo', title: 'Shadow Pokémon' };
 const hasDark = () => S.mons.some(m => m.id === 150 && m.sh === 2);
 const raidInfo = R => R && R.dk ? DARK : R ? LEG[R.id] : null;
@@ -972,7 +979,7 @@ const raidTitle = (id, dk) => dk ? DARK.title : id === 493 ? 'The Original One' 
 const legOwn = id => S.mons.some(m => m.id === id) || (S.pend || []).some(e => e.id === id);
 /* HVEM SOM KOMMER, følger samlingen din (legN = antall legendariske arter du eier):
    - Klassene veies etter RAIDW0 når du ikke eier noen, og etter RAIDW1 når du eier RAIDFAR arter eller flere, jevnt imellom: de vanlige og de mytiske
-     viker for de største og for Arceus og Deoxys, så du bygger deg gradvis opp mot dem. Klasse 4 har i tillegg sin egen ventetid (S.rpity) som før.
+     viker for de største og for Mewtwo og Arceus, så du bygger deg gradvis opp mot dem. Klasse 4 har i tillegg sin egen ventetid (S.rpity) som før.
    - Lagnivået må være høyt nok for klassen (RAIDGATE); ellers går vekten til klassen under.
    - Innen klassen: aldri en du har (eller som venter i gresset) så lenge det finnes en ny. En klasse du har ALLE i, gir plassen sin til de klassene der
      du mangler noen, så langt ute er det nesten bare de største igjen. Først når du eier alle, kommer de om igjen (Mewtwo ikke, om du har den mørke).
@@ -1004,7 +1011,7 @@ function raidRoll(p) {
   return Math.random() < (p != null ? p : RAIDP0 + RAIDPITY * w) * (diff().rf || 1) ? raidSpawn() : false;
 }
 /* Seieren er fangsten: den legendariske blir med deg i det raidet er vunnet, uten kast. Nivået er som for et møte i gresset (etter laget ditt),
-   ikke raidnivået. res.got = { u, isNew } til oppsummeringen. */
+   ikke raidnivået. res.cau = { u, isNew } til oppsummeringen. */
 function raidCatch(id, dk, res, sh) {
   const e = genEnc({ ids: [id] }), isNew = !S.caught[id], m = addMon(id, e.lv, dk ? 2 : sh ? 1 : 0, 0, e.g);
   if (res) { res.cau = { u: m.u, isNew }; if (isNew) { res.cau.c = NEWCOIN[tierOf(id)] || 0; S.coins += res.cau.c; } }
@@ -1016,8 +1023,10 @@ function raidSpawn(res) {
   /* Mewtwo har sin egen trekning (MEWP) helt til du eier Dark Mewtwo, også om du alt har den vanlige: det er bare gjennom den du kan møte den mørke. */
   let first = 0;
   if (!S.humb) { S.humb = 1; const two = HUMB.filter(x => !legOwn(x)); if (!(S.st && S.st.rw > 0) && two.length) first = two[rnd(two.length)]; }
-  const id = first || (!hasDark() && lv >= RAIDGATE[1] && Math.random() < MEWP + (MEWP1 - MEWP) * raidFar() ? 150 : raidPick()), t = LEG[id].t;
-  S.rpity = t >= 4 ? 0 : (S.rpity || 0) + 1;
+  const mew = !first && !hasDark() && lv >= RAIDGATE[3] && Math.random() < MEWP + (MEWP1 - MEWP) * raidFar(), id = first || (mew ? 150 : raidPick()), t = LEG[id].t;
+  /* Ventetiden for klasse 4 nullstilles når klassen selv blir trukket (og ved det første møtet), ikke av Mewtwo sin egen trekning: ellers ville
+     hver Mewtwo holdt Arceus borte. */
+  S.rpity = t >= 4 && !mew ? 0 : (S.rpity || 0) + 1;
   /* hid = ikke vist ennå: den viser seg først når dagens kamper er spilt, simulert eller hoppet over (raidUnhide), som en overraskelse.
      sh = shiny: 1 av SHINYN, eller PRISMP når en Prism Lure er kjøpt (den brukes opp her). */
   const sh = Math.random() < (S.prism ? PRISMP : 1 / SHINYN) ? 1 : 0; S.prism = 0;
@@ -1052,8 +1061,12 @@ const domKey = tr => tr.dk ? 'dark' : tr.lbg === 'flame' ? 'magma' : tr.lbg, rai
 function raidField(B, ev) {
   const D0 = raidDom(B.tr), f = B.foe[B.b], b = B.me[B.a]; if (!D0 || B.over || f.hp <= 0) return;
   const N = nmOf('me', b), F = f.name;
-  if (!B.rage && f.hp <= f.max / 2) { B.rage = 1; ev.push({ t: 'env', k: 'rage', s: `${F} is enraged!` }); if (!megaEvolve(B, 'foe', ev, 'rage')) changeStats(B, 'foe', D0.up, ev); }
+  /* Deoxys åpner i Attack Forme, går i Defense Forme når to runder er gått, og tilbake i Attack Forme når den blir rasende. */
+  if (f.id === DEOXYS && f.mega === DEOXA && !B.rage && B.turn >= DEOXT && f.hp > f.max / 2) raidForm(B, ev, DEOXD);
+  if (!B.rage && f.hp <= f.max / 2) { B.rage = 1; ev.push({ t: 'env', k: 'rage', s: `${F} is enraged!` }); if (!(f.id === DEOXYS && raidForm(B, ev, DEOXA)) && !megaEvolve(B, 'foe', ev, 'rage')) changeStats(B, 'foe', D0.up, ev); }
   if (b.hp <= 0 || b.v.away) return;
+  /* Arceus bytter plate: første gang når første runde er over, så hver ARCEV-te runde (hver ARCEV2-te når den er rasende). */
+  if (f.id === ARCEUS && !B.tr.dk) { B.arc = (B.arc == null ? ARCEV : B.arc) + 1; if (B.arc > (B.rage ? ARCEV2 : ARCEV)) { B.arc = 1; arcPlate(B, ev); } }
   B.fld = (B.fld || 0) + 1;
   if (B.fld < (B.rage ? RAIDEV2 : RAIDEV)) return;
   B.fld = 0;
@@ -1065,6 +1078,42 @@ function raidField(B, ev) {
     else { b.hp = Math.max(0, b.hp - Math.max(1, Math.floor(b.max / RAIDCHIP))); ev.push({ t: 'hit', side: 'me', hp: b.hp, e: 1, quiet: 1 }); settle(B, ev); }
   }
   if (D0.k !== 'chip' && b.hp > 0 && !B.over) changeStats(B, 'me', [[D0.st, -1]], ev, true);
+}
+/* DEOXYS I RAID skifter form: Attack Forme i åpningen (DEOXT runder) og i raseriet, Defense Forme imellom. Verdiene følger formen (HP er lik i alle). */
+const DEOXT = 2;
+function raidForm(B, ev, to) {
+  const f = B.foe[B.b]; if (f.id !== DEOXYS || f.mega === to || f.hp <= 0) return false;
+  const g = MEGA[to - 1], st = statsOf(Object.assign({}, f.src, { mega: to }));
+  f.st = [f.st[0]].concat(st.slice(1)); f.ty = [g[2], g[3]]; f.mega = to;
+  ev.push({ t: 'mega', side: 'foe', id: f.id, mega: to, sh: f.sh, forme: 1, txt: `${f.name} is changing its shape!` }, { t: 'msg', s: `${f.name} changed to its ${g[1]} Forme!` });
+  return true;
+}
+/* ARCEUS I RAID bytter plate (Multitype): den tar en type som tåler angrepet den sist ble truffet av, og blant dem helst en som treffer Pokémonen din
+   hardt og tåler typene dens (litt tilfeldig, så det ikke alltid blir den samme). Judgment, fargen og typen følger plata, og plata gir angrep av typen PLATEX som ellers. Ingen immunitet varer:
+   en Ghost-type er trygg for Normal bare til første bytte.
+   ARCW = vektene i valget: [tåle angrepet den sist ble truffet av, treffe Pokémonen din hardt, tåle typene dens, tilfeldighet]. Forsvar veier tyngst:
+   den tilpasser seg det du kaster mot den, så samme angrep virker dårligere og dårligere, og du må veksle. */
+const ARCW = [10, 3, 2, 2];
+const ARCEV = 3, ARCEV2 = 2, ARCMOVES = ['Judgment', 'Earth Power', 'Extreme Speed', 'Hyper Voice'];
+const arcMoves = () => { const l = ARCMOVES.map(n => MOVES.findIndex(m => m[0] === n)).filter(i => i >= 0); return l.length === 4 ? l : null; };
+/* Deoxys i raid: et sett som ikke senker dens egne verdier (med Psycho Boost gjorde den seg selv ufarlig etter to angrep). */
+const DEOXMOVES = ['Psychic', 'Shadow Ball', 'Ice Beam', 'Extreme Speed'];
+const deoxMoves = () => { const l = DEOXMOVES.map(n => MOVES.findIndex(m => m[0] === n)).filter(i => i >= 0); return l.length === 4 ? l : null; };
+function arcPlate(B, ev) {
+  const f = B.foe[B.b], b = B.me[B.a]; if (f.id !== ARCEUS || f.hp <= 0 || !b || b.hp <= 0) return false;
+  const li = B.lastM.me, lm = li != null && li >= 0 && MOVES[li][4] > 0 ? mvEff(B, b, MOVES[li]) : null, lt = lm ? lm[1] : -1;
+  let best = -1, bs = -1e9;
+  for (let t = 1; t <= 17; t++) {
+    if (!HELD['p' + t]) continue;
+    const as = { ty: [t, -1], v: {} }, last = lt >= 0 ? typeEff(lt, as) : 1, off = typeEff(t, b), hurt = Math.max(...b.ty.filter(x => x >= 0).map(x => typeEff(x, as)));
+    const sc = -last * ARCW[0] + Math.min(2, off) * ARCW[1] - Math.min(2, hurt) * ARCW[2] + Math.random() * ARCW[3];
+    if (sc > bs) { bs = sc; best = t; }
+  }
+  /* Står den alt med den beste plata, beholder den den. */
+  if (best < 0 || best === f.ty[0]) return false;
+  const k = 'p' + best; f.item = k; f.src.item = k; f.ty = [best, -1]; if (f.orig) f.orig.ty = [best, -1];
+  ev.push({ t: 'plate', side: 'foe', ty: best, s: `${f.name} draws on the ${HELD[k].n}!` }, { t: 'msg', s: `It became the ${TYN[best]} type!` });
+  return true;
 }
 /* Dark Mewtwo forvandles midt i kampen. Kampskjermen bestemmer når (dkShift i bui.js: når den første låta er slutt), reglene står her: helsa løftes til DKHP
    av full hvis den er lavere, og verdiene i DKUP går opp ett trinn. Skjer høyst én gang i en kamp (B.sin). */
@@ -1096,6 +1145,16 @@ const SELFKO = new Set(['Explosion', 'Self-Destruct', 'Final Gambit', 'Memento',
    selv (Future Sight, Aura Sphere, Swift, Psystrike) var en Ghost/Dark-type som Sableye helt urørlig, og den sterkeste i spillet kunne bare stå og se på. */
 const DKMOVES = ['Psystrike', 'Shadow Ball', 'Aura Sphere', 'Dark Pulse'];
 const dkMoves = () => { const l = DKMOVES.map(n => MOVES.findIndex(m => m[0] === n)).filter(i => i >= 0); return l.length === 4 ? l : null; };
+/* Den mørke tar plassen til en Mewtwo du eier: det er den samme Pokémonen (nivå, XP, kallenavn og det den holder står), men mørk, og alltid med de
+   beste verdiene: IV 31 i alt, naturen Timid (DKNAT) og EV fullt ut i Sp. Atk og Speed (DKEV). Angrepene blir de fire den mørke bruker. */
+const DKNAT = 10, DKEV = [6, 0, 0, 252, 0, 252];
+/* Mewtwoen den mørke tar plassen til: den vanlige på høyest nivå. En shiny Mewtwo røres aldri (da kommer den mørke som egen Pokémon). */
+const dkTarget = () => S.mons.filter(m => m.id === 150 && !m.sh).sort((a, b) => b.lv - a.lv)[0] || null;
+function darkTake(m) {
+  m.sh = 2; m.iv = [31, 31, 31, 31, 31, 31]; m.nat = DKNAT; m.ev = DKEV.slice(); delete m.ht;
+  const mv = dkMoves(); if (mv) m.mv = mv.slice();
+  return m;
+}
 function raidMoves(id, lv) {
   /* Og den bygger seg ikke opp med Cosmic Power, Calm Mind og lignende: den angriper. */
   const ok = x => { const m = MOVES[x]; return !SELFKO.has(m[0]) && !(m[4] === 0 && m[17] === 1 && m[12].length); }, mv = foeMoves(id, lv, 2).filter(ok);
@@ -1110,11 +1169,11 @@ function raidBattle(lead, demo) {
   /* Hvem som venter, er hemmelig til filmen har gått: fra første forsøk er den kjent (R.seen), og kortet viser den. */
   if (!demo && S.raid && !S.raid.seen) { S.raid.seen = 1; save(); }
   /* Vanskelighetsgraden senker nivået og HP-en til den legendariske (Hard = som før). */
-  const dd = diff(), lv = Math.max(10, Math.round(R.lv * dd.rlv)), e = Math.round((R.dk ? 85 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : R.sh ? 1 : 0, g: rollG(R.id), mega: defForm(R.id), ms: raidMega(R), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: (R.dk && dkMoves()) || raidMoves(R.id, lv) };
+  const dd = diff(), lv = Math.max(10, Math.round(R.lv * dd.rlv * (R.dk ? 1 : raidX(R.id)[1]))), e = Math.round((R.dk ? 85 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : R.sh ? 1 : 0, g: rollG(R.id), mega: R.id === DEOXYS ? DEOXA : defForm(R.id), ms: raidMega(R), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: (R.dk && dkMoves()) || (R.id === ARCEUS && arcMoves()) || (R.id === DEOXYS && deoxMoves()) || raidMoves(R.id, lv) };
   const B = mkBattle(demo ? party : party.map(evSrc), [foe], legTr(R.id, R.dk), { mode: demo ? 'lab' : 'raid', raid: 1, st: TCL.supreme, k: 'legend', rd: 0, n: 0, lap: 0, ti: 0, bag: bagN(), xm: 3 * dd.xp, sm: 1, dc: dd.coin, boost: { mode: '', m: 1, xp: 1 } });
   B.tr.skill = dd.sk; if (demo) labMega(B); else evApply(B);
   /* I demoen har Mewtwo vanlig HP (ikke raid-HP), så en kommer fram til forvandlingen: det er den demoen er til for. */
-  const f = B.foe[0], big = demo === 150 ? 1 : RAIDHP[L.t - 1] * dd.rhp * (R.dk ? 1 : R.hx || 1); f.max = f.hp = Math.round(f.max * big); f.big = big; if (R.dk) f.short = 'D.Mewtwo';
+  const f = B.foe[0], big = demo === 150 ? 1 : RAIDHP[L.t - 1] * dd.rhp * (R.dk ? 1 : (R.hx || 1) * raidX(R.id)[0]); f.max = f.hp = Math.round(f.max * big); f.big = big; if (L.t >= 4) f.mv.forEach(m => { m.pp = m.max = m.max * RAIDPP; }); if (R.dk) f.short = 'D.Mewtwo';
   return B;
 }
 function finishRaid(B) {
@@ -1130,22 +1189,33 @@ function finishRaid(B) {
     /* Plata til typen den legendariske har (den mørke: Dread Plate; de av Normal-type, som Arceus: en tilfeldig). */
     { const ty = B.tr.dk ? 16 : D(id)[1], pk = 'p' + (ty > 0 ? ty : 1 + rnd(17)); S.items[pk] = (S.items[pk] || 0) + 1; res.items.push(HELD[pk].n); }
     if (megaOpts(id).length && !hasStone(id)) { (S.lst || (S.lst = {}))[id] = 1; res.items.push(legStone(id).replace(/^the /, '')); res.perks.push(`You found ${legStone(id)}. Every ${D(id)[0]} you own can now ${id === 382 || id === 383 ? 'revert to its primal form' : 'Mega Evolve'} in battle${S.ring ? '' : ', once you have the Mega Ring'}.`); }
-    if (id === 150 && !B.tr.dk && R && !hasDark() && Math.random() < DARKP) {
-      /* Den reiser seg igjen. Belønningen for Mewtwo er gitt; r1 husker den til oppsummeringen etter runde to. */
-      S.raid = { id: 150, dk: 1, seen: 1, lv: raidLvFor(5), hx: +raidHx(5).toFixed(2), day: '', tries: R.tries || 0, won1: 1, r1: `${res.coins.toLocaleString('en-US')} coins, ${res.items.join(', ')}` };
-      res.dark = 1; res.note = 'Mewtwo is not finished.';
-    } else {
-      raidCatch(id, B.tr.dk, res, R && R.sh); S.raid = null; res.note = `${nm} is yours.`;
+    if (id === 150 && !B.tr.dk && R && !hasDark()) {
+      /* Mewtwo er din med en gang, og skyggen reiser seg ALLTID: runde to, mot Dark Mewtwo, med nye forsøk. Har du en Mewtwo fra før, får du ikke en
+         til – unntatt når den du slo er shiny og du ikke har en shiny: den får du. mu = Mewtwoen den mørke tar plassen til hvis du vinner (dkTarget:
+         aldri en shiny). r1 husker belønningen til oppsummeringen etter runde to. res.mew = 1 når du fikk Mewtwo nå. */
+      const regs = S.mons.filter(m => m.id === 150 && m.sh !== 2), give = !regs.length || (!!R.sh && !regs.some(m => m.sh === 1));
+      if (give) raidCatch(150, 0, res, R.sh);
+      const tg = dkTarget(), nc = res.cau && res.cau.c ? `, ${res.cau.c} coins for a new species` : '';
+      S.raid = { id: 150, dk: 1, seen: 1, lv: raidLvFor(5), hx: +raidHx(5).toFixed(2), day: '', tries: 0, mu: tg ? tg.u : null, r1: `${res.coins.toLocaleString('en-US')} coins, ${res.items.join(', ')}${nc}` };
+      res.dark = 1; res.mew = give ? 1 : 0; res.note = give ? 'Mewtwo is yours, but its shadow is not finished.' : 'Mewtwo is beaten, but its shadow is not.';
+    } else if (B.tr.dk) {
+      /* Den mørke tar plassen til Mewtwoen din (darkTake). Har du ingen lenger (eller bare en shiny, som aldri overskrives), kommer den som ny. */
+      const mu = R && R.mu != null ? monBy(R.mu) : null, m0 = mu && mu.id === 150 && !mu.sh ? mu : dkTarget();
+      if (m0) { darkTake(m0); res.cau = { u: m0.u, isNew: false, took: 1 }; res.note = 'Dark Mewtwo has taken the place of your Mewtwo. It is yours.'; }
+      else { darkTake(raidCatch(150, 1, res)); res.note = 'Dark Mewtwo is yours.'; }
+      S.raid = null;
       if (R && R.r1) res.perks.push(`Mewtwo gave its rewards before it changed: ${R.r1}.`);
+    } else {
+      raidCatch(id, 0, res, R && R.sh); S.raid = null; res.note = `${nm} is yours.`;
     }
   } else if (R) {
     R.day = dayKey(); R.tries = (R.tries || 0) + 1;
     const pre = R.r1 && !R.told ? `Mewtwo's rewards are yours: ${R.r1}. ` : ''; R.told = 1;
     if (R.tries >= RAIDTRIES) {
       S.raid = null;
-      if (R.won1) { raidCatch(150, 0, res); res.note = `${pre}The shadow lets go and Dark Mewtwo is gone. The Mewtwo you beat is yours.`; }
+      if (R.dk) res.note = `${pre}The shadow lets go and Dark Mewtwo is gone. Mewtwo stays with you. Beat a Mewtwo again, and the shadow will rise once more.`;
       else res.note = `${nm} has moved on. Another legendary Pokémon will show itself in time.`;
-    } else res.note = `${pre}${nm} stays where it is. You have one more attempt, tomorrow, and now you know who is waiting.`;
+    } else res.note = `${pre}${nm} stays where it is. You have one more attempt, tomorrow${R.dk ? '' : ', and now you know who is waiting'}.`;
   }
   save(); return res;
 }

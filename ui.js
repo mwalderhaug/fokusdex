@@ -24,7 +24,7 @@ function spr(id, o = {}) {
   if (o.urls) return list;
   /* Arceus skifter farge etter plata den holder: gullet i ringen dreies mot typens farge (PLTINT: grader og metning). */
   const pt = id === ARCEUS && o.it && HELD[o.it] && HELD[o.it].ty != null && !o.sil ? PLTINT[HELD[o.it].ty] : null;
-  return `<span class="sprb${o.sil ? ' sil' : ''}${shn && !o.sil ? ' shiny' : ''}${pt ? ' plt' : ''}" style="--tc:var(--t${pt ? HELD[o.it].ty : D(id)[1]})${o.s ? ';--s:' + o.s : ''}${pt ? `;--pf:hue-rotate(${pt[0]}deg) saturate(${pt[1]})` : ''}" data-n="${id}"><img class="spr" alt="${o.sil ? 'Unknown' : esc(D(id)[0])}" ${o.lazy ? 'loading="lazy" ' : ''}src="${list[0]}" data-f="${list.slice(1).join('|')}" onload="this.classList.add('ok')" onerror="sprErr(this)"></span>`;
+  return `<span class="sprb${o.sil ? ' sil' : ''}${shn && !o.sil ? ' shiny' + (id === ARCEUS ? ' gsh' : '') : ''}${pt ? ' plt' : ''}" style="--tc:var(--t${pt ? HELD[o.it].ty : D(id)[1]})${o.s ? ';--s:' + o.s : ''}${pt ? `;--pf:hue-rotate(${pt[0]}deg) saturate(${pt[1]})` : ''}" data-n="${id}"><img class="spr" alt="${o.sil ? 'Unknown' : esc(D(id)[0])}" ${o.lazy ? 'loading="lazy" ' : ''}src="${list[0]}" data-f="${list.slice(1).join('|')}" onload="this.classList.add('ok')" onerror="sprErr(this)"></span>`;
 }
 /* Henter bildet av en Pokémon på forhånd, så det står klart i det den sendes ut (ellers dukker den opp et øyeblikk etter ballen).
    Prøver adressene i samme rekkefølge som spr(). Gir et løfte som blir ferdig når bildet er hentet (eller ikke finnes). */
@@ -406,7 +406,7 @@ VIEW.lag = () => {
 const BSC = v => v < 30 ? '#e2574c' : v < 60 ? '#e8913d' : v < 90 ? '#e6c84f' : v < 120 ? '#a5cf3f' : v < 150 ? '#3fbf6e' : '#31b8b0';
 function bstEl(id, mega, sh) {
   const b = mega ? MEGA[mega - 1][4] : BST[id - 1], tot = b.reduce((a, c) => a + c, 0);
-  return `<div class="bst" role="table" aria-label="Base stats">${['HP', 'Attack', 'Defense', 'Sp. Atk', 'Sp. Def', 'Speed'].map((n, i) => `<div role="row"><span role="cell">${n}</span><b class="tn" role="cell">${b[i]}</b><span class="bst-b" role="cell" aria-hidden="true"><i style="width:${Math.min(100, Math.round(b[i] / 180 * 100))}%;background:${BSC(b[i])}"></i></span></div>`).join('')}<div class="bst-t" role="row"><span role="cell">Total</span><b class="tn" role="cell">${tot}</b><span class="sm" role="cell">${sh ? 'Shiny: every stat is 5 % higher' : ''}</span></div></div>`;
+  return `<div class="bst" role="table" aria-label="Base stats">${['HP', 'Attack', 'Defense', 'Sp. Atk', 'Sp. Def', 'Speed'].map((n, i) => `<div role="row"><span role="cell">${n}</span><b class="tn" role="cell">${b[i]}</b><span class="bst-b" role="cell" aria-hidden="true"><i style="width:${Math.min(100, Math.round(b[i] / 180 * 100))}%;background:${BSC(b[i])}"></i></span></div>`).join('')}<div class="bst-t" role="row"><span role="cell">Total</span><b class="tn" role="cell">${tot}</b><span class="sm" role="cell">${sh ? `Shiny: every stat is ${id === ARCEUS ? Math.round((SHINYARC - 1) * 100) : Math.round((SHINYST - 1) * 100)} % higher` : ''}</span></div></div>`;
 }
 function hexEl(m) {
   const st = statsOf(m), up = natUp(m.nat), dn = natDn(m.nat), cx = 130, cy = 104, R = 64;
@@ -846,11 +846,11 @@ const oddsEl = e => { const o = oddsOf(e, E.ball); return `Catch odds: <b class=
 /* Det du ser når fangsten sitter: potensialet avsløres stjerne for stjerne, og så det fangsten ga. */
 function catchCard(r, e) {
   const m = r.mon, j = judge(m), st = ['Decent', 'Above average', 'Great', 'Outstanding', 'Flawless'].indexOf(j.t) + 1, reg = regOf(e.id), tot = REG[reg].b - REG[reg].a + 1, n = countOf(e.id);
-  return `<div class="ecard"><div class="row" style="justify-content:center;gap:8px"><b class="ecard-h">Caught!</b>${r.crit ? '<span class="pill ecrit">Critical capture</span>' : ''}</div>
+  return `<div class="ecard"><div class="row" style="justify-content:center;gap:8px"><b class="ecard-h">${r.took ? 'It is yours.' : 'Caught!'}</b>${r.crit ? '<span class="pill ecrit">Critical capture</span>' : ''}</div>
     <div class="epot" role="img" aria-label="Potential: ${j.t}, ${st} of 5 stars"><span class="sm">Potential · IVs</span><span class="epot-s">${Array.from({ length: 5 }, (_, i) => `<i class="${i < st ? 'on' : ''}" style="animation-delay:${0.25 + i * 0.16}s"></i>`).join('')}</span><b class="epot-t" style="animation-delay:${0.3 + st * 0.16}s">${j.t}</b></div>
     <div class="sm tn">${NAT[m.nat]} nature · best stat ${SN[j.best]}</div>
     ${r.bonus.c ? `<div class="ecoin"><b>+${coinEl(r.bonus.c)}</b><span class="sm">${esc(r.bonus.why.join(' · '))}</span></div>` : ''}
-    <div class="sm">${r.isNew ? `<b style="color:var(--sage)">New species</b> · ${REG[reg].n} ${dexCount(reg)} of ${tot}` : `You have ${n} now. A duplicate sells for ${nb(sellValue(m))} coins.`}</div></div>`;
+    <div class="sm">${r.isNew ? `<b style="color:var(--sage)">New species</b> · ${REG[reg].n} ${dexCount(reg)} of ${tot}` : r.took ? `It has taken the place of your Mewtwo: the same Pokémon at Lv ${m.lv}, now dark, with perfect IVs and full training.` : `You have ${n} now. A duplicate sells for ${nb(sellValue(m))} coins.`}</div></div>`;
 }
 function aim() {
   cancelAnimationFrame(E.raf);

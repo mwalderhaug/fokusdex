@@ -406,7 +406,7 @@ async function legendIntro(B) {
   /* De aller sjeldneste varsles først: mørket puster, bildet slår sprekker, og så starter filmen. */
   if (info.omen) {
     await CINE.fxPrep('omen'); if (gone()) return; root.classList.add('on'); PACK.music(''); music(''); BSFX.dread();
-    await CINE.fx(cv, 'omen', { cc: tr.cc, warn: tr.dk ? 'WARNING' : '', txt: tr.dk ? 'A power that could end\nthe galaxy is awakening' : tr.leg === 493 ? 'The one who shaped\nthe world draws near' : 'Something from beyond\nthe sky draws near', cue: n => { if (gone()) return; if (n === 'beat') { BSFX.beat(); buzz([70, 90, 110]); } else if (n === 'boom') { BSFX.mv('boom', 3); buzz([90, 60, 240]); } } });
+    await CINE.fx(cv, 'omen', { cc: tr.cc, warn: tr.dk ? 'WARNING' : '', txt: tr.dk ? 'A power that could end\nthe galaxy is awakening' : tr.leg === 493 ? 'The one who shaped\nthe world draws near' : tr.leg === 150 ? 'It was made to be\nthe strongest of all' : 'Something from beyond\nthe sky draws near', cue: n => { if (gone()) return; if (n === 'beat') { BSFX.beat(); buzz([70, 90, 110]); } else if (n === 'boom') { BSFX.mv('boom', 3); buzz([90, 60, 240]); } } });
     if (gone()) return;
   }
   const started = tk ? await PACK.music(tk, V ? { at: 0, loop: false, out: 0.3 } : { at: info.at }) : false; if (gone()) return;
@@ -1126,6 +1126,13 @@ async function playOne(B, e) {
   else if (e.t === 'vanish') { sp.classList.toggle('away', !!e.on); await bwait(260); clearMot(sp); EBXP.unhide(side); }
   else if (e.t === 'sub') { sp.classList.toggle('subd', !!e.on); await bwait(200); }
   else if (e.t === 'mega') await megaShow(B, side, e);
+  /* Arceus bytter plate i raid: et lysglimt i typens farge, og figuren, typen og fargen byttes. */
+  else if (e.t === 'plate') {
+    await typeOut(e.s); if (BT.B !== B || !sp.isConnected) return;
+    if (!PACK.sfx('Judgment', 0.55)) BSFX.aura(); buzz([30, 40, 140]);
+    if (!calm()) { const fxl = $('#fx'); if (fxl) { const d = document.createElement('i'); d.className = 'flashov'; d.style.background = `var(--t${e.ty})`; d.style.animationDuration = '560ms'; fxl.append(d); setTimeout(() => d.remove(), 620); } }
+    const keep = [...sp.classList].filter(c => !['bs', side, 'in', 'gone'].includes(c)).join(' '); paintSprite(side, keep); paintBox(side); await bwait(460);
+  }
   else if (e.t === 'form') { const el = $('#s-' + side); if (el) { FX.open(fxPos(side), ''); BSFX.ball(); el.innerHTML = spr(e.id, { ani: 1, sh: e.sh, back: side === 'me', mega: e.mega }); } await bwait(480); }
   else if (e.t === 'wx') { const a = $('#arena'); if (e.k) { a.dataset.wx = e.k; FX.weather(e.k); await bwait(640); } else delete a.dataset.wx; }
 }
@@ -1334,9 +1341,9 @@ async function resumeBattle(B) {
 async function darkRise(B) {
   const ar = $('#arena'), ok = () => BT.B === B && !!$('#arena');
   BT.busy = true; await bwait(600); if (!ok()) return;
-  await say('Mewtwo is beaten…'); if (!ok()) return;
+  await say(BT.res && BT.res.mew ? 'Mewtwo is beaten, and it is yours…' : 'Mewtwo is beaten…'); if (!ok()) return;
   BSFX.dread(); buzz([40, 60, 40, 60, 200]); shake(1100, 3); ar.classList.add('dkrise');
-  await Promise.all([say('…but a shadow closes around it!'), new Promise(r => setTimeout(r, 1400))]); if (!ok()) return;
+  await Promise.all([say('…but its shadow stays behind, and it is rising!'), new Promise(r => setTimeout(r, 1400))]); if (!ok()) return;
   await say('Your team is restored. This is not over.'); if (!ok()) return;
   BT.busy = false; startBattle(raidBattle(BT.lead, B.mode === 'lab' ? 'dk' : undefined));
 }
@@ -1465,12 +1472,13 @@ function rulesSheet() {
       ${row('It appears', 'about once a week on Normal if you study every day<br>nearly twice as often on Hard, less often on Easy<br>likelier the longer since the last one')}
       ${row('It shows itself', 'when the day\'s battles are played, simulated or skipped')}${row('New ones first', 'never one you own<br>while there is one you lack')}${row('As you collect', 'the great ones and Arceus come more often,<br>the common and the mythical less')}${row('Your first raid', 'one of the very strongest:<br>it shows how far there is to go')}
       ${row('One more draw', 'reaching your daily goal<br>winning a League lap or a Frontier round')}
-      ${row('Team level needed', `mythical ${RAIDGATE[2]} · the great ones ${RAIDGATE[1]} · Arceus, Deoxys ${RAIDGATE[3]}`)}
+      ${row('Team level needed', `mythical ${RAIDGATE[2]} · the great ones ${RAIDGATE[1]} · Mewtwo, Arceus ${RAIDGATE[3]}`)}
       ${row('Its place fights too', `an event every ${RAIDEV}rd turn<br>enraged below half HP`)}
       ${row('Coins', RAIDCOIN.map(nb).join(' · '))}${row('Rare Candy', RAIDCANDY.join(' · '))}
       ${row('Shiny', `1 in ${nb(SHINYN)} · 1 in ${Math.round(1 / PRISMP)} with a Prism Lure`)}${row('Sacred Ash', 'once in a raid: every fainted Pokémon is back at half HP')}
-      <p class="sm">The five steps are: legendary, the great ones, mythical, Arceus and Deoxys, and Dark Mewtwo. A win also gives a lot of XP, and the legendary is yours.</p>
-      <p class="sm"><b>Dark Mewtwo</b> has no raid of its own. Beat Mewtwo, and there is a ${Math.round(DARKP * 100)} % chance that it rises again as Dark Mewtwo. You keep what Mewtwo gave, your team is restored, and you fight once more, right away. Partway through that fight it is provoked and restores its strength. With <b>Arceus</b> on your team and still standing at that moment, it cannot: the light holds the darkness back.</p></div>
+      <p class="sm">The five steps are: legendary, the great ones, mythical, Mewtwo and Arceus, and Dark Mewtwo. A win also gives a lot of XP, and the legendary is yours.</p>
+      <p class="sm"><b>Mewtwo and Arceus</b> are the two hardest. <b>Arceus</b> changes plate every ${ARCEV}rd turn: it takes a type that resists what you last hit it with, and Judgment follows, so you have to vary your attacks. Neither of the two runs out of PP. <b>Deoxys</b> changes shape: it opens in Attack Forme, turns to Defense Forme after ${DEOXT} turns, and goes back to Attack Forme when it is enraged.</p>
+      <p class="sm"><b>Dark Mewtwo</b> has no raid of its own. Beat Mewtwo and it is yours, and its shadow always rises as Dark Mewtwo, until you own the dark one. You keep what Mewtwo gave, your team is restored, and you fight once more, right away, with ${RAIDTRIES} attempts. Win, and Dark Mewtwo takes the place of your Mewtwo, with perfect IVs, a Timid nature and full training (a shiny Mewtwo is never taken: then the dark one joins you as its own). Lose, and you still have Mewtwo. Partway through that fight it is provoked and restores its strength. With <b>Arceus</b> on your team and still standing at that moment, it cannot: the light holds the darkness back.</p></div>
     <div class="card stack"><b>Items to hold</b><p class="sm">Each Pokémon can hold one item, given from its card. It works by itself in the League, the tournament and raids. The rentals in the Battle Frontier hold nothing, and neither do your opponents.</p>
       ${row('Berries · used up', 'Sitrus: a quarter of its HP back at half HP<br>Lum: cures a status condition<br>one against each type: halves one super effective hit')}${row('Plates · they last', `one type hits ${Math.round((PLATEX - 1) * 100)} % harder`)}
       ${row('Gear · it lasts', 'Leftovers: 1/16 HP every turn · Shell Bell: 1/8 of the damage dealt<br>Life Orb: ×1.3, costs 1/10 HP per attack · Expert Belt: ×1.2 when super effective<br>Muscle Band and Wise Glasses: ×1.1 · Scope Lens: more critical hits<br>Rocky Helmet: contact costs the attacker 1/6 HP · Eviolite: Def and Sp. Def ×1.5 for one that can still evolve')}
@@ -1480,10 +1488,10 @@ function rulesSheet() {
     <div class="card stack"><b>Mega Evolution</b><p class="sm">The first Champion or Supreme Boss you beat gives you the Mega Ring and a Mega Stone. A Pokémon that has a Mega form and holds a stone can Mega Evolve from the move menu: once a battle for your team, before it attacks, and it stays that way until the battle is over. Its HP is the same, its other stats and sometimes its types change. Stones are given on the Pokémon's card, and you get the stone back if you sell or trade it.</p>
       ${row('Mega Stone', `${nb(SHOP.mstone.p)} coins in the Shop, with the ring`)}${row('Won from', `Supreme Boss: always · Champion: ${Math.round(MSTONE[1] * 100)} % · Evil Leader: ${Math.round(MSTONE[0] * 100)} %<br>the Champions Cup · raids against the great ones`)}${row('Opponents', 'Champions and Supreme Bosses, on Normal and Hard')}
       <p class="sm"><b>Arceus</b> takes the type of the plate it holds, and Judgment with it.</p>
-      <p class="sm"><b>Legendaries</b> do not use ordinary stones. Rayquaza, Kyogre, Groudon, Latias, Latios, Heatran and Darkrai change form when they become enraged in a raid, and Mewtwo may rise again as Dark Mewtwo. Beat one, and you have its stone: every one of that species you own can then do the same.</p></div>
+      <p class="sm"><b>Legendaries</b> do not use ordinary stones. Rayquaza, Kyogre, Groudon, Latias, Latios, Heatran and Darkrai change form when they become enraged in a raid, and the shadow of a beaten Mewtwo rises as Dark Mewtwo. Beat one, and you have its stone: every one of that species you own can then do the same.</p></div>
     <div class="card stack"><b>Training: IVs and EVs</b><p class="sm">As in the games. <b>IVs</b> are what a Pokémon was born with, 0 to 31 in each stat, and cannot be trained: from Lv ${HTLV} Hyper Training makes a stat count as 31. <b>EVs</b> are what training adds, at most ${EVMAX} in one stat and ${EVTOT} in all, so two stats can be maxed. Your partner gains 1 EV for every two minutes of focus, in the stat it has trained the most. Both are bought under Train on the Pokémon's card, both count more the higher its level, and neither can pass its cap. EVs can be cleared from a stat and placed somewhere else, but the coins are not returned.</p>
       ${row('At Lv 100', 'perfect IV: +31 in a stat<br>full EVs: +63 in a stat')}${row('One EV', `${EVP} coins`)}${row('Hyper Training', `${nb(HTP)} coins a stat, from Lv ${HTLV}`)}${row('One Pokémon, fully trained', `${nb(EVTOT * EVP)} coins for the EVs<br>up to ${nb(6 * HTP)} for Hyper Training`)}</div>
-    <div class="card stack"><b>Shiny Pokémon</b><p class="sm">A shiny is born with perfect IVs in every stat and has ${Math.round((SHINYST - 1) * 100)} % higher stats than an ordinary one of its kind, so the best Pokémon you can own is a fully trained shiny. The odds follow your streak, and incense from the Shop multiplies them for a while in the grass, in packs and in eggs. They can never pass 1 in ${Math.round(1 / SHINYCAP)}.</p>
+    <div class="card stack"><b>Shiny Pokémon</b><p class="sm">A shiny is born with perfect IVs in every stat and has ${Math.round((SHINYST - 1) * 100)} % higher stats than an ordinary one of its kind (a shiny Arceus ${Math.round((SHINYARC - 1) * 100)} %, and it glows), so the best Pokémon you can own is a fully trained shiny. The odds follow your streak, and incense from the Shop multiplies them for a while in the grass, in packs and in eggs. They can never pass 1 in ${Math.round(1 / SHINYCAP)}.</p>
       ${row('Incense', ['glint', 'gleam', 'radiant'].map(k => `×${SHOP[k].sb[0]} for ${SHOP[k].sb[1]} h`).join(' · '))}${row('Prism Lure', `the next raid: 1 in ${Math.round(1 / PRISMP)}`)}${row('Sold', 'five times the price')}</div>
     <div class="card stack"><b>Catching</b><p class="sm">Every encounter gives you three throws, four for a legendary. Stop the marker in the green zone for a good throw and in the gold for a perfect one. The dots at the top show how many are still waiting. Who they are, and how rare, you see when you meet them. A catch shows the Pokémon's potential (its IVs) in stars: from Lv ${HTLV} Hyper Training can make up for low ones.</p>
       ${row('New species', NEWCOIN.map((c, i) => `${TIERS[i].toLowerCase()} ${c}`).join(' · ') + ' coins')}

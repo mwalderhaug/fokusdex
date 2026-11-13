@@ -1499,6 +1499,10 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .sbxbar .sp{display:flex;flex-direction:column;flex:1 1 auto;min-width:0}.sbxbar b{color:var(--gold);font-size:14px;letter-spacing:.02em}
 .sbxbar .btn.gold{background:var(--gold);color:#2a2109}
 .sprb.plt>.spr{filter:var(--pf)}
+/* Shiny Arceus: en gullglød rundt figuren, også med plate. Den følger størrelsen på figuren (--s) og har ingen egen animasjon, så den aldri tar
+   plassen til en annen (avsløringen ved fangst, partneren som vipper). */
+.sprb.gsh>.spr{filter:drop-shadow(0 0 calc(var(--s,64px)*.05) rgba(255,226,145,.95)) drop-shadow(0 0 calc(var(--s,64px)*.13) rgba(255,190,70,.65))}
+.sprb.gsh.plt>.spr{filter:var(--pf) drop-shadow(0 0 calc(var(--s,64px)*.05) rgba(255,226,145,.95)) drop-shadow(0 0 calc(var(--s,64px)*.13) rgba(255,190,70,.65))}
 .purse{margin-top:6px;color:var(--gold)}.purse b{color:var(--gold)}
 .heldc{padding:12px 14px}.hnone{display:block;width:26px;height:26px;border-radius:50%;border:2px dashed var(--ink3);opacity:.6}
 .hfold{margin-top:12px}.hfold>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 14px;border-radius:16px;background:var(--card2)}.hfold>summary::-webkit-details-marker{display:none}.hfold>summary::after{content:"+";font-weight:800;color:var(--ink2);margin-left:6px}.hfold[open]>summary::after{content:"–"}.hfold>summary .sm{margin-left:auto;text-align:right}.hfold>.card{margin-top:8px}
