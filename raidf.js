@@ -725,8 +725,8 @@
      Hver rad: sted, mørkning (farge og styrke), stemning, måten den kommer på, hvor i låta filmen starter, og når den viser seg. */
   const TR = { Raikou: [0, 4.16], Lugia: [8.3, 4.6], 'Ho-oh': [4.6, 4.5], Mewtwo: [5.1, 4.47], Heatran: [2.2, 4.49], Rayquaza: [0.9, 4.34], Deoxys: [0, 3.91], Uxie: [1.0, 4.49], Entei: [0.3, 4.61], Reshiram: [1.9, 4.49], Cobalion: [1.4, 4.43] };
   const CALM = {
-    144: ['loc_icepath', '#04122a', 0.35, 'ice', 'fall', 'Lugia'], 145: ['', '#000', 0, 'bolt', 'fall', 'Raikou'], 146: ['loc_mortar', '#2a0600', 0.3, 'fire', 'fall', 'Ho-oh'], 151: ['loc_ilexday', '#1a0a2a', 0.25, 'dream', 'orbit', 'Mewtwo'],
-    243: ['loc_burned', '#0a0a04', 0.25, 'bolt', 'dash', 'Raikou'], 244: ['loc_burned', '#1a0400', 0.25, 'fire', 'dash', 'Entei'], 245: ['loc_tohjo', '#041a2a', 0.35, 'water', 'dash', 'Raikou'], 251: ['loc_ilex', '#000', 0, 'forest', 'orbit', 'Ho-oh'],
+    144: ['loc_icepath', '#04122a', 0.35, 'ice', 'fall', 'Ho-oh'], 145: ['', '#000', 0, 'bolt', 'fall', 'Ho-oh'], 146: ['loc_mortar', '#2a0600', 0.3, 'fire', 'fall', 'Ho-oh'], 151: ['loc_ilexday', '#1a0a2a', 0.25, 'dream', 'orbit', 'Mewtwo'],
+    243: ['loc_burned', '#0a0a04', 0.25, 'bolt', 'dash', 'Entei'], 244: ['loc_burned', '#1a0400', 0.25, 'fire', 'dash', 'Entei'], 245: ['loc_tohjo', '#041a2a', 0.35, 'water', 'dash', 'Entei'], 251: ['loc_ilex', '#000', 0, 'forest', 'orbit', 'Ho-oh'],
     377: ['loc_alph', '#1a0e04', 0.3, 'regi', 'dots', 'Heatran'], 378: ['loc_icepath', '#04122a', 0.5, 'regi', 'dots', 'Heatran'], 379: ['loc_alph', '#0a0e14', 0.45, 'regi', 'dots', 'Heatran'], 486: ['loc_alph', '#14140a', 0.35, 'regi', 'dots', 'Heatran'],
     380: ['loc_dragonsden', '#0a1a3a', 0.3, 'wind', 'dash', 'Rayquaza'], 381: ['loc_dragonsden', '#0a1a3a', 0.3, 'wind', 'dash', 'Rayquaza'], 385: ['', '#000', 0, 'star', 'fall', 'Deoxys'],
     480: ['loc_mortar', '#1a1400', 0.3, 'lake', 'orbit', 'Uxie'], 481: ['loc_mortar', '#2a0618', 0.3, 'lake', 'orbit', 'Uxie'], 482: ['loc_mortar', '#04102a', 0.3, 'lake', 'orbit', 'Uxie'],
