@@ -262,7 +262,7 @@ function tourShow(i) {
     <div class="acts">${i ? '<button type="button" class="btn nf" data-a="tourgo" data-k="-1">Back</button>' : ''}<button type="button" class="btn ${last ? 'gold' : 'pri'}" data-a="${last ? 'tourend' : 'tourgo'}" data-k="1">${last ? 'Start studying' : 'Next'}</button></div>
     ${last ? '<button type="button" class="btn wide nf" data-a="tourhub">Open the question hub</button>' : ''}`, 'tint', 'var(--sage)');
 }
-function tourEnd(hub) { if (S.tour !== TOURV) { S.tour = TOURV; save(true); } closeOv(); render(); if (hub) helpOpen(''); else if (typeof raidArrive === 'function' && dayOpenQ()) raidArrive(); }
+function tourEnd(hub) { if (S.tour !== TOURV) { S.tour = TOURV; save(true); } closeOv(); render(); if (hub) helpOpen(''); else if (typeof raidArrive === 'function' && raidGo()) raidArrive(); }
 
 /* ---------- Første gang Train åpnes: hva potensial og treningspoeng er. Kan hentes fram igjen med spørsmålstegnet der. ---------- */
 const trainTipOn = () => !(S.tip && S.tip.train) || U.trhelp;

@@ -256,7 +256,7 @@ function liveLoss() {
   } else if (L.m === 'pwt') { pwt().run = null; what = 'cup';
   } else if (L.m === 'raid') {
     const R = S.raid; what = 'raid';
-    if (R) { R.day = dayKey(); R.tries = (R.tries || 0) + 1; R.told = 1; if (R.tries >= RAIDTRIES) S.raid = null; }
+    if (R) { R.day = dayKey(); R.tries = (R.tries || 0) + 1; R.told = 1; if (R.tries >= raidTries(R)) raidGone(); }
   }
   stamp(); save();
   return what;
@@ -1035,6 +1035,20 @@ function raidSpawn(res) {
   return true;
 }
 function raidUnhide() { const R = S.raid; if (!R || !R.hid) return false; R.hid = 0; R.nw = 1; return true; }
+/* GAVE 13. NOV 2026 (bestilt av Jazz): alle utenom eieren får Deoxys som raid denne ene dagen, med ETT forsøk og så mye HP at den ikke kan slås
+   (ev = 1), og en gratis Poké, Great og Ultra Pack (S.fpk: gratispakker, brukes i openPack). Et raid som alt ventet, legges til side (S.rst) og
+   kommer tilbake når Deoxys er borte (raidGone). S.gift = merket for at gaven er gitt, S.gnote = arket om gaven er ikke vist ennå. */
+const GIFT = { k: 'g1113', d: '2026-11-13', id: 386, pk: ['poke', 'great', 'ultra'], hx: 30 };
+function giftCheck() {
+  if (!S.started || S.gift === GIFT.k || dayKey() !== GIFT.d || !S.party.length || !LEG[GIFT.id] || (typeof isAdmin === 'function' && isAdmin())) return false;
+  S.gift = GIFT.k;
+  if (S.raid && !S.raid.ev) S.rst = S.raid;
+  S.raid = { id: GIFT.id, lv: 100, hx: GIFT.hx, day: '', tries: 0, at: dayKey(), nw: 1, hid: 0, sh: 0, ev: 1 };
+  S.fpk = S.fpk || {}; GIFT.pk.forEach(k => { S.fpk[k] = (S.fpk[k] || 0) + 1; });
+  S.gnote = 1; save(true); return true;
+}
+const raidTries = R => R && R.ev ? 1 : RAIDTRIES;
+function raidGone() { S.raid = S.rst || null; delete S.rst; }
 const raidOpen = () => !!S.raid && !S.raid.hid && !!LEG[S.raid.id] && S.raid.day !== dayKey();
 /* ---------- Stedet kjemper med ----------
    Hver legendarisk har et «domene» etter stedet sitt (LEG.bg). Hver RAIDEV-te runde skjer det noe der: din Pokémon mister litt HP (1/RAIDCHIP, og typer som tåler
@@ -1174,11 +1188,11 @@ function raidBattle(lead, demo) {
   /* Hvem som venter, er hemmelig til filmen har gått: fra første forsøk er den kjent (R.seen), og kortet viser den. */
   if (!demo && S.raid && !S.raid.seen) { S.raid.seen = 1; save(); }
   /* Vanskelighetsgraden senker nivået og HP-en til den legendariske (Hard = som før). */
-  const dd = diff(), lv = Math.max(10, Math.round(R.lv * dd.rlv * (R.dk ? 1 : raidX(R.id)[1]))), e = Math.round((R.dk ? 85 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : R.sh ? 1 : 0, g: rollG(R.id), mega: R.id === DEOXYS ? DEOXA : defForm(R.id), ms: raidMega(R), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: (R.dk && dkMoves()) || (R.id === ARCEUS && arcMoves()) || (R.id === DEOXYS && deoxMoves()) || (R.id === 150 && demo !== 150 && mewMoves()) || raidMoves(R.id, lv) };
+  const dd = diff(), lv = R.ev ? 100 : Math.max(10, Math.round(R.lv * dd.rlv * (R.dk ? 1 : raidX(R.id)[1]))), e = Math.round((R.dk ? 85 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : R.sh ? 1 : 0, g: rollG(R.id), mega: R.id === DEOXYS ? DEOXA : defForm(R.id), ms: raidMega(R), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: (R.dk && dkMoves()) || (R.id === ARCEUS && arcMoves()) || (R.id === DEOXYS && deoxMoves()) || (R.id === 150 && demo !== 150 && mewMoves()) || raidMoves(R.id, lv) };
   const B = mkBattle(demo ? party : party.map(evSrc), [foe], legTr(R.id, R.dk), { mode: demo ? 'lab' : 'raid', raid: 1, st: TCL.supreme, k: 'legend', rd: 0, n: 0, lap: 0, ti: 0, bag: bagN(), xm: 3 * dd.xp, sm: 1, dc: dd.coin, boost: { mode: '', m: 1, xp: 1 } });
   B.tr.skill = dd.sk; if (demo) labMega(B); else evApply(B);
   /* I demoen har Mewtwo vanlig HP (ikke raid-HP), så en kommer fram til forvandlingen: det er den demoen er til for. */
-  const f = B.foe[0], big = demo === 150 ? 1 : RAIDHP[L.t - 1] * dd.rhp * (R.dk ? 1 : (R.hx || 1) * raidX(R.id)[0]); f.max = f.hp = Math.round(f.max * big); f.big = big; if (L.t >= 4) f.mv.forEach(m => { m.pp = m.max = m.max * RAIDPP; }); if (R.dk) f.short = 'D.Mewtwo';
+  const f = B.foe[0], big = demo === 150 ? 1 : RAIDHP[L.t - 1] * (R.ev ? 1 : dd.rhp) * (R.dk ? 1 : (R.hx || 1) * raidX(R.id)[0]); f.max = f.hp = Math.round(f.max * big); f.big = big; if (L.t >= 4) f.mv.forEach(m => { m.pp = m.max = m.max * RAIDPP; }); if (R.dk) f.short = 'D.Mewtwo';
   return B;
 }
 function finishRaid(B) {
@@ -1211,14 +1225,15 @@ function finishRaid(B) {
       S.raid = null;
       if (R && R.r1) res.perks.push(`Mewtwo gave its rewards before it changed: ${R.r1}.`);
     } else {
-      raidCatch(id, 0, res, R && R.sh); S.raid = null; res.note = `${nm} is yours.`;
+      raidCatch(id, 0, res, R && R.sh); raidGone(); res.note = `${nm} is yours.`;
     }
   } else if (R) {
     R.day = dayKey(); R.tries = (R.tries || 0) + 1;
     const pre = R.r1 && !R.told ? `Mewtwo's rewards are yours: ${R.r1}. ` : ''; R.told = 1;
-    if (R.tries >= RAIDTRIES) {
-      S.raid = null;
-      if (R.dk) res.note = `${pre}The shadow lets go and Dark Mewtwo is gone. Mewtwo stays with you. Beat a Mewtwo again, and the shadow will rise once more.`;
+    if (R.tries >= raidTries(R)) {
+      raidGone();
+      if (R.ev) res.note = `${nm} was never going to fall today, and that is how it was meant to be. It has moved on. Train your team: legendary Pokémon will show themselves again.`;
+      else if (R.dk) res.note = `${pre}The shadow lets go and Dark Mewtwo is gone. Mewtwo stays with you. Beat a Mewtwo again, and the shadow will rise once more.`;
       else res.note = `${nm} has moved on. Another legendary Pokémon will show itself in time.`;
     } else res.note = `${pre}${nm} stays where it is. You have one more attempt, tomorrow${R.dk ? '' : ', and now you know who is waiting'}.`;
   }

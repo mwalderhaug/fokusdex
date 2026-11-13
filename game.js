@@ -154,9 +154,9 @@ function packDraw(k, demo) {
   return P.slots.map(sl => { const r = Math.random(), lg = r < (sl.leg || 0) ? legEnc(P.shm) : null, ps = !lg && r < (sl.leg || 0) + (sl.ps || 0), e = lg || (ps ? genEnc({ ids: PKPS, shm: P.shm }) : genEnc({ min: sl.min || 0, luck: sl.luck || 0, shm: P.shm })); e.pk = 1; if (demo) { delete e.myst; if (lg) e.lg = 1; if (ps) e.ps = 1; } return e; });
 }
 function openPack(k) {
-  const P = PACKS[k]; if (!P || S.coins < P.p || (P.lv && tlv() < P.lv) || S.pend.length > PACKMAX) return null;
+  const P = PACKS[k], free = !!(S.fpk && S.fpk[k] > 0); if (!P || S.pend.length > PACKMAX || (!free && (S.coins < P.p || (P.lv && tlv() < P.lv)))) return null;
   const out = packDraw(k);
-  S.coins -= P.p; S.pend.push(...out); S.packs = (S.packs || 0) + 1; save();
+  if (free) { if (--S.fpk[k] <= 0) delete S.fpk[k]; } else S.coins -= P.p; S.pend.push(...out); S.packs = (S.packs || 0) + 1; save();
   return out;
 }
 /* Salgsverdi: sjeldenhet teller mest, nivå løfter prisen (nivå 20 dobler den). */

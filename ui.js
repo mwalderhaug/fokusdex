@@ -222,6 +222,7 @@ function render() {
   buildFags();
   if (!S.started) { $('#nav').hidden = true; $('#main').innerHTML = ''; return intro(); }
   /* Før «Done for today» finnes bare Focus, uten faner (dayOpenQ). */
+  if (typeof giftCheck === 'function' && giftCheck()) setTimeout(() => { if (!giftSheet()) return; }, 60);
   const open = dayOpenQ(); if (!open) U.tab = 'fokus'; $('#nav').hidden = !open;
   if (featCheck()) save(true);
   /* Achievements: summen regnes én gang per tegning. Når et nytt mål er nådd siden sist, sies det fra én gang (ikke mens en studerer). */
@@ -244,6 +245,15 @@ const admOn = () => { if (U.adm == null) { try { U.adm = localStorage.getItem(KE
 const admRow = () => isAdmin() ? `<div class="admrow"><button type="button" class="btn sm2" data-a="adm" aria-pressed="${admOn()}">Admin view · ${admOn() ? 'on' : 'off'}</button>${admOn() ? '<button type="button" class="btn sm2" data-a="lab">Sandbox</button>' : ''}</div>` : '';
 /* Foten på forsiden før «Done for today». */
 const studyFoot = () => `<button type="button" class="btn wide st-done" data-a="dn">Done for today</button><p class="sm st-cap">Battles, raids and the tabs open when you are done.</p>`;
+/* Raidet vises ellers først når dagen er åpnet; gaveraidet (ev) vises med en gang. */
+const raidGo = () => dayOpenQ() || !!(S.raid && S.raid.ev);
+function giftSheet() {
+  if (!S.gnote || S.timer || !$('#ov').hidden || !$('#sheet').hidden) return false;
+  delete S.gnote; save(true);
+  const pk = Object.keys(S.fpk || {}).filter(k => PACKS[k]).map(k => PACKS[k].n);
+  openSheet(`<h2 style="margin:0 0 4px">A gift today</h2><ul class="wnl">${pk.length ? `<li>Free packs wait in the Shop: ${pk.join(', ')}.</li>` : ''}<li>Something legendary shows itself to every trainer today. You get one attempt, today only.</li></ul><button type="button" class="btn wide gold" data-a="wnok" style="margin-top:14px">Got it</button>`);
+  return true;
+}
 function whatsNew() {
   if (!S.started || (S.wn || 0) >= WNV) return false;
   S.wn = WNV; save(true);
@@ -397,7 +407,7 @@ VIEW.fokus = () => {
     ${S.incOn ? '<p class="sm" style="margin-top:10px">Incense is lit for your next session.</p>' : ''}${S.lure > 0 ? `<p class="sm" style="margin-top:10px">Lure: one more encounter in your next ${S.lure} session${S.lure > 1 ? 's' : ''}.</p>` : ''}${S.slure > 0 ? `<p class="sm" style="margin-top:10px">Super Lure: rarer Pokémon in your next ${S.slure} session${S.slure > 1 ? 's' : ''}.</p>` : ''}${shinyBoost() > 1 ? `<p class="sm" style="margin-top:10px;color:var(--gold)">${SHOP[S.shb.k] ? SHOP[S.shb.k].n : 'Shiny incense'}: shiny odds ×${shinyBoost()} for ${hLeft(S.shb.until - Date.now())} more.</p>` : ''}${S.prism ? '<p class="sm" style="margin-top:10px;color:var(--gold)">Prism Lure: the next raid has a 1 in 5 chance of being shiny.</p>' : ''}${S.boost ? `<p class="sm" style="margin-top:10px;color:var(--gold)">Boss perk: ${S.boost.m}× coins for your next ${S.boost.n} session${S.boost.n > 1 ? 's' : ''}.</p>` : ''}</div>`;
   /* En vanlig dag ligger kampene nederst. På en eventdag står eventet og kampene øverst, og det som har med studeringen å gjøre, under. */
   const CL = clockLock(); if (CL) top += clockCard(CL);
-  if (!dayOpenQ()) return top + h + studyFoot() + admRow();
+  if (!dayOpenQ()) return top + (S.raid && S.raid.ev && S.party.length ? raidCard() : '') + (S.fpk && Object.keys(S.fpk).length ? '<button type="button" class="btn wide gold" data-a="fpk" style="margin-bottom:12px">Open your free packs</button>' : '') + h + studyFoot() + admRow();
   top += newsEl();
   const battles = S.party.length ? (has('battles') ? raidCard() + ladderCard() : lockCard('battles')) : '', E = battles && has('battles') && typeof evNow === 'function' ? evNow() : null;
   return E ? `${top}${battles}<div class="evsep"><span>Study</span></div>${h}${admRow()}` : top + h + battles + admRow();
@@ -609,8 +619,8 @@ VIEW.butikk = () => {
   const full = S.pend.length > PACKMAX;
   return `<div class="row" style="justify-content:space-between"><h1 class="big">Shop</h1>${coinEl(S.coins)}</div>
     <h2 class="h">Encounter packs</h2>
-    <div class="packs">${Object.keys(PACKS).map(k => { const P = PACKS[k], lock = P.lv && l < P.lv, can = S.coins >= P.p && !lock && !full;
-      return `<button type="button" class="pkb${can ? '' : ' off'}" data-a="pack" data-k="${k}" style="--pc:${P.c}"${can ? '' : ' disabled'}><span class="pk-ic"><i></i></span><b>${P.n}</b><span class="sm">${P.d}</span><span class="pk-p tn">${lock ? 'Trainer level ' + P.lv : coinEl(P.p)}</span></button>`; }).join('')}</div>
+    <div class="packs">${Object.keys(PACKS).map(k => { const P = PACKS[k], free = !!(S.fpk && S.fpk[k] > 0), lock = !free && P.lv && l < P.lv, can = (free || S.coins >= P.p) && !lock && !full;
+      return `<button type="button" class="pkb${can ? '' : ' off'}" data-a="pack" data-k="${k}" style="--pc:${P.c}"${can ? '' : ' disabled'}><span class="pk-ic"><i></i></span><b>${P.n}</b><span class="sm">${P.d}</span><span class="pk-p tn">${free ? 'Free · a gift' : lock ? 'Trainer level ' + P.lv : coinEl(P.p)}</span></button>`; }).join('')}</div>
     <p class="sm">${full ? 'Catch some of the encounters that are waiting before you open more packs.' : 'Three encounters in every pack, opened on the spot. The last slot is the good one: the dearer the pack, the better the odds of something rare. Pokémon from packs sell for less than wild ones. The greatest legendaries are not in packs; they have to be met in raids.'}</p>
     ${SHELF.map(([name, ks]) => `<h2 class="h">${name}</h2>${SHELFD[name] ? `<p class="sm">${SHELFD[name]()}</p>` : ''}<div class="card" style="padding-top:6px;padding-bottom:6px">${ks.map(k => { const it = SHOP[k], lock = (it.lv && l < it.lv) || (it.ring && !S.ring), full = shopFull(k);
       return `<div class="item${lock ? ' lk' : ''}"><span class="ic">${ic(k)}</span><div class="sp"><b>${it.n}</b> <span class="sm tn">· ${shopHave(k)}</span><div class="sm">${it.d}</div></div><button type="button" class="btn sm2 ${S.coins >= it.p && !lock && !full ? 'pri' : ''}" data-a="buy" data-k="${k}"${S.coins < it.p || lock || full ? ' disabled' : ''}>${lock ? (it.ring && !S.ring ? 'Mega Ring' : 'Level ' + it.lv) : full ? shopFullTxt(k) : nb(it.p)}</button></div>`; }).join('')}</div>`).join('')}
@@ -948,7 +958,8 @@ const A = {
   tab: el => { if (!dayOpenQ()) return; U.tab = el.dataset.k; render(); $('#main').scrollTop = 0; enter(); },
   smore: () => { U.more = !U.more; render(); },
   adm: () => { if (!isAdmin()) return; U.adm = !admOn(); try { localStorage.setItem(KEY + '.adm', U.adm ? '1' : '0'); } catch (_) {} render(); toast(U.adm ? 'Admin view is on: everything is open, and the Sandbox is here.' : 'Admin view is off: you see what everyone sees.'); },
-  wnok: () => { closeSheet(); if (typeof raidArrive === 'function' && dayOpenQ()) raidArrive(); },
+  wnok: () => { closeSheet(); if (!giftSheet() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
+  fpk: () => { const k = Object.keys(S.fpk || {}).find(x => PACKS[x]); if (!k) return render(); const out = openPack(k); if (!out) return toast('Catch some of your waiting encounters first.'); sfx.coin(); render(); packShow(k, out); },
   newsok: el => { S.news = (S.news || []).filter(k => k !== el.dataset.k); save(true); render(); },
   /* «Done for today»: resten av appen kommer fram. Er det studert nok til kampene (og de er åpnet for deg), åpnes kampdagen med det samme. */
   dn: () => { if (typeof fairGate === 'function' && fairGate()) return; S.dn = dayKey(); stamp(); save(); sfx.open(); render(); $('#main').scrollTop = 0; enter();
@@ -963,7 +974,7 @@ const A = {
   pause: () => { togglePause(); paintTimer(); },
   early: () => endTimer(),
   quit: () => { if (!U.quit) { U.quit = 1; $('#t-quit').textContent = 'Tap again to cancel'; setTimeout(() => { U.quit = 0; const b = $('#t-quit'); if (b) b.textContent = 'Cancel'; }, 3000); return; } clearInterval(tick); dropAwake(); S.timer = null; save(true); document.title = 'Fokusdex'; closeOv(); render(); },
-  home: () => { encQuiet(); closeOv(); render(); if (typeof raidArrive === 'function' && dayOpenQ()) raidArrive(); },
+  home: () => { encQuiet(); closeOv(); render(); if (!giftSheet() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
   hunt: () => hunt(),
   later: () => { cancelAnimationFrame(E.raf); encQuiet(); closeOv(); render(); },
   skip: () => { if (E.busy) return; cancelAnimationFrame(E.raf); dropPend(E.e); S.cst = 0; save(); hunt(); },
@@ -1137,7 +1148,7 @@ window.addEventListener('storage', ev => { if (ev.key === KEY) tabShow(); });
 render();
 clockCheck();
 netTime().then(o => { if (o != null && clockCheck() && $('#ov').hidden) render(); });
-if (S.started && S.timer) showTimer(); else if (!(typeof liveGate === 'function' && liveGate()) && S.started) { if (S.tour !== TOURV) tourShow(0); else if (!whatsNew() && typeof raidArrive === 'function' && dayOpenQ()) raidArrive(); }
+if (S.started && S.timer) showTimer(); else if (!(typeof liveGate === 'function' && liveGate()) && S.started) { if (S.tour !== TOURV) tourShow(0); else if (!whatsNew() && !giftSheet() && typeof raidArrive === 'function' && raidGo()) raidArrive(); }
 ghPull();
 setTimeout(() => PACK.init(), 2500);
 /* Adressen …/#lab åpner demoen direkte. */

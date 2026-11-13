@@ -16,7 +16,7 @@ function raidArrive() {
   R.nw = 0; save(true);
   ov(`<div class="rarr" id="rarr"><canvas class="rarr-cv" id="rarrcv" width="512" height="384"></canvas>
       <div class="rarr-c"><span class="raid-sp qm" aria-hidden="true"><i>?</i></span><div class="sm">Legendary raid</div><h1 class="big" style="font-size:28px">A legendary Pokémon has shown itself.</h1>
-        <p class="mut" style="max-width:32ch;margin:0 auto">Who it is stays secret until you face it. You get ${RAIDTRIES} attempts: the first blind, the second knowing. Beat it, and it is yours.</p>
+        <p class="mut" style="max-width:32ch;margin:0 auto">Who it is stays secret until you face it. ${R.ev ? 'You get one attempt, today only.' : `You get ${RAIDTRIES} attempts: the first blind, the second knowing. Beat it, and it is yours.`}</p>
         <div class="acts"><button type="button" class="btn gold" data-a="raid">See the raid</button><button type="button" class="btn nf" data-a="home">Later</button></div></div></div>`, 'battle rarrov', 'var(--gold)');
   const root = $('#rarr'), done = () => { if (root.isConnected) root.classList.add('done'); };
   if (calm() || typeof CINE === 'undefined' || !CINE.fx) { done(); sfx.event(); return true; }
