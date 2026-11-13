@@ -1144,6 +1144,11 @@ const SELFKO = new Set(['Explosion', 'Self-Destruct', 'Final Gambit', 'Memento',
 /* Dark Mewtwo har sitt eget sett: Psystrike, Shadow Ball, Aura Sphere og Dark Pulse treffer alle typer med minst ett angrep. Med det arten lærer av seg
    selv (Future Sight, Aura Sphere, Swift, Psystrike) var en Ghost/Dark-type som Sableye helt urørlig, og den sterkeste i spillet kunne bare stå og se på. */
 const DKMOVES = ['Psystrike', 'Shadow Ball', 'Aura Sphere', 'Dark Pulse'];
+/* MEWTWO I RAID har de samme fire angrepene på alle nivåer: de den ellers først har fra nivå 93–100. Med nivålista hadde den under raidnivå 90 bare
+   Psychic-angrep og Swift, og et lag med en Dark-type slo den nesten hver gang (målt: 96–100 % for pseudo-legendariske på nivå 35–60). I demoen
+   (Mewtwo → Dark) har den nivålista som før, så en kommer fram til forvandlingen. */
+const MEWMOVES = ['Psystrike', 'Aura Sphere', 'Future Sight', 'Swift'];
+const mewMoves = () => { const l = MEWMOVES.map(n => MOVES.findIndex(m => m[0] === n)).filter(i => i >= 0); return l.length === 4 ? l : null; };
 const dkMoves = () => { const l = DKMOVES.map(n => MOVES.findIndex(m => m[0] === n)).filter(i => i >= 0); return l.length === 4 ? l : null; };
 /* Den mørke tar plassen til en Mewtwo du eier: det er den samme Pokémonen (nivå, XP, kallenavn og det den holder står), men mørk, og alltid med de
    beste verdiene: IV 31 i alt, naturen Timid (DKNAT) og EV fullt ut i Sp. Atk og Speed (DKEV). Angrepene blir de fire den mørke bruker. */
@@ -1169,7 +1174,7 @@ function raidBattle(lead, demo) {
   /* Hvem som venter, er hemmelig til filmen har gått: fra første forsøk er den kjent (R.seen), og kortet viser den. */
   if (!demo && S.raid && !S.raid.seen) { S.raid.seen = 1; save(); }
   /* Vanskelighetsgraden senker nivået og HP-en til den legendariske (Hard = som før). */
-  const dd = diff(), lv = Math.max(10, Math.round(R.lv * dd.rlv * (R.dk ? 1 : raidX(R.id)[1]))), e = Math.round((R.dk ? 85 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : R.sh ? 1 : 0, g: rollG(R.id), mega: R.id === DEOXYS ? DEOXA : defForm(R.id), ms: raidMega(R), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: (R.dk && dkMoves()) || (R.id === ARCEUS && arcMoves()) || (R.id === DEOXYS && deoxMoves()) || raidMoves(R.id, lv) };
+  const dd = diff(), lv = Math.max(10, Math.round(R.lv * dd.rlv * (R.dk ? 1 : raidX(R.id)[1]))), e = Math.round((R.dk ? 85 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : R.sh ? 1 : 0, g: rollG(R.id), mega: R.id === DEOXYS ? DEOXA : defForm(R.id), ms: raidMega(R), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: (R.dk && dkMoves()) || (R.id === ARCEUS && arcMoves()) || (R.id === DEOXYS && deoxMoves()) || (R.id === 150 && demo !== 150 && mewMoves()) || raidMoves(R.id, lv) };
   const B = mkBattle(demo ? party : party.map(evSrc), [foe], legTr(R.id, R.dk), { mode: demo ? 'lab' : 'raid', raid: 1, st: TCL.supreme, k: 'legend', rd: 0, n: 0, lap: 0, ti: 0, bag: bagN(), xm: 3 * dd.xp, sm: 1, dc: dd.coin, boost: { mode: '', m: 1, xp: 1 } });
   B.tr.skill = dd.sk; if (demo) labMega(B); else evApply(B);
   /* I demoen har Mewtwo vanlig HP (ikke raid-HP), så en kommer fram til forvandlingen: det er den demoen er til for. */
