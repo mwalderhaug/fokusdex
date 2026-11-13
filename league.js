@@ -1007,7 +1007,7 @@ function raidPick() {
   const p = raidFar(), lv = leagueLv(), all = Object.keys(LEG).map(Number), w = [0, 1, 2, 3, 4].map(t => RAIDW0[t] + (RAIDW1[t] - RAIDW0[t]) * p);
   w[4] = Math.min(25, w[4] + 0.6 * (S.rpity || 0));
   if (lv < RAIDGATE[3]) { w[2] += w[4]; w[4] = 0; } if (lv < RAIDGATE[1]) { w[3] += w[2]; w[2] = 0; } if (lv < RAIDGATE[2]) { w[1] += w[3]; w[3] = 0; }
-  const inT = t => all.filter(id => LEG[id].t === t && !(id === 150 && lv < RAIDGATE[3])), fresh = t => inT(t).filter(id => !legOwn(id));
+  const inT = t => all.filter(id => LEG[id].t === t && !(id === 150 && lv < RAIDGATE[3])), fresh = t => inT(t).filter(id => !legOwn(id) && !(S.rnot || []).includes(id));
   const open = [1, 2, 3, 4].filter(t => w[t] > 0 && fresh(t).length), use = open.length ? open : [1, 2, 3, 4].filter(t => w[t] > 0);
   let x = Math.random() * use.reduce((a, t) => a + w[t], 0), t = use[use.length - 1];
   for (const k of use) { x -= w[k]; if (x <= 0) { t = k; break; } }
@@ -1019,6 +1019,10 @@ function raidPick() {
    teller studiedagene og økes i grant). Med p: en ekstra trekning med den sjansen (en vunnet runde), men heller ikke den før RAIDCOOL dager er gått. */
 function raidRoll(p) {
   if (S.raid || !S.party.length || (jOn() && !S.humb)) return false;
+  /* Et bestilt raid (S.rforce = 'ÅÅÅÅ-MM-DD', settes bare for hånd i én lagring etter protokollen): ingen trekning før den dagen, og den første
+     trekningen fra og med den dagen gir et raid. Det er en vanlig trekning (S.humb = 1: ikke det første møtet med Mewtwo eller Arceus), og
+     artene i S.rnot er utelatt (raidPick). */
+  if (S.rforce) { if (dayKey() < S.rforce) return false; delete S.rforce; S.humb = 1; return raidSpawn(); }
   /* Det første raidet kommer tidlig, uten trekning. */
   if (!S.humb && (S.rwait || 0) >= HUMBDAY) return raidSpawn();
   const w = (S.rwait || 0) - RAIDCOOL - (diff().rc || 0); if (w < 0) return false;
@@ -1044,7 +1048,7 @@ function raidSpawn(res) {
   /* hid = ikke vist ennå: den viser seg først når dagens kamper er spilt, simulert eller hoppet over (raidUnhide), som en overraskelse.
      sh = shiny: 1 av SHINYN, eller PRISMP når en Prism Lure er kjøpt (den brukes opp her). */
   const sh = Math.random() < (S.prism ? PRISMP : 1 / SHINYN) ? 1 : 0; S.prism = 0;
-  S.raid = { id, lv: raidLvFor(t), hx: +raidHx(t).toFixed(2), day: '', tries: 0, at: dayKey(), nw: 0, hid: 1, sh }; S.rwait = 0;
+  S.raid = { id, lv: raidLvFor(t), hx: +raidHx(t).toFixed(2), day: '', tries: 0, at: dayKey(), nw: 0, hid: 1, sh }; S.rwait = 0; delete S.rnot;
   if (res) res.raid = id;
   return true;
 }

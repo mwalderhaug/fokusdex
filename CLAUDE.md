@@ -32,12 +32,15 @@ belønninger) · `bfx`, `ebx`, `ebxp` (effekter, EBDX-animasjoner) · `raid`, `r
   Serveren stopper mellom svarene, så start den på nytt. Full regresjon: `work/pw/regress10.sh`.
 - Balanse: `work/sim/boss.js` (finalene i ligaen), `perleg.js` (hvert raid for seg), `prog.js` (progresjonen). Med `DIR=/tmp/kopi` måles en endret kopi.
 - Store tall og beslutninger skrives i `work/NOTES.md` (logg) og `work/HANDOFF.md` (status nå).
+- Tid på skjermen vises som timer og minutter med `hm()` (ui.js): «4 h 20 min», aldri desimaltimer som 4.3.
 
 ## Utgivelse
 1. Testene er grønne.
 2. Øk `CACHE` i `sw.js` (`fokusdex-vNN`).
-3. Merker spillerne noe: øk `WNV` og skriv 3–4 korte linjer i `WN` (game.js), uten å røpe noe. Spillerne får selv beskjed om at en ny
-   versjon er klar (stripa «Reload», `updReady` i ui.js), så de trenger ikke å bli fortalt det.
+3. Merker spillerne noe: øk `WNV` og skriv 3–4 korte linjer i `WN` (game.js), med norsk i `LNO`. Hold dem vage: «Bug fixes»,
+   «Some adjustments to raids and bosses». Aldri navn på bosser, legendariske eller gjenstander, og aldri tall: det røper for mye for
+   spillerne. Et nytt valg spilleren selv skal bruke, kan nevnes kort med hvor det er. Spillerne får selv beskjed om at en ny versjon
+   er klar (stripa «Reload», `updReady` i ui.js), så de trenger ikke å bli fortalt det.
 4. Ny form på lagringen: ny `migrateNN` og `fresh().mig`.
 5. Commit på engelsk, push til `main`. Skriv det i `work/NOTES.md` og oppdater `work/HANDOFF.md`.
 

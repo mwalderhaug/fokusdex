@@ -13,6 +13,8 @@ const REG = [null, { n: 'Kanto', a: 1, b: 151, lv: 1, dex: 0 }, { n: 'Johto', a:
    Økter kan også føres på andre aktiviteter (EXTRA: jobbsøking, musikk, lesing …). De teller OTHERW av et fag: halv XP, halve mynter, halvt så
    mange møter og halv framdrift mot dagsmålet, og timene føres for seg. Har spilleren ingen egne fag, teller alt fullt. */
 const OTHERW = 0.5;
+/* XP fra andre ting enn fagene (XP-en fagene gir, ganget med dette). Møter og mynter er de samme som for fagene; bare kampbonusen og dagsmålet teller halvt (OTHERW). */
+const OTHERXP = 0.75;
 const EXTRA = { sok: { n: 'Job apps', c: '#D4BC8E', ty: [2, 9] }, musikk: { n: 'Music', c: '#C9A8B4', ty: [0, 17] }, lesing: { n: 'Reading', c: '#A8B6C9', ty: [13, 7] }, prosjekt: { n: 'Project', c: '#B4C2A0', ty: [8, 12] }, annet: { n: 'Other', c: '#AFA89E', ty: [] } };
 const isSubj = k => !!(S.fag && S.fag[k]);
 const rateOf = k => isSubj(k) || !Object.keys(S.fag || {}).length ? 1 : OTHERW;
@@ -446,11 +448,10 @@ const LNO = {
   'That was {name}. You never had a chance, and that was the point: now you know what is out there. Train your team, and the next legendary Pokémon will be a fair fight. It comes in a few days.': 'Det var {name}. Du hadde aldri en sjanse, og det var meningen: nå vet du hva som finnes der ute. Tren laget ditt, så blir neste legendariske Pokémon en rettferdig kamp. Den kommer om noen dager.',
   // What's new og oppdateringer
   'What\'s new': 'Nytt i appen',
+  'Other activities now give encounters every 20 minutes, like your subjects.': 'Andre aktiviteter gir nå møter hvert 20. minutt, som fagene.',
+  'You can mute the encounter sound: tap the bell during a session.': 'Du kan slå av lyden når et møte dukker opp: trykk på bjella under en økt.',
   'Explanations can now be read in Norwegian: Profile → Language for explanations.': 'Forklaringer kan nå leses på norsk: Profile → Language for explanations.',
-  'The app now tells you when an update is ready, so you never miss one.': 'Appen sier nå fra når en oppdatering er klar, så du aldri går glipp av en.',
-  'Arceus and Dark Mewtwo stand alone at the top. Rayquaza, Giratina and Mewtwo come next, and Deoxys is one of the great ones.': 'Arceus og Dark Mewtwo står alene på toppen. Så kommer Rayquaza, Giratina og Mewtwo, og Deoxys er en av de store.',
-  'Cynthia now fights about as hard as Ghetsis, and beating her or Ghetsis pays far more. See for yourself.': 'Cynthia kjemper nå omtrent like hardt som Ghetsis, og å slå henne eller Ghetsis gir mye mer. Se selv.',
-  'Master Balls are rarer now, and dearer in the Shop.': 'Master Balls er sjeldnere nå, og dyrere i Shop.',
+  'Some adjustments to raids, bosses and rewards, and bug fixes.': 'Noen justeringer på raid, bosser og belønninger, og feilrettinger.',
   'Your journey: new things now open one study day at a time. See the card on the Focus page.': 'Reisen din: nye ting åpner seg nå én studiedag om gangen. Se kortet på Focus-siden.',
   'A new version of Fokusdex is ready.': 'En ny versjon av Fokusdex er klar.'
 };
@@ -492,7 +493,7 @@ function jFriend() {
 const has = k => !!(S.ulk && S.ulk[k]);
 /* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
    Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
-const WNV = 66, WN = ['Explanations can now be read in Norwegian: Profile → Language for explanations.', 'The app now tells you when an update is ready, so you never miss one.', 'Arceus and Dark Mewtwo stand alone at the top. Rayquaza, Giratina and Mewtwo come next, and Deoxys is one of the great ones.', 'Cynthia now fights about as hard as Ghetsis, and beating her or Ghetsis pays far more. See for yourself.', 'Master Balls are rarer now, and dearer in the Shop.'];
+const WNV = 67, WN = ['Other activities now give encounters every 20 minutes, like your subjects.', 'You can mute the encounter sound: tap the bell during a session.', 'Explanations can now be read in Norwegian: Profile → Language for explanations.', 'Some adjustments to raids, bosses and rewards, and bug fixes.'];
 /* Første linje for dem som går reisen (whatsNew i ui.js). */
 const WNJ = 'Your journey: new things now open one study day at a time. See the card on the Focus page.';
 function featCheck() { S.ulk = S.ulk || {}; if (!jOn()) return 0; let ch = 0; for (const [k, d] of JOURNEY) if (!S.ulk[k] && (S.jd || 0) >= d) { S.ulk[k] = 1; ch = 1; } return ch; }
@@ -874,11 +875,14 @@ function finishTimer() {
 function grant(fag, real, full, plan, re) {
   /* re = { t: da økta startet }. Gis en økt på nytt etter at to lagringer har møttes (jrMerge: re.again), hører den til dagen den ble gjort (re.d). */
   const k = re && re.again && re.d ? re.d : dayKey(), day = S.log[k] || (S.log[k] = { m: 0, s: 0, f: {} });
-  const w = rateOf(fag), min = w === 1 ? real : Math.round(real * w), planned = plan * w;
+  /* Andre ting enn fagene (rateOf < 1) teller halvt bare for kampbonusen og dagsmålet (min, day.m). Møter og mynter følger de ekte minuttene
+     (okReal = de ekte minuttene som er innenfor dagsmålet), XP er OTHERXP av det fagene gir, og partneren får ikke EV av dem. */
+  const w = rateOf(fag), min = w === 1 ? real : Math.round(real * w), planned = plan;
   const rested = day.s === 0, okMin = Math.max(0, Math.min(min, S.cap - day.m)), tired = okMin < min, mult = rested ? 1.5 : 1;
+  const okReal = w === 1 ? okMin : Math.min(real, Math.round(okMin / w)), xw = w === 1 ? 1 : OTHERXP;
   const R = { fag, min: real, eff: min, w, full, rested, tired, ups: [], gifts: [], hatch: [], tl0: tlv(), enc: 0 };
-  R.xp = Math.round((okMin * 10 + (min - okMin) * 5) * mult);
-  R.coins = Math.round((okMin * 3 + (min - okMin) * 1.5) * mult) + (full ? Math.round(30 * w) : 0);
+  R.xp = Math.round((okReal * 10 + (real - okReal) * 5) * mult * xw);
+  R.coins = Math.round((okReal * 3 + (real - okReal) * 1.5) * mult) + (full ? 30 : 0);
   /* Fordel fra toppbosser: flere mynter i de neste øktene. */
   if (S.boost && S.boost.n > 0) { R.coins = Math.round(R.coins * S.boost.m); S.boost.n--; R.gifts.push(`Boss perk: ${S.boost.m}× coins${S.boost.n ? ` · ${S.boost.n} more session${S.boost.n > 1 ? 's' : ''}` : ''}`); if (!S.boost.n) S.boost = null; }
   S.xp += R.xp; S.coins += R.coins;
@@ -894,8 +898,8 @@ function grant(fag, real, full, plan, re) {
   { const A = achInit(), g0 = typeof goalMin === 'function' ? goalMin() : S.cap; A.bs = Math.max(A.bs || 0, streak()); if (A.gd !== k && day.m >= g0) { A.goal = (A.goal || 0) + 1; A.gd = k; } }
   S.party.forEach((u, i) => {
     const m = monBy(u); if (!m) return;
-    const l0 = m.lv; m.xp += Math.round(min * 10 * (i ? 0.3 : 1)); m.lv = lvOf(m.xp);
-    if (!i) addEv(m, Math.floor(min / 2));
+    const l0 = m.lv; m.xp += Math.round(real * 10 * xw * (i ? 0.3 : 1)); m.lv = lvOf(m.xp);
+    if (!i && w === 1) addEv(m, Math.floor(real / 2));
     if (m.lv > l0) R.ups.push(Object.assign({ u, l0, l1: m.lv, evo: evoOpts(m).some(x => x.ok) }, learnUp(m, l0)));
   });
   for (const q of QUESTS) if (day.m - min < q.m && day.m >= q.m) { q.give(); R.gifts.push(`Daily goal, ${q.n}: ${q.r}`); }
@@ -919,11 +923,11 @@ function grant(fag, real, full, plan, re) {
     R.gifts.push(`Trainer level ${l}: ${g}`);
   }
   if (S.eggs.length) {
-    const e = S.eggs[0]; e.got += min;
+    const e = S.eggs[0]; e.got += real;
     if (e.got >= e.need) { S.eggs.shift(); const en = genEnc({ egg: 1 }); const isNew = !S.caught[en.id]; const m = addMon(en.id, 1, en.sh, 1, en.g); R.hatch.push({ u: m.u, isNew }); }
   }
   const encs = [];
-  let n = Math.floor(okMin / 20) + (full && planned >= 25 && okMin >= planned ? 1 : 0), luck = Math.min(1.5, planned / 60);
+  let n = Math.floor(okReal / 20) + (full && planned >= 25 && okReal >= planned ? 1 : 0), luck = Math.min(1.5, planned / 60);
   if (S.incOn && okMin > 0) { n++; luck += 0.5; S.incOn = 0; }
   /* Lure: ett møte til i LUREN økter. Super Lure: sjeldnere funn i LUREN økter. */
   let cap = 6;
@@ -935,8 +939,8 @@ function grant(fag, real, full, plan, re) {
      de store kommer i raid, og et legendarisk møte i gresset skal være en sjelden overraskelse. */
   const legP = LEGSES * (1 + luck * 0.5) + Math.min(streak(), 10) * 0.0001;
   for (let i = 0; i < n; i++) encs.push(Math.random() < legP ? legEnc() : genEnc({ fag, luck }));
-  if (full && planned >= 45 && okMin >= planned && Math.random() < Math.min(LEGSTIR[1], LEGSTIR[0] + 0.0015 * streak())) { encs.push(legEnc()); R.gifts.push('Something legendary is stirring in the grass.'); }
-  { const bk = berryFind(okMin); if (bk) R.gifts.push(`Your team found ${/^[AEIOU]/.test(HELD[bk].n) ? 'an' : 'a'} ${HELD[bk].n}. A Pokémon can hold it in battle.`); }
+  if (full && planned >= 45 && okReal >= planned && Math.random() < Math.min(LEGSTIR[1], LEGSTIR[0] + 0.0015 * streak())) { encs.push(legEnc()); R.gifts.push('Something legendary is stirring in the grass.'); }
+  { const bk = berryFind(okReal); if (bk) R.gifts.push(`Your team found ${/^[AEIOU]/.test(HELD[bk].n) ? 'an' : 'a'} ${HELD[bk].n}. A Pokémon can hold it in battle.`); }
   const fg = S.fag[fag];
   if (fg) {
     /* Milepælene regnes av hele planen (med timene du hadde fra før), men belønningen krever tid som er logget her: MSGATE minutter for hver
