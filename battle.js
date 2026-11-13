@@ -47,12 +47,17 @@ const bstSum = id => BST[id - 1].reduce((a, c) => a + c, 0);
 const FIXED = { 'Dragon Rage': () => 40, 'Sonic Boom': () => 20, 'Seismic Toss': u => u.lv, 'Night Shade': u => u.lv, 'Super Fang': (u, t) => Math.max(1, Math.floor(t.hp / 2)),
   'Psywave': u => Math.max(1, Math.floor(u.lv * (0.5 + Math.random()))), 'Endeavor': (u, t) => Math.max(0, t.hp - u.hp), 'Final Gambit': u => u.hp,
   'Counter': u => u.v.hit && u.v.hit.p === 1 ? u.v.hit.d * 2 : 0, 'Mirror Coat': u => u.v.hit && u.v.hit.p === 2 ? u.v.hit.d * 2 : 0, 'Metal Burst': u => u.v.hit ? Math.floor(u.v.hit.d * 1.5) : 0 };
-/* Angrep der styrken regnes ut i kampen. Vekt finnes ikke i dataene, så tunge arter leses av samlet base stat. */
+/* Angrep der styrken regnes ut i kampen. */
 const hpPow = u => { const f = u.hp / u.max; return f < 0.042 ? 200 : f < 0.105 ? 150 : f < 0.21 ? 100 : f < 0.355 ? 80 : f < 0.69 ? 40 : 20; };
-const wPow = (u, t) => { const s = bstSum(t.id); return s < 330 ? 40 : s < 430 ? 60 : s < 510 ? 80 : 100; };
-const VPOW = { 'Flail': hpPow, 'Reversal': hpPow, 'Low Kick': wPow, 'Grass Knot': wPow, 'Heavy Slam': () => 80, 'Heat Crash': () => 80, 'Return': () => 102, 'Frustration': () => 60,
-  'Electro Ball': (u, t, B) => { const r = spdB(B, u) / Math.max(1, spdB(B, t)); return r >= 4 ? 150 : r >= 3 ? 120 : r >= 2 ? 80 : 60; },
-  'Gyro Ball': (u, t, B) => Math.max(1, Math.min(150, Math.floor(25 * spdB(B, t) / Math.max(1, spdB(B, u))))),
+/* VEKT i hektogram (fra PokeAPI, som resten av dataene), for de fire angrepene som regner med den. MEGAWT: Mega-former med en annen vekt enn arten
+   (plass i MEGA + 1). Low Kick og Grass Knot: jo tyngre mål, jo hardere (20–120). Heavy Slam og Heat Crash: jo tyngre brukeren er mot målet (40–120). */
+const WT = '69,130,1000,85,190,905,90,225,855,29,99,320,32,100,295,18,300,395,35,185,20,380,69,650,60,300,120,295,70,200,600,90,195,620,75,400,99,199,55,120,75,550,54,86,186,54,295,300,125,8,333,42,320,196,766,280,320,190,1550,124,200,540,195,565,480,195,705,1300,40,64,155,455,550,200,1050,3000,300,950,360,785,60,600,150,392,852,900,1200,300,300,40,1325,1,1,405,2100,324,756,65,600,104,666,25,1200,65,450,498,502,655,10,95,1150,1200,346,350,800,80,250,150,390,345,800,545,560,406,300,445,550,884,100,2350,2200,40,65,290,245,250,365,75,350,115,405,590,4600,554,526,600,33,165,2100,1220,40,64,158,1005,79,190,795,95,250,888,60,325,212,408,108,356,85,335,750,120,225,20,30,10,15,32,20,150,78,133,615,58,85,285,380,339,5,10,30,115,18,85,380,85,750,265,270,21,795,10,50,285,415,72,1258,140,648,4000,78,487,39,1180,205,540,280,88,1258,350,550,65,558,50,120,285,160,2200,505,108,350,1520,335,1200,325,712,580,210,480,60,235,214,755,468,1780,1980,1870,720,1520,2020,2160,1990,50,50,216,522,25,195,520,76,280,819,136,370,175,325,36,100,284,115,316,26,325,550,40,280,596,23,198,95,280,66,202,484,17,36,45,392,240,465,1305,55,120,12,163,405,840,864,2538,20,970,110,326,110,115,600,1200,3600,112,315,152,402,42,42,177,177,20,103,800,208,888,1300,3980,240,2200,804,306,715,50,150,153,820,513,774,12,206,403,525,1680,1540,19,236,115,328,215,1080,238,604,125,682,74,1620,8,220,23,125,150,306,1000,10,470,140,168,2565,395,876,1506,525,270,226,234,87,421,1105,1026,952,2025,5500,2300,1750,2050,400,600,3520,9500,2065,11,608,102,970,3100,62,220,550,52,230,845,20,155,249,200,315,22,255,95,305,420,12,145,315,1025,570,1495,34,65,233,55,385,39,295,335,33,93,63,299,203,12,150,55,333,44,273,39,438,6,192,380,605,1870,150,130,244,19,1080,205,560,950,1050,202,540,495,3000,120,615,230,444,270,70,240,650,505,1355,340,1800,1400,2828,1286,1386,680,380,515,255,259,425,2910,340,520,3400,1066,266,3,3,3,3,6830,3360,4300,4200,7500,856,31,14,505,21,3200,40,81,160,630,99,555,1500,59,245,946,116,270,41,147,610,101,375,105,305,110,280,135,290,233,605,21,150,290,298,795,180,1020,2600,21,105,85,404,310,125,400,870,45,170,620,555,510,25,73,205,53,585,2005,6,66,66,163,180,152,334,963,375,929,280,145,2000,118,300,140,15,765,165,810,95,320,310,1073,125,811,58,75,58,180,440,10,80,201,55,242,57,410,575,195,925,50,59,330,10,105,330,1350,316,6,143,188,1100,210,510,810,3,220,805,90,345,31,130,343,180,360,1055,85,2600,1480,77,253,110,200,355,1390,920,3300,102,700,946,105,410,90,395,580,330,173,500,1600,288,460,2500,2600,2000,630,610,3300,3450,680,3250,485,65,825'.split(',').map(Number), MEGAWT = {1:1555,2:1105,3:1005,4:1011,5:405,6:505,7:380,8:260,9:423,11:1255,12:1200,14:1000,16:590,17:3050,18:790,19:2900,20:1270,21:330,22:2010,23:1088,25:7400,26:1250,27:625,28:404,29:495,30:2550,31:552,33:1020,35:1610,36:235,37:3950,39:440,40:1303,41:3205,43:130,44:80,45:490,46:490,47:3502,48:1126,49:9429,50:520,51:700,52:4300,53:9997,54:3920,55:500,56:283,58:990,59:575,60:494,61:1850,62:564,63:296,64:5700,65:2400,66:1803,67:600,68:320,69:2305,70:310,71:1800,72:696,74:6500};
+const wtOf = b => (b.mega && MEGAWT[b.mega]) || WT[b.id - 1] || 500;
+const wPow = (u, t) => { const w = wtOf(t) / 10; return w < 10 ? 20 : w < 25 ? 40 : w < 50 ? 60 : w < 100 ? 80 : w < 200 ? 100 : 120; };
+const hvPow = (u, t) => { const r = wtOf(u) / wtOf(t); return r >= 5 ? 120 : r >= 4 ? 100 : r >= 3 ? 80 : r >= 2 ? 60 : 40; };
+const VPOW = { 'Flail': hpPow, 'Reversal': hpPow, 'Low Kick': wPow, 'Grass Knot': wPow, 'Heavy Slam': hvPow, 'Heat Crash': hvPow, 'Return': () => 102, 'Frustration': () => 60,
+  'Electro Ball': (u, t, B) => { const r = spdB(B, u) / Math.max(1, spdB(B, t)); return r >= 4 ? 150 : r >= 3 ? 120 : r >= 2 ? 80 : r >= 1 ? 60 : 40; },
+  'Gyro Ball': (u, t, B) => Math.max(1, Math.min(150, Math.floor(25 * spdB(B, t) / Math.max(1, spdB(B, u))) + 1)),
   'Wring Out': (u, t) => 1 + Math.floor(120 * t.hp / t.max), 'Crush Grip': (u, t) => 1 + Math.floor(120 * t.hp / t.max),
   'Punishment': (u, t) => Math.min(200, 60 + 20 * t.sg.reduce((a, b) => a + Math.max(0, b), 0)), 'Magnitude': () => [10, 30, 50, 70, 90, 110, 150][[0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 6][rnd(20)]],
   'Present': () => [40, 80, 120][rnd(3)], 'Spit Up': u => 100 * (u.v.stock || 1), 'Natural Gift': () => 70, 'Fling': () => 50, 'Bide': () => 60,
@@ -159,6 +164,8 @@ function megaEvolve(B, s, ev, how) {
   b.mega = k; b.name = b.src.nn || to; (B.megaUsed || (B.megaUsed = {}))[s] = 1;
   ev.push({ t: 'mega', side: s, id: b.id, mega: k, sh: b.sh, primal, txt: primal ? `${N}'s Primal Reversion!` : how === 'rage' ? `${N} is surrounded by a blinding light!` : s === 'me' ? `${N} is reacting to your Mega Ring!` : `${N} is reacting to ${B.tr.n}'s Mega Ring!` },
     { t: 'msg', s: primal ? `It reverted to its primal form: ${to}!` : `${N} has Mega Evolved into ${to}!` });
+  /* En ny egenskap som virker i det den kommer (Drought, Intimidate, Mold Breaker), slår inn nå. */
+  { const a1 = ab(b); if (a1 && a1 !== abilityOf(b.id, 0)) abEntry(B, s, ev); }
   return true;
 }
 const opp = s => s === 'me' ? 'foe' : 'me';
@@ -188,7 +195,10 @@ const ABTXT = { intimidate: "Lowers the foe's Attack when it enters.", pressure:
 const ABOF = {}; ABD.split('|').forEach(r => { const q = r.split(':'); q[1].split(',').forEach(id => { ABOF[+id] = q[0]; }); });
 /* Egenskapen til en art (til visning), og til en Pokémon i kamp (den som har forvandlet seg med Transform, har ingen). */
 /* Giratina i Origin Forme har Levitate i stedet for Pressure. */
-const abilityOf = (id, mega) => id === 487 && mega === ORIGIN ? 'levitate' : ABOF[id] || '';
+/* MEGA-FORMENE HAR SIN EGEN EGENSKAP der spillene gir dem en av dem motoren kjenner (art:form). '' = den mister artens egenskap (Mega Gengar svever ikke,
+     Mega Aggron har ikke Sturdy). Former som ikke står her (de fra Legends: Z-A og de som får en egenskap motoren ikke har), beholder artens. */
+const MEGAAB = { '6:Y': 'drought', '94:': '', '127:': '', '130:': 'moldbreaker', '142:': '', '150:X': '', '150:Y': '', '181:': 'moldbreaker', '208:': '', '229:': '', '254:': 'lightningrod', '257:': 'speedboost', '303:': 'hugepower', '306:': '', '310:': 'intimidate', '319:': '', '359:': '', '373:': '', '376:': '' };
+const abilityOf = (id, mega) => { if (id === 487 && mega === ORIGIN) return 'levitate'; const g = mega ? MEGA[mega - 1] : null, k = g ? id + ':' + g[1] : ''; return g && k in MEGAAB ? MEGAAB[k] : ABOF[id] || ''; };
 const ab = b => b && !b.tf ? abilityOf(b.id, b.mega) : '';
 const mold = b => { const a = ab(b); return a === 'moldbreaker' || a === 'teravolt' || a === 'turboblaze'; };
 const airOn = B => [act(B, 'me'), act(B, 'foe')].some(b => b && b.hp > 0 && (ab(b) === 'airlock' || ab(b) === 'cloudnine'));
@@ -256,12 +266,15 @@ function powOf(B, u, t, m, ord) {
   /* Fury Cutter dobles for hvert treff på rad (40, 80, 160). Echoed Voice øker med 40 om gangen opp til 200. */
   if (CHAIN.has(n)) p = n === 'Echoed Voice' ? Math.min(200, p * (1 + (u.v.chain || 0))) : Math.min(160, p * Math.pow(2, u.v.chain || 0));
   if (n === 'Pursuit' && B.pursuit) p *= 2;
+  /* Knock Off slår halvannen gang så hardt mot en som holder noe den kan miste (Arceus sin plate sitter fast). */
+  if (n === 'Knock Off' && t.item && HELD[t.item] && !(t.id === ARCEUS && HELD[t.item].ty != null)) p = Math.floor(p * 1.5);
   if ((STOMP.has(n) && t.v.mini) || (AWAY2.has(n) && reaches(m, t))) p *= 2;
   return p;
 }
 function dmgOf(B, u, t, m, pow, crit, roll) {
   const phys = m[4] === 1, n = m[0], ai = phys ? 1 : 3, d0 = phys || n === 'Psyshock' || n === 'Psystrike' || n === 'Secret Sword' ? 2 : 4, di = B.wroom ? 6 - d0 : d0, raw = n === 'Chip Away' || n === 'Sacred Sword';
-  let a = (n === 'Foul Play' ? t : u).st[ai] * (crit && u.sg[ai] < 0 ? 1 : stgM((n === 'Foul Play' ? t : u).sg[ai])), d = t.st[di] * ((crit && t.sg[di] > 0) || raw ? 1 : stgM(t.sg[di]));
+  const au = n === 'Foul Play' ? t : u;
+  let a = au.st[ai] * (crit && au.sg[ai] < 0 ? 1 : stgM(au.sg[ai])), d = t.st[di] * ((crit && t.sg[di] > 0) || raw ? 1 : stgM(t.sg[di]));
   if (phys && n !== 'Foul Play') { if (u.v.slow) a *= 0.5; const ua = ab(u); if (ua === 'hugepower' || ua === 'purepower') a *= 2; }
   if (B.wx.k === 'sand' && di === 4 && t.ty.includes(5)) d *= 1.5;
   const uh = hi(B, u), th = hi(B, t);
@@ -462,7 +475,7 @@ function useMove(B, s, k, ev, ord) {
     else {
       say(`${N} is confused!`);
       if (Math.random() < 0.33) {
-        const d = Math.max(1, Math.floor((Math.floor((Math.floor(2 * u.lv / 5) + 2) * 40 * u.st[1] / u.st[2] / 50) + 2) * 0.92));
+        const d = Math.max(1, Math.floor((Math.floor((Math.floor(2 * u.lv / 5) + 2) * 40 * (u.st[1] * stgM(u.sg[1])) / (u.st[2] * stgM(u.sg[2])) / 50) + 2) * 0.92));
         u.hp = Math.max(0, u.hp - d); ev.push({ t: 'hit', side: s, hp: u.hp, e: 1 }); say('It hurt itself in its confusion!'); return stop();
       }
     }
@@ -529,11 +542,12 @@ function useMove(B, s, k, ev, ord) {
     let hit = true;
     if (V.lockon || (t.v.tele && m[6] !== 9) || (STOMP.has(m[0]) && t.v.mini && !t.v.away)) hit = true;
     else if (t.v.away && !reaches(m, t)) hit = false;
-    else if (m[6] === 9) hit = !t.big && u.lv >= t.lv && Math.random() < (30 + u.lv - t.lv) / 100;
-    else if (m[3] && !((m[0] === 'Thunder' || m[0] === 'Hurricane') && B.wx.k === 'rain') && !(m[0] === 'Blizzard' && B.wx.k === 'hail')) hit = Math.random() < m[3] / 100 * accM(clampS(u.sg[6] - (t.v.fore ? Math.min(0, t.sg[7]) : t.sg[7]))) * (B.grav ? 5 / 3 : 1);
+    else if (m[6] === 9) hit = !t.big && !(ab(t) === 'sturdy' && !mold(u)) && u.lv >= t.lv && Math.random() < (30 + u.lv - t.lv) / 100;
+    /* Thunder og Hurricane treffer alltid i regn, og bare annenhver gang i sol. Blizzard treffer alltid i hagl. */
+    else if (m[3] && !((m[0] === 'Thunder' || m[0] === 'Hurricane') && B.wx.k === 'rain') && !(m[0] === 'Blizzard' && B.wx.k === 'hail')) hit = Math.random() < ((m[0] === 'Thunder' || m[0] === 'Hurricane') && B.wx.k === 'sun' ? 50 : m[3]) / 100 * accM(clampS(u.sg[6] - (t.v.fore ? Math.min(0, t.sg[7]) : t.sg[7]))) * (B.grav ? 5 / 3 : 1);
     V.lockon = 0;
     if (!hit) {
-      say(m[6] === 9 && t.big ? `${nmOf(o, t)} is far too strong for that!` : t.v.away ? `${nmOf(o, t)} avoided the attack!` : `${N}'s attack missed!`);
+      say(m[6] === 9 && t.big ? `${nmOf(o, t)} is far too strong for that!` : m[6] === 9 && ab(t) === 'sturdy' && !mold(u) && !t.v.away ? `${nmOf(o, t)} held on with Sturdy!` : t.v.away ? `${nmOf(o, t)} avoided the attack!` : `${N}'s attack missed!`);
       if (m[0] === 'High Jump Kick' || m[0] === 'Jump Kick') { u.hp = Math.max(0, u.hp - Math.floor(mx(u) / 2)); ev.push({ t: 'hit', side: s, hp: u.hp, e: 1 }); say(`${N} kept going and crashed!`); }
       return stop();
     }

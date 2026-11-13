@@ -1001,6 +1001,13 @@ function shake(ms, amp, kind, zoom, at) {
 /* Spiller en EBDX-animasjon (se ebx.js og ebxp.js) og venter til den treffer ('hit') eller til selve animasjonen er over ('main');
    kameraet glir hjem i bakgrunnen etterpå. Gir null hvis animasjonen ikke finnes eller bildene ikke er klare: da brukes den gamle. */
 const EBXR = 1.5;
+/* Så lenge (sekunder) klinger lyden til et angrep ut etter at det har truffet. */
+const MVTAIL = 0.5;
+/* Angrep som låner animasjonen til et annet (pakka har ingen egen), men skal ha en annen farge: lagene med effektene farges om så lenge animasjonen går.
+   Pokémonene ligger ikke i de lagene, så de beholder fargene sine. */
+const EBXTINT = { 'Blue Flare': 'hue-rotate(195deg) saturate(1.15)', 'Fusion Bolt': 'hue-rotate(150deg) saturate(1.1)' };
+/* De samme angrepene i effektene som tegnes med kode (treffet, og hele angrepet uten pakke): fargene til en annen type (10 = blå, 14 = isblå). */
+const MVPAL = { 'Blue Flare': 10, 'Fusion Bolt': 14 };
 async function ebxPlay(key, side, o, until) {
   const B = BT.B, sp = $('#s-' + side);
   if (!key || !sp) return null;
@@ -1014,8 +1021,14 @@ async function ebxPlay(key, side, o, until) {
   /* De aller lengste animasjonene spilles litt fortere, så ingen angrep tar mye lengre tid enn de andre. */
   const pl = EBXP.play(rec, spdF() * EBXR * Math.min(1.5, Math.max(1, Math.sqrt(rec.busy / 140)))); if (!pl) return null;
   if (o.sound) textAway();
-  if (o.sound && !PACK.sfx(o.sound[0])) BSFX.mv(FX.kindOf(o.sound), mvTier(o.sound), o.sound[1]);
+  { const tint = o.sound ? EBXTINT[o.sound[0]] : '', cvs = tint ? [...document.querySelectorAll('#arena canvas.ebx')] : [];
+    if (cvs.length) { cvs.forEach(c => { c.style.filter = tint; }); const off = () => cvs.forEach(c => { if (c.style.filter === tint) c.style.filter = ''; }); if (pl.done && pl.done.then) pl.done.then(off); else setTimeout(off, 4000); } }
+  /* Lyden til angrepet tones ut når animasjonen er over (PACK.mvEnd). */
+  const mh = o.sound ? PACK.mvSfx(o.sound[0]) : null;
+  if (o.sound && !mh) BSFX.mv(FX.kindOf(o.sound), mvTier(o.sound), o.sound[1]);
+  if (mh && pl.done && pl.done.then) pl.done.then(() => PACK.mvEnd(mh));
   await pl.at(until === 'hit' ? rec.hit : rec.busy);
+  if (mh && until === 'hit') PACK.mvEnd(mh, MVTAIL);
   return pl;
 }
 /* Et angrep: oppladning, selve angrepet og fram til det treffer. Treffet (lyd, stopp, risting og HP-linja) hører til hendelsen som kommer etter. */
@@ -1037,23 +1050,24 @@ async function playAnim(B, e) {
   await windUp(K, sp, d, wms);
   if (BT.B !== B || !sp.isConnected) return;
   const an = PACK.animFor(m);
-  if (!PACK.sfx(m[0])) BSFX.mv(kind, tier, m[1]);
+  const mh = PACK.mvSfx(m[0]); if (!mh) BSFX.mv(kind, tier, m[1]);
+  const mvDone = p => { if (mh) Promise.resolve(p).then(() => PACK.mvEnd(mh)); };
   if (an && PACK.ready(an)) {
     /* Arkanimasjonen fra pakken. Flytter den selv på angriperen, gjør ikke vi det også. */
     const T = PACK.frames(an) * 50, hit = m[4] ? PACK.hitAt(an) * 50 : T;
     if (K.style === 'dash' && PACK.movesUser(an)) K.style = 'own';
     K.done = PACK.play(an, $('#axc'), { x: a.x * 2, y: a.y * 2 }, { x: b.x * 2, y: b.y * 2 }, side === 'foe', spdF(), animHooks(side, self));
-    PACK.sfxTrim(T / spdF() / 1000 + 0.15);
+    PACK.sfxTrim(T / spdF() / 1000 + 0.15); mvDone(bwait(T));
     launch(K, sp, d, hit);
     if (kind === 'quake' || kind === 'boom') shake(T / spdF(), kind === 'boom' ? 8 : 4 + tier * 1.5, 1);
     else if (kind === 'beam' && tier >= 2) shake(hit / spdF(), 1 + tier * 0.8, 1);
-    await bwait(hit);
+    await bwait(hit); if (m[4]) PACK.mvEnd(mh, MVTAIL);
   } else {
-    const r = FX.move(m, a, b, { roll: e.roll, self: BOOM.has(m[0]), tier, wobble: ms => wob(opp(side), ms) });
+    const r = FX.move(m, a, b, { roll: e.roll, self: BOOM.has(m[0]), tier, pal: MVPAL[m[0]], wobble: ms => wob(opp(side), ms) });
     PACK.sfxTrim(r.ms / spdF() / 1000 + 0.15);
     launch(K, sp, d, r.hit);
-    K.done = bwait(r.ms);
-    await bwait(m[4] ? r.hit : r.ms);
+    K.done = bwait(r.ms); mvDone(K.done);
+    await bwait(m[4] ? r.hit : r.ms); if (m[4]) PACK.mvEnd(mh, MVTAIL);
   }
 }
 /* En egenskap slår inn: et bånd med navnet glir inn fra den siden Pokémonen står på, som i Black 2 og White 2. Teksten kommer i tekstboksen. */
@@ -1078,7 +1092,7 @@ async function playOne(B, e) {
       const pos = fxPos(side), n = K ? K.n++ : 0, ef = e.e;
       if (!PACK.sfx(ef > 1 ? 'Hit Super Effective' : ef < 1 ? 'Hit Weak Not Very Effective' : 'Hit Normal Damage', 1)) { if (ef > 1) BSFX.hitS(); else if (ef < 1) BSFX.hitW(); else BSFX.hit(); }
       if (e.crit) BSFX.crit();
-      FX.hit(pos, BT.ty, ef, e.crit, tier, n); buzz(ef > 1 ? [40, 30, 60] : 25);
+      FX.hit(pos, K && MVPAL[K.m[0]] != null ? MVPAL[K.m[0]] : BT.ty, ef, e.crit, tier, n); buzz(ef > 1 ? [40, 30, 60] : 25);
       /* Treff-stopp: et øyeblikk der alt står stille og målet lyser hvitt. Lengst for supereffektive og kritiske treff. */
       const fz = calm() || e.sub ? 0 : ((ef > 1 ? 95 : ef < 1 ? 0 : 50) + tier * 22 + (e.crit ? 50 : 0)) * (n ? 0.45 : 1) / spdF();
       if (fz) { sp.classList.add('imp'); FX.hold(fz); PACK.hold(fz); EBXP.hold(fz); await sleep(fz); sp.classList.remove('imp'); }
@@ -1485,7 +1499,7 @@ function rulesSheet() {
       ${row('Focus Sash · used up', 'at full HP it survives a knockout hit')}${row('Found', `a berry after some sessions of ${BERRYMIN} minutes or more<br>the plate of its type from every legendary you beat`)}</div>
     <div class="card stack"><b>Special events</b><p class="sm">Some battle days are special. You find out once you have chosen today's mode: the event shows as a symbol above it, and a tap tells you what it does. An event is only ever for you, never for your opponents: nothing gets harder, and a day you sit out costs nothing. They are counted in battle days, come about every third one, and never two days running.</p>
       ${Object.keys(EVENTS).map(k => row(k === 'type' ? 'Type Festival' : EVENTS[k].n, k === 'surge' ? `${SURGEN} of your Pokémon with a Mega form start in it, and you choose which` : k === 'type' ? 'one type gets +15 % in every stat' : k === 'stars' ? 'three from your box: team level and +20 %' : k === 'little' ? '+35 % for those that can still evolve' : k === 'gold' ? 'coins ×1.5 from every battle' : k === 'wind' ? 'one more attempt in the League, one more run in the Frontier' : k === 'lucky' ? 'shiny odds ×5, one more encounter from bosses' : 'training costs 40 % less')).join('')}</div>
-    <div class="card stack"><b>Mega Evolution</b><p class="sm">The first Champion or Supreme Boss you beat gives you the Mega Ring and a Mega Stone. A Pokémon that has a Mega form and holds a stone can Mega Evolve from the move menu: once a battle for your team, before it attacks, and it stays that way until the battle is over. Its HP is the same, its other stats and sometimes its types change. Stones are given on the Pokémon's card, and you get the stone back if you sell or trade it.</p>
+    <div class="card stack"><b>Mega Evolution</b><p class="sm">The first Champion or Supreme Boss you beat gives you the Mega Ring and a Mega Stone. A Pokémon that has a Mega form and holds a stone can Mega Evolve from the move menu: once a battle for your team, before it attacks, and it stays that way until the battle is over. Its HP is the same, its other stats and sometimes its types change, and some get an Ability of their own (Mega Mawile has Huge Power, Mega Charizard Y brings the sun, Mega Gengar no longer levitates). Stones are given on the Pokémon's card, and you get the stone back if you sell or trade it.</p>
       ${row('Mega Stone', `${nb(SHOP.mstone.p)} coins in the Shop, with the ring`)}${row('Won from', `Supreme Boss: always · Champion: ${Math.round(MSTONE[1] * 100)} % · Evil Leader: ${Math.round(MSTONE[0] * 100)} %<br>the Champions Cup · raids against the great ones`)}${row('Opponents', 'Champions and Supreme Bosses, on Normal and Hard')}
       <p class="sm"><b>Arceus</b> takes the type of the plate it holds, and Judgment with it.</p>
       <p class="sm"><b>Legendaries</b> do not use ordinary stones. Rayquaza, Kyogre, Groudon, Latias, Latios, Heatran and Darkrai change form when they become enraged in a raid, and the shadow of a beaten Mewtwo rises as Dark Mewtwo. Beat one, and you have its stone: every one of that species you own can then do the same.</p></div>

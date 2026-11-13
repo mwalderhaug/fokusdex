@@ -67,8 +67,17 @@ function ac() {
   try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state !== 'running') AC.resume(); return AC; } catch (_) { return null; }
 }
 /* Effektene går gjennom én hovedvolumknapp (S.vol). Skrikene har sin egen (S.cvol). */
-let MG = null, NB = null;
-function out() { const a = ac(); if (!a) return null; if (!MG) { MG = a.createGain(); MG.connect(a.destination); } MG.gain.value = Math.pow((S.vol == null ? 70 : S.vol) / 100, 1.6) * 2.13; return MG; }
+let MG = null, NB = null, LIM = null;
+/* ALT SOM LÅTER (effekter, skrik, musikk) går gjennom én begrenser før høyttaleren. Den gjør ingenting så lenge summen er under full styrke: terskelen
+   ligger rett under (LIMDB), så musikken alene går urørt gjennom. Når flere sterke lyder faller oppå hverandre, holder den summen nede i stedet for at
+   nettleseren klipper toppene (det låter som skurring). Finnes ikke noden, går lyden rett ut som før. */
+const LIMDB = -0.6, LIMTRIM = 0.95;
+function master() {
+  const a = ac(); if (!a) return null;
+  if (!LIM) { try { const c = a.createDynamicsCompressor(); c.threshold.value = LIMDB; c.knee.value = 0; c.ratio.value = 20; c.attack.value = 0.002; c.release.value = 0.12; const tg = a.createGain(); tg.gain.value = LIMTRIM; c.connect(tg); tg.connect(a.destination); LIM = c; } catch (_) { LIM = a.destination; } }
+  return LIM;
+}
+function out() { const a = ac(); if (!a) return null; if (!MG) { MG = a.createGain(); MG.connect(master() || a.destination); } MG.gain.value = Math.pow((S.vol == null ? 70 : S.vol) / 100, 1.6) * 2.13; return MG; }
 /* Lydstyrken (K-vektet som i LUFS-målinger) i det sterkeste 400 ms-vinduet av en dekodet lyd. Brukes til å holde angrepslyder og skrik på
    nivå med musikken, uansett hvor sterkt filene er tatt opp. Regnes én gang per lyd. */
 function loudOf(buf) {
@@ -175,7 +184,7 @@ function cry(id, delay = 0, vol = 0.45) {
     const a = ac(), src = a.createBufferSource(), g = a.createGain();
     /* Skrikene er tatt opp med svært ulik styrke (de nyeste er mye sterkere enn de eldste), så hvert skrik jevnes til samme nivå før volumet legges på. */
     const L = loudOf(buf), norm = L > -90 ? Math.max(0.12, Math.min(2, Math.pow(10, (-18 - L) / 20))) : 0.4;
-    src.buffer = buf; g.gain.value = Math.min(1.6, vol * norm * Math.pow((S.cvol == null ? 70 : S.cvol) / 100, 1.6) * 4.27); src.connect(g); g.connect(a.destination);
+    src.buffer = buf; g.gain.value = Math.min(1.6, vol * norm * Math.pow((S.cvol == null ? 70 : S.cvol) / 100, 1.6) * 4.27); src.connect(g); g.connect(master() || a.destination);
     src.start(a.currentTime + Math.max(0, delay - (performance.now() - t0)) / 1000);
     window.cryCount++;
   }).catch(() => {});
@@ -489,7 +498,8 @@ function heldShop(u) {
 function megaCard(m) {
   const o = megaOpts(m.id); if (!o.length) return '';
   const leg = isLeg(m.id), has = leg ? hasStone(m.id) : o.includes(m.ms), cur = o.includes(m.ms) ? m.ms : o[0], pri = MEGA[cur - 1][1] === 'Primal', word = pri ? 'revert to its primal form' : 'Mega Evolve';
-  const g = MEGA[cur - 1], info = `${[g[2], g[3]].filter(t => t >= 0).map(t => TYN[t]).join(' / ')} · base stats +${megaBst(cur - 1) - BST[m.id - 1].reduce((a, b) => a + b, 0)}`;
+  const a0 = abilityOf(m.id, 0), a1 = abilityOf(m.id, cur), abx = a1 === a0 ? '' : a1 ? ` · ${ABN[a1]}` : ` · loses ${ABN[a0]}`;
+  const g = MEGA[cur - 1], info = `${[g[2], g[3]].filter(t => t >= 0).map(t => TYN[t]).join(' / ')} · base stats +${megaBst(cur - 1) - BST[m.id - 1].reduce((a, b) => a + b, 0)}${abx}`;
   const txt = !S.ring ? (leg ? (has ? 'You have its stone. You also need the Mega Ring: beat a Champion.' : `Its stone is won by beating ${D(m.id)[0]} in a raid, and you need the Mega Ring: beat a Champion.`) : 'You need the Mega Ring first: beat a Champion.')
     : has ? `It can ${word} once a battle, from the move menu.` : leg ? `Its stone is won by beating ${D(m.id)[0]} in a raid.` : `Give it a Mega Stone and it can ${word} in battle. You have ${S.items.mstone || 0}.`;
   const btn = !S.ring ? '' : has ? o.filter(k => k !== cur).map(k => `<button type="button" class="btn sm2 wide" data-a="mgive" data-u="${m.u}" data-k="${k}">Switch to ${esc(megaName(k))}</button>`).join('')

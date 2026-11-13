@@ -387,7 +387,7 @@ const MUSIC = (() => {
     if (!SONGS[key] || !S.sound || S.music === 0) return false;
     const a = typeof ac === 'function' ? ac() : null; if (!a) return false;
     let c; try { c = comp(key); } catch (_) { return false; }
-    const sy = synth(a, a.destination), v = level(), t0 = a.currentTime + 0.09; sy.echo(c.spb);
+    const sy = synth(a, (typeof master === 'function' && master()) || a.destination), v = level(), t0 = a.currentTime + 0.09; sy.echo(c.spb);
     sy.master.gain.setValueAtTime(o.fade ? Math.max(0.0001, v * (o.from || 0)) : v, a.currentTime); if (o.fade) sy.master.gain.linearRampToValueAtTime(v, a.currentTime + o.fade);
     const st = cur = { key, sy, i: 0, t: t0, id: 0 };
     const tick = () => {

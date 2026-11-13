@@ -95,6 +95,15 @@ const FX = (() => {
     add({ x: b.x, y: b.y, s: 14 + n * 5, gs: -50, life: 0.14 + n * 0.02, c: '#fff', k: 'di', r: 0.78 });
     add({ x: b.x, y: b.y, s: 12 + n * 5, gs: -40, life: 0.12, c: '#fff', k: 'ci' });
   };
+  /* KRAFTTREFFET til de sterkeste angrepene (t = 2 eller 3), oppå det vanlige smellet. */
+  const power = (b, P, t) => {
+    const big = t >= 3, n = big ? 20 : 10, L = big ? 150 : 84;
+    if (big) { flash('#06070c', 0.07, 0.34); at(60, () => flash('#fff', 0.16, 0.42)); }
+    ring(b.x, b.y, P[0], 8, 104 + t * 16, 0.42, big ? 3 : 2); if (big) at(90, () => ring(b.x, b.y, '#fff', 14, 196, 0.5, 2));
+    for (let i = 0; i < n; i++) { const an = (i + R() * 0.8) / n * TAU, r0 = 14 + R() * 12, v = L / 0.22; add({ x: b.x + Math.cos(an) * r0, y: b.y + Math.sin(an) * r0, vx: Math.cos(an) * v, vy: Math.sin(an) * v, life: 0.22 + R() * 0.06, c: i % 3 ? [P[0], P[1]] : '#fff', k: 'ln', len: big ? 0.1 : 0.07, w: big ? 2 : 1 }); }
+    burst(b.x, b.y, [P[0], P[1], '#fff'], big ? 22 : 12, big ? 160 : 120, 'sp', 5, 0.5, 40);
+    if (big) for (let i = 0; i < 12; i++) at(140 + i * 45, () => add({ x: b.x + (R() - 0.5) * 56, y: b.y + (R() - 0.5) * 36, vy: -26 - R() * 34, life: 0.7, s: 3 + R() * 3, c: [P[0], '#fff'], k: 'sp' }));
+  };
   /* En partikkel som flyr fra a til b på ms millisekunder, med valgfri bue (arc = piksler opp). */
   const fly = (a, b, ms, o) => { const T = ms / 1000, arc = o.arc || 0; return add(Object.assign({ x: a.x, y: a.y, vx: (b.x - a.x) / T, vy: (b.y - a.y) / T - 4 * arc / T, ay: 8 * arc / (T * T), life: T, hold: 1 }, o)); };
   const jit = (p, d) => ({ x: p.x + (R() - 0.5) * d, y: p.y + (R() - 0.5) * d });
@@ -282,7 +291,7 @@ const FX = (() => {
   /* Treff-stopp: alt på lerretet fryser i ms millisekunder, så smellet står stille et øyeblikk. */
   F.hold = ms => { holdT = performance.now() + ms; kick(); };
   /* Spiller et angrep fra a til b. Gir { hit, ms }: når angrepet treffer, og når hele effekten er ferdig (millisekunder ved vanlig fart). */
-  F.move = (m, a, b, o = {}) => { if (!g) return { hit: 200, ms: 320 }; const k = kindOf(m), q = Object.assign({ ty: m[1], pow: m[2] || 0, name: m[0], tier: 0 }, o), ms = PROG[k](a, b, PAL[m[1]] || PAL[0], q); return { hit: q.hit == null ? Math.round(ms * 0.6) : q.hit, ms }; };
+  F.move = (m, a, b, o = {}) => { if (!g) return { hit: 200, ms: 320 }; const k = kindOf(m), q = Object.assign({ ty: m[1], pow: m[2] || 0, name: m[0], tier: 0 }, o), ms = PROG[k](a, b, PAL[q.pal != null ? q.pal : m[1]] || PAL[0], q); return { hit: q.hit == null ? Math.round(ms * 0.6) : q.hit, ms }; };
   /* Oppladningen før et angrep: lys og kraft som samler seg hos angriperen. Sterkere angrep samler mer. cls = 1 fysisk, 2 spesial, 0 status. */
   F.charge = (a, ty, tier, ms, cls) => {
     if (!g) return;
@@ -316,7 +325,7 @@ const FX = (() => {
     else { burst(b.x, b.y, P, 6 + t * 2, 70 + t * 10, 'sp', 4, 0.3); ring(b.x, b.y, '#fff', 3, 20 + t * 5, 0.18, 2); }
     if (F.intensity >= 4 && e >= 1) burst(b.x, b.y, [P[0], '#fff'], F.intensity, 110, 'sp', 4, 0.35, 0);
     if (crit) { ring(b.x, b.y, '#ffe14a', 6, 64, 0.3, 3); rays(b.x, b.y, ['#fff', '#ffe14a'], 10, 6, 48, 0.2, 2); }
-    if (t >= 3 && !n) flash('#fff', 0.14, 0.3);
+    if (t >= 2 && !n) power(b, P, t);
   };
   F.status = (k, b) => {
     if (!g) return;

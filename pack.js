@@ -218,7 +218,7 @@ const PACK = (() => {
       const s = a.createBufferSource(), g2 = a.createGain(), v = Math.min(1, mvol() * (o.tg || 1)), t = a.currentTime;
       if (o.loop !== false) { let lp = null; try { lp = loopPrep(o.path || '', d); } catch (_) {} s.buffer = d; s.loop = true; if (lp && lp.le > lp.ls) { s.loopStart = lp.ls; s.loopEnd = lp.le; } }
       else s.buffer = d;
-      s.connect(g2); g2.connect(a.destination);
+      s.connect(g2); g2.connect((typeof master === 'function' && master()) || a.destination);
       if (o.fade) { g2.gain.setValueAtTime(Math.max(0.0001, v * (o.from || 0)), t); g2.gain.linearRampToValueAtTime(v, t + o.fade); } else g2.gain.setValueAtTime(v, t);
       s.start(0, Math.max(0, Math.min(d.duration - 0.2, o.at || 0)));
       return { s, g: g2, t0: t };
@@ -277,6 +277,13 @@ const PACK = (() => {
   let last = null;
   const sfxCut = (h, sec) => { try { const t = h.t0 + Math.max(0.15, sec); h.g.gain.cancelScheduledValues(t); h.g.gain.setValueAtTime(h.v, t); h.g.gain.linearRampToValueAtTime(0.0001, t + 0.16); h.s.stop(t + 0.2); } catch (_) {} };
   P.sfxTrim = sec => { const h = last; if (!h || !S.bfast || typeof AC === 'undefined' || !AC || AC.currentTime - h.t0 > 0.12 || h.len <= sec + 0.2) return; sfxCut(h, sec); };
+  /* ANGREPSLYDEN FØLGER ANIMASJONEN (i begge hastigheter). Klippene i pakken er 2–4,7 s lange, og animasjonene 1–2 s: før spilte hvert klipp ut, så
+     lyden fra forrige angrep (og det før) lå under det neste og under musikken, som en maskin som går. Nå er det én angrepslyd om gangen: en ny demper
+     den forrige (mvSfx), og når animasjonen er over, tones lyden ut (mvEnd). Treff, status og andre korte lyder går som før. */
+  let mvH = null;
+  const sfxFade = (h, sec) => { try { const t = AC.currentTime; if (!h || h.end || t >= h.t0 + h.len) return; h.end = 1; const v = Math.max(0.0001, h.g.gain.value); h.g.gain.cancelScheduledValues(t); h.g.gain.setValueAtTime(v, t); h.g.gain.linearRampToValueAtTime(0.0001, t + sec); h.s.stop(t + sec + 0.05); } catch (_) {} };
+  P.mvSfx = (name, vol) => { const prev = mvH; if (!P.sfx(name, vol)) return null; if (prev && prev !== last) sfxFade(prev, 0.09); mvH = last; return mvH; };
+  P.mvEnd = (h, sec) => { if (h) sfxFade(h, sec == null ? 0.35 : sec); };
   P.sfxPath = name => (P.ok && P.man.sfx && P.man.sfx[name]) || '';
   P.warm = name => { const f = P.sfxPath(name); if (!f || bufs.has(f) || !S.sound) return; bufs.set(f, null); P.url(f).then(u => u && fetch(u)).then(r => r && r.arrayBuffer()).then(b => b && ac() && AC.decodeAudioData(b)).then(d => { if (d) bufs.set(f, d); else bufs.delete(f); }).catch(() => bufs.delete(f)); };
   P.sfx = (name, vol) => {
