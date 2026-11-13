@@ -223,6 +223,7 @@ function render() {
   if (!S.started) { $('#nav').hidden = true; $('#main').innerHTML = ''; return intro(); }
   /* Før «Done for today» finnes bare Focus, uten faner (dayOpenQ). */
   if (typeof giftCheck === 'function' && giftCheck()) setTimeout(() => { if (!giftSheet()) return; }, 60);
+  if (typeof jFriend === 'function') jFriend();
   const open = dayOpenQ(); if (!open || (U.tab === 'butikk' && jOn() && !has('shop'))) U.tab = 'fokus'; $('#nav').hidden = !open;
   if (featCheck()) save(true);
   /* Achievements: summen regnes én gang per tegning. Når et nytt mål er nådd siden sist, sies det fra én gang (ikke mens en studerer). */
@@ -302,7 +303,7 @@ function jAfter() {
 function whatsNew() {
   if (!S.started || (S.wn || 0) >= WNV) return false;
   S.wn = WNV; save(true);
-  openSheet(`<h2 style="margin:0 0 4px">What's new</h2><ul class="wnl">${WN.map(t => `<li>${t}</li>`).join('')}</ul><button type="button" class="btn wide gold" data-a="wnok" style="margin-top:14px">Got it</button>`);
+  openSheet(`<h2 style="margin:0 0 4px">What's new</h2><ul class="wnl">${(jOn() ? [WNJ] : []).concat(WN).map(t => `<li>${t}</li>`).join('')}</ul><button type="button" class="btn wide gold" data-a="wnok" style="margin-top:14px">Got it</button>`);
   return true;
 }
 /* Kort som sier fra om noe nytt (FEATS), og kortet som står der kampene kommer. */
@@ -1200,4 +1201,28 @@ ghPull();
 setTimeout(() => PACK.init(), 2500);
 /* Adressen …/#lab åpner demoen direkte. */
 if (location.hash === '#lab' && S.started && !S.timer) setTimeout(() => BA.lab(), 400);
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+/* OPPDATERINGER: når en ny versjon er lagt ut, henter service workeren den i bakgrunnen og tar over med en gang (skipWaiting og clients.claim i
+   sw.js). Da sier appen fra: rett etter at den er åpnet (og ingenting er i gang) lastes den bare på nytt, ellers kommer en stripe nederst med «Reload».
+   Appen ser etter en ny versjon når den åpnes, hver gang den kommer fram igjen, og hvert 30. minutt. hadCtl: den første installasjonen er ikke en oppdatering. */
+const UPD = { t0: Date.now(), on: 0 };
+function updBar() {
+  if (!UPD.on || $('#updbar')) return;
+  const b = document.createElement('div'); b.id = 'updbar'; b.className = 'updbar'; b.setAttribute('role', 'status');
+  b.innerHTML = '<span>A new version of Fokusdex is ready.</span><button type="button" class="btn sm2 gold" data-a="upd">Reload</button>';
+  document.body.appendChild(b);
+}
+function updReady() {
+  const busy = !!(S.timer || (typeof BT !== 'undefined' && BT.B) || !$('#ov').hidden || !$('#sheet').hidden);
+  if (Date.now() - UPD.t0 < 6000 && !busy) { try { save(true); } catch (_) {} location.reload(); return; }
+  UPD.on = 1; updBar();
+}
+A.upd = () => { if (typeof BT !== 'undefined' && BT.B) return toast('Finish the battle first, then reload.'); try { save(true); } catch (_) {} location.reload(); };
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  const hadCtl = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadCtl) updReady(); });
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    const check = () => { try { reg.update(); } catch (_) {} };
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+    setInterval(check, 30 * 60000);
+  }).catch(() => {});
+}

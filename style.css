@@ -1643,3 +1643,7 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .mvc.spc{background:#5f86d6}.mvc.spc::after{content:'';position:absolute;inset:7px;border-radius:50%;box-shadow:0 0 0 2px #fff5,inset 0 0 0 4px #5f86d6,inset 0 0 0 6px #fff5}
 .mvc.stt{background:#8a8a8a}.mvc.stt::after{content:'';position:absolute;inset:9px;border-radius:50%;background:#fff5}
 .jdays{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.jdays .btn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left}
+
+/* Ny versjon klar (ui.js updBar): en stripe nederst over fanene. */
+.updbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:90;display:flex;align-items:center;gap:12px;
+  width:max-content;max-width:calc(100% - 24px);padding:10px 10px 10px 16px;border-radius:16px;background:#2a2622;box-shadow:0 0 0 1.5px var(--gold),0 10px 30px -8px #000;font-size:14px}

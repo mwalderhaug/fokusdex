@@ -407,10 +407,28 @@ const FEATS = JOURNEY, JFREE = { shop: { pk: 'poke', great: 10 }, shiny: { pk: '
 /* Den garanterte shinyen på dag 3: en svak art fra områdene dine (den skal vise hva en shiny er, ikke bære laget). */
 const JSHINY = [19, 161, 263, 399, 504];
 const jOn = () => !!S.j && !S.jdone;
+/* VENNENE PÅ REISEN (v65): alle som startet før reisen, utenom eieren, går inn i den på studiedag 4. Ingenting tas fra dem: Pokémon, XP, mynter,
+   gjenstander, raid som venter, gratispakker og dagens studier står som før. Bare det som vises, følger reisen herfra (nature dag 4, trening dag 5,
+   holdte gjenstander dag 6), og bare dager med studier teller. Har dagen alt OPENMIN minutter, er i dag dag 4; ellers blir neste studiedag dag 4.
+   Første kamp, raidintroen og shinyen er regnet som gjort (de er forbi det), og S.humb = 1 så raidene går som før. S.jf = merket for at det er gjort. */
+const JFRIEND = 'f4';
+function jFriend() {
+  if (!S.started || (typeof SBX !== 'undefined' && SBX) || typeof isAdmin !== 'function') return false;
+  /* Skulle eierens lagring en gang ha blitt merket (for eksempel på en enhet der synken ikke var koblet til ennå), tas det tilbake så snart
+     eieren er kjent igjen: alt åpent som før, og merket 'own' så det aldri skjer igjen. */
+  if (isAdmin()) { if (S.jf === JFRIEND) { S.j = 0; S.jdone = 1; jAll(); S.jf = 'own'; save(true); } return false; }
+  if (S.j || S.jf === JFRIEND || S.jf === 'own' || (GH && !GH.ok)) return false;
+  const k = dayKey(), done = (((S.log || {})[k] || {}).m || 0) >= OPENMIN;
+  S.jf = JFRIEND; S.j = 1; S.jdone = 0; S.jd = done ? 4 : 3; S.jt = done ? k : ''; S.ulk = {}; featCheck();
+  S.js = ['battles', 'shop', 'shiny']; S.jx = { b: 1, r: 2, sh: 2, mv: 0 }; S.humb = 1; S.news = [];
+  save(true); return true;
+}
 const has = k => !!(S.ulk && S.ulk[k]);
 /* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
    Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
-const WNV = 64, WN = ['Arceus and Dark Mewtwo stand alone at the top. Rayquaza, Giratina and Mewtwo come next, and Deoxys is one of the great ones.', 'Cynthia now fights about as hard as Ghetsis, and Iris a little softer.', 'Beating Cynthia or Ghetsis pays far more than before. See for yourself.', 'Master Balls are rarer now, and dearer in the Shop.'];
+const WNV = 65, WN = ['The app now tells you when an update is ready, so you never miss one.', 'Arceus and Dark Mewtwo stand alone at the top. Rayquaza, Giratina and Mewtwo come next, and Deoxys is one of the great ones.', 'Cynthia now fights about as hard as Ghetsis, and beating her or Ghetsis pays far more. See for yourself.', 'Master Balls are rarer now, and dearer in the Shop.'];
+/* Første linje for dem som går reisen (whatsNew i ui.js). */
+const WNJ = 'Your journey: new things now open one study day at a time. See the card on the Focus page.';
 function featCheck() { S.ulk = S.ulk || {}; if (!jOn()) return 0; let ch = 0; for (const [k, d] of JOURNEY) if (!S.ulk[k] && (S.jd || 0) >= d) { S.ulk[k] = 1; ch = 1; } return ch; }
 /* Alt åpent, uten ark (de som startet før reisen, og når reisen er ferdig). */
 function jAll() { S.ulk = S.ulk || {}; JOURNEY.forEach(f => { S.ulk[f[0]] = 1; }); S.news = []; }
