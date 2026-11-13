@@ -1612,3 +1612,12 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .simw{background:color-mix(in srgb,var(--gold) 12%,var(--card2))}
 .chk{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--ink2);padding:4px 2px}
 .chk input{width:20px;height:20px;accent-color:var(--sage)}
+
+/* Cynthia og Ghetsis slått: eget kort med det de gir (bui.js overview, res.sp). */
+.spw{box-shadow:0 0 0 1.5px var(--cc),0 0 26px -10px var(--cc);background:linear-gradient(160deg,color-mix(in srgb,var(--cc) 14%,transparent),transparent 70%),var(--card)}
+.spw-h{display:block;font-size:19px;margin:2px 0 8px}
+.spw-r{display:flex;align-items:center;gap:12px;padding:6px 0;border-top:1px solid rgba(255,255,255,.06)}
+.spw-r:first-of-type{border-top:0}
+.spw-r .sp{display:flex;flex-direction:column;gap:1px}
+.spw-i{flex:none;width:40px;height:40px;display:grid;place-items:center}
+.spw-i .raid-sp.qm{width:34px;height:34px;font-size:15px}

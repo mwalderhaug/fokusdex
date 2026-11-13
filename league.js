@@ -93,11 +93,12 @@ const POOL = {
     ['Alder', 'alder', 'Champion', 6, [637, 617, 626, 621, 589, 584], 'Alder', { sc: 'pinwheel_road', th: 'petal', cc: '#ff9a4a', fx: [3, [534, 579, 553, 609, 628]] }]],
   supreme: [['Red', 'red', 'Legend', 9, [6, 25, 3, 9, 143, 131], 'Red & Blue|Champion & Red', { sc: 'snowy_tall_grass', fx: [5, [196, 68, 59]] }],
     ['Blue', 'blue', 'Legend', 9, [18, 65, 59, 130, 103, 464], 'Red & Blue', { sc: 'pwt', fx: [2, [68, 142, 248, 214]] }],
-    ['Cynthia', 'cynthia', 'Sinnoh Champion', 15, [445, 442, 448, 350, 407, 468], 'Cynthia', { sc: 'black_tower_10', sp: 1, film: 'b:cynthia', cc: '#e9d28a', fx: [4, [423, 471, 604, 628]] }],
-    ['Iris', 'iris', 'Unova Champion', 15, [612, 635, 621, 567, 306, 131], 'Iris', { sc: 'black_tower_3_5', fx: [2, [373]] }],
+    ['Cynthia', 'cynthia', 'Sinnoh Champion', 15, [445, 442, 448, 350, 407, 468], 'Cynthia', { sc: 'black_tower_10', sp: 1, film: 'b:cynthia', cc: '#e9d28a', fx: [4, [423, 471, 604, 628]], st: { rel: 0.06, ev: 1.4 } }],
+    ['Iris', 'iris', 'Unova Champion', 15, [612, 635, 621, 567, 306, 131], 'Iris', { sc: 'black_tower_3_5', fx: [2, [373]], st: { rel: -0.01 } }],
     ['Steven', 'steven', 'Hoenn Champion', 8, [376, 227, 306, 142, 344, 346], 'Champion Steven', { sc: 'cave', fx: [3, [348, 530, 567]] }],
     ['Colress', 'colress', 'Team Plasma', 8, [601, 462, 606, 376, 479, 474], 'Colress', { sc: 'black_tower_1_2', fx: [3, [466, 604]] }],
-    /* Ghetsis, Champions Edition: den andre av de to helt spesielle (ved siden av Cynthia), og den sterkeste motstanderen i spillet. Laget er det han
+    /* Cynthia står over klassen sin (st), så hun er omtrent like vanskelig som Ghetsis (målt med sim/boss.js), og Iris litt under.
+       Ghetsis, Champions Edition: den andre av de to helt spesielle (ved siden av Cynthia), og den sterkeste motstanderen i spillet. Laget er det han
        ville hatt om han fikk det som han ville: Hydreigon som ess, Kyurem (dragen han tvang til å lyde, sendes ut nest sist: late), og rundt dem de
        sterkeste han kunne tatt fra hvilken som helst region – Tyranitar, Gengar, Chandelure, Genesect (Team Plasmas eget våpen), Darkrai – og et par av
        hans egne (Cofagrigus, Eelektross, Drapion, Bisharp). Høyst én legendarisk til kommer inn. Laget er sterkere enn noe annet i spillet, så han har
@@ -140,6 +141,10 @@ TCL.brain = { i: 5, n: 'Frontier Brain', mons: 4, rel: 1, sk: 1, iv: 22, ev: 24,
    ikke høyere enn klasse CLIMBTOP (Evil Leader). Kamp LAPN er alltid en Champion, med en liten sjanse (SUPP) for en av de aller største i stedet:
    oftest Cynthia eller Ghetsis i Champions Edition (SPW), som har egen film, eget lag og ekstra belønning. Hvem som venter, vises ikke før introen.
    S.lad.c = klassen til den du sist slo i runden (0 ved rundestart). Så starter en ny runde med høyere nivå, større lag og bedre belønninger. */
+/* De to spesielle (sp: Cynthia og Ghetsis i Champions Edition) gir i tillegg til klassens belønning: dobbelt så mange mynter, SPCANDY Rare Candy
+   (rett i veska, ikke skåret ned som ligaens ellers), en Mega Stone, en shiny av sin egen signatur-Pokémon (SPSIG, i første form), et legendarisk
+   møte, og første gang hver av dem er slått, en Master Ball. res.sp beskriver det for resultatskjermen. */
+const SPSIG = { Cynthia: 443, Ghetsis: 633 }, SPCANDY = 6;
 const LAPN = 8, CLIMBUP = 0.7, CLIMBJUMP = 0.12, CLIMBTOP = 7, SPW = 3;
 /* Mynter og Rare Candy i ligaen målt mot klassetabellen (stilt inn sammen med Battle Frontier og cupen, så en dag i hver modus er omtrent like mye verdt
    og dagens bonus avgjør valget). */
@@ -599,7 +604,15 @@ function finishLeague(B) {
       if (!res.trade.length) res.trade = null;
     }
     /* De to spesielle gir mer av alt, og seieren huskes (S.spw). */
-    if (B.tr.sp) { const extra = Math.round(res.coins * 0.5); res.coins += extra; S.coins += extra; give('candy', 4); give('mstone', 1); pushEnc(res, legEnc()); (S.spw || (S.spw = {}))[B.tr.n] = (S.spw[B.tr.n] || 0) + 1; res.perks.push(`${B.tr.n} is beaten. Half again as many coins, and one more legendary encounter.`); }
+    if (B.tr.sp) {
+      const spw = S.spw || (S.spw = {}), first = !spw[B.tr.n], extra = res.coins, sig = SPSIG[B.tr.n];
+      res.coins += extra; S.coins += extra; S.items.candy = (S.items.candy || 0) + SPCANDY; S.items.mstone = (S.items.mstone || 0) + 1;
+      let se = null; if (sig) { se = genEnc({ ids: [sig] }); se.sh = 1; pushEnc(res, se); }
+      pushEnc(res, legEnc());
+      if (first) S.items.master = (S.items.master || 0) + 1;
+      spw[B.tr.n] = (spw[B.tr.n] || 0) + 1;
+      res.sp = { n: B.tr.n, cn: (POOL[k][B.ti][6] || {}).cn || POOL[k][B.ti][2] || '', cc: B.tr.cc || '', extra, candy: SPCANDY, sig: se ? se.id : 0, first };
+    }
     L.best = (L.best || 0) + 1; (L.seen = L.seen || []).push(k + B.ti); L.next = null; L.c = Math.min(CLIMBTOP, clsI(k)); L.won = (L.won || 0) + 1;
     if (clsI(k) >= 8) achInit().ch++;
     /* Runden er vunnet: ligaen er ferdig for i dag (én runde per ligadag), og en legendarisk kan vise seg (RAIDWIN). */
@@ -925,7 +938,7 @@ function labMega(B) { B.me.forEach(b => { if (!b.mg && !b.mega) { const o = mega
    Når en runde i ligaen eller i Battle Frontier er fullført, viser en legendarisk Pokémon seg. Den er på et høyt nivå og har flere ganger så mye HP
    som vanlig, så den er umulig i starten. Slår du den, venter den i gresset, og da kan du prøve å fange den.
    LEGD: art, trinn (1 legendarisk, 2 de største, 3 mytisk, 4 Mewtwo og Arceus: de to vanskeligste), søk etter låta i pakken, bane, tema på banen, farge, scenen i filmsnutten og kjennetegnet der. */
-const LEGD = '144,1,Lugia,snowy_tall_grass,snow,#bfe6ff,ice,|145,1,Raikou,mountain,spark,#ffe14a,bolt,|146,1,Ho-oh,mountain,flame,#ff9a3a,magma,|150,4,Origins>>Mewtwo,cave,shard,#c79bff,void,rings|151,3,Origins>>Mewtwo,tall_grass,petal,#ffb3d9,forest,|243,1,Raikou,mountain,spark,#ffe14a,bolt,|244,1,Entei>>Raikou,cave,flame,#ff7a2a,magma,|245,1,Raikou,shallow_water,bubble,#7ad0ff,sea,|249,2,Lugia,water,bubble,#cfe6ff,sea,whirl|250,2,Ho-oh,mountain,flame,#ffb23a,sky,rainbow|251,3,Ho-oh,pinwheel_road,petal,#9be07a,forest,|377,1,Heatran,cave,shard,#c9a45c,stone,|378,1,Heatran,kyurem_cave,snow,#bfe6ff,ice,|379,1,Heatran,cave,shard,#b4c0d2,stone,|380,1,Rayquaza,mountain,spark,#ff7a8a,sky,|381,1,Rayquaza,mountain,spark,#6aa8ff,sky,|382,2,Kyogre,water,bubble,#3f8cff,sea,glyph|383,2,Kyogre,cave,flame,#ff5a2a,magma,glyph|384,2,Rayquaza,mountain,spark,#3fe08a,sky,streak|385,3,Deoxys,mountain,spark,#ffe680,space,|386,3,Deoxys,black_tower_10,shard,#ff7a4a,space,rings|480,1,Uxie,shallow_water,bubble,#ffe680,sea,|481,1,Uxie,shallow_water,bubble,#ff8ab0,sea,|482,1,Uxie,shallow_water,bubble,#6aa8ff,sea,|483,2,Palkia,black_tower_10,shard,#6aa8ff,time,rings|484,2,Palkia,black_tower_10,shard,#ff8ad0,space,rift|485,1,Heatran,cave,flame,#ff7a2a,magma,|486,1,Heatran,cave,shard,#e8e0c0,stone,|487,2,Giratina,kyurem_cave,evil,#e0b030,void,stripes|488,1,Uxie,mountain,shard,#ffb3ea,space,|490,3,Uxie,water,bubble,#5ad0ff,sea,|491,3,Darkrai>>Giratina,kyurem_cave,evil,#b03060,night,|492,3,Uxie,tall_grass,petal,#8be07a,forest,|493,4,Arceus,black_tower_10,,#ffe9a8,origin,wheel|494,3,Reshiram,pwt,flame,#ff9a3a,magma,|638,1,Cobalion,mountain,shard,#6ac0e8,stone,|639,1,Cobalion,cave,shard,#c9a45c,stone,|640,1,Cobalion,pinwheel_road,petal,#8be07a,forest,|641,1,Reshiram,mountain,spark,#8be0a0,sky,|642,1,Reshiram,mountain,spark,#6aa8ff,bolt,|643,2,Reshiram,black_tower_10,flame,#fff2e0,flame,pillar|644,2,Reshiram,black_tower_10,spark,#4ad0ff,bolt,pillar|645,1,Reshiram,cave,shard,#e0903a,stone,|646,2,Reshiram,kyurem_cave,snow,#bfe6ff,ice,pillar|647,3,Cobalion,shallow_water,bubble,#6ac0ff,sea,|648,3,Reshiram,pwt,petal,#9be07a,forest,|649,3,Reshiram,black_tower_3_5,shard,#c79bff,space,';
+const LEGD = '144,1,Lugia,snowy_tall_grass,snow,#bfe6ff,ice,|145,1,Raikou,mountain,spark,#ffe14a,bolt,|146,1,Ho-oh,mountain,flame,#ff9a3a,magma,|150,4,Origins>>Mewtwo,cave,shard,#c79bff,void,rings|151,3,Origins>>Mewtwo,tall_grass,petal,#ffb3d9,forest,|243,1,Raikou,mountain,spark,#ffe14a,bolt,|244,1,Entei>>Raikou,cave,flame,#ff7a2a,magma,|245,1,Raikou,shallow_water,bubble,#7ad0ff,sea,|249,2,Lugia,water,bubble,#cfe6ff,sea,whirl|250,2,Ho-oh,mountain,flame,#ffb23a,sky,rainbow|251,3,Ho-oh,pinwheel_road,petal,#9be07a,forest,|377,1,Heatran,cave,shard,#c9a45c,stone,|378,1,Heatran,kyurem_cave,snow,#bfe6ff,ice,|379,1,Heatran,cave,shard,#b4c0d2,stone,|380,1,Rayquaza,mountain,spark,#ff7a8a,sky,|381,1,Rayquaza,mountain,spark,#6aa8ff,sky,|382,2,Kyogre,water,bubble,#3f8cff,sea,glyph|383,2,Kyogre,cave,flame,#ff5a2a,magma,glyph|384,2,Rayquaza,mountain,spark,#3fe08a,sky,streak|385,3,Deoxys,mountain,spark,#ffe680,space,|386,4,Deoxys,black_tower_10,shard,#ff7a4a,space,rings|480,1,Uxie,shallow_water,bubble,#ffe680,sea,|481,1,Uxie,shallow_water,bubble,#ff8ab0,sea,|482,1,Uxie,shallow_water,bubble,#6aa8ff,sea,|483,2,Palkia,black_tower_10,shard,#6aa8ff,time,rings|484,2,Palkia,black_tower_10,shard,#ff8ad0,space,rift|485,1,Heatran,cave,flame,#ff7a2a,magma,|486,1,Heatran,cave,shard,#e8e0c0,stone,|487,2,Giratina,kyurem_cave,evil,#e0b030,void,stripes|488,1,Uxie,mountain,shard,#ffb3ea,space,|490,3,Uxie,water,bubble,#5ad0ff,sea,|491,3,Darkrai>>Giratina,kyurem_cave,evil,#b03060,night,|492,3,Uxie,tall_grass,petal,#8be07a,forest,|493,4,Arceus,black_tower_10,,#ffe9a8,origin,wheel|494,3,Reshiram,pwt,flame,#ff9a3a,magma,|638,1,Cobalion,mountain,shard,#6ac0e8,stone,|639,1,Cobalion,cave,shard,#c9a45c,stone,|640,1,Cobalion,pinwheel_road,petal,#8be07a,forest,|641,1,Reshiram,mountain,spark,#8be0a0,sky,|642,1,Reshiram,mountain,spark,#6aa8ff,bolt,|643,2,Reshiram,black_tower_10,flame,#fff2e0,flame,pillar|644,2,Reshiram,black_tower_10,spark,#4ad0ff,bolt,pillar|645,1,Reshiram,cave,shard,#e0903a,stone,|646,2,Reshiram,kyurem_cave,snow,#bfe6ff,ice,pillar|647,3,Cobalion,shallow_water,bubble,#6ac0ff,sea,|648,3,Reshiram,pwt,petal,#9be07a,forest,|649,3,Reshiram,black_tower_3_5,shard,#c79bff,space,';
 const LEG = {}; LEGD.split('|').forEach(r => { const q = r.split(','); LEG[+q[0]] = { t: +q[1], mre: q[2], sc: q[3], th: q[4], cc: q[5], bg: q[6], sig: q[7] }; });
 /* ---------- Raid-reglene ----------
    NÅR en legendarisk viser seg: sjelden, og aldri til fast tid (raidRoll). Hver studiedag (dagens første OPENMIN minutter) trekkes det én gang:
@@ -949,9 +962,9 @@ const RAIDLV = [75, 88, 82, 96, 100], RAIDHP = [2.4, 3.2, 2.8, 3.4, 3.6], RAIDCO
 const RAIDTRIES = 2, RAIDP0 = 0.08, RAIDPITY = 0.035, RAIDWIN = 0.25, RAIDCOOL = 3, MEWP = 0.08, MEWP1 = 0.16;
 /* Egen HP-faktor for enkelte arter, oppå klassens (RAIDHP). Innen «de største» var spredningen for stor: Dialga, Palkia, Zekrom og Reshiram var nesten
    uslåelige for alle lag uten legendariske, og hardere enn Mewtwo og Arceus, som skal være de to vanskeligste. Stilt inn med sim/perleg.js. */
-const RAIDX = { 150: [1.3, 1], 493: [0.85, 1], 386: [1.6, 1], 483: [0.6, 0.94], 484: [0.6, 0.94], 644: [0.75, 0.97], 643: [0.7, 0.96] };
+const RAIDX = { 150: [1.3, 1], 493: [0.85, 1], 386: [2.4, 1], 483: [0.6, 0.94], 484: [0.6, 0.94], 644: [0.75, 0.97], 643: [0.7, 0.96] };
 const raidX = id => RAIDX[id] || [1, 1];
-/* Mewtwo, Arceus og den mørke går ikke tomme: de har RAIDPP ganger så mange PP. De andre har vanlige PP, så de sterkeste angrepene deres tar slutt i en
+/* Mewtwo, Arceus, Deoxys og den mørke går ikke tomme: de har RAIDPP ganger så mange PP. De andre har vanlige PP, så de sterkeste angrepene deres tar slutt i en
    lang kamp (det er en del av hvorfor en lang kamp kan vinnes). */
 const RAIDPP = 4;
 /* De sterkeste viser seg bare for lag som kan gi dem kamp: de mytiske fra lagnivå 25, de største fra 35, og Mewtwo og Arceus fra 45. (Dark Mewtwo kommer bare ut av en slått Mewtwo.) */

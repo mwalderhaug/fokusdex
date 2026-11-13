@@ -125,7 +125,7 @@ const shopFull = k => k === 'egg' ? S.eggs.length >= 3 : k === 'incense' ? !!S.i
 /* Encounter-pakker: kjøpes for mynter og åpnes med en gang, som å åpne en kortpakke. Tre møter i hver, og den siste plassen er den gode:
    jo dyrere pakke, jo bedre sjanser (min = laveste sjeldenhet, ps/leg = sjansen for en pseudo-legendarisk eller en legendarisk i den plassen,
    shm = så mye likere er en shiny). lv = trenernivået pakken krever. Alle pakker har en liten sjanse for en legendarisk, som et lodd: hvem som helst
-   av dem du ikke eier, i områdene dine. Vekten per art (PKLEGW, etter sjeldenhet): vanlige 1, mytiske 1,3, de største 0,25, Mewtwo og Arceus 0,1 –
+   av dem du ikke eier, i områdene dine. Vekten per art (PKLEGW, etter sjeldenhet): vanlige 1, mytiske 1,3, de største 0,25, Mewtwo, Arceus og Deoxys 0,1 –
    så de mytiske kommer litt oftere, og de aller største er sjeldne her og kommer heller i raid. Kortet viser ikke hvem det er (myst = 1):
    det får du vite i gresset, i introen. */
 const PKLEGW = [0, 1, 0.25, 1.3, 0.1];
@@ -355,7 +355,7 @@ function wildLv(id, t) {
 const KEY = 'fokusdex.v1';
 function fresh() {
   return {
-    v: 1, mig: 13, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
+    v: 1, mig: 14, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
     items: { poke: 15, great: 0, ultra: 0, dusk: 0, master: 0, gberry: 0, candy: 0, stone: 0, mstone: 0, incense: 0, potion: 0, super: 0, hyper: 0, maxp: 0, heal: 0, revive: 0, maxrev: 0, ash: 0 }, charm: 0, ring: 0, lst: {},
     lure: 0, slure: 0, prism: 0, shb: null,
     mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, routes: [1], eggs: [], pend: [], incOn: 0,
@@ -400,8 +400,10 @@ const FEATS = [['battles', 2, 'Battles', 'When you are done for the day, your te
 const has = k => !!(S.ulk && S.ulk[k]);
 /* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
    Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
-const WNV = 60, WN = ['A calmer front page. Until you press Done for today, it is about studying. Battles and the tabs open after.', 'New trainers meet things step by step.', 'Attacks hit harder and sound cleaner.', 'The two rarest raids fight back more.'];
+const WNV = 62, WN = ['Deoxys is back among the rarest raids, next to Mewtwo and Arceus.', 'Cynthia now fights about as hard as Ghetsis, and Iris a little softer.', 'Beating Cynthia or Ghetsis pays far more than before. See for yourself.'];
 function featCheck() { S.ulk = S.ulk || {}; S.news = S.news || []; const l = tlv(); let ch = 0; for (const [k, lv] of FEATS) if (!S.ulk[k] && l >= lv) { S.ulk[k] = 1; S.news.push(k); ch = 1; } return ch; }
+/* Deoxys er tilbake i øverste klasse (v62): et vanlig Deoxys-raid som venter, får nivået og HP-en den klassen gir. */
+function migrate14() { const R = S.raid; if (R && !R.dk && !R.ev && R.id === 386 && typeof LEG !== 'undefined') { delete R.hx; raidRelevel(R); } S.mig = 14; }
 function migrate13() { if (S.started) { S.ulk = {}; FEATS.forEach(f => { S.ulk[f[0]] = 1; }); S.news = []; } S.mig = 13; }
 function migrate12() {
   const R = S.raid;
@@ -435,6 +437,7 @@ function adopt(o) {
   if (!o.mig || o.mig < 11) migrate11();
   if (!o.mig || o.mig < 12) migrate12();
   if (!o.mig || o.mig < 13) migrate13();
+  if (!o.mig || o.mig < 14) migrate14();
   /* Et forsøk kan ikke være eldre enn raidet selv (S.raid.at = dagen det kom). Et slikt merke kommer fra en eldre appversjon som flettet inn
      forsøkene fra et tidligere raid av samme art: de gjelder ikke dette. */
   if (S.raid && S.raid.at && S.raid.day && S.raid.day < S.raid.at) { S.raid.tries = 0; S.raid.day = ''; }
