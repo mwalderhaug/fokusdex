@@ -256,15 +256,17 @@ function giftSheet() {
   return true;
 }
 /* ---------- REISEN (nye spillere) ----------
-   journeyCard: hva som er åpnet, og hva som kommer. jReveal: arket for det som er nytt (ett om gangen, etter «Done for today»).
-   jAfter: det som hører til rett etter en økt eller en kamp (forklaringen av raid, shinyen, angrepstypene), og ellers jReveal. */
+   journeyCard: hva som er åpnet, og hva som kommer (med et hint om neste studiedag). jReveal: arket for det som er nytt (ett om gangen, etter
+   «Done for today»). jAfter: det som hører til rett etter en økt eller en kamp (forklaringen av raid, shinyen, angrepstypene), og ellers jReveal.
+   Tekstene går gjennom tl (norsk eller engelsk, S.lang). */
 const JIC = { battles: 'B', shop: 'S', shiny: '✦', nature: 'N', train: 'T', held: 'H' };
+const jNext = () => JOURNEY.find(f => !has(f[0]));
 function journeyCard() {
   if (!jOn() || !S.started) return '';
-  const next = JOURNEY.find(f => !has(f[0]));
-  return `<div class="card jrn"><div class="row" style="justify-content:space-between"><b>Your journey</b><span class="pill tn">Study day ${S.jd || 0}</span></div>
-    <div class="jrn-t">${JOURNEY.map(f => { const on = has(f[0]), nx = next && next[0] === f[0]; return `<span class="jt${on ? ' on' : ''}${nx ? ' nx' : ''}"><i>${on ? JIC[f[0]] : '?'}</i><small>${on ? f[2] : nx ? 'Next' : ''}</small></span>`; }).join('')}</div>
-    <p class="sm">${next ? `Something new after your next day of focus (${OPENMIN} minutes).` : 'Everything is open. The rest is yours to find.'}</p></div>`;
+  const next = jNext();
+  return `<div class="card jrn"><div class="row" style="justify-content:space-between"><b>${tl('Your journey')}</b><span class="pill tn">${tl('Study day {d}', { d: S.jd || 0 })}</span></div>
+    <div class="jrn-t">${JOURNEY.map(f => { const on = has(f[0]), nx = next && next[0] === f[0]; return `<span class="jt${on ? ' on' : ''}${nx ? ' nx' : ''}"><i>${on ? JIC[f[0]] : '?'}</i><small>${on ? tl(JSHORT[f[0]]) : nx ? tl('Next') : ''}</small></span>`; }).join('')}</div>
+    <p class="sm">${next ? tl('Next study day ({min} min): {hint}', { min: OPENMIN, hint: tl(JHINT[next[0]]) }) : tl('Everything is open. The rest is yours to find.')}</p></div>`;
 }
 /* To av samme art på nivå 50: født med full potensial og en nature som hjelper, mot født svak med en nature som trekker ned. */
 function jNature() {
@@ -273,12 +275,15 @@ function jNature() {
   const mk = (iv, nat) => ({ nat, st: statsOf({ id, lv: 50, sh: 0, iv: [iv, iv, iv, iv, iv, iv], ev: [0, 0, 0, 0, 0, 0], nat }) });
   const A = mk(31, natFor(hi, lo)), Z = mk(3, natFor(lo, hi)), top = Math.max(...A.st, ...Z.st);
   const col = (x, t) => `<div class="jn-c"><div class="jn-h">${spr(id, { s: '44px' })}<span><b>${t}</b><span class="sm tn">${NAT[x.nat]}</span></span></div>${x.st.map((v, i) => `<div class="jn-r"><span class="sm">${SN[i]}</span><span class="jn-b"><i style="width:${Math.round(v / top * 100)}%"></i></span><b class="tn">${v}</b></div>`).join('')}</div>`;
-  return `<div class="jn">${col(A, 'Born strong')}${col(Z, 'Born weak')}</div><p class="sm">Same Pokémon, same level. Potential (IVs) is set when it is born: 0 to 31 in each stat. A nature lifts one stat by 10 % and lowers another. Keep the ones born strong: the stars on the catch screen show it.</p>`;
+  return `<div class="jn">${col(A, tl('Born strong'))}${col(Z, tl('Born weak'))}</div><p class="sm">${tl('Same Pokémon, same level. Potential (IVs) is set when it is born: 0 to 31 in each stat. A nature lifts one stat by 10 % and lowers another. Keep the ones born strong: the stars on the catch screen show it.')}</p>`;
 }
-const jMoveTypes = () => `<div class="jmv"><div><span class="mvc ph"></span><span><b>Physical</b><span class="sm">Contact moves. They use Attack against Defense.</span></span></div><div><span class="mvc spc"></span><span><b>Special</b><span class="sm">Energy from a distance. They use Sp. Atk against Sp. Def.</span></span></div><div><span class="mvc stt"></span><span><b>Status</b><span class="sm">No damage. They change stats, the weather or the foe.</span></span></div></div><p class="sm">A Pokémon with a high Sp. Atk hits harder with special moves, and one with a high Attack with physical ones. Look at its stats before you pick its moves.</p>`;
+const jMoveTypes = () => `<div class="jmv"><div><span class="mvc ph"></span><span><b>Physical</b><span class="sm">${tl('Contact moves. They use Attack against Defense.')}</span></span></div><div><span class="mvc spc"></span><span><b>Special</b><span class="sm">${tl('Energy from a distance. They use Sp. Atk against Sp. Def.')}</span></span></div><div><span class="mvc stt"></span><span><b>Status</b><span class="sm">${tl('No damage. They change stats, the weather or the foe.')}</span></span></div></div><p class="sm">${tl('A Pokémon with a high Sp. Atk hits harder with special moves, and one with a high Attack with physical ones. Look at its stats before you pick its moves.')}</p>`;
+/* Hintet nederst i et ark: hva som kommer neste studiedag (ingenting når reisen er ferdig). */
+const jTease = () => { const n = jNext(); return n ? `<p class="jtease">${tl('Next study day: {hint}', { hint: tl(JHINT[n[0]]) })}</p>` : ''; };
+const jOk = () => `<button type="button" class="btn wide gold" data-a="jok" style="margin-top:14px">${tl('Got it')}</button>`;
 function jSheet(f, g) {
   const body = f[0] === 'nature' ? jNature() : '';
-  return `<div class="jsh"><div class="sm">New · study day ${f[1]}</div><h2 style="margin:2px 0 6px">${f[2]}</h2><p class="mut">${f[3]}</p>${body}${g && g.length ? `<ul class="wnl">${g.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}${f[0] === 'shop' ? '<p class="sm" style="margin-top:8px">New areas open as your trainer level rises, and their Pokémon then show up in your encounters. See Routes under More options on the Focus page.</p>' : ''}<button type="button" class="btn wide gold" data-a="jok" style="margin-top:14px">Got it</button></div>`;
+  return `<div class="jsh"><div class="sm">${tl('New · study day {d}', { d: f[1] })}</div><h2 style="margin:2px 0 6px">${tl(f[2])}</h2><p class="mut">${tl(f[3])}</p>${body}${g && g.length ? `<ul class="wnl">${g.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}${f[0] === 'shop' ? `<p class="sm" style="margin-top:8px">${tl('New areas open as your trainer level rises, and their Pokémon then show up in your encounters. See Routes under More options on the Focus page.')}</p>` : ''}${jTease()}${jOk()}</div>`;
 }
 function jReveal() {
   if (!jOn() || !S.started || S.timer || !dayOpenQ() || !$('#sheet').hidden || !$('#ov').hidden) return false;
@@ -290,25 +295,25 @@ function jReveal() {
 function jAfter() {
   if (!jOn() || !S.started || S.timer || !$('#sheet').hidden || !$('#ov').hidden) return false;
   const x = S.jx || (S.jx = {});
-  if (x.r === 1) { x.r = 2; save(true); openSheet(`<div class="jsh"><div class="sm">Now you know</div><h2 style="margin:2px 0 6px">Legendary raids</h2><p class="mut">Now and then a legendary Pokémon shows itself after the day's battles. It fights your whole team. You get ${RAIDTRIES} attempts, one a day, and if you win, it joins you.</p><ul class="wnl"><li>The stronger your team, the better your chances.</li><li>The first ones are fair fights. Deoxys was not.</li><li>The next one shows itself in a few days.</li></ul><button type="button" class="btn wide gold" data-a="jok" style="margin-top:14px">Got it</button></div>`); return true; }
+  if (x.r === 1) { x.r = 2; save(true); openSheet(`<div class="jsh"><div class="sm">${tl('Now you know')}</div><h2 style="margin:2px 0 6px">Legendary raids</h2><p class="mut">${tl('Now and then a legendary Pokémon shows itself after the day\'s battles. It fights your whole team. You get {n} attempts, one a day, and if you win, it joins you.', { n: RAIDTRIES })}</p><ul class="wnl"><li>${tl('The stronger your team, the better your chances.')}</li><li>${tl('The first ones are fair fights. Deoxys was not.')}</li><li>${tl('The next one shows itself in a few days.')}</li></ul>${jOk()}</div>`); return true; }
   if (x.sh === 1) {
     x.sh = 2; let g = []; if (!(S.js || []).includes('shiny')) { (S.js = S.js || []).push('shiny'); g = jGift('shiny'); }
     const e = S.pend.slice().reverse().find(q => q.sure && q.sh); save(true);
-    openSheet(`<div class="jsh"><div class="sm">Look closer</div><h2 style="margin:2px 0 6px">A shiny ${e ? esc(D(e.id)[0]) : 'Pokémon'}</h2>${e ? `<div class="jsh-pic">${spr(e.id, { ani: 1, sh: 1, s: '96px' })}</div>` : ''}<p class="mut">In the main games a shiny is just another colour. Here it is stronger: born with perfect IVs, and every stat ${Math.round((SHINYST - 1) * 100)} % higher. This one is yours whatever ball you throw.</p>${g.length ? `<ul class="wnl">${g.map(y => `<li>${y}</li>`).join('')}</ul>` : ''}<p class="sm" style="margin-top:8px">That is enough distraction. Study on, fill up today's bonus, and catch it when you like.</p><div class="acts" style="margin-top:12px"><button type="button" class="btn gold" data-a="hunt">Catch it now</button><button type="button" class="btn nf" data-a="jok">Later</button></div></div>`);
+    openSheet(`<div class="jsh"><div class="sm">${tl('Look closer')}</div><h2 style="margin:2px 0 6px">${tl('A shiny {name}', { name: e ? esc(D(e.id)[0]) : 'Pokémon' })}</h2>${e ? `<div class="jsh-pic">${spr(e.id, { ani: 1, sh: 1, s: '96px' })}</div>` : ''}<p class="mut">${tl('In the main games a shiny is just another colour. Here it is stronger: born with perfect IVs, and every stat {p} % higher. This one is yours whatever ball you throw.', { p: Math.round((SHINYST - 1) * 100) })}</p>${g.length ? `<ul class="wnl">${g.map(y => `<li>${y}</li>`).join('')}</ul>` : ''}<p class="sm" style="margin-top:8px">${tl('That is enough distraction. Study on, fill up today\'s bonus, and catch it when you like.')}</p>${jTease()}<div class="acts" style="margin-top:12px"><button type="button" class="btn gold" data-a="hunt">${tl('Catch it now')}</button><button type="button" class="btn nf" data-a="jok">${tl('Later')}</button></div></div>`);
     return true;
   }
-  if (U.jmv && !x.mv && (S.jd || 0) >= 4) { x.mv = 1; U.jmv = 0; save(true); openSheet(`<div class="jsh"><div class="sm">A new move</div><h2 style="margin:2px 0 6px">Three kinds of moves</h2>${jMoveTypes()}<button type="button" class="btn wide gold" data-a="jok" style="margin-top:14px">Got it</button></div>`); return true; }
+  if (U.jmv && !x.mv && (S.jd || 0) >= 4) { x.mv = 1; U.jmv = 0; save(true); openSheet(`<div class="jsh"><div class="sm">${tl('A new move')}</div><h2 style="margin:2px 0 6px">${tl('Three kinds of moves')}</h2>${jMoveTypes()}${jOk()}</div>`); return true; }
   return jReveal();
 }
 function whatsNew() {
   if (!S.started || (S.wn || 0) >= WNV) return false;
   S.wn = WNV; save(true);
-  openSheet(`<h2 style="margin:0 0 4px">What's new</h2><ul class="wnl">${(jOn() ? [WNJ] : []).concat(WN).map(t => `<li>${t}</li>`).join('')}</ul><button type="button" class="btn wide gold" data-a="wnok" style="margin-top:14px">Got it</button>`);
+  openSheet(`<h2 style="margin:0 0 4px">${tl('What\'s new')}</h2><ul class="wnl">${(jOn() ? [WNJ] : []).concat(WN).map(x => `<li>${tl(x)}</li>`).join('')}</ul><button type="button" class="btn wide gold" data-a="wnok" style="margin-top:14px">${tl('Got it')}</button>`);
   return true;
 }
 /* Kort som sier fra om noe nytt (FEATS), og kortet som står der kampene kommer. */
 const newsEl = () => (S.news || []).map(k => { const f = FEATS.find(x => x[0] === k); return f ? `<div class="card newsc"><div class="row" style="justify-content:space-between"><b><span class="newsp">New</span> ${f[2]}</b><button type="button" class="btn sm2" data-a="newsok" data-k="${k}">Got it</button></div><p class="sm" style="margin-top:6px">${f[3]}</p></div>` : ''; }).join('');
-const lockCard = k => { const f = FEATS.find(x => x[0] === k); return f ? `<div class="card lockc"><b>${f[2]}</b><p class="sm" style="margin-top:4px">${f[1] <= 1 ? `Opens when today has ${OPENMIN} minutes of focus.` : `Opens on study day ${f[1]}. You are on day ${S.jd || 0}.`}</p></div>` : ''; };
+const lockCard = k => { const f = FEATS.find(x => x[0] === k); return f ? `<div class="card lockc"><b>${tl(f[2])}</b><p class="sm" style="margin-top:4px">${f[1] <= 1 ? tl('Opens when today has {min} minutes of focus.', { min: OPENMIN }) : tl('Opens on study day {d}. You are on day {n}.', { d: f[1], n: S.jd || 0 })}</p></div>` : ''; };
 function enter() { const w = $('#main .wrap'); if (w) w.classList.add('enter'); }
 
 /* ---------- Din egen figur ----------
@@ -706,6 +711,7 @@ VIEW.profil = () => {
     <div class="card stack">
       <label class="field">Daily goal<select data-c="cap">${[120, 180, 240, 300, 360, 420, 480].map(c => `<option value="${c}"${S.cap === c ? ' selected' : ''}>${c / 60} hours · battle rewards up to ×${topFor(c).toFixed(1)}</option>`).join('')}</select></label>
       <p class="sm" style="margin-top:-4px">Battle rewards grow with today's focus and peak when you reach your goal: a higher goal has a higher peak. Past the goal your team is tired (half XP, no encounters).</p>
+      <div><div class="lab">${tl('Language for explanations')}</div>${langSeg(false)}<p class="sm" style="margin-top:6px">${tl('Guides and introductions to new things. Names, types and moves stay in English.')}</p></div>
       <div><div class="lab">Difficulty</div><div class="seg">${DIFF.map((d, i) => `<button type="button" data-a="diff" data-k="${i}" aria-pressed="${(S.diff == null ? 2 : S.diff) === i}">${d.n}</button>`).join('')}</div>
         <p class="sm" style="margin-top:6px">${['Opponents are a good bit below your level, play simply and bring smaller teams. You may use 5 items per battle.', 'Opponents are slightly below your level and make the odd mistake. You may use 4 items per battle.', 'Opponents match your level, are well trained and play to win. You may use 3 items per battle.'][S.diff == null ? 2 : S.diff]} Coins ×${diff().coin} and XP ×${diff().xp} from battles.</p></div>
       <div class="row"><button type="button" class="btn sp" data-a="hfx">Move hints: ${S.hfx === 0 ? 'off' : 'on'}</button><button type="button" class="btn sp" data-a="hty">Type tags: ${S.hty === 0 ? 'off' : 'on'}</button></div>
@@ -790,17 +796,19 @@ function closeOv() { const o = $('#ov'); o.hidden = true; o.innerHTML = ''; }
 
 /* ---------- Start: velg partner ---------- */
 let pick = 0;
+/* Språkvalget: på startskjermen (kort, med «Explanations in») og under Settings i Profile. */
+const langSeg = small => `<div class="langseg${small ? ' sm' : ''}">${small ? `<span class="sm">${tl('Explanations in')}</span>` : ''}<div class="seg">${[['en', 'English'], ['no', 'Norsk']].map(([k, n]) => `<button type="button" data-a="lang" data-k="${k}" aria-pressed="${(S.lang || 'en') === k}">${n}</button>`).join('')}</div></div>`;
 function intro() {
   if (U.step === 2) {
     ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="sback">Back</button><span class="pill">Step 2 of 2</span></div>
-      <div><h1 class="big">Your subjects</h1><p class="mut" style="margin-top:6px">Add up to four subjects you are studying for. Each gets a badge that fills as you focus, and the types you pick show up more often in its sessions. You can change this later in Profile.</p></div>
+      <div><h1 class="big">${tl('Your subjects')}</h1><p class="mut" style="margin-top:6px">${tl('Add up to four subjects you are studying for. Each gets a badge that fills as you focus, and the types you pick show up more often in its sessions. You can change this later in Profile.')}</p></div>
       <div id="se" class="stack">${seCards()}</div><p class="err" id="se-err" role="alert"></p>
       <div class="acts"><button type="button" class="btn pri" data-a="sestart">Start with ${esc(D(pick)[0])}</button></div>`);
     return;
   }
-  ov(`<div class="row" style="justify-content:flex-end"><span class="pill">Step 1 of 2</span></div><div class="mid"><h1 class="big">Fokusdex</h1><p class="mut" style="max-width:30ch">Every minute you focus earns XP and coins. Every session lures out wild Pokémon you can catch, evolve and collect.</p>
+  ov(`<div class="row" style="justify-content:space-between;align-items:center">${langSeg(true)}<span class="pill">Step 1 of 2</span></div><div class="mid"><h1 class="big">Fokusdex</h1><p class="mut" style="max-width:30ch">${tl('Every minute you focus earns XP and coins. Every session lures out wild Pokémon you can catch, evolve and collect.')}</p>
     <div class="starters">${[1, 4, 7].map(id => `<button type="button" data-a="pick" data-k="${id}" aria-pressed="${pick === id}" style="--tc:var(--t${D(id)[1]})">${spr(id, { ani: 1 })}<span>${D(id)[0]}</span>${types(id)}</button>`).join('')}</div>
-    <p class="sm" style="max-width:32ch">Pick your partner. You start with 20 Poké Balls, and next you add your subjects.</p></div>
+    <p class="sm" style="max-width:32ch">${tl('Pick your partner. You start with 20 Poké Balls, and next you add your subjects.')}</p></div>
     <div class="acts"><button type="button" class="btn pri" data-a="snext"${pick ? '' : ' disabled'}>${pick ? 'Next' : 'Choose a partner'}</button></div>`);
 }
 
@@ -1088,6 +1096,7 @@ const A = {
   pkdone: () => { U.pk = null; closeOv(); render(); },
   pkhunt: () => { U.pk = null; hunt(); },
   sound: () => { S.sound = S.sound ? 0 : 1; save(); sfx.tap(); render(); },
+  lang: el => { S.lang = el.dataset.k === 'no' ? 'no' : 'en'; save(true); if (!S.started) intro(); else render(); },
   diff: el => { S.diff = +el.dataset.k; save(); render(); toast(`Difficulty: ${diff().n}. It applies from your next battle.`); },
   hfx: () => { S.hfx = S.hfx === 0 ? 1 : 0; save(); render(); },
   hty: () => { S.hty = S.hty === 0 ? 1 : 0; save(); render(); },
@@ -1208,7 +1217,7 @@ const UPD = { t0: Date.now(), on: 0 };
 function updBar() {
   if (!UPD.on || $('#updbar')) return;
   const b = document.createElement('div'); b.id = 'updbar'; b.className = 'updbar'; b.setAttribute('role', 'status');
-  b.innerHTML = '<span>A new version of Fokusdex is ready.</span><button type="button" class="btn sm2 gold" data-a="upd">Reload</button>';
+  b.innerHTML = `<span>${tl('A new version of Fokusdex is ready.')}</span><button type="button" class="btn sm2 gold" data-a="upd">Reload</button>`;
   document.body.appendChild(b);
 }
 function updReady() {

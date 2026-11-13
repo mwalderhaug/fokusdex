@@ -1252,7 +1252,7 @@ function finishRaid(B) {
     const pre = R.r1 && !R.told ? `Mewtwo's rewards are yours: ${R.r1}. ` : ''; R.told = 1;
     if (R.tries >= raidTries(R)) {
       raidGone();
-      if (R.ev === 2) { S.items.candy = (S.items.candy || 0) + 2; res.items.push('2 × Rare Candy'); S.seen[386] = 1; (S.jx = S.jx || {}).r = 1; res.note = `That was ${nm}. You never had a chance, and that was the point: now you know what is out there. Train your team, and the next legendary Pokémon will be a fair fight. It comes in a few days.`; }
+      if (R.ev === 2) { S.items.candy = (S.items.candy || 0) + 2; res.items.push('2 × Rare Candy'); S.seen[386] = 1; (S.jx = S.jx || {}).r = 1; res.note = tl('That was {name}. You never had a chance, and that was the point: now you know what is out there. Train your team, and the next legendary Pokémon will be a fair fight. It comes in a few days.', { name: nm }); }
       else if (R.ev) res.note = `${nm} was never going to fall today, and that is how it was meant to be. It has moved on. Train your team: legendary Pokémon will show themselves again.`;
       else if (R.dk) res.note = `${pre}The shadow lets go and Dark Mewtwo is gone. Mewtwo stays with you. Beat a Mewtwo again, and the shadow will rise once more.`;
       else res.note = `${nm} has moved on. Another legendary Pokémon will show itself in time.`;

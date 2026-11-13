@@ -1647,3 +1647,7 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 /* Ny versjon klar (ui.js updBar): en stripe nederst over fanene. */
 .updbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:90;display:flex;align-items:center;gap:12px;
   width:max-content;max-width:calc(100% - 24px);padding:10px 10px 10px 16px;border-radius:16px;background:#2a2622;box-shadow:0 0 0 1.5px var(--gold),0 10px 30px -8px #000;font-size:14px}
+
+/* Språkvalget (ui.js langSeg): på startskjermen og under Settings. */
+.langseg.sm{display:flex;align-items:center;gap:8px}.langseg.sm .seg{min-width:150px}.langseg.sm .seg button{min-height:30px;font-size:12px}
+.jtease{margin:12px 0 0;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--gold) 9%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold) 30%,transparent);font-size:13px;color:var(--ink2)}

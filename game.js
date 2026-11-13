@@ -392,6 +392,69 @@ function migrate11() {
 }
 /* Mewtwo og Deoxys har byttet klasse (Mewtwo står nå sammen med Arceus, Deoxys er mytisk): et raid som venter, får nivået den nye klassen gir.
    En Dark Mewtwo du alt eier, får det den mørke alltid har (IV 31, Timid, og EV fullt ut hvis den ikke er trent ferdig). */
+/* SPRÅK: forklaringer og introduksjoner kan leses på norsk (S.lang = 'no'). Navn, typer, angrep, knapper og faner står alltid på engelsk.
+   tl(tekst, verdier): den engelske teksten er nøkkelen, LNO[tekst] den norske; {navn} byttes med verdier.navn. Mangler en oversettelse, står den engelske. */
+const LNO = {
+  // Startskjermen
+  'Every minute you focus earns XP and coins. Every session lures out wild Pokémon you can catch, evolve and collect.': 'Hvert minutt du fokuserer gir XP og mynter. Hver økt lokker fram ville Pokémon du kan fange, utvikle og samle på.',
+  'Pick your partner. You start with 20 Poké Balls, and next you add your subjects.': 'Velg partneren din. Du starter med 20 Poké Balls, og etterpå legger du inn fagene dine.',
+  'Your subjects': 'Fagene dine',
+  'Add up to four subjects you are studying for. Each gets a badge that fills as you focus, and the types you pick show up more often in its sessions. You can change this later in Profile.': 'Legg inn opptil fire fag du studerer. Hvert fag får et merke som fylles når du fokuserer, og typene du velger dukker oftere opp i øktene til faget. Du kan endre dette senere under Profile.',
+  'Explanations in': 'Forklaringer på',
+  // Innstillingen
+  'Language for explanations': 'Språk for forklaringer',
+  'Guides and introductions to new things. Names, types and moves stay in English.': 'Guider og introduksjoner til nye ting. Navn, typer og angrep står alltid på engelsk.',
+  // Reisen: navn, korte navn, tekstene og hintet om neste dag
+  'Battles': 'Kamper', 'The Shop': 'Shop', 'Shiny Pokémon': 'Shiny Pokémon', 'Nature and potential': 'Nature og potensial', 'Training': 'Trening', 'Held items': 'Held items',
+  'Shop': 'Shop', 'Shiny': 'Shiny', 'Nature': 'Nature', 'Items': 'Items',
+  'When the day is done, your team can fight. Pick the League, the Battle Frontier or the World Tournament for the day.': 'Når dagen er ferdig, kan laget ditt kjempe. Velg League, Battle Frontier eller World Tournament for dagen.',
+  'Spend your coins on balls, packs and things for your team. A free Poké Pack and 10 Great Balls are yours.': 'Bruk myntene på baller, pakker og ting til laget. En gratis Poké Pack og 10 Great Balls er dine.',
+  'A shiny is rare, and here it is more than a new colour: perfect IVs, and every stat a little higher.': 'En shiny er sjelden, og her er den mer enn en ny farge: perfekte IV-er og litt høyere verdier i alt.',
+  'Two of the same Pokémon are never quite equal. Here is why, and why it pays to keep the good ones.': 'To av samme Pokémon er aldri helt like. Her ser du hvorfor, og hvorfor det lønner seg å beholde de gode.',
+  'Open a Pokémon in Team and tap Train to raise its stats with coins. A free Ultra Pack is yours.': 'Åpne en Pokémon under Team og trykk Train for å øke verdiene med mynter. En gratis Ultra Pack er din.',
+  'A Pokémon can hold a berry, a plate or gear in battle. See its card in Team, or the Shop.': 'En Pokémon kan holde et bær, en plate eller utstyr i kamp. Se kortet dens under Team, eller i Shop.',
+  'Your team gets to fight.': 'Laget ditt får kjempe.', 'Somewhere to spend your coins.': 'Et sted å bruke myntene.', 'Something rare in the grass.': 'Noe sjeldent i gresset.',
+  'Why two of the same are not equal.': 'Hvorfor to like ikke er like.', 'A way to make your team stronger.': 'En måte å gjøre laget sterkere på.', 'Something for your team to carry.': 'Noe laget kan bære med seg.',
+  'A free {pack}: open it from the Focus page or the Shop': 'En gratis {pack}: åpne den fra Focus-siden eller i Shop',
+  '{n} Great Balls in your bag': '{n} Great Balls i bagen din',
+  // Kortet på forsiden og låste kort
+  'Your journey': 'Reisen din', 'Study day {d}': 'Studiedag {d}', 'Next': 'Neste',
+  'Next study day ({min} min): {hint}': 'Neste studiedag ({min} min): {hint}',
+  'Everything is open. The rest is yours to find.': 'Alt er åpnet. Resten finner du selv.',
+  'Opens when today has {min} minutes of focus.': 'Åpner når dagen har {min} minutter fokus.',
+  'Opens on study day {d}. You are on day {n}.': 'Åpner på studiedag {d}. Du er på dag {n}.',
+  // Arkene
+  'New · study day {d}': 'Nytt · studiedag {d}', 'Got it': 'Skjønner', 'Next study day: {hint}': 'Neste studiedag: {hint}',
+  'New areas open as your trainer level rises, and their Pokémon then show up in your encounters. See Routes under More options on the Focus page.': 'Nye områder åpner seg når trenernivået ditt stiger, og da dukker Pokémonene deres opp i møtene dine. Se Routes under More options på Focus-siden.',
+  'Born strong': 'Født sterk', 'Born weak': 'Født svak',
+  'Same Pokémon, same level. Potential (IVs) is set when it is born: 0 to 31 in each stat. A nature lifts one stat by 10 % and lowers another. Keep the ones born strong: the stars on the catch screen show it.': 'Samme Pokémon, samme nivå. Potensialet (IV) settes når den blir født: 0 til 31 i hver verdi. En nature løfter én verdi med 10 % og senker en annen. Behold de som er født sterke: stjernene på fangstskjermen viser det.',
+  'Contact moves. They use Attack against Defense.': 'Angrep med kontakt. De bruker Attack mot Defense.',
+  'Energy from a distance. They use Sp. Atk against Sp. Def.': 'Energi på avstand. De bruker Sp. Atk mot Sp. Def.',
+  'No damage. They change stats, the weather or the foe.': 'Ingen skade. De endrer verdier, været eller motstanderen.',
+  'A Pokémon with a high Sp. Atk hits harder with special moves, and one with a high Attack with physical ones. Look at its stats before you pick its moves.': 'En Pokémon med høy Sp. Atk slår hardere med special-angrep, og en med høy Attack med physical-angrep. Se på verdiene før du velger angrepene.',
+  'A new move': 'Et nytt angrep', 'Three kinds of moves': 'Tre slags angrep',
+  'Now you know': 'Nå vet du det',
+  'Now and then a legendary Pokémon shows itself after the day\'s battles. It fights your whole team. You get {n} attempts, one a day, and if you win, it joins you.': 'Av og til viser en legendarisk Pokémon seg etter dagens kamper. Den kjemper mot hele laget ditt. Du får {n} forsøk, ett om dagen, og vinner du, blir den med deg.',
+  'The stronger your team, the better your chances.': 'Jo sterkere laget er, jo bedre er sjansene.',
+  'The first ones are fair fights. Deoxys was not.': 'De første er rettferdige kamper. Deoxys var ikke det.',
+  'The next one shows itself in a few days.': 'Den neste viser seg om noen dager.',
+  'Look closer': 'Se nøyere', 'A shiny {name}': 'En shiny {name}',
+  'In the main games a shiny is just another colour. Here it is stronger: born with perfect IVs, and every stat {p} % higher. This one is yours whatever ball you throw.': 'I hovedspillene er en shiny bare en annen farge. Her er den sterkere: født med perfekte IV-er, og alle verdier {p} % høyere. Denne blir din uansett hvilken ball du kaster.',
+  'That is enough distraction. Study on, fill up today\'s bonus, and catch it when you like.': 'Det var nok distraksjon. Studer videre, fyll opp dagens bonus, og fang den når du vil.',
+  'Catch it now': 'Fang den nå', 'Later': 'Senere',
+  // Raidintroen (league.js)
+  'That was {name}. You never had a chance, and that was the point: now you know what is out there. Train your team, and the next legendary Pokémon will be a fair fight. It comes in a few days.': 'Det var {name}. Du hadde aldri en sjanse, og det var meningen: nå vet du hva som finnes der ute. Tren laget ditt, så blir neste legendariske Pokémon en rettferdig kamp. Den kommer om noen dager.',
+  // What's new og oppdateringer
+  'What\'s new': 'Nytt i appen',
+  'Explanations can now be read in Norwegian: Profile → Language for explanations.': 'Forklaringer kan nå leses på norsk: Profile → Language for explanations.',
+  'The app now tells you when an update is ready, so you never miss one.': 'Appen sier nå fra når en oppdatering er klar, så du aldri går glipp av en.',
+  'Arceus and Dark Mewtwo stand alone at the top. Rayquaza, Giratina and Mewtwo come next, and Deoxys is one of the great ones.': 'Arceus og Dark Mewtwo står alene på toppen. Så kommer Rayquaza, Giratina og Mewtwo, og Deoxys er en av de store.',
+  'Cynthia now fights about as hard as Ghetsis, and beating her or Ghetsis pays far more. See for yourself.': 'Cynthia kjemper nå omtrent like hardt som Ghetsis, og å slå henne eller Ghetsis gir mye mer. Se selv.',
+  'Master Balls are rarer now, and dearer in the Shop.': 'Master Balls er sjeldnere nå, og dyrere i Shop.',
+  'Your journey: new things now open one study day at a time. See the card on the Focus page.': 'Reisen din: nye ting åpner seg nå én studiedag om gangen. Se kortet på Focus-siden.',
+  'A new version of Fokusdex is ready.': 'En ny versjon av Fokusdex er klar.'
+};
+const tl = (s, v) => { const x = typeof S !== 'undefined' && S && S.lang === 'no' && LNO[s] != null ? LNO[s] : s; return v ? x.replace(/\{(\w+)\}/g, (m, k) => v[k] != null ? v[k] : m) : x; };
 /* REISEN: nye spillere får ting åpnet etter STUDIEDAGER (ikke trenernivå), én ny ting per dag, og ser det når dagen er ferdig («Done for today»).
    JOURNEY: [nøkkel, studiedag, navn, tekst på arket]. S.j = 1 for dem som startet etter v63 (begin). S.jd = antall studiedager (en dag teller når
    den når OPENMIN minutter, se grant). S.ulk = det som er åpnet, S.js = det som er vist. S.jx = engangsting underveis: b = første kamp er spilt,
@@ -403,6 +466,9 @@ const JOURNEY = [['battles', 1, 'Battles', 'When the day is done, your team can 
   ['nature', 4, 'Nature and potential', 'Two of the same Pokémon are never quite equal. Here is why, and why it pays to keep the good ones.'],
   ['train', 5, 'Training', 'Open a Pokémon in Team and tap Train to raise its stats with coins. A free Ultra Pack is yours.'],
   ['held', 6, 'Held items', 'A Pokémon can hold a berry, a plate or gear in battle. See its card in Team, or the Shop.']];
+/* Korte navn til rutene på kortet, og hintet om hva som kommer neste studiedag. */
+const JSHORT = { battles: 'Battles', shop: 'Shop', shiny: 'Shiny', nature: 'Nature', train: 'Training', held: 'Items' };
+const JHINT = { battles: 'Your team gets to fight.', shop: 'Somewhere to spend your coins.', shiny: 'Something rare in the grass.', nature: 'Why two of the same are not equal.', train: 'A way to make your team stronger.', held: 'Something for your team to carry.' };
 const FEATS = JOURNEY, JFREE = { shop: { pk: 'poke', great: 10 }, shiny: { pk: 'great' }, train: { pk: 'ultra' } }, JLAST = JOURNEY[JOURNEY.length - 1][1];
 /* Den garanterte shinyen på dag 3: en svak art fra områdene dine (den skal vise hva en shiny er, ikke bære laget). */
 const JSHINY = [19, 161, 263, 399, 504];
@@ -426,7 +492,7 @@ function jFriend() {
 const has = k => !!(S.ulk && S.ulk[k]);
 /* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
    Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
-const WNV = 65, WN = ['The app now tells you when an update is ready, so you never miss one.', 'Arceus and Dark Mewtwo stand alone at the top. Rayquaza, Giratina and Mewtwo come next, and Deoxys is one of the great ones.', 'Cynthia now fights about as hard as Ghetsis, and beating her or Ghetsis pays far more. See for yourself.', 'Master Balls are rarer now, and dearer in the Shop.'];
+const WNV = 66, WN = ['Explanations can now be read in Norwegian: Profile → Language for explanations.', 'The app now tells you when an update is ready, so you never miss one.', 'Arceus and Dark Mewtwo stand alone at the top. Rayquaza, Giratina and Mewtwo come next, and Deoxys is one of the great ones.', 'Cynthia now fights about as hard as Ghetsis, and beating her or Ghetsis pays far more. See for yourself.', 'Master Balls are rarer now, and dearer in the Shop.'];
 /* Første linje for dem som går reisen (whatsNew i ui.js). */
 const WNJ = 'Your journey: new things now open one study day at a time. See the card on the Focus page.';
 function featCheck() { S.ulk = S.ulk || {}; if (!jOn()) return 0; let ch = 0; for (const [k, d] of JOURNEY) if (!S.ulk[k] && (S.jd || 0) >= d) { S.ulk[k] = 1; ch = 1; } return ch; }
@@ -435,8 +501,8 @@ function jAll() { S.ulk = S.ulk || {}; JOURNEY.forEach(f => { S.ulk[f[0]] = 1; }
 /* Gaven som hører til et steg, gitt når arket vises. Svaret er linjene til arket. */
 function jGift(k) {
   const g = JFREE[k], out = []; if (!g) return out;
-  if (g.pk && PACKS[g.pk]) { S.fpk = S.fpk || {}; S.fpk[g.pk] = (S.fpk[g.pk] || 0) + 1; out.push(`A free ${PACKS[g.pk].n}: open it from the Focus page or the Shop`); }
-  if (g.great) { S.items.great = (S.items.great || 0) + g.great; out.push(`${g.great} Great Balls in your bag`); }
+  if (g.pk && PACKS[g.pk]) { S.fpk = S.fpk || {}; S.fpk[g.pk] = (S.fpk[g.pk] || 0) + 1; out.push(tl('A free {pack}: open it from the Focus page or the Shop', { pack: PACKS[g.pk].n })); }
+  if (g.great) { S.items.great = (S.items.great || 0) + g.great; out.push(tl('{n} Great Balls in your bag', { n: g.great })); }
   return out;
 }
 /* Den garanterte shinyen: første art fra JSHINY som finnes i områdene dine. Den blir fanget uansett (sure). */
