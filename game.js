@@ -34,7 +34,7 @@ const SHOP = {
   great: { n: 'Great Ball', p: 60, d: 'Better odds · trainer level 3', lv: 3, img: 'great-ball', bc: '#7fa8e6' },
   ultra: { n: 'Ultra Ball', p: 150, d: 'Best odds · trainer level 7', lv: 7, img: 'ultra-ball', bc: '#e3c577' },
   dusk: { n: 'Dusk Ball', p: 350, d: 'Ultra Ball odds, and a third better on legendary Pokémon · trainer level 10', lv: 10, img: 'dusk-ball', bc: '#4f8a5b' },
-  master: { n: 'Master Ball', p: 25000, d: 'Never fails. You can carry one · trainer level 25', lv: 25, img: 'master-ball', bc: '#8a5fc0', max: 1 },
+  master: { n: 'Master Ball', p: 60000, d: 'Never fails. You can carry one · trainer level 28', lv: 28, img: 'master-ball', bc: '#8a5fc0', max: 1 },
   /* Til kamp: brukes fra veska i ligakamper (bt = kampgjenstand). */
   potion: { n: 'Potion', p: 20, d: 'Heals 20 HP in battle', img: 'potion', bc: '#b28fe0', bt: 1 },
   super: { n: 'Super Potion', p: 45, d: 'Heals 60 HP in battle', img: 'super-potion', bc: '#e0845a', bt: 1 },
@@ -125,7 +125,7 @@ const shopFull = k => k === 'egg' ? S.eggs.length >= 3 : k === 'incense' ? !!S.i
 /* Encounter-pakker: kjøpes for mynter og åpnes med en gang, som å åpne en kortpakke. Tre møter i hver, og den siste plassen er den gode:
    jo dyrere pakke, jo bedre sjanser (min = laveste sjeldenhet, ps/leg = sjansen for en pseudo-legendarisk eller en legendarisk i den plassen,
    shm = så mye likere er en shiny). lv = trenernivået pakken krever. Alle pakker har en liten sjanse for en legendarisk, som et lodd: hvem som helst
-   av dem du ikke eier, i områdene dine. Vekten per art (PKLEGW, etter sjeldenhet): vanlige 1, mytiske 1,3, de største 0,25, Mewtwo, Arceus og Deoxys 0,1 –
+   av dem du ikke eier, i områdene dine. Vekten per art (PKLEGW, etter sjeldenhet): vanlige 1, mytiske 1,3, de største 0,25 (også Mewtwo og Deoxys), Arceus 0,1 –
    så de mytiske kommer litt oftere, og de aller største er sjeldne her og kommer heller i raid. Kortet viser ikke hvem det er (myst = 1):
    det får du vite i gresset, i introen. */
 const PKLEGW = [0, 1, 0.25, 1.3, 0.1];
@@ -355,7 +355,7 @@ function wildLv(id, t) {
 const KEY = 'fokusdex.v1';
 function fresh() {
   return {
-    v: 1, mig: 15, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
+    v: 1, mig: 16, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
     items: { poke: 20, great: 0, ultra: 0, dusk: 0, master: 0, gberry: 0, candy: 0, stone: 0, mstone: 0, incense: 0, potion: 0, super: 0, hyper: 0, maxp: 0, heal: 0, revive: 0, maxrev: 0, ash: 0 }, charm: 0, ring: 0, lst: {},
     lure: 0, slure: 0, prism: 0, shb: null,
     mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, routes: [1], eggs: [], pend: [], incOn: 0,
@@ -410,7 +410,7 @@ const jOn = () => !!S.j && !S.jdone;
 const has = k => !!(S.ulk && S.ulk[k]);
 /* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
    Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
-const WNV = 62, WN = ['Deoxys is back among the rarest raids, next to Mewtwo and Arceus.', 'Cynthia now fights about as hard as Ghetsis, and Iris a little softer.', 'Beating Cynthia or Ghetsis pays far more than before. See for yourself.'];
+const WNV = 64, WN = ['Arceus and Dark Mewtwo stand alone at the top. Rayquaza, Giratina and Mewtwo come next, and Deoxys is one of the great ones.', 'Cynthia now fights about as hard as Ghetsis, and Iris a little softer.', 'Beating Cynthia or Ghetsis pays far more than before. See for yourself.', 'Master Balls are rarer now, and dearer in the Shop.'];
 function featCheck() { S.ulk = S.ulk || {}; if (!jOn()) return 0; let ch = 0; for (const [k, d] of JOURNEY) if (!S.ulk[k] && (S.jd || 0) >= d) { S.ulk[k] = 1; ch = 1; } return ch; }
 /* Alt åpent, uten ark (de som startet før reisen, og når reisen er ferdig). */
 function jAll() { S.ulk = S.ulk || {}; JOURNEY.forEach(f => { S.ulk[f[0]] = 1; }); S.news = []; }
@@ -427,6 +427,8 @@ function jShiny() { const id = JSHINY.find(x => S.regions.includes(regOf(x))) ||
 function migrate14() { const R = S.raid; if (R && !R.dk && !R.ev && R.id === 386 && typeof LEG !== 'undefined') { delete R.hx; raidRelevel(R); } S.mig = 14; }
 function migrate13() { if (S.started) jAll(); S.mig = 13; }
 /* Reisen (v63) gjelder bare dem som starter etter den. Alle andre får alt (også det som var nytt i reisen: butikken, shiny, nature). */
+/* Mewtwo og Deoxys står blant de store fra v64: et vanlig raid som venter med en av dem, får nivået og HP-en den klassen gir. */
+function migrate16() { const R = S.raid; if (R && !R.dk && !R.ev && (R.id === 150 || R.id === 386) && typeof LEG !== 'undefined') { delete R.hx; raidRelevel(R); } S.mig = 16; }
 function migrate15() { if (S.started && !S.j) jAll(); S.mig = 15; }
 function migrate12() {
   const R = S.raid;
@@ -462,6 +464,7 @@ function adopt(o) {
   if (!o.mig || o.mig < 13) migrate13();
   if (!o.mig || o.mig < 14) migrate14();
   if (!o.mig || o.mig < 15) migrate15();
+  if (!o.mig || o.mig < 16) migrate16();
   /* Et forsøk kan ikke være eldre enn raidet selv (S.raid.at = dagen det kom). Et slikt merke kommer fra en eldre appversjon som flettet inn
      forsøkene fra et tidligere raid av samme art: de gjelder ikke dette. */
   if (S.raid && S.raid.at && S.raid.day && S.raid.day < S.raid.at) { S.raid.tries = 0; S.raid.day = ''; }
