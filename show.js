@@ -125,7 +125,7 @@ function showcase() {
       <div class="gain">${num(S.mons.length, 'Pokémon')}${num(sh, 'shiny')}${num(lg, 'legendary')}${num(as.p, 'medals')}</div>
       ${best.length ? `<div class="pkbest">${best.map(m => `<span class="${m.sh ? 'shy' : ''}">${spr(m.id, { sh: m.sh, mega: m.mega, s: '52px' })}</span>`).join('')}</div>` : ''}
       <p class="sm">Every Pokémon has its own IVs, nature and moves, and can be trained. Five regions, shinies, Mega forms, and ${nb(N.medals)} medals across the achievements.</p></div>
-    ${isAdmin() ? '<button type="button" class="btn wide nf" data-a="lab">Sandbox · films, raids, packs and modes</button>' : ''}
+    ${admOn() ? '<button type="button" class="btn wide nf" data-a="lab">Sandbox · films, raids, packs and modes</button>' : ''}
     <p class="sm" style="text-align:center">Nothing in the showcase touches your save.</p>`, 'tint shwov', 'var(--gold)');
   showSilFill('#shw-sil', 8);
 }

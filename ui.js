@@ -237,11 +237,18 @@ const VIEW = {};
 /* DAGEN HAR TO DELER. Før du har trykket «Done for today», viser appen bare det som har med studiet å gjøre: fag, lengde, Start, dagens framdrift og
    fangsten etter en økt. Laget, kampene, butikken og resten kommer fram når du er ferdig (S.dn = dagen det ble trykket). En kampdag som alt er åpnet
    i dag, og Sandbox, teller som ferdig. */
-const dayOpenQ = () => !S.started || !!SBX || S.dn === dayKey() || (S.lad && S.lad.day === dayKey());
-function studyView(lock, mid, td) {
-  const st = streak(), q = QUESTS.find(x => td < x.m);
-  return `<div class="study"><div class="st-top"><div class="row" style="justify-content:space-between"><span class="st-l">Today</span><span class="sm tn">${hrs(td)} of ${hrs(S.cap)} h${st >= 2 ? ` · ${st}-day streak` : ''}</span></div><div class="bar" style="margin-top:8px"><i style="width:${Math.min(100, Math.round(td / S.cap * 100))}%"></i></div>${q ? `<p class="sm st-q">Next: ${q.n} · ${q.r}</p>` : ''}</div>${lock}${mid}
-    <button type="button" class="btn wide st-done" data-a="dn">Done for today</button><p class="sm st-cap">Your team, the battles and the shop open when you are done.</p></div>`;
+const dayOpenQ = () => !S.started || !!SBX || admOn() || S.dn === dayKey() || (S.lad && S.lad.day === dayKey());
+/* ADMIN VIEW: eieren (isAdmin) ser det samme som alle andre, til bryteren «Admin view» slås på. Da er alt framme uansett om dagen er ferdig, og
+   Sandbox står der. Valget huskes på denne enheten. */
+const admOn = () => { if (U.adm == null) { try { U.adm = localStorage.getItem(KEY + '.adm') === '1'; } catch (_) { U.adm = false; } } return !!U.adm && isAdmin(); };
+const admRow = () => isAdmin() ? `<div class="admrow"><button type="button" class="btn sm2" data-a="adm" aria-pressed="${admOn()}">Admin view · ${admOn() ? 'on' : 'off'}</button>${admOn() ? '<button type="button" class="btn sm2" data-a="lab">Sandbox</button>' : ''}</div>` : '';
+/* Foten på forsiden før «Done for today». */
+const studyFoot = () => `<button type="button" class="btn wide st-done" data-a="dn">Done for today</button><p class="sm st-cap">Battles, raids and the tabs open when you are done.</p>`;
+function whatsNew() {
+  if (!S.started || (S.wn || 0) >= WNV) return false;
+  S.wn = WNV; save(true);
+  openSheet(`<h2 style="margin:0 0 4px">What's new</h2><ul class="wnl">${WN.map(t => `<li>${t}</li>`).join('')}</ul><button type="button" class="btn wide gold" data-a="wnok" style="margin-top:14px">Got it</button>`);
+  return true;
 }
 /* Kort som sier fra om noe nytt (FEATS), og kortet som står der kampene kommer. */
 const newsEl = () => (S.news || []).map(k => { const f = FEATS.find(x => x[0] === k); return f ? `<div class="card newsc"><div class="row" style="justify-content:space-between"><b><span class="newsp">New</span> ${f[2]}</b><button type="button" class="btn sm2" data-a="newsok" data-k="${k}">Got it</button></div><p class="sm" style="margin-top:6px">${f[3]}</p></div>` : ''; }).join('');
@@ -390,10 +397,10 @@ VIEW.fokus = () => {
     ${S.incOn ? '<p class="sm" style="margin-top:10px">Incense is lit for your next session.</p>' : ''}${S.lure > 0 ? `<p class="sm" style="margin-top:10px">Lure: one more encounter in your next ${S.lure} session${S.lure > 1 ? 's' : ''}.</p>` : ''}${S.slure > 0 ? `<p class="sm" style="margin-top:10px">Super Lure: rarer Pokémon in your next ${S.slure} session${S.slure > 1 ? 's' : ''}.</p>` : ''}${shinyBoost() > 1 ? `<p class="sm" style="margin-top:10px;color:var(--gold)">${SHOP[S.shb.k] ? SHOP[S.shb.k].n : 'Shiny incense'}: shiny odds ×${shinyBoost()} for ${hLeft(S.shb.until - Date.now())} more.</p>` : ''}${S.prism ? '<p class="sm" style="margin-top:10px;color:var(--gold)">Prism Lure: the next raid has a 1 in 5 chance of being shiny.</p>' : ''}${S.boost ? `<p class="sm" style="margin-top:10px;color:var(--gold)">Boss perk: ${S.boost.m}× coins for your next ${S.boost.n} session${S.boost.n > 1 ? 's' : ''}.</p>` : ''}</div>`;
   /* En vanlig dag ligger kampene nederst. På en eventdag står eventet og kampene øverst, og det som har med studeringen å gjøre, under. */
   const CL = clockLock(); if (CL) top += clockCard(CL);
-  if (!dayOpenQ()) return studyView(CL ? clockCard(CL) : '', h.slice(iPend, iToday), td);
+  if (!dayOpenQ()) return top + h + studyFoot() + admRow();
   top += newsEl();
   const battles = S.party.length ? (has('battles') ? raidCard() + ladderCard() : lockCard('battles')) : '', E = battles && has('battles') && typeof evNow === 'function' ? evNow() : null;
-  return E ? `${top}${battles}<div class="evsep"><span>Study</span></div>${h}` : top + h + battles;
+  return E ? `${top}${battles}<div class="evsep"><span>Study</span></div>${h}${admRow()}` : top + h + battles + admRow();
 };
 
 /* ---------- Laget ---------- */
@@ -631,7 +638,7 @@ VIEW.profil = () => {
       return `<div class="card avcard" style="--rk:${R.c}"><button type="button" class="avpb" data-a="ach" aria-label="Achievements. Rank: ${R.n}">${avFrame(R, 'lg', 1)}</button><span class="sp"><span class="sm">${S.av ? esc(avName()) : 'No character yet'}</span><b>${R.n}</b>
         <span class="bar"><i style="width:${pct}%;background:${R.c}"></i></span><span class="sm tn">${R.p} of ${achTotal()} medals${R.nn ? ` · ${R.next - R.p} more to ${R.nn}` : ''}</span></span></div>
       <div class="row"><button type="button" class="btn sp${as.open ? ' gold' : ''}" data-a="ach">${as.open ? `${as.open} reward${as.open > 1 ? 's' : ''} ready` : 'Achievements'}</button><button type="button" class="btn sp" data-a="avatar">${S.av ? 'Change character' : 'Pick a character'}</button></div>`; })()}
-    <div class="card stack shwc"><div><b>Show the game</b><p class="sm" style="margin-top:4px">A trailer and an overview of what is in here, without giving away what is waiting. Made for showing a friend.</p></div><div class="row"><button type="button" class="btn sp gold" data-a="show">Open the showcase</button><button type="button" class="btn sp" data-a="tour">Start guide</button></div><div class="row"><button type="button" class="btn sp" data-a="rules">Rules and rewards</button>${isAdmin() ? '<button type="button" class="btn sp" data-a="lab">Sandbox</button>' : ''}</div></div>
+    <div class="card stack shwc"><div><b>Show the game</b><p class="sm" style="margin-top:4px">A trailer and an overview of what is in here, without giving away what is waiting. Made for showing a friend.</p></div><div class="row"><button type="button" class="btn sp gold" data-a="show">Open the showcase</button><button type="button" class="btn sp" data-a="tour">Start guide</button></div><div class="row"><button type="button" class="btn sp" data-a="rules">Rules and rewards</button>${admOn() ? '<button type="button" class="btn sp" data-a="lab">Sandbox</button>' : ''}</div></div>
     <h2 class="h">Badges</h2><div class="card" style="padding-top:6px;padding-bottom:6px">${badges}</div>
     <p class="sm">Each badge fills with focus hours in that subject. 25, 50 and 75% give an epic encounter, and a full badge gives a legendary one. A reward needs time logged here in the app: ${MSGATE / 60} hours in the subject for each one, and ${BADGEGATE / 60} hours in all for the legendary.</p>
     <h2 class="h">Stats</h2>
@@ -940,6 +947,8 @@ function evoShow(m, from) {
 const A = {
   tab: el => { if (!dayOpenQ()) return; U.tab = el.dataset.k; render(); $('#main').scrollTop = 0; enter(); },
   smore: () => { U.more = !U.more; render(); },
+  adm: () => { if (!isAdmin()) return; U.adm = !admOn(); try { localStorage.setItem(KEY + '.adm', U.adm ? '1' : '0'); } catch (_) {} render(); toast(U.adm ? 'Admin view is on: everything is open, and the Sandbox is here.' : 'Admin view is off: you see what everyone sees.'); },
+  wnok: () => { closeSheet(); if (typeof raidArrive === 'function' && dayOpenQ()) raidArrive(); },
   newsok: el => { S.news = (S.news || []).filter(k => k !== el.dataset.k); save(true); render(); },
   /* «Done for today»: resten av appen kommer fram. Er det studert nok til kampene (og de er åpnet for deg), åpnes kampdagen med det samme. */
   dn: () => { if (typeof fairGate === 'function' && fairGate()) return; S.dn = dayKey(); stamp(); save(); sfx.open(); render(); $('#main').scrollTop = 0; enter();
@@ -1128,7 +1137,7 @@ window.addEventListener('storage', ev => { if (ev.key === KEY) tabShow(); });
 render();
 clockCheck();
 netTime().then(o => { if (o != null && clockCheck() && $('#ov').hidden) render(); });
-if (S.started && S.timer) showTimer(); else if (!(typeof liveGate === 'function' && liveGate()) && S.started) { if (S.tour !== TOURV) tourShow(0); else if (typeof raidArrive === 'function' && dayOpenQ()) raidArrive(); }
+if (S.started && S.timer) showTimer(); else if (!(typeof liveGate === 'function' && liveGate()) && S.started) { if (S.tour !== TOURV) tourShow(0); else if (!whatsNew() && typeof raidArrive === 'function' && dayOpenQ()) raidArrive(); }
 ghPull();
 setTimeout(() => PACK.init(), 2500);
 /* Adressen …/#lab åpner demoen direkte. */

@@ -398,6 +398,9 @@ const FEATS = [['battles', 2, 'Battles', 'When you are done for the day, your te
   ['train', 3, 'Training', 'Open a Pokémon in Team and tap Train to raise its stats for coins.'],
   ['held', 4, 'Held items', 'A Pokémon can hold a berry, a plate or gear. See its card in Team, or the Shop.']];
 const has = k => !!(S.ulk && S.ulk[k]);
+/* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
+   Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
+const WNV = 60, WN = ['A calmer front page. Until you press Done for today, it is about studying. Battles and the tabs open after.', 'New trainers meet things step by step.', 'Attacks hit harder and sound cleaner.', 'The two rarest raids fight back more.'];
 function featCheck() { S.ulk = S.ulk || {}; S.news = S.news || []; const l = tlv(); let ch = 0; for (const [k, lv] of FEATS) if (!S.ulk[k] && l >= lv) { S.ulk[k] = 1; S.news.push(k); ch = 1; } return ch; }
 function migrate13() { if (S.started) { S.ulk = {}; FEATS.forEach(f => { S.ulk[f[0]] = 1; }); S.news = []; } S.mig = 13; }
 function migrate12() {
@@ -991,7 +994,7 @@ function toggleRoute(r) {
 function dexCount(r) { const g = REG[r]; let c = 0; for (let id = g.a; id <= g.b; id++) if (S.caught[id]) c++; return c; }
 /* Første start: timer som alt er gjort i fagene gir 60 mynter per time og et forsprang på merkene. */
 function begin(id) {
-  S.started = 1;
+  S.started = 1; S.wn = WNV;
   let head = 0;
   for (const f in S.fag) { const g = S.fag[f]; head += g.b; g.ms = Math.min(3, Math.floor(g.b / (g.t * 60) * 4)); }
   const coins = Math.round(Math.min(head, STARTCAP) / 60 * 60);
