@@ -1654,6 +1654,7 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 
 /* Bjella på timeren (ui.js bellSvg, A.fsnd): lyden når et møte dukker opp. */
 .frow{display:flex;align-items:center;justify-content:center;gap:12px}
+.wlock .ovin{justify-content:center}
 .tsnd{width:32px;height:32px;flex:none;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--ink2)}
 .tsnd svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .tsnd[aria-pressed="false"]{color:var(--ink3,#8a8178)}

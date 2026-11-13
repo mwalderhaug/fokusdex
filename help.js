@@ -28,7 +28,7 @@ const HELP = [
 
   { k: 'timer', n: 'Subjects and the timer', s: 'What counts, and how a session works', ic: () => hSym('◷', 'var(--sage)'), body: () => `
     ${hH('Your subjects')}
-    ${hP('Add up to four subjects under <b>Profile → Edit subjects</b>. Each one has a plan in hours and a badge that fills as you study it. The Pokémon types you pick for a subject show up more often in its sessions.')}
+    ${hP('Add up to four subjects under <b>Profile → Edit subjects</b>. The Pokémon types you pick for a subject show up more often in its sessions. In an exam period (Profile → Badges) each badge counts down to its exam and gives encounters on the way. Work days are under Profile → Settings → Advanced options: the app is locked while you work, and work adds a little to the battle bonus.')}
     ${hH('Other things')}
     ${hP(`Job applications, music, reading and the like can be logged too. They count at <b>half value</b> (×${OTHERW}) for the battle bonus and your daily goal, give a little less XP, and do not train your partner. Encounters still come every 20 minutes. Their hours are kept apart from your subject hours.`)}
     ${hH('A session')}

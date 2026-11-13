@@ -222,9 +222,15 @@ function renderNav() {
 function render() {
   buildFags();
   if (!S.started) { $('#nav').hidden = true; $('#main').innerHTML = ''; return intro(); }
+  /* Arbeidsdager: i arbeidstida er appen låst (utenom pausene). Aldri midt i en økt, en kamp eller noe annet som står framme: da kommer låsen etterpå. */
+  if (S.work) { workPromote(); if (workCredit()) save(true);
+    const L = workLock(), busy = !!S.timer || !!SBX || (typeof BT !== 'undefined' && !!BT.B) || (!$('#ov').hidden && !U.wlock);
+    if (L && !busy) { $('#nav').hidden = true; return workScreen(L); }
+    if (!L && U.wlock) { U.wlock = 0; closeOv(); } }
   /* Før «Done for today» finnes bare Focus, uten faner (dayOpenQ). */
   if (typeof giftCheck === 'function' && giftCheck()) setTimeout(() => { if (!giftSheet()) return; }, 60);
   if (typeof jFriend === 'function') jFriend();
+  if (typeof examCheck === 'function' && examCheck()) save(true);
   const open = dayOpenQ(); if (!open || (U.tab === 'butikk' && jOn() && !has('shop'))) U.tab = 'fokus'; $('#nav').hidden = !open;
   if (featCheck()) save(true);
   /* Achievements: summen regnes én gang per tegning. Når et nytt mål er nådd siden sist, sies det fra én gang (ikke mens en studerer). */
@@ -428,7 +434,7 @@ function mulBox(td) {
     <p class="sm" style="margin-top:6px">${td >= g ? `Goal reached: battles pay ×${top.toFixed(1)} coins today.` : `It grows with every minute of focus and peaks at ×${top.toFixed(1)} at your goal of ${gh} h.${nx ? ` Next step: ×${at(Math.min(g, nx)).toFixed(1)} in ${Math.min(g, nx) - td} min.` : ''}`}</p>${purseNote()}</div>`;
 }
 VIEW.fokus = () => {
-  const p = partner(), fag = FAGS[U.fag] ? U.fag : curFag(), min = U.min || S.last.min, td = todayMin(), left = Math.max(0, S.cap - td);
+  const p = partner(), fag = FAGS[U.fag] ? U.fag : curFag(), min = U.min || S.last.min, td = todayMin(), tdb = (S.log[dayKey()] || {}).b || 0, left = Math.max(0, S.cap - td);
   /* Andre aktiviteter enn fagene teller halvt (rateOf): em = det økta er verdt. */
   const w = rateOf(fag), em = Math.round(min * w), subj = Object.keys(FAGS).filter(isSubj), oth = Object.keys(FAGS).filter(k => !isSubj(k)), chip = k => `<button type="button" class="chip" data-a="fag" data-k="${k}" aria-pressed="${fag === k}">${esc(F(k).n)}</button>`;
   const rl = w === 1 ? left : Math.round(left / w), n = Math.floor(Math.min(min, rl) / 20) + (min >= 25 && rl >= min ? 1 : 0) + (S.incOn ? 1 : 0) + (S.lure > 0 ? 1 : 0);
@@ -450,10 +456,11 @@ VIEW.fokus = () => {
     ${more && S.regions.length > 1 ? `<div class="lab" style="margin-top:14px">Routes · tap to turn on or off</div><div class="chips">${S.regions.map(r => `<button type="button" class="chip" data-a="reg" data-k="${r}" aria-pressed="${S.routes.includes(r)}">${REG[r].n}</button>`).join('')}</div>` : ''}
     ${hasMore ? `<button type="button" class="morel" data-a="smore" aria-expanded="${more}">${more ? 'Fewer options' : 'More options'}</button>` : ''}
     <button type="button" class="go" data-a="start" style="margin-top:16px">Start ${min} min</button>
-    <p class="sm" style="margin-top:10px;text-align:center">${left <= 0 ? 'Your team is tired today: half XP and no encounters. Rest gives a bonus tomorrow.' : `${n} ${n === 1 ? 'encounter' : 'encounters'} · ${nb(Math.round(Math.min(min, rl) * 10 * (w === 1 ? 1 : OTHERXP) * (rested ? 1.5 : 1)))} XP${rested ? ' with rested bonus' : ''}${F(fag).ty.length ? ' · more ' + F(fag).ty.map(t => TYN[t].toLowerCase()).join(' and ') : ''}${w < 1 ? `<br>${esc(F(fag).n)} counts at half value for the battle bonus: ${min} min counts as ${em} there.` : ''}`}</p></div>`;
+    <p class="sm" style="margin-top:10px;text-align:center">${left <= 0 ? 'Your team is tired today: half XP and no encounters. Rest gives a bonus tomorrow.' : `${n} ${n === 1 ? 'encounter' : 'encounters'} · ${nb(Math.round(Math.min(min, rl) * 10 * (w === 1 ? 1 : OTHERXP) * exf() * (rested ? 1.5 : 1)))} XP${rested ? ' with rested bonus' : ''}${F(fag).ty.length ? ' · more ' + F(fag).ty.map(t => TYN[t].toLowerCase()).join(' and ') : ''}${w < 1 ? `<br>${esc(F(fag).n)} counts at half value for the battle bonus: ${min} min counts as ${em} there.` : ''}`}</p></div>`;
   const iToday = h.length;
   h += `<div class="card"><div class="row" style="justify-content:space-between"><b>Today</b><span class="sm tn">${hm(td)} of ${hm(S.cap)}</span></div><div class="bar" style="margin-top:8px"><i style="width:${Math.min(100, Math.round(td / S.cap * 100))}%"></i></div>${dx ? `<p class="sm tn" style="margin-top:6px">Includes ${hm(dx)} of other things, counted as ${hm(dx * OTHERW)}.</p>` : ''}
-    ${mulBox(td)}
+    ${tdb ? `<p class="sm tn" style="margin-top:6px">Work adds ${hm(tdb)} to the battle bonus today.</p>` : ''}
+    ${mulBox(td + tdb)}
     <div class="quests">${QUESTS.map(q => `<span class="${td >= q.m ? 'on' : ''}"><b>${td >= q.m ? '✓ ' : ''}${q.n}</b>${q.r}</span>`).join('')}</div>
     ${S.eggs.length ? `<div class="row" style="margin-top:14px"><span class="egg"></span><div class="sp"><div class="row sm tn" style="justify-content:space-between"><span>Egg${S.eggs.length > 1 ? ' (' + S.eggs.length + ')' : ''}</span><span>${S.eggs[0].need - S.eggs[0].got} min left</span></div><div class="bar gold" style="margin-top:5px"><i style="width:${Math.round(S.eggs[0].got / S.eggs[0].need * 100)}%"></i></div></div></div>` : ''}
     ${S.incOn ? '<p class="sm" style="margin-top:10px">Incense is lit for your next session.</p>' : ''}${S.lure > 0 ? `<p class="sm" style="margin-top:10px">Lure: one more encounter in your next ${S.lure} session${S.lure > 1 ? 's' : ''}.</p>` : ''}${S.slure > 0 ? `<p class="sm" style="margin-top:10px">Super Lure: rarer Pokémon in your next ${S.slure} session${S.slure > 1 ? 's' : ''}.</p>` : ''}${shinyBoost() > 1 ? `<p class="sm" style="margin-top:10px;color:var(--gold)">${SHOP[S.shb.k] ? SHOP[S.shb.k].n : 'Shiny incense'}: shiny odds ×${shinyBoost()} for ${hLeft(S.shb.until - Date.now())} more.</p>` : ''}${S.prism ? '<p class="sm" style="margin-top:10px;color:var(--gold)">Prism Lure: the next raid has a 1 in 5 chance of being shiny.</p>' : ''}${S.boost ? `<p class="sm" style="margin-top:10px;color:var(--gold)">Boss perk: ${S.boost.m}× coins for your next ${S.boost.n} session${S.boost.n > 1 ? 's' : ''}.</p>` : ''}</div>`;
@@ -688,9 +695,11 @@ VIEW.butikk = () => {
 /* ---------- Profil: merker, statistikk, innstillinger ---------- */
 VIEW.profil = () => {
   const t0 = new Date(), tot = totalMin(), ses = Object.values(S.log).reduce((s, d) => s + d.s, 0);
-  const badges = Object.keys(S.fag).map(f => { const g = S.fag[f], m = fagMin(f), pct = Math.min(1, m / (g.t * 60)), dd = g.d ? Math.round((new Date(g.d + 'T00:00') - new Date(t0.getFullYear(), t0.getMonth(), t0.getDate())) / 864e5) : null;
-    return `<div class="item" style="--tc:${F(f).c}"><span class="badge${pct >= 1 ? ' on' : ''}">${esc(short(F(f).n))}</span><div class="sp"><div class="row" style="justify-content:space-between"><b>${esc(F(f).n)} badge</b><span class="sm tn">${dd == null ? '' : dd > 0 ? 'exam in ' + dd + ' d' : dd === 0 ? 'exam today' : 'done'}</span></div>
-      <div class="bar" style="margin-top:6px"><i style="width:${Math.round(pct * 100)}%;background:${F(f).c}"></i></div><div class="sm tn" style="margin-top:4px">${hm(m)} of ${hm(g.t * 60)} · ${g.ms >= 4 ? 'badge complete' : `next reward at ${Math.min(100, (g.ms + 1) * 25)}%${fagGate(f) > 0 && pct >= (g.ms + 1) / 4 ? ` · ${hm(fagGate(f))} more logged here first` : ''}`}</div></div></div>`; }).join('');
+  const exOn = examOn(), badges = Object.keys(S.fag).map(f => { const g = S.fag[f], c = F(f).c, on = exOn && !!g.xs && !!g.d, dd = g.d ? dIdx(g.d) - dIdx(dayKey()) : null;
+    const pct = on ? exFrac(g) : 0, xm = g.xm || 0, done = on && xm >= 4, gate = on ? exGate(g) : 0;
+    const line = !on ? `${hm(fagMin(f))} in all` : done ? 'badge complete' : `${hm(g.xf || 0)} this exam period · next reward at ${(xm + 1) * 25}%${gate > 0 && pct >= (xm + 1) / 4 ? ` · ${hm(gate)} more here first` : ''}`;
+    return `<div class="item" style="--tc:${c}"><span class="badge${done ? ' on' : ''}">${esc(short(F(f).n))}</span><div class="sp"><div class="row" style="justify-content:space-between"><b>${esc(F(f).n)}</b><span class="sm tn">${dd == null || (!on && dd < 0) ? '' : dd > 0 ? 'exam in ' + dd + ' d' : dd === 0 ? 'exam today' : 'exam done'}</span></div>
+      ${on ? `<div class="bar" style="margin-top:6px"><i style="width:${Math.round(pct * 100)}%;background:${c}"></i></div>` : ''}<div class="sm tn" style="margin-top:4px">${line}</div></div></div>`; }).join('');
   let heat = '';
   const mon = addDays(t0, -((t0.getDay() + 6) % 7) - 63);
   for (let i = 0; i < 70; i++) { const d = addDays(mon, i), k = dayKey(d), m = (S.log[k] || { m: 0 }).m; heat += `<i class="${m ? (m < 90 ? 'l1' : m < 180 ? 'l2' : m < 270 ? 'l3' : 'l4') : ''}${k === dayKey() ? ' td' : ''}" title="${d.getDate()}.${d.getMonth() + 1}: ${m} min"></i>`; }
@@ -701,8 +710,11 @@ VIEW.profil = () => {
         <span class="bar"><i style="width:${pct}%;background:${R.c}"></i></span><span class="sm tn">${R.p} of ${achTotal()} medals${R.nn ? ` · ${R.next - R.p} more to ${R.nn}` : ''}</span></span></div>
       <div class="row"><button type="button" class="btn sp${as.open ? ' gold' : ''}" data-a="ach">${as.open ? `${as.open} reward${as.open > 1 ? 's' : ''} ready` : 'Achievements'}</button><button type="button" class="btn sp" data-a="avatar">${S.av ? 'Change character' : 'Pick a character'}</button></div>`; })()}
     <div class="card stack shwc"><div><b>Show the game</b><p class="sm" style="margin-top:4px">A trailer and an overview of what is in here, without giving away what is waiting. Made for showing a friend.</p></div><div class="row"><button type="button" class="btn sp gold" data-a="show">Open the showcase</button><button type="button" class="btn sp" data-a="tour">Start guide</button></div><div class="row"><button type="button" class="btn sp" data-a="rules">Rules and rewards</button>${admOn() ? '<button type="button" class="btn sp" data-a="lab">Sandbox</button>' : ''}</div></div>
-    <h2 class="h">Badges</h2><div class="card" style="padding-top:6px;padding-bottom:6px">${badges}</div>
-    <p class="sm">Each badge fills with focus hours in that subject. 25, 50 and 75% give an epic encounter, and a full badge gives a legendary one. A reward needs time logged here in the app: ${MSGATE / 60} hours in the subject for each one, and ${BADGEGATE / 60} hours in all for the legendary.</p>
+    <h2 class="h">Badges</h2>
+    <div class="card stack"><div class="row" style="justify-content:space-between;align-items:center"><b>Exam period</b><span class="pill${exOn ? ' on' : ''}">${exOn ? 'until ' + dShort(examEnd()) : 'off'}</span></div>
+      <p class="sm">${tl(exOn ? 'Each badge counts down to its exam. More hours studied give a bigger boost.' : 'There is a bigger bonus in the exam period: more hours studied give a bigger boost.')}</p>
+      <button type="button" class="btn sp${exOn ? '' : ' gold'}" data-a="exam">${exOn ? 'Exam dates' : 'Start exam period'}</button></div>
+    ${badges ? `<div class="card" style="padding-top:6px;padding-bottom:6px">${badges}</div>` : ''}
     <h2 class="h">Stats</h2>
     <div class="gain"><div><span class="sm">${hasS ? 'Subject hours' : 'Total focus'}</span><b class="tn">${hm(hasS ? sp.subj : tot)}</b></div><div><span class="sm">Sessions</span><b class="tn">${ses}</b></div><div><span class="sm">Day streak</span><b class="tn">${streak()}</b></div><div><span class="sm">Species caught</span><b class="tn">${all}</b></div></div>
     ${hasS && sp.other ? `<p class="sm">Plus ${hm(sp.other)} of other things, which count at half value for the battle bonus.</p>` : ''}
@@ -721,6 +733,8 @@ VIEW.profil = () => {
       <button type="button" class="btn wide" data-a="music"${S.sound ? '' : ' disabled'}>Battle music: ${S.music === 0 ? 'off' : 'on'}</button>
       ${S.sound ? `${S.music === 0 ? '' : `<div class="volrow"><span>Music</span><input type="range" min="0" max="100" step="5" value="${S.mvol}" data-v="mvol" aria-label="Music volume"><b class="tn" id="vv-mvol">${S.mvol}%</b></div>`}<div class="volrow"><span>Effects</span><input type="range" min="0" max="100" step="5" value="${S.vol}" data-v="vol" aria-label="Effects volume"><b class="tn" id="vv-vol">${S.vol}%</b></div>${S.cries ? `<div class="volrow"><span>Cries</span><input type="range" min="0" max="100" step="5" value="${S.cvol}" data-v="cvol" aria-label="Cries volume"><b class="tn" id="vv-cvol">${S.cvol}%</b></div>` : ''}` : ''}
       <button type="button" class="btn wide" data-a="plan">Edit subjects</button>
+      <button type="button" class="btn wide" data-a="adv" aria-expanded="${!!U.adv}">Advanced options</button>
+      ${U.adv ? `<button type="button" class="btn wide" data-a="work">Work days${S.work && (S.work.fx || S.work.fx2 || Object.keys(S.work.one || {}).length) ? ' · on' : ''}</button>` : ''}
       <button type="button" class="btn wide" data-a="sync">Sync between devices${GH && GH.ok ? ' · ' + (ghState === 'ok' ? 'on' : ghState || 'connecting') : ''}</button>
       <button type="button" class="btn wide" data-a="backup">Backup</button>
       ${isAdmin() ? '<button type="button" class="btn wide" data-a="lab">Demo · battles, raids and packs (admin)</button>' : ''}
@@ -729,11 +743,13 @@ VIEW.profil = () => {
     <p class="sm">Fokusdex is a private hobby project. Pokémon and the names belong to Nintendo, Game Freak and Creatures. Images are fetched from PokeAPI when the app is used and are not part of the app.</p>`;
 };
 /* ---------- Fag: brukes både ved første start og fra Profil ---------- */
-const subjDraft = () => Object.keys(S.fag).map(k => { const f = S.fag[k]; return { k, n: f.n, ty: (f.ty || []).slice(0, 2), t: String(f.t), h: f.b ? String(Math.round(f.b / 6) / 10) : '', d: f.d || '' }; });
+const subjDraft = () => Object.keys(S.fag).map(k => { const f = S.fag[k]; return { k, n: f.n, ty: (f.ty || []).slice(0, 2), d: f.d || '' }; });
+/* «14 Nov» */
+const dShort = k => new Date(k + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 function seCards() {
   const sd = U.sd;
   return sd.map((s, i) => `<div class="card secard"><div class="row"><input class="sein" data-f="n" data-i="${i}" maxlength="14" placeholder="Subject name" autocomplete="off" value="${esc(s.n)}" aria-label="Subject name"><button type="button" class="btn sm2" data-a="sedel" data-i="${i}" aria-label="Remove ${esc(s.n) || 'subject'}">Remove</button></div>
-    <div class="segrid"><label class="field">Planned hours<input inputmode="decimal" data-f="t" data-i="${i}" value="${esc(s.t)}" placeholder="40"></label><label class="field">Already done (h)<input inputmode="decimal" data-f="h" data-i="${i}" value="${esc(s.h)}" placeholder="0"></label><label class="field full">Exam date (optional)<input type="date" data-f="d" data-i="${i}" value="${esc(s.d)}"></label></div>
+    <label class="field">Exam date (optional)<input type="date" data-f="d" data-i="${i}" value="${esc(s.d)}"></label>
     <div><div class="lab">Types that show up more often · pick up to 2</div><div class="tychips">${TYN.map((n, t) => `<button type="button" class="tyc" data-a="sety" data-i="${i}" data-k="${t}" aria-pressed="${s.ty.includes(t)}" style="--c:var(--t${t})">${n}</button>`).join('')}</div></div></div>`).join('') +
     (sd.length < 4 ? '<button type="button" class="pfree" data-a="seadd">+ Add subject</button>' : '');
 }
@@ -743,23 +759,83 @@ function seRead() {
   const num = v => Number(String(v).replace(',', '.').trim());
   const out = [];
   for (const s of U.sd) {
-    const n = s.n.trim(), t = num(s.t), h = String(s.h).trim() ? num(s.h) : 0;
+    const n = s.n.trim();
     if (!n) return 'Give every subject a name, or remove the empty one.';
-    if (!(t > 0 && t <= 1000)) return `Enter planned hours for ${n}.`;
-    if (!(h >= 0 && h <= t)) return `Hours already done for ${n} must be between 0 and the planned hours.`;
     if (s.d && !/^\d{4}-\d{2}-\d{2}$/.test(s.d)) return `Check the exam date for ${n}.`;
-    out.push({ k: s.k, n, ty: s.ty, t, b: Math.round(h * 60), d: s.d });
+    out.push({ k: s.k, n, ty: s.ty, d: s.d || '' });
   }
   return out;
 }
 function subjSheet() {
   U.sd = subjDraft(); U.ex = (S.extra || []).filter(k => k !== 'annet' && EXTRA[k]);
-  openSheet(`<h2 class="h">Your subjects</h2><p class="sm">Up to four. Each one gets a badge that fills as you focus, and its types show up more often in its sessions. Subjects count in full.</p>
+  openSheet(`<h2 class="h">Your subjects</h2><p class="sm">Up to four. Their types show up more often in their sessions, and in an exam period each badge counts down to its exam. Subjects count in full.</p>
     <div id="se" class="stack">${seCards()}</div>
     <div><div class="lab">Other things you log · half value for the battle bonus</div><div class="chips">${Object.keys(EXTRA).filter(k => k !== 'annet').map(k => `<button type="button" class="chip" data-a="extog" data-k="${k}" aria-pressed="${U.ex.includes(k)}">${EXTRA[k].n}</button>`).join('')}<span class="chip" style="display:inline-flex;align-items:center;opacity:.55">Other · always there</span></div>
-      <p class="sm" style="margin-top:8px">Half the XP, coins and encounters, and half the progress towards your daily goal. Their hours are kept apart from your subject hours.</p></div>
+      <p class="sm" style="margin-top:8px">Encounters and coins as for subjects, a little less XP, and half value for the battle bonus and your daily goal.</p></div>
     <p class="err" id="se-err" role="alert"></p>
     <button type="button" class="btn pri wide" data-a="sesave">Save</button>`);
+}
+/* ---------- Arbeidsdager ---------- */
+function workScreen(L) {
+  closeSheet(); U.wlock = 1; U.wlockE = L.e;
+  ov(`<div class="mid"><h1 class="big">At work</h1><p class="mut" style="max-width:30ch">${L.brk ? `Locked until your break at ${tstr(L.e)}. Work ends at ${tstr(L.end)}.` : `Locked until ${tstr(L.e)}.`}</p>
+    <p class="sm" style="max-width:32ch">${tl('Each hour of work adds {m} minutes to the battle bonus. Transport and breaks do not count.', { m: WORKB })}</p></div>
+    <div class="acts"><button type="button" class="btn" data-a="wearly">Done early</button></div>`, 'wlock');
+}
+/* Arbeidsdager: en økt kan ikke gå inn i arbeidstida (heller ikke forbi slutten av en pause). */
+function workClash() {
+  const wn = typeof workNext === 'function' ? workNext() : null, m = U.min || S.last.min;
+  if (wn == null || nowMin() + m <= wn) return false;
+  toast(wn <= nowMin() ? 'You are at work right now.' : `Work starts at ${tstr(wn)}. Pick a session that ends before then.`); return true;
+}
+/* Låsen kommer og går av seg selv: sjekkes hvert 20. sekund og når appen kommer fram. */
+function workTick() { if (!S.started || !S.work || S.timer) return; const L = workLock(); if (!!L !== !!U.wlock || (L && U.wlockE !== L.e)) render(); else if (workCredit()) { save(true); render(); } }
+setInterval(workTick, 20000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') workTick(); });
+const WDAYS = [[1, 'Mon'], [2, 'Tue'], [3, 'Wed'], [4, 'Thu'], [5, 'Fri'], [6, 'Sat'], [0, 'Sun']];
+/* Tidene fra arket: p = 'w' (uka) eller 'o' (en enkelt dag). Pausene må ligge inne i arbeidstida. */
+function wRead(p) {
+  const v = id => tmin(($('#' + p + '-' + id) || {}).value), s = v('s'), e = v('e');
+  if (s == null || e == null || e <= s) return 'Work must end after it starts.';
+  const br = [];
+  for (const i of [1, 2]) { const a = v('b' + i), b = v('c' + i); if (a == null && b == null) continue; if (a == null || b == null || b <= a || a < s || b > e) return 'A break must lie inside your work hours.'; br.push([a, b]); }
+  br.sort((x, y) => x[0] - y[0]); if (br.length === 2 && br[1][0] < br[0][1]) return 'Two breaks cannot overlap.';
+  return { s, e, br };
+}
+function workSheet() {
+  const W = S.work || {}, cur = W.fx2 || W.fx || { days: [1, 2, 3, 4, 5], s: 480, e: 960, br: [[690, 720]] }, k = dayKey();
+  if (!U.wd) U.wd = (cur.days && cur.days.length ? cur.days : [1, 2, 3, 4, 5]).slice();
+  const t = (p, id, m) => `<input type="time" id="${p}-${id}" value="${m == null ? '' : tstr(m)}">`, br = (p, w, i) => (w.br || [])[i - 1] || [];
+  const times = (p, w) => `<div class="segrid"><label class="field">Start${t(p, 's', w.s)}</label><label class="field">End${t(p, 'e', w.e)}</label>
+    ${[1, 2].map(i => `<label class="field">Break ${i} from${t(p, 'b' + i, br(p, w, i)[0])}</label><label class="field">to${t(p, 'c' + i, br(p, w, i)[1])}</label>`).join('')}</div>`;
+  const ones = Object.keys(W.one || {}).filter(d => d >= k).sort();
+  openSheet(`<h2 class="h">Work days</h2><p class="sm">${tl('The app is locked while you work, except in your breaks. Each hour of work adds {m} minutes to the battle bonus that day, and study after work counts ×{x} for it. Transport and breaks do not count.', { m: WORKB, x: 1 + AFTERB })}</p>
+    <div class="lab">Every week</div><div class="chips">${WDAYS.map(([d, n]) => `<button type="button" class="chip" data-a="wday" data-k="${d}" aria-pressed="${U.wd.includes(d)}">${n}</button>`).join('')}</div>
+    ${times('w', cur)}<p class="sm">${W.fx2 ? 'Changes count from ' + dShort(W.fx2.from) + '.' : 'Changes count from tomorrow.'}</p>
+    <button type="button" class="btn pri wide" data-a="wsave">Save the week</button>
+    <div class="lab" style="margin-top:8px">One day</div><label class="field">Date<input type="date" id="o-d" min="${k}" value="${k}"></label>
+    ${times('o', { s: null, e: null, br: [] })}<p class="sm">Add it before it starts.</p><button type="button" class="btn wide" data-a="wone">Add the day</button>
+    ${ones.length ? `<div class="stack">${ones.map(d => `<div class="row" style="justify-content:space-between;align-items:center"><span class="sm tn">${dShort(d)} · ${tstr(W.one[d].s)}–${tstr(W.one[d].e)}</span><button type="button" class="btn sm2" data-a="wdel" data-k="${d}">Remove</button></div>`).join('')}</div>` : ''}
+    <p class="err" id="w-err" role="alert"></p>
+    ${W.fx || W.fx2 ? '<button type="button" class="btn wide" data-a="woff">Turn off work days</button>' : ''}`);
+}
+/* Eksamensperioden: datoene per fag, og (ved start) valget om å øke dagsmålet. */
+function examSheet() {
+  const on = examOn(), k = dayKey(), subs = Object.keys(S.fag), caps = [S.cap, S.cap + 60, S.cap + 120].filter((c, i) => !i || c <= 480);
+  openSheet(`<h2 class="h">Exam period</h2><p>${tl('There is a bigger bonus in the exam period: more hours studied give a bigger boost.')}</p>
+    ${subs.length ? `<div class="stack">${subs.map(f => `<label class="field">${esc(F(f).n)} · exam date<input type="date" data-x="${esc(f)}" min="${k}" value="${esc(S.fag[f].d || '')}"></label>`).join('')}</div>` : `<p class="sm">${tl('Add your subjects first: Profile → Edit subjects.')}</p>`}
+    ${on ? '' : `<label class="field">${tl('Daily goal in the exam period')}<select id="ex-cap">${caps.map((c, i) => `<option value="${c}">${hm(c)}${i ? ' · +' + hm(c - S.cap) : ' · as now'}</option>`).join('')}</select></label>`}
+    <p class="sm">${tl('Each badge counts down to its exam. 25, 50 and 75% give an epic encounter and exam day a legendary one, once you have logged {a}, {b} and {c} hours in the subject in the period ({d} for the legendary). Outside an exam period the battle bonus and XP are a little lower.', { a: MSGATE / 60, b: MSGATE / 30, c: MSGATE / 20, d: BADGEGATE / 60 })}</p>
+    <p class="err" id="ex-err" role="alert"></p>
+    <div class="acts">${on ? '<button type="button" class="btn" data-a="exend">End exam period</button><button type="button" class="btn pri" data-a="exsave">Save</button>' : `<button type="button" class="btn pri" data-a="exgo"${subs.length ? '' : ' disabled'}>Start exam period</button>`}</div>`);
+}
+/* Leser datoene fra arket inn i fagene. start = perioden skal starte nå: minst ett fag må ha eksamen i dag eller senere. */
+function exRead(start) {
+  const k = dayKey(), got = {};
+  for (const el of document.querySelectorAll('#sheet [data-x]')) { const v = el.value.trim(); if (v && !/^\d{4}-\d{2}-\d{2}$/.test(v)) return 'Check the exam dates.'; got[el.dataset.x] = v; }
+  if (start && !Object.values(got).some(v => v && v >= k)) return 'Give at least one subject an exam date from today on.';
+  for (const f in got) if (S.fag[f]) { S.fag[f].d = got[f]; if (S.exam && !start) examJoin(S.fag[f], k); }
+  return got;
 }
 function syncSheet() {
   let lb = null; try { lb = JSON.parse(localStorage.getItem('lb.gh') || 'null'); } catch (_) {}
@@ -803,8 +879,9 @@ const langSeg = small => `<div class="langseg${small ? ' sm' : ''}">${small ? `<
 function intro() {
   if (U.step === 2) {
     ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="sback">Back</button><span class="pill">Step 2 of 2</span></div>
-      <div><h1 class="big">${tl('Your subjects')}</h1><p class="mut" style="margin-top:6px">${tl('Add up to four subjects you are studying for. Each gets a badge that fills as you focus, and the types you pick show up more often in its sessions. You can change this later in Profile.')}</p></div>
+      <div><h1 class="big">${tl('Your subjects')}</h1><p class="mut" style="margin-top:6px">${tl('Add up to four subjects you are studying for. The types you pick show up more often in their sessions. You can change this later in Profile.')}</p></div>
       <div id="se" class="stack">${seCards()}</div><p class="err" id="se-err" role="alert"></p>
+      <label class="field">${tl('How long do you usually study a day?')}<select data-c="cap">${[120, 180, 240, 300, 360, 420, 480].map(c => `<option value="${c}"${(S.cap || 360) === c ? ' selected' : ''}>${hm(c)}</option>`).join('')}</select></label>
       <div class="acts"><button type="button" class="btn pri" data-a="sestart">Start with ${esc(D(pick)[0])}</button></div>`);
     return;
   }
@@ -843,7 +920,7 @@ function paintTimer() {
   document.title = `${Math.floor(s / 60)}:${pad2(s % 60)} · Fokusdex`;
   $('#t-arc').style.strokeDashoffset = String(Math.round(CIRC * (ms / (t.min * 60000)) * 100) / 100);
   const xw = rateOf(t.fag) === 1 ? 1 : OTHERXP;
-  $('#t-sub').textContent = t.pausedAt ? 'Paused' : `+${nb(Math.round(Math.floor(ms / 60000) * 10 * xw))} XP`;
+  $('#t-sub').textContent = t.pausedAt ? 'Paused' : `+${nb(Math.round(Math.floor(ms / 60000) * 10 * xw * exf()))} XP`;
   $('#t-pause').textContent = t.pausedAt ? 'Resume' : 'Pause';
   const got = Math.floor(ms / 1200000), dots = $('#t-found').children;
   for (let i = 0; i < dots.length; i++) if (i < got && !dots[i].classList.contains('on')) { dots[i].classList.add('on'); if (i >= t.seen) { dots[i].classList.add('new'); t.seen = i + 1; if (S.fsnd !== 0) { sfx.found(); buzz(40); } $('#t-hint').textContent = 'Something is rustling in the grass. It will wait until you are done.'; } }
@@ -1027,7 +1104,7 @@ const A = {
   fag: el => { U.fag = el.dataset.k; render(); },
   min: el => { U.min = +el.dataset.k; render(); },
   reg: el => { const r = +el.dataset.k, was = S.routes.includes(r); toggleRoute(r); if (was && S.routes.includes(r)) toast('At least one route has to stay on.'); render(); },
-  start: el => { if (fairGate()) return; if (typeof SBX !== 'undefined' && SBX) return toast('Leave the sandbox before you start a session: nothing in here is saved.'); if (!(el && el.dataset.ok) && typeof dayOld === 'function' && dayOld() && (simPending() || !dayDone())) return openSheet(`<h2 class="h" style="margin-top:0">Yesterday's battles are still open</h2><p class="sm">${simPending() ? 'A simulated result is waiting for your answer. ' : ''}Starting a focus session closes the battles from your last battle day, and what you have not played or accepted is lost.</p><div class="acts"><button type="button" class="btn gold" data-a="close">Back to the battles</button><button type="button" class="btn nf" data-a="start" data-ok="1">Start the session anyway</button></div>`); closeSheet(); const why = honestWhy(); if (why) return honestAsk(why); startTimer(FAGS[U.fag] ? U.fag : curFag(), U.min || S.last.min); sfx.start(); showTimer(); },
+  start: el => { if (fairGate()) return; if (typeof SBX !== 'undefined' && SBX) return toast('Leave the sandbox before you start a session: nothing in here is saved.'); if (workClash()) return; if (!(el && el.dataset.ok) && typeof dayOld === 'function' && dayOld() && (simPending() || !dayDone())) return openSheet(`<h2 class="h" style="margin-top:0">Yesterday's battles are still open</h2><p class="sm">${simPending() ? 'A simulated result is waiting for your answer. ' : ''}Starting a focus session closes the battles from your last battle day, and what you have not played or accepted is lost.</p><div class="acts"><button type="button" class="btn gold" data-a="close">Back to the battles</button><button type="button" class="btn nf" data-a="start" data-ok="1">Start the session anyway</button></div>`); closeSheet(); const why = honestWhy(); if (why) return honestAsk(why); startTimer(FAGS[U.fag] ? U.fag : curFag(), U.min || S.last.min); sfx.start(); showTimer(); },
   honyes: el => { honestOk(el.dataset.k); closeOv(); startTimer(FAGS[U.fag] ? U.fag : curFag(), U.min || S.last.min); sfx.start(); showTimer(); },
   clkagain: async el => { el.disabled = true; el.textContent = 'Checking…'; await netTime(); closeSheet(); render(); const L = clockCheck(); if (L) clockSheet(L); else { sfx.ok(); toast('The clock is fine.'); } },
   pause: () => { togglePause(); paintTimer(); },
@@ -1115,9 +1192,21 @@ const A = {
   seadd: () => { if (U.sd.length < 4) { U.sd.push({ k: '', n: '', ty: [], t: '', h: '', d: '' }); seRedraw(); const f = document.querySelectorAll('#se .sein'); if (f.length) f[f.length - 1].focus(); } },
   sedel: el => { U.sd.splice(+el.dataset.i, 1); seRedraw(); },
   sety: el => { const s = U.sd[+el.dataset.i], t = +el.dataset.k; if (s.ty.includes(t)) s.ty = s.ty.filter(x => x !== t); else { s.ty.push(t); if (s.ty.length > 2) s.ty.shift(); } seRedraw(); },
+  exam: () => examSheet(),
+  adv: () => { U.adv = !U.adv; render(); },
+  work: () => { U.wd = null; workSheet(); },
+  wday: el => { const d = +el.dataset.k, i = U.wd.indexOf(d); if (i >= 0) U.wd.splice(i, 1); else U.wd.push(d); el.setAttribute('aria-pressed', String(i < 0)); },
+  wsave: () => { const r = wRead('w'); if (typeof r === 'string') { $('#w-err').textContent = r; return; } S.work = S.work || {}; S.work.fx2 = Object.assign(r, { days: U.wd.slice().sort(), from: dayKey(addDays(new Date(), 1)) }); save(true); closeSheet(); render(); toast(U.wd.length ? 'Work days saved. They count from tomorrow.' : 'No fixed work days from tomorrow.'); },
+  wone: () => { const r = wRead('o'), d = ($('#o-d') || {}).value || ''; if (typeof r === 'string') { $('#w-err').textContent = r; return; } if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || d < dayKey() || (d === dayKey() && r.s <= nowMin())) { $('#w-err').textContent = 'A single day must be added before it starts.'; return; } S.work = S.work || {}; (S.work.one = S.work.one || {})[d] = r; save(true); workSheet(); toast('Work day added.'); },
+  wdel: el => { const d = el.dataset.k, w = ((S.work || {}).one || {})[d]; if (!w || d < dayKey() || (d === dayKey() && w.s <= nowMin())) return toast('That day has already started.'); delete S.work.one[d]; save(true); workSheet(); },
+  woff: el => { if (!el.dataset.ok) { el.dataset.ok = 1; el.textContent = 'Tap again to turn off'; return; } const k = dayKey(), W = S.work || {}; W.fx2 = { days: [], from: dayKey(addDays(new Date(), 1)) }; for (const d in W.one || {}) if (d > k) delete W.one[d]; S.work = W; save(true); closeSheet(); render(); toast('Work days are off from tomorrow.'); },
+  wearly: el => { if (!el.dataset.ok) { el.dataset.ok = 1; el.textContent = 'Tap again: work is over for today'; return; } (S.work.early = S.work.early || {})[dayKey()] = nowMin(); const b = workCredit(); save(true); U.wlock = 0; closeOv(); render(); toast(b ? `Work done: +${hm(b)} for the battle bonus.` : 'Work done for today.'); },
+  exgo: () => { const r = exRead(true); if (typeof r === 'string') { $('#ex-err').textContent = r; return; } const c = $('#ex-cap'); if (c) S.cap = +c.value; examStart(); save(true); closeSheet(); render(); sfx.ok(); toast('Exam period on. Good luck!'); },
+  exsave: () => { const r = exRead(false); if (typeof r === 'string') { $('#ex-err').textContent = r; return; } examCheck(); save(true); closeSheet(); render(); toast('Exam dates saved.'); },
+  exend: el => { if (!el.dataset.ok) { el.dataset.ok = 1; el.textContent = 'Tap again to end'; return; } examStop(); save(true); closeSheet(); render(); toast('Exam period ended.'); },
   sesave: () => { const r = seRead(); if (typeof r === 'string') { $('#se-err').textContent = r; return; } if (U.ex) S.extra = Object.keys(EXTRA).filter(k => k === 'annet' || U.ex.includes(k)); setSubjects(r); save(); closeSheet(); render(); toast('Subjects saved.'); },
   extog: el => { const k = el.dataset.k, i = U.ex.indexOf(k); if (i >= 0) U.ex.splice(i, 1); else U.ex.push(k); el.setAttribute('aria-pressed', String(i < 0)); },
-  snext: () => { if (!pick) return; U.step = 2; if (!U.sd) U.sd = [{ k: '', n: '', ty: [], t: '', h: '', d: '' }]; intro(); $('#ov').scrollTop = 0; },
+  snext: () => { if (!pick) return; U.step = 2; if (!U.sd) U.sd = [{ k: '', n: '', ty: [], d: '' }]; intro(); $('#ov').scrollTop = 0; },
   sback: () => { U.step = 1; intro(); },
   sestart: () => { const r = seRead(); if (typeof r === 'string') { $('#se-err').textContent = r; return; } setSubjects(r); const c = begin(pick); S.tour = 0; save(true); sfx.evo(); closeOv(); render(); tourShow(0); if (c) toast(`${nb(c)} coins for the hours you have already done.`); },
   sync: () => SBX ? toast('Leave the sandbox first: Sync is paused in here.') : syncSheet(),

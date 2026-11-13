@@ -173,15 +173,16 @@ const teamSize = (st, lap) => Math.min(6, st.mons + (lap >= 3 ? 2 : lap >= 1 ? 1
    ×0,5 uten studering og full uttelling når målet er nådd. Et høyere mål gir en høyere topp (4 t: ×2,0 · 6 t: ×2,5 · 8 t: ×3,0), så det lønner seg
    å sette målet der du faktisk vil ligge – men bare hvis du når det. XP svinger mindre. Kampene er hovedkilden til mynter, så dette er
    den viktigste premien for å studere: samme seier betaler fem ganger så mye på en dag der målet er nådd som på en dag uten studering. */
-const ladMin = () => S.lad.day ? ((S.log[S.lad.day] || {}).m || 0) : todayMin();
+/* Med arbeidsdager kommer kreditten for arbeid og studier etter jobb i tillegg (day.b). */
+const ladMin = () => { const d = S.log[S.lad.day || dayKey()] || {}; return (d.m || 0) + (d.b || 0); };
 const goalMin = () => Math.max(60, S.cap || 360);
-const topFor = c => Math.round((1 + Math.max(60, c) / 240) * 10) / 10;
+const topFor = c => Math.round((1 + Math.max(60, c) / 240) * exf() * 10) / 10;
 const goalTop = () => topFor(goalMin());
 const goalPart = () => Math.min(1, ladMin() / goalMin());
 const studyMult = () => Math.round((0.5 + goalPart() * (goalTop() - 0.5)) * 10) / 10;
 /* XP og Rare Candy fra kampene følger også fokustiden, fra ×0,7 uten studering til ×1,3 når dagsmålet er nådd (før 0,8–1,2 for XP, og ikke i det
    hele tatt for Rare Candy): da skiller studietiden mer på hvor fort laget vokser. candyRoll(x) = antall Rare Candy når satsen er x. */
-const xpMult = () => 0.7 + goalPart() * 0.6;
+const xpMult = () => (0.7 + goalPart() * 0.6) * exf();
 const candyRoll = x => { const y = x * xpMult() * (diff().candy || 1); return Math.floor(y) + (Math.random() < y - Math.floor(y) ? 1 : 0); };
 /* Dagens første seier gir doble mynter (S.lad.fw = dagen den er brukt). */
 const firstWin = () => S.lad.fw !== (S.lad.day || dayKey());

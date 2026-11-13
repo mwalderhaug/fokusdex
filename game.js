@@ -401,7 +401,15 @@ const LNO = {
   'Every minute you focus earns XP and coins. Every session lures out wild Pokémon you can catch, evolve and collect.': 'Hvert minutt du fokuserer gir XP og mynter. Hver økt lokker fram ville Pokémon du kan fange, utvikle og samle på.',
   'Pick your partner. You start with 20 Poké Balls, and next you add your subjects.': 'Velg partneren din. Du starter med 20 Poké Balls, og etterpå legger du inn fagene dine.',
   'Your subjects': 'Fagene dine',
-  'Add up to four subjects you are studying for. Each gets a badge that fills as you focus, and the types you pick show up more often in its sessions. You can change this later in Profile.': 'Legg inn opptil fire fag du studerer. Hvert fag får et merke som fylles når du fokuserer, og typene du velger dukker oftere opp i øktene til faget. Du kan endre dette senere under Profile.',
+  'Add up to four subjects you are studying for. The types you pick show up more often in their sessions. You can change this later in Profile.': 'Legg inn opptil fire fag du studerer. Typene du velger, dukker oftere opp i øktene til faget. Du kan endre dette senere under Profile.',
+  'How long do you usually study a day?': 'Hvor lenge studerer du vanligvis om dagen?',
+  'There is a bigger bonus in the exam period: more hours studied give a bigger boost.': 'Det er en økt bonus i eksamensperioden: flere timer studert gir en større boost.',
+  'Each badge counts down to its exam. More hours studied give a bigger boost.': 'Hvert merke teller ned til eksamen. Flere timer studert gir en større boost.',
+  'Add your subjects first: Profile → Edit subjects.': 'Legg inn fagene dine først: Profile → Edit subjects.',
+  'Daily goal in the exam period': 'Dagsmålet i eksamensperioden',
+  'The app is locked while you work, except in your breaks. Each hour of work adds {m} minutes to the battle bonus that day, and study after work counts ×{x} for it. Transport and breaks do not count.': 'Appen er låst mens du jobber, utenom pausene. Hver arbeidstime gir {m} minutter til kampbonusen den dagen, og studier etter jobb teller ×{x} for den. Transport og pauser teller ikke.',
+  'Each hour of work adds {m} minutes to the battle bonus. Transport and breaks do not count.': 'Hver arbeidstime gir {m} minutter til kampbonusen. Transport og pauser teller ikke.',
+  'Each badge counts down to its exam. 25, 50 and 75% give an epic encounter and exam day a legendary one, once you have logged {a}, {b} and {c} hours in the subject in the period ({d} for the legendary). Outside an exam period the battle bonus and XP are a little lower.': 'Hvert merke teller ned til eksamen. 25, 50 og 75 % gir et episk møte og eksamensdagen et legendarisk, når du har logget {a}, {b} og {c} timer i faget i perioden ({d} for det legendariske). Utenfor en eksamensperiode er kampbonusen og XP litt lavere.',
   'Explanations in': 'Forklaringer på',
   // Innstillingen
   'Language for explanations': 'Språk for forklaringer',
@@ -452,6 +460,9 @@ const LNO = {
   'You can mute the encounter sound: tap the bell during a session.': 'Du kan slå av lyden når et møte dukker opp: trykk på bjella under en økt.',
   'Explanations can now be read in Norwegian: Profile → Language for explanations.': 'Forklaringer kan nå leses på norsk: Profile → Language for explanations.',
   'Some adjustments to raids, bosses and rewards, and bug fixes.': 'Noen justeringer på raid, bosser og belønninger, og feilrettinger.',
+  'Exam period: Profile → Badges. Your badges count down to your exams, and subjects no longer need planned hours.': 'Eksamensperiode: Profile → Badges. Merkene teller ned til eksamen, og fagene trenger ikke lenger planlagte timer.',
+  'Work days: Profile → Settings → Advanced options.': 'Arbeidsdager: Profile → Settings → Advanced options.',
+  'Other activities now give encounters every 20 minutes, and the bell in a session mutes the encounter sound.': 'Andre aktiviteter gir nå møter hvert 20. minutt, og bjella i en økt slår av lyden for møter.',
   'Your journey: new things now open one study day at a time. See the card on the Focus page.': 'Reisen din: nye ting åpner seg nå én studiedag om gangen. Se kortet på Focus-siden.',
   'A new version of Fokusdex is ready.': 'En ny versjon av Fokusdex er klar.'
 };
@@ -493,7 +504,7 @@ function jFriend() {
 const has = k => !!(S.ulk && S.ulk[k]);
 /* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
    Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
-const WNV = 67, WN = ['Other activities now give encounters every 20 minutes, like your subjects.', 'You can mute the encounter sound: tap the bell during a session.', 'Explanations can now be read in Norwegian: Profile → Language for explanations.', 'Some adjustments to raids, bosses and rewards, and bug fixes.'];
+const WNV = 68, WN = ['Exam period: Profile → Badges. Your badges count down to your exams, and subjects no longer need planned hours.', 'Work days: Profile → Settings → Advanced options.', 'Other activities now give encounters every 20 minutes, and the bell in a session mutes the encounter sound.', 'Some adjustments to raids, bosses and rewards, and bug fixes.'];
 /* Første linje for dem som går reisen (whatsNew i ui.js). */
 const WNJ = 'Your journey: new things now open one study day at a time. See the card on the Focus page.';
 function featCheck() { S.ulk = S.ulk || {}; if (!jOn()) return 0; let ch = 0; for (const [k, d] of JOURNEY) if (!S.ulk[k] && (S.jd || 0) >= d) { S.ulk[k] = 1; ch = 1; } return ch; }
@@ -734,6 +745,79 @@ const countOf = id => S.mons.filter(m => m.id === id).length;
 const todayMin = () => (S.log[dayKey()] || { m: 0 }).m;
 const fagMin = f => (S.fag[f] ? S.fag[f].b : 0) + (S.fm[f] || 0);
 const MSGATE = 180, BADGEGATE = 900, STARTCAP = 25 * 60;
+/* EKSAMENSPERIODEN (v68): «Det er en økt bonus i eksamensperioden: flere timer studert gir en større boost.» S.exam = { s: dagen den startet }.
+   I perioden teller hvert fag med eksamensdato (g.d) ned mot eksamen: merket fylles med tida fra g.xs (dagen faget kom med) til eksamensdagen.
+   25, 50 og 75 % gir et episk møte og eksamensdagen et legendarisk, når det er logget MSGATE minutter i faget for hvert steg (BADGEGATE for det
+   legendariske) i perioden (g.xf). g.xm = steg nådd i perioden. Utenfor perioden er framgangen litt lavere (EXN): toppen på kampbonusen, XP fra
+   kampene og XP fra øktene. Perioden slutter av seg selv dagen etter den siste eksamenen (examCheck). Planlagte timer (g.t, g.b, g.ms) brukes ikke lenger. */
+const EXN = 0.9;
+const dIdx = k => Math.round(new Date(k + 'T12:00').getTime() / 864e5);
+const examEnd = () => Object.values(S.fag || {}).reduce((a, g) => g.d && g.xs && g.d > a ? g.d : a, '');
+const examOn = () => !!S.exam && !!examEnd() && dayKey() <= examEnd();
+const exf = () => examOn() ? 1 : EXN;
+const exFrac = g => !g || !g.d || !g.xs ? 0 : Math.max(0, Math.min(1, (dIdx(dayKey()) - dIdx(g.xs)) / Math.max(1, dIdx(g.d) - dIdx(g.xs))));
+/* Minuttene som må logges i faget i perioden før neste belønning kan komme (0 = ingenting står i veien). */
+const exGate = g => !g || (g.xm || 0) >= 4 ? 0 : Math.max(0, ((g.xm || 0) === 3 ? BADGEGATE : MSGATE * ((g.xm || 0) + 1)) - (g.xf || 0));
+/* Et fag med eksamensdato fra i dag og fram blir med i perioden fra i dag; uten dato (eller etter eksamen) er det ute. */
+function examJoin(g, k) { if (g.d && g.d >= k) { if (!g.xs) { g.xs = k; g.xf = 0; g.xm = 0; } } else delete g.xs; }
+function examStart() { const k = dayKey(); S.exam = { s: k }; for (const f in S.fag) { delete S.fag[f].xs; examJoin(S.fag[f], k); } }
+function examStop() { S.exam = null; for (const f in S.fag) delete S.fag[f].xs; }
+/* Er perioden over (siste eksamen var i går eller før), avsluttes den. true når det skjedde. */
+function examCheck() { if (S.exam && !examOn()) { examStop(); return true; } return false; }
+/* ARBEIDSDAGER (v68): S.work = { fx: fast uke { days: [0–6, søndag = 0], s, e, br: [[fra, til]], from }, fx2: endret uke som gjelder fra i morgen,
+   one: { dag: { s, e, br } } (en enkelt dag, lagt inn før den starter), early: { dag: minuttet «Done early» ble trykket }, cr: { dag: kreditt gitt } }.
+   Tider er minutter fra midnatt. I arbeidstida er appen låst, utenom pausene. Når dagens arbeid er over, gir hver arbeidstime (uten pausene) WORKB
+   minutter til kampbonusen den dagen (day.b), og studier etter jobb teller ×(1 + AFTERB) for kampbonusen den dagen. Ikke for XP, møter, dagsmålet
+   eller for å åpne kampene. Endringer i uka gjelder fra i morgen, og en enkelt dag må legges inn før den starter: ingen kreditt i etterkant. */
+const WORKB = 10, AFTERB = 0.5;
+const nowMin = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
+const tmin = s => { const m = /^(\d{1,2}):(\d{2})/.exec(s || ''); return m ? +m[1] * 60 + +m[2] : null; };
+const tstr = m => `${pad2(Math.floor(m / 60) % 24)}:${pad2(m % 60)}`;
+function workOf(k) {
+  const W = S.work; if (!W) return null;
+  if (W.one && W.one[k]) return W.one[k];
+  const fx = W.fx2 && k >= W.fx2.from ? W.fx2 : W.fx;
+  if (!fx || !fx.days || !(k >= (fx.from || ''))) return null;
+  return fx.days.includes(new Date(k + 'T12:00').getDay()) ? fx : null;
+}
+/* Ny uke fra i dag tar over, og gamle dager ryddes bort. */
+function workPromote() {
+  const W = S.work; if (!W) return; const k = dayKey(), old = dayKey(addDays(new Date(), -14));
+  if (W.fx2 && k >= W.fx2.from) { W.fx = W.fx2.days && W.fx2.days.length ? W.fx2 : null; delete W.fx2; }
+  for (const o of [W.one, W.early, W.cr]) if (o) for (const d in o) if (d < old) delete o[d];
+}
+/* Arbeidsminutter (uten pausene) fra start til «to». */
+function workMins(w, to) { if (!w) return 0; const e = Math.min(w.e, to == null ? w.e : to); let m = Math.max(0, e - w.s); for (const [a, b] of w.br || []) m -= Math.max(0, Math.min(b, e) - Math.max(a, w.s)); return Math.max(0, m); }
+/* Når arbeidet den dagen var over (minutt), eller null: ikke over ennå, eller ikke arbeid. Dager før i dag er over. */
+function workEnd(k) {
+  const w = workOf(k); if (!w) return null; const ea = ((S.work || {}).early || {})[k];
+  if (ea != null) return Math.max(w.s, Math.min(ea, w.e)); if (k < dayKey()) return w.e; if (k > dayKey()) return null; return nowMin() >= w.e ? w.e : null;
+}
+/* Låst nå? { e: minuttet låsen slutter (neste pause eller arbeidsslutt), brk: låsen slutter med en pause, end: arbeidsslutt }, ellers null. */
+function workLock() {
+  if (!S.work) return null; const k = dayKey(), w = workOf(k); if (!w || ((S.work.early || {})[k]) != null) return null;
+  const n = nowMin(); if (n < w.s || n >= w.e) return null;
+  for (const [a, b] of w.br || []) if (n >= a && n < b) return null;
+  const nb = (w.br || []).map(x => x[0]).filter(a => a > n && a < w.e).sort((a, b) => a - b)[0];
+  return { e: nb != null ? nb : w.e, brk: nb != null, end: w.e };
+}
+/* Minuttet låsen begynner neste gang i dag (nå, hvis den er på), eller null. En økt kan ikke gå inn i den. */
+function workNext() {
+  if (!S.work) return null; const k = dayKey(), w = workOf(k); if (!w || ((S.work.early || {})[k]) != null) return null;
+  const n = nowMin(); if (n >= w.e) return null; if (n < w.s) return w.s;
+  for (const [a, b] of w.br || []) if (n >= a && n < b) return b < w.e ? b : null;
+  return n;
+}
+/* Kreditten for arbeidet, én gang per dag når arbeidet er over (i går eller i dag). Gir minuttene som ble lagt til. */
+function workCredit() {
+  const W = S.work; if (!W) return 0; W.cr = W.cr || {}; let got = 0;
+  for (const k of [dayKey(addDays(new Date(), -1)), dayKey()]) {
+    if (W.cr[k] != null) continue; const end = workEnd(k); if (end == null) continue;
+    const b = Math.round(workMins(workOf(k), end) * WORKB / 60); W.cr[k] = b;
+    if (b) { const d = S.log[k] || (S.log[k] = { m: 0, s: 0, f: {} }); d.b = (d.b || 0) + b; got += b; }
+  }
+  return got;
+}
 /* Minuttene som må logges i faget før neste belønning kan komme (0 = ingenting står i veien). */
 function fagGate(f) {
   const g = S.fag[f]; if (!g || g.ms >= 4) return 0;
@@ -881,14 +965,17 @@ function grant(fag, real, full, plan, re) {
   const rested = day.s === 0, okMin = Math.max(0, Math.min(min, S.cap - day.m)), tired = okMin < min, mult = rested ? 1.5 : 1;
   const okReal = w === 1 ? okMin : Math.min(real, Math.round(okMin / w)), xw = w === 1 ? 1 : OTHERXP;
   const R = { fag, min: real, eff: min, w, full, rested, tired, ups: [], gifts: [], hatch: [], tl0: tlv(), enc: 0 };
-  R.xp = Math.round((okReal * 10 + (real - okReal) * 5) * mult * xw);
+  R.xp = Math.round((okReal * 10 + (real - okReal) * 5) * mult * xw * exf());
   R.coins = Math.round((okReal * 3 + (real - okReal) * 1.5) * mult) + (full ? 30 : 0);
   /* Fordel fra toppbosser: flere mynter i de neste øktene. */
   if (S.boost && S.boost.n > 0) { R.coins = Math.round(R.coins * S.boost.m); S.boost.n--; R.gifts.push(`Boss perk: ${S.boost.m}× coins${S.boost.n ? ` · ${S.boost.n} more session${S.boost.n > 1 ? 's' : ''}` : ''}`); if (!S.boost.n) S.boost = null; }
   S.xp += R.xp; S.coins += R.coins;
   /* Kampbonusen før og etter økta, til oppsummeringen. */
   const mulOf = m => typeof goalMin === 'function' ? Math.round((0.5 + Math.min(1, m / goalMin()) * (goalTop() - 0.5)) * 10) / 10 : null;
-  R.sm0 = mulOf(day.m); R.sm1 = mulOf(day.m + min);
+  const b0 = day.b || 0;
+  /* Arbeidsdager: en økt som startet etter dagens arbeid, teller ×(1 + AFTERB) for kampbonusen den dagen (day.b). */
+  if (S.work && !(re && re.again) && re && re.t) { const we = workEnd(k), st = new Date(re.t); if (we != null && dayKey(st) === k && st.getHours() * 60 + st.getMinutes() >= we) { day.b = b0 + Math.round(min * AFTERB); R.wb = day.b - b0; } }
+  R.sm0 = mulOf(day.m + b0); R.sm1 = mulOf(day.m + min + (day.b || 0));
   day.m += min; day.s++; day.f[fag] = (day.f[fag] || 0) + real; if (w < 1) day.x = (day.x || 0) + real;
   S.fm[fag] = (S.fm[fag] || 0) + real;
   stamp();
@@ -898,7 +985,7 @@ function grant(fag, real, full, plan, re) {
   { const A = achInit(), g0 = typeof goalMin === 'function' ? goalMin() : S.cap; A.bs = Math.max(A.bs || 0, streak()); if (A.gd !== k && day.m >= g0) { A.goal = (A.goal || 0) + 1; A.gd = k; } }
   S.party.forEach((u, i) => {
     const m = monBy(u); if (!m) return;
-    const l0 = m.lv; m.xp += Math.round(real * 10 * xw * (i ? 0.3 : 1)); m.lv = lvOf(m.xp);
+    const l0 = m.lv; m.xp += Math.round(real * 10 * xw * exf() * (i ? 0.3 : 1)); m.lv = lvOf(m.xp);
     if (!i && w === 1) addEv(m, Math.floor(real / 2));
     if (m.lv > l0) R.ups.push(Object.assign({ u, l0, l1: m.lv, evo: evoOpts(m).some(x => x.ok) }, learnUp(m, l0)));
   });
@@ -941,17 +1028,15 @@ function grant(fag, real, full, plan, re) {
   for (let i = 0; i < n; i++) encs.push(Math.random() < legP ? legEnc() : genEnc({ fag, luck }));
   if (full && planned >= 45 && okReal >= planned && Math.random() < Math.min(LEGSTIR[1], LEGSTIR[0] + 0.0015 * streak())) { encs.push(legEnc()); R.gifts.push('Something legendary is stirring in the grass.'); }
   { const bk = berryFind(okReal); if (bk) R.gifts.push(`Your team found ${/^[AEIOU]/.test(HELD[bk].n) ? 'an' : 'a'} ${HELD[bk].n}. A Pokémon can hold it in battle.`); }
+  /* Eksamensperioden: merket teller ned mot eksamen. Tida i faget teller fram til og med eksamensdagen (se EXN). */
   const fg = S.fag[fag];
-  if (fg) {
-    /* Milepælene regnes av hele planen (med timene du hadde fra før), men belønningen krever tid som er logget her: MSGATE minutter for hver
-       belønning i faget, og BADGEGATE i alt for den legendariske. Ellers kunne en liten plan eller «timer gjort fra før» gi dem nesten gratis. */
-    const reach = Math.min(4, Math.floor(fagMin(fag) / (fg.t * 60) * 4)), logged = S.fm[fag] || 0;
-    if (fg.rw == null) fg.rw = Math.min(fg.ms, Math.floor((logged - real) / MSGATE));
-    while (fg.ms < reach) {
-      if (fg.ms === 3 ? logged < BADGEGATE : logged < MSGATE * (fg.rw + 1)) break;
-      fg.ms++; fg.rw++;
-      if (fg.ms < 4) { encs.push(genEnc({ fag, min: 3, luck: 1.5 })); R.gifts.push(`${F(fag).n}: ${fg.ms * 25}% of the plan is done. An epic encounter is waiting.`); }
-      else { encs.push(legEnc()); R.gifts.push(`The ${F(fag).n} badge is yours. A legendary encounter is waiting.`); }
+  if (fg && examOn() && fg.xs && fg.d && k <= fg.d) {
+    fg.xf = (fg.xf || 0) + real; fg.xm = fg.xm || 0;
+    const reach = Math.floor(exFrac(fg) * 4);
+    while (fg.xm < reach && !exGate(fg)) {
+      fg.xm++;
+      if (fg.xm < 4) { encs.push(genEnc({ fag, min: 3, luck: 1.5 })); R.gifts.push(`${F(fag).n}: ${fg.xm * 25}% of the way to the exam. An epic encounter is waiting.`); }
+      else { encs.push(legEnc()); R.gifts.push(`Exam day: the ${F(fag).n} badge is yours. A legendary encounter is waiting.`); }
     }
   }
   if (jOn() && has('shiny') && !(S.jx || {}).sh) { (S.jx = S.jx || {}).sh = 1; encs.push(jShiny()); R.jsh = 1; }
@@ -1117,7 +1202,7 @@ function dexCount(r) { const g = REG[r]; let c = 0; for (let id = g.a; id <= g.b
 function begin(id) {
   S.started = 1; S.wn = WNV; S.j = 1; S.jd = 0; S.ulk = {}; S.js = []; S.jx = {}; if (typeof TOURV !== 'undefined') S.tour = TOURV;
   let head = 0;
-  for (const f in S.fag) { const g = S.fag[f]; head += g.b; g.ms = Math.min(3, Math.floor(g.b / (g.t * 60) * 4)); }
+  for (const f in S.fag) { const g = S.fag[f]; head += g.b || 0; g.ms = g.t > 0 ? Math.min(3, Math.floor((g.b || 0) / (g.t * 60) * 4)) : 0; }
   const coins = Math.round(Math.min(head, STARTCAP) / 60 * 60);
   S.coins += coins; S.last.fag = Object.keys(S.fag)[0] || 'annet';
   addMon(id, 5, 0); save();
@@ -1128,9 +1213,9 @@ function setSubjects(list) {
   const old = S.fag, out = {};
   list.forEach((s, i) => {
     const k = s.k && old[s.k] ? s.k : 's' + Date.now().toString(36) + i;
-    const o = old[k] || { ms: 0, c: PAL[Object.keys(out).length % PAL.length] };
-    out[k] = Object.assign({}, o, { n: s.n, ty: s.ty.slice(0, 2), t: s.t, b: s.b, d: s.d });
-    out[k].ms = Math.max(o.ms || 0, Math.min(3, Math.floor(s.b / (s.t * 60) * 4)));
+    const o = old[k] || { ms: 0, t: 0, b: 0, c: PAL[Object.keys(out).length % PAL.length] };
+    out[k] = Object.assign({}, o, { n: s.n, ty: s.ty.slice(0, 2), d: s.d || '' });
+    if (S.exam) examJoin(out[k], dayKey());
   });
   S.fag = out; buildFags();
   if (!FAGS[S.last.fag]) S.last.fag = curFag();
