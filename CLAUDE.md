@@ -33,6 +33,8 @@ belønninger) · `bfx`, `ebx`, `ebxp` (effekter, EBDX-animasjoner) · `raid`, `r
 - Balanse: `work/sim/boss.js` (finalene i ligaen), `perleg.js` (hvert raid for seg), `prog.js` (progresjonen). Med `DIR=/tmp/kopi` måles en endret kopi.
 - Store tall og beslutninger skrives i `work/NOTES.md` (logg) og `work/HANDOFF.md` (status nå).
 - Tid på skjermen vises som timer og minutter med `hm()` (ui.js): «4 h 20 min», aldri desimaltimer som 4.3.
+- Store steg (planen i `work/HANDOFF.md`): jobb på grenen `steg-N` og push den underveis. Skriv «Ferdig med steg N.M» for hvert delsteg og
+  «Ferdig med steg N» til slutt. Slå sammen med main først når Jazz skriver «Godkjent, slipp det».
 
 ## Utgivelse
 1. Testene er grønne.
