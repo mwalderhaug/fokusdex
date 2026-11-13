@@ -822,6 +822,9 @@ function partyPanel(b, i, act, ok, cur) {
 }
 function drawMenu() {
   const el = $('#bmenu'); if (!el) return;
+  /* Demoen «Mewtwo → Dark» i Sandbox: mens du står mot den vanlige Mewtwo, kan du hoppe rett til forvandlingen. */
+  { const B0 = BT.B, ar = $('#arena'), on = !!(B0 && !B0.over && !BT.busy && B0.mode === 'lab' && B0.raid && B0.tr && B0.tr.leg === 150 && !B0.tr.dk), b = $('#dkskip');
+    if (on && ar && !b) ar.insertAdjacentHTML('beforeend', '<button type="button" id="dkskip" class="dkskip" data-a="dkskip">Skip to Dark Mewtwo ›</button>'); else if (!on && b) b.remove(); }
   const B = BT.B, pk = PACK.menu ? ' pk' : '', bg = mim('pbg'), cancel = (a, t) => `<button type="button" class="bw-cancel bback" data-a="${a || 'bback'}" aria-label="${t || 'Back'}" style="--c:#2f84e6">${MFR}${RET}</button>`;
   const myTy = `<span class="tyb bw-ty" id="bty-me" data-h="">${BT.tyme || ''}</span>`;
   if (!B || BT.busy || B.over) { el.innerHTML = `<div class="bw bw-main bw-idle${pk}" style="${mim('ball')}">${B && !B.over ? myTy : ''}</div>`; return; }
@@ -1646,6 +1649,7 @@ const BA = {
   bswitch: () => { BT.menu = 'team'; drawMenu(); },
   bpause: () => { BT.menu = 'pause'; drawMenu(); },
   bback: () => { BT.menu = 'main'; drawMenu(); },
+  dkskip: () => { const B = BT.B; if (!B || BT.busy || B.over || B.mode !== 'lab' || !(B.tr && B.tr.leg === 150 && !B.tr.dk)) return; const b = $('#dkskip'); if (b) b.remove(); B.foe.forEach(f => { f.hp = 0; }); B.over = 'win'; BT.busy = true; paintBox('foe'); endBattle(); },
   bfast: () => { S.bfast = S.bfast ? 0 : 1; save(true); FX.speed = spdF(); drawMenu(); },
   /* Angrepsanimasjonene: de store fra Elite Battle DX, eller de enklere arkene og kodetegnede effektene (for den som vil ha det raskere, eller hvis noe ser rart ut). */
   bdx: () => { S.dx = S.dx === 0 ? 1 : 0; save(true); drawMenu(); },
