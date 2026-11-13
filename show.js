@@ -320,14 +320,25 @@ function exhibition(play) {
       og ingenting synkes. Kopien får en ny kampdag med bonusen på topp og alle tre modusene åpne (sbxDay), og verktøyene (sbxTools) gir det som trengs for
       å prøve noe bestemt: mynter, nivå, gjenstander, et raid, et legendarisk eller shiny møte. «Leave» bytter tilbake til den ekte lagringen. Lukkes appen,
       er kopien borte. */
-const sbxBar = () => SBX ? `<div class="sbxbar"><span class="sp"><b>Sandbox</b><span class="sm">A copy of your save · nothing is saved</span></span><button type="button" class="btn sm2" data-a="sbxtools">Tools</button><button type="button" class="btn sm2 gold" data-a="sbxleave">Leave</button></div>` : '';
+/* REISEN SOM NY SPILLER (admin): en ny lagring i sandkassa, stilt til studiedag n. «Done for today» viser arket for dagen; «Session» gir en økt
+   på 30 minutter (for shinyen dag 3 og angrepstypene), «Next day» går videre. Ingenting lagres. */
+function jPreview(n) {
+  if (!isAdmin()) return;
+  if (!SBX) SBX = { real: S, cup: null }; SBX.jp = 1;
+  const real = SBX.real; S = fresh(); S.fag = JSON.parse(JSON.stringify(real.fag || {})); S.extra = (real.extra || []).slice();
+  begin(4); S.jd = n; featCheck(); S.js = JOURNEY.filter(f => f[1] < n).map(f => f[0]); S.jx = { b: n > 1 ? 1 : 0, r: n > 1 ? 2 : 0, sh: n > 3 ? 2 : 0, mv: n > 4 ? 1 : 0 }; S.humb = n > 1 ? 1 : 0;
+  const m = partner(); if (m) { m.xp = xpAt(5 + 4 * n); m.lv = lvOf(m.xp); }
+  S.log[dayKey()] = { m: OPENMIN + 5, s: 1, f: {} }; S.jt = dayKey(); S.dn = ''; S.wn = WNV; S.gift = 'g1113';
+  BT.B = null; BT.res = null; U.tab = 'fokus'; closeSheet(); closeOv(); render(); toast(`Journey preview: study day ${n}. Press Done for today to see what is new.`);
+}
+const sbxBar = () => SBX && SBX.jp ? `<div class="sbxbar"><span class="sp"><b>Journey preview</b><span class="sm">Study day ${S.jd || 0} as a new player · nothing is saved</span></span><button type="button" class="btn sm2" data-a="jsess">Session</button><button type="button" class="btn sm2" data-a="jnext">Next day</button><button type="button" class="btn sm2 gold" data-a="sbxleave">Leave</button></div>` : SBX ? `<div class="sbxbar"><span class="sp"><b>Sandbox</b><span class="sm">A copy of your save · nothing is saved</span></span><button type="button" class="btn sm2" data-a="sbxtools">Tools</button><button type="button" class="btn sm2 gold" data-a="sbxleave">Leave</button></div>` : '';
 function sbxEnter() {
   if (!isAdmin()) return false;
   if (S.timer) { toast('Finish your focus session first.'); return false; }
   if (!SBX) { SBX = { real: S, cup: null }; S = JSON.parse(JSON.stringify(S)); delete S.live; }
   return true;
 }
-function sbxLeave() { if (!SBX) return; S = SBX.real; SBX = null; BT.B = null; BT.busy = false; BT.res = null; stopMusic(); }
+function sbxLeave() { if (!SBX) return; S = SBX.real; SBX = null; U.jfrom = ''; U.jmv = 0; BT.B = null; BT.busy = false; BT.res = null; stopMusic(); }
 /* En ny kampdag i kopien: bonusen på topp, alle tre modusene åpne (eller bare én: da kan dagen også simuleres), ingen forsøk brukt. */
 function sbxDay(only) {
   const d = dayKey(), L = S.lad, lg = S.log[d] || (S.log[d] = { m: 0, s: 0, f: {} });
@@ -426,5 +437,9 @@ const XA = {
   sbxsounds: () => { if (!SBX) return; sbxSounds(); },
   sbxsnd: el => { const k = el.dataset.k; if (sfx[k]) sfx[k](k === 'wob' ? 1 : undefined); },
   sbxtool: el => { if (!SBX) return; const k = el.dataset.k; sbxTool(k); sfx.ok(); closeSheet(); render(); toast((SBXT.find(x => x[0] === k) || ['', 'Done'])[1] + ': done.'); },
+  jprev: () => { if (!isAdmin()) return; openSheet(`<h2 style="margin:0 0 4px">Journey preview</h2><p class="sm">See the game as a new player on a given study day. Nothing is saved.</p><div class="jdays">${JOURNEY.map(f => `<button type="button" class="btn" data-a="jday" data-k="${f[1]}"><b>Day ${f[1]}</b><span class="sm">${f[2]}</span></button>`).join('')}<button type="button" class="btn" data-a="jday" data-k="${JLAST + 1}"><b>Day ${JLAST + 1}</b><span class="sm">After the journey</span></button></div>`); },
+  jday: el => { closeSheet(); jPreview(+el.dataset.k); },
+  jnext: () => { if (SBX && SBX.jp) jPreview(Math.min(JLAST + 1, (S.jd || 0) + 1)); },
+  jsess: () => { if (!(SBX && SBX.jp)) return; const f = Object.keys(S.fag)[0] || 'annet'; const R = grant(f, 30, true, 30); render(); showReward(R); },
   sbxleave: () => { if (!SBX) return; closeSheet(); closeOv(); sbxLeave(); render(); toast('Back in your real save. Nothing from the sandbox was kept.'); }
 };

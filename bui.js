@@ -1301,6 +1301,7 @@ function endBattle() {
   if (B.mode !== 'lab') liveEnd();
   clearInterval(BT.goldT); FX.show(null); if (BT.air) { BT.air(); BT.air = null; }
   const res = BT.res = B.mode === 'fac' ? finishFactory(B) : B.mode === 'lab' ? finishLab(B) : B.mode === 'raid' ? finishRaid(B) : B.mode === 'pwt' ? finishPwt(B) : finishLeague(B);
+  if (jOn() && B.mode !== 'raid' && B.mode !== 'lab' && !(S.jx || {}).b) { (S.jx = S.jx || {}).b = 1; jRaid(); }
   BT.tp = null; BT.fs = null;
   if (res.dark && $('#arena')) return darkRise(B);
   if (res.win) BSFX.win(); else BSFX.lose();

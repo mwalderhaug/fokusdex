@@ -213,6 +213,9 @@ function helpTrain() {
 }
 
 /* ---------- Hubben ---------- */
+/* Emnene som hører til noe spilleren ikke har møtt ennå (reisen), vises ikke før det er åpnet. */
+const HELPJ = { modes: 'battles', bonus: 'battles', events: 'held', train: 'train', held: 'held', mega: 'train', shop: 'shop', ach: 'shop' };
+const helpOk = k => typeof jOn !== 'function' || !jOn() || (k === 'raids' ? !!S.humb : !HELPJ[k] || has(HELPJ[k]));
 function helpOpen(k) {
   const T = HELP.find(t => t.k === k);
   const html = T
@@ -221,7 +224,7 @@ function helpOpen(k) {
        <button type="button" class="btn wide" data-a="help" data-k="">All topics</button>`
     : `<div class="row" style="justify-content:space-between"><h2 class="h" style="font-size:22px;margin:0">Questions</h2><button type="button" class="btn sm2" data-a="close">Close</button></div>
        <p class="sm">Pick a topic. Short answers, with pictures.</p>
-       <div class="hlist">${HELP.map(t => `<button type="button" class="hitem" data-a="help" data-k="${t.k}"><span class="hic">${t.ic()}</span><span class="sp"><b>${t.n}</b><span class="sm">${t.s}</span></span><span class="hgo">›</span></button>`).join('')}</div>
+       <div class="hlist">${HELP.filter(t => helpOk(t.k)).map(t => `<button type="button" class="hitem" data-a="help" data-k="${t.k}"><span class="hic">${t.ic()}</span><span class="sp"><b>${t.n}</b><span class="sm">${t.s}</span></span><span class="hgo">›</span></button>`).join('')}</div>
        <button type="button" class="btn wide" data-a="tour">Show the guide again</button>
        <button type="button" class="btn wide" data-a="show">Show the game · trailer and overview</button>
        <button type="button" class="btn wide nf" data-a="rules">Rules and rewards · every number</button>`;

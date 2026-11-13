@@ -368,6 +368,7 @@ function pickStars() {
 const EVMODE = { league: ['surge', 'type', 'stars', 'little', 'gold', 'wind', 'lucky', 'camp'], factory: ['surge', 'type', 'gold', 'wind', 'lucky', 'camp'], pwt: ['surge', 'type', 'stars', 'little', 'gold', 'lucky', 'camp'] };
 function evRoll(mode) {
   const day = S.lad.day; if (!day) return null;
+  if (jOn() && (S.jd || 0) < JLAST) { S.evt = { day, k: '' }; return null; }
   if (S.evt && S.evt.day === day) return evNow();
   const first = !S.evt, gap = S.evg || 0;
   if (!first && !(Math.random() < EVGAP[Math.min(3, gap)])) { S.evt = { day, k: '' }; S.evg = gap + 1; return null; }
@@ -1017,7 +1018,7 @@ function raidPick() {
 /* En trekning om en legendarisk viser seg. Uten p: dagens trekning (RAIDP0 + RAIDPITY for hver studiedag utover RAIDCOOL siden forrige raid; S.rwait
    teller studiedagene og økes i grant). Med p: en ekstra trekning med den sjansen (en vunnet runde), men heller ikke den før RAIDCOOL dager er gått. */
 function raidRoll(p) {
-  if (S.raid || !S.party.length) return false;
+  if (S.raid || !S.party.length || (jOn() && !S.humb)) return false;
   /* Det første raidet kommer tidlig, uten trekning. */
   if (!S.humb && (S.rwait || 0) >= HUMBDAY) return raidSpawn();
   const w = (S.rwait || 0) - RAIDCOOL - (diff().rc || 0); if (w < 0) return false;
@@ -1061,6 +1062,12 @@ function giftCheck() {
   S.gnote = 1; save(true); return true;
 }
 const raidTries = R => R && R.ev ? 1 : RAIDTRIES;
+/* RAIDINTROEN (reisen): etter den første kampen viser Deoxys seg. Den kan ikke slås, og det er meningen: den viser hva som finnes der ute.
+   ev = 2, ett forsøk, nivå 100. S.humb = 1, så det vanlige første raidet (HUMB) ikke kommer i tillegg, og S.rwait = 0, så neste raid tar noen dager. */
+function jRaid() {
+  if (!jOn() || S.raid || S.humb || !S.party.length || !LEG[386]) return false;
+  S.humb = 1; S.rwait = 0; S.raid = { id: 386, lv: 100, hx: 30, day: '', tries: 0, at: dayKey(), nw: 1, hid: 0, sh: 0, ev: 2 }; save(true); return true;
+}
 function raidGone() { S.raid = S.rst || null; delete S.rst; }
 const raidOpen = () => !!S.raid && !S.raid.hid && !!LEG[S.raid.id] && S.raid.day !== dayKey();
 /* ---------- Stedet kjemper med ----------
@@ -1245,7 +1252,8 @@ function finishRaid(B) {
     const pre = R.r1 && !R.told ? `Mewtwo's rewards are yours: ${R.r1}. ` : ''; R.told = 1;
     if (R.tries >= raidTries(R)) {
       raidGone();
-      if (R.ev) res.note = `${nm} was never going to fall today, and that is how it was meant to be. It has moved on. Train your team: legendary Pokémon will show themselves again.`;
+      if (R.ev === 2) { S.items.candy = (S.items.candy || 0) + 2; res.items.push('2 × Rare Candy'); S.seen[386] = 1; (S.jx = S.jx || {}).r = 1; res.note = `That was ${nm}. You never had a chance, and that was the point: now you know what is out there. Train your team, and the next legendary Pokémon will be a fair fight. It comes in a few days.`; }
+      else if (R.ev) res.note = `${nm} was never going to fall today, and that is how it was meant to be. It has moved on. Train your team: legendary Pokémon will show themselves again.`;
       else if (R.dk) res.note = `${pre}The shadow lets go and Dark Mewtwo is gone. Mewtwo stays with you. Beat a Mewtwo again, and the shadow will rise once more.`;
       else res.note = `${nm} has moved on. Another legendary Pokémon will show itself in time.`;
     } else res.note = `${pre}${nm} stays where it is. You have one more attempt, tomorrow${R.dk ? '' : ', and now you know who is waiting'}.`;

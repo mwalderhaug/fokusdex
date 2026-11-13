@@ -1621,3 +1621,25 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .spw-r .sp{display:flex;flex-direction:column;gap:1px}
 .spw-i{flex:none;width:40px;height:40px;display:grid;place-items:center}
 .spw-i .raid-sp.qm{width:34px;height:34px;font-size:15px}
+
+/* Reisen: kortet på forsiden og arkene (ui.js journeyCard, jReveal, jAfter). Finpusses på Fable (MONDAY.md). */
+.jrn-t{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:10px 0 8px}
+.jt{display:flex;flex-direction:column;align-items:center;gap:4px;opacity:.38}
+.jt i{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}
+.jt small{font-size:10.5px;text-align:center;line-height:1.15;min-height:12px}
+.jt.on{opacity:1}.jt.on i{background:color-mix(in srgb,var(--sage) 22%,transparent);box-shadow:inset 0 0 0 1.5px var(--sage);color:var(--sage)}
+.jt.nx{opacity:.8}.jt.nx i{box-shadow:inset 0 0 0 1.5px var(--gold);color:var(--gold);animation:jpulse 2.4s ease-in-out infinite}
+@keyframes jpulse{50%{box-shadow:inset 0 0 0 1.5px var(--gold),0 0 14px -2px var(--gold)}}
+.jsh h2{font-size:22px}.jsh-pic{display:grid;place-items:center;margin:6px 0}
+.jn{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0 8px}
+.jn-c{background:rgba(255,255,255,.04);border-radius:12px;padding:8px}
+.jn-h{display:flex;align-items:center;gap:6px;margin-bottom:6px}.jn-h span{display:flex;flex-direction:column}
+.jn-r{display:grid;grid-template-columns:44px 1fr 30px;align-items:center;gap:5px;font-size:12px;margin:3px 0}
+.jn-b{height:6px;border-radius:3px;background:rgba(255,255,255,.07);overflow:hidden}.jn-b i{display:block;height:100%;background:var(--sage);border-radius:3px}
+.jn-c:last-child .jn-b i{background:var(--red)}
+.jmv{display:flex;flex-direction:column;gap:10px;margin:10px 0}.jmv>div{display:flex;gap:12px;align-items:center}.jmv>div>span:last-child{display:flex;flex-direction:column}
+.mvc{flex:none;width:30px;height:30px;border-radius:8px;position:relative}
+.mvc.ph{background:#d9774e}.mvc.ph::after{content:'';position:absolute;inset:7px;background:#fff3;clip-path:polygon(50% 0,62% 35%,100% 50%,62% 65%,50% 100%,38% 65%,0 50%,38% 35%)}
+.mvc.spc{background:#5f86d6}.mvc.spc::after{content:'';position:absolute;inset:7px;border-radius:50%;box-shadow:0 0 0 2px #fff5,inset 0 0 0 4px #5f86d6,inset 0 0 0 6px #fff5}
+.mvc.stt{background:#8a8a8a}.mvc.stt::after{content:'';position:absolute;inset:9px;border-radius:50%;background:#fff5}
+.jdays{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.jdays .btn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left}

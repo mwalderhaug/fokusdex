@@ -216,14 +216,14 @@ const NAV = [
   ['profil', 'Profile', '<circle cx="12" cy="9" r="5"/><path d="M8.500 13.200L7 21l5-2.500L17 21l-1.500-7.800"/>']
 ];
 function renderNav() {
-  $('#nav').innerHTML = NAV.map(([k, n, p]) => `<button type="button" data-a="tab" data-k="${k}"${U.tab === k ? ' aria-current="page"' : ''}><svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg><span>${n}</span>${(k === 'fokus' && S.pend.length) || (k === 'profil' && U.as && U.as.open) ? '<i class="dot"></i>' : ''}</button>`).join('');
+  $('#nav').innerHTML = NAV.filter(([k]) => k !== 'butikk' || !jOn() || has('shop')).map(([k, n, p]) => `<button type="button" data-a="tab" data-k="${k}"${U.tab === k ? ' aria-current="page"' : ''}><svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg><span>${n}</span>${(k === 'fokus' && S.pend.length) || (k === 'profil' && U.as && U.as.open) ? '<i class="dot"></i>' : ''}</button>`).join('');
 }
 function render() {
   buildFags();
   if (!S.started) { $('#nav').hidden = true; $('#main').innerHTML = ''; return intro(); }
   /* Før «Done for today» finnes bare Focus, uten faner (dayOpenQ). */
   if (typeof giftCheck === 'function' && giftCheck()) setTimeout(() => { if (!giftSheet()) return; }, 60);
-  const open = dayOpenQ(); if (!open) U.tab = 'fokus'; $('#nav').hidden = !open;
+  const open = dayOpenQ(); if (!open || (U.tab === 'butikk' && jOn() && !has('shop'))) U.tab = 'fokus'; $('#nav').hidden = !open;
   if (featCheck()) save(true);
   /* Achievements: summen regnes én gang per tegning. Når et nytt mål er nådd siden sist, sies det fra én gang (ikke mens en studerer). */
   { const as = U.as = achSum(); if (open) { if (U.asN != null && as.open > U.asN) setTimeout(() => toast('Achievement reached. Tap your picture to claim the reward.'), 700); U.asN = as.open; } }
@@ -242,7 +242,7 @@ const dayOpenQ = () => !S.started || !!SBX || admOn() || S.dn === dayKey() || (S
 /* ADMIN VIEW: eieren (isAdmin) ser det samme som alle andre, til bryteren «Admin view» slås på. Da er alt framme uansett om dagen er ferdig, og
    Sandbox står der. Valget huskes på denne enheten. */
 const admOn = () => { if (U.adm == null) { try { U.adm = localStorage.getItem(KEY + '.adm') === '1'; } catch (_) { U.adm = false; } } return !!U.adm && isAdmin(); };
-const admRow = () => isAdmin() ? `<div class="admrow"><button type="button" class="btn sm2" data-a="adm" aria-pressed="${admOn()}">Admin view · ${admOn() ? 'on' : 'off'}</button>${admOn() ? '<button type="button" class="btn sm2" data-a="lab">Sandbox</button>' : ''}</div>` : '';
+const admRow = () => isAdmin() ? `<div class="admrow"><button type="button" class="btn sm2" data-a="adm" aria-pressed="${admOn()}">Admin view · ${admOn() ? 'on' : 'off'}</button>${admOn() ? '<button type="button" class="btn sm2" data-a="lab">Sandbox</button><button type="button" class="btn sm2" data-a="jprev">Journey preview</button>' : ''}</div>` : '';
 /* Foten på forsiden før «Done for today». */
 const studyFoot = () => `<button type="button" class="btn wide st-done" data-a="dn">Done for today</button><p class="sm st-cap">Battles, raids and the tabs open when you are done.</p>`;
 /* Raidet vises ellers først når dagen er åpnet; gaveraidet (ev) vises med en gang. */
@@ -254,6 +254,51 @@ function giftSheet() {
   openSheet(`<h2 style="margin:0 0 4px">A gift today</h2><ul class="wnl">${pk.length ? `<li>Free packs wait in the Shop: ${pk.join(', ')}.</li>` : ''}<li>Something legendary shows itself to every trainer today. You get one attempt, today only.</li></ul><button type="button" class="btn wide gold" data-a="wnok" style="margin-top:14px">Got it</button>`);
   return true;
 }
+/* ---------- REISEN (nye spillere) ----------
+   journeyCard: hva som er åpnet, og hva som kommer. jReveal: arket for det som er nytt (ett om gangen, etter «Done for today»).
+   jAfter: det som hører til rett etter en økt eller en kamp (forklaringen av raid, shinyen, angrepstypene), og ellers jReveal. */
+const JIC = { battles: 'B', shop: 'S', shiny: '✦', nature: 'N', train: 'T', held: 'H' };
+function journeyCard() {
+  if (!jOn() || !S.started) return '';
+  const next = JOURNEY.find(f => !has(f[0]));
+  return `<div class="card jrn"><div class="row" style="justify-content:space-between"><b>Your journey</b><span class="pill tn">Study day ${S.jd || 0}</span></div>
+    <div class="jrn-t">${JOURNEY.map(f => { const on = has(f[0]), nx = next && next[0] === f[0]; return `<span class="jt${on ? ' on' : ''}${nx ? ' nx' : ''}"><i>${on ? JIC[f[0]] : '?'}</i><small>${on ? f[2] : nx ? 'Next' : ''}</small></span>`; }).join('')}</div>
+    <p class="sm">${next ? `Something new after your next day of focus (${OPENMIN} minutes).` : 'Everything is open. The rest is yours to find.'}</p></div>`;
+}
+/* To av samme art på nivå 50: født med full potensial og en nature som hjelper, mot født svak med en nature som trekker ned. */
+function jNature() {
+  const p = partner(), id = p ? p.id : 4, b = BST[id - 1], ix = [1, 2, 3, 4, 5], hi = ix.reduce((a, c) => b[c] > b[a] ? c : a, 1), lo = ix.reduce((a, c) => b[c] < b[a] ? c : a, 1);
+  const natFor = (u, d) => { for (let n = 0; n < 25; n++) if (natUp(n) === u && natDn(n) === d) return n; return 0; };
+  const mk = (iv, nat) => ({ nat, st: statsOf({ id, lv: 50, sh: 0, iv: [iv, iv, iv, iv, iv, iv], ev: [0, 0, 0, 0, 0, 0], nat }) });
+  const A = mk(31, natFor(hi, lo)), Z = mk(3, natFor(lo, hi)), top = Math.max(...A.st, ...Z.st);
+  const col = (x, t) => `<div class="jn-c"><div class="jn-h">${spr(id, { s: '44px' })}<span><b>${t}</b><span class="sm tn">${NAT[x.nat]}</span></span></div>${x.st.map((v, i) => `<div class="jn-r"><span class="sm">${SN[i]}</span><span class="jn-b"><i style="width:${Math.round(v / top * 100)}%"></i></span><b class="tn">${v}</b></div>`).join('')}</div>`;
+  return `<div class="jn">${col(A, 'Born strong')}${col(Z, 'Born weak')}</div><p class="sm">Same Pokémon, same level. Potential (IVs) is set when it is born: 0 to 31 in each stat. A nature lifts one stat by 10 % and lowers another. Keep the ones born strong: the stars on the catch screen show it.</p>`;
+}
+const jMoveTypes = () => `<div class="jmv"><div><span class="mvc ph"></span><span><b>Physical</b><span class="sm">Contact moves. They use Attack against Defense.</span></span></div><div><span class="mvc spc"></span><span><b>Special</b><span class="sm">Energy from a distance. They use Sp. Atk against Sp. Def.</span></span></div><div><span class="mvc stt"></span><span><b>Status</b><span class="sm">No damage. They change stats, the weather or the foe.</span></span></div></div><p class="sm">A Pokémon with a high Sp. Atk hits harder with special moves, and one with a high Attack with physical ones. Look at its stats before you pick its moves.</p>`;
+function jSheet(f, g) {
+  const body = f[0] === 'nature' ? jNature() : '';
+  return `<div class="jsh"><div class="sm">New · study day ${f[1]}</div><h2 style="margin:2px 0 6px">${f[2]}</h2><p class="mut">${f[3]}</p>${body}${g && g.length ? `<ul class="wnl">${g.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}${f[0] === 'shop' ? '<p class="sm" style="margin-top:8px">New areas open as your trainer level rises, and their Pokémon then show up in your encounters. See Routes under More options on the Focus page.</p>' : ''}<button type="button" class="btn wide gold" data-a="jok" style="margin-top:14px">Got it</button></div>`;
+}
+function jReveal() {
+  if (!jOn() || !S.started || S.timer || !dayOpenQ() || !$('#sheet').hidden || !$('#ov').hidden) return false;
+  const f = JOURNEY.find(x => has(x[0]) && !(S.js || []).includes(x[0])); if (!f) return false;
+  (S.js = S.js || []).push(f[0]); const g = jGift(f[0]);
+  if (JOURNEY.every(x => S.js.includes(x[0]))) S.jdone = 1;
+  save(true); render(); openSheet(jSheet(f, g)); return true;
+}
+function jAfter() {
+  if (!jOn() || !S.started || S.timer || !$('#sheet').hidden || !$('#ov').hidden) return false;
+  const x = S.jx || (S.jx = {});
+  if (x.r === 1) { x.r = 2; save(true); openSheet(`<div class="jsh"><div class="sm">Now you know</div><h2 style="margin:2px 0 6px">Legendary raids</h2><p class="mut">Now and then a legendary Pokémon shows itself after the day's battles. It fights your whole team. You get ${RAIDTRIES} attempts, one a day, and if you win, it joins you.</p><ul class="wnl"><li>The stronger your team, the better your chances.</li><li>The first ones are fair fights. Deoxys was not.</li><li>The next one shows itself in a few days.</li></ul><button type="button" class="btn wide gold" data-a="jok" style="margin-top:14px">Got it</button></div>`); return true; }
+  if (x.sh === 1) {
+    x.sh = 2; let g = []; if (!(S.js || []).includes('shiny')) { (S.js = S.js || []).push('shiny'); g = jGift('shiny'); }
+    const e = S.pend.slice().reverse().find(q => q.sure && q.sh); save(true);
+    openSheet(`<div class="jsh"><div class="sm">Look closer</div><h2 style="margin:2px 0 6px">A shiny ${e ? esc(D(e.id)[0]) : 'Pokémon'}</h2>${e ? `<div class="jsh-pic">${spr(e.id, { ani: 1, sh: 1, s: '96px' })}</div>` : ''}<p class="mut">In the main games a shiny is just another colour. Here it is stronger: born with perfect IVs, and every stat ${Math.round((SHINYST - 1) * 100)} % higher. This one is yours whatever ball you throw.</p>${g.length ? `<ul class="wnl">${g.map(y => `<li>${y}</li>`).join('')}</ul>` : ''}<p class="sm" style="margin-top:8px">That is enough distraction. Study on, fill up today's bonus, and catch it when you like.</p><div class="acts" style="margin-top:12px"><button type="button" class="btn gold" data-a="hunt">Catch it now</button><button type="button" class="btn nf" data-a="jok">Later</button></div></div>`);
+    return true;
+  }
+  if (U.jmv && !x.mv && (S.jd || 0) >= 4) { x.mv = 1; U.jmv = 0; save(true); openSheet(`<div class="jsh"><div class="sm">A new move</div><h2 style="margin:2px 0 6px">Three kinds of moves</h2>${jMoveTypes()}<button type="button" class="btn wide gold" data-a="jok" style="margin-top:14px">Got it</button></div>`); return true; }
+  return jReveal();
+}
 function whatsNew() {
   if (!S.started || (S.wn || 0) >= WNV) return false;
   S.wn = WNV; save(true);
@@ -262,7 +307,7 @@ function whatsNew() {
 }
 /* Kort som sier fra om noe nytt (FEATS), og kortet som står der kampene kommer. */
 const newsEl = () => (S.news || []).map(k => { const f = FEATS.find(x => x[0] === k); return f ? `<div class="card newsc"><div class="row" style="justify-content:space-between"><b><span class="newsp">New</span> ${f[2]}</b><button type="button" class="btn sm2" data-a="newsok" data-k="${k}">Got it</button></div><p class="sm" style="margin-top:6px">${f[3]}</p></div>` : ''; }).join('');
-const lockCard = k => { const f = FEATS.find(x => x[0] === k); return f ? `<div class="card lockc"><b>${f[2]}</b><p class="sm" style="margin-top:4px">Opens at trainer level ${f[1]}. You are level ${tlv()}.</p></div>` : ''; };
+const lockCard = k => { const f = FEATS.find(x => x[0] === k); return f ? `<div class="card lockc"><b>${f[2]}</b><p class="sm" style="margin-top:4px">${f[1] <= 1 ? `Opens when today has ${OPENMIN} minutes of focus.` : `Opens on study day ${f[1]}. You are on day ${S.jd || 0}.`}</p></div>` : ''; };
 function enter() { const w = $('#main .wrap'); if (w) w.classList.add('enter'); }
 
 /* ---------- Din egen figur ----------
@@ -408,7 +453,7 @@ VIEW.fokus = () => {
   /* En vanlig dag ligger kampene nederst. På en eventdag står eventet og kampene øverst, og det som har med studeringen å gjøre, under. */
   const CL = clockLock(); if (CL) top += clockCard(CL);
   if (!dayOpenQ()) return top + (S.raid && S.raid.ev && S.party.length ? raidCard() : '') + (S.fpk && Object.keys(S.fpk).length ? '<button type="button" class="btn wide gold" data-a="fpk" style="margin-bottom:12px">Open your free packs</button>' : '') + h + studyFoot() + admRow();
-  top += newsEl();
+  top += newsEl() + journeyCard();
   const battles = S.party.length ? (has('battles') ? raidCard() + ladderCard() : lockCard('battles')) : '', E = battles && has('battles') && typeof evNow === 'function' ? evNow() : null;
   return E ? `${top}${battles}<div class="evsep"><span>Study</span></div>${h}${admRow()}` : top + h + battles + admRow();
 };
@@ -754,7 +799,7 @@ function intro() {
   }
   ov(`<div class="row" style="justify-content:flex-end"><span class="pill">Step 1 of 2</span></div><div class="mid"><h1 class="big">Fokusdex</h1><p class="mut" style="max-width:30ch">Every minute you focus earns XP and coins. Every session lures out wild Pokémon you can catch, evolve and collect.</p>
     <div class="starters">${[1, 4, 7].map(id => `<button type="button" data-a="pick" data-k="${id}" aria-pressed="${pick === id}" style="--tc:var(--t${D(id)[1]})">${spr(id, { ani: 1 })}<span>${D(id)[0]}</span>${types(id)}</button>`).join('')}</div>
-    <p class="sm" style="max-width:32ch">Pick your partner. You start with 15 Poké Balls, and next you add your subjects.</p></div>
+    <p class="sm" style="max-width:32ch">Pick your partner. You start with 20 Poké Balls, and next you add your subjects.</p></div>
     <div class="acts"><button type="button" class="btn pri" data-a="snext"${pick ? '' : ' disabled'}>${pick ? 'Next' : 'Choose a partner'}</button></div>`);
 }
 
@@ -801,7 +846,7 @@ function endTimer() {
 /* ---------- Belønning ---------- */
 function countUp(el, to) { const t0 = performance.now(); (function f(t) { const k = Math.min(1, (t - t0) / 900); el.textContent = '+' + nb(to * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(f); })(t0); }
 function showReward(R) {
-  const news = [];
+  const news = []; U.jmv = U.jmv || R.ups.some(x => (x.learned || []).length);
   R.hatch.forEach(x => { const m = monBy(x.u); if (m) news.push(`<div>${spr(m.id, { it: m.item, sh: m.sh, mega: m.mega })}<span><b>Egg hatched: ${esc(D(m.id)[0])}</b><br><span class="sm">${x.isNew ? 'New to your collection' : 'You already have it'}${m.sh ? ' · shiny' : ''}</span></span></div>`); });
   R.ups.forEach(x => { const m = monBy(x.u); if (m) news.push(`<div>${spr(m.id, { it: m.item, sh: m.sh, mega: m.mega })}<span><b>${esc(mName(m))} level ${x.l0} → ${x.l1}</b>${x.evo ? '<br><span class="sm" style="color:var(--gold)">Ready to evolve</span>' : ''}${(x.learned || []).length ? `<br><span class="sm">Learned ${esc(x.learned.join(', '))}</span>` : ''}${(x.avail || []).length ? `<br><span class="sm">New move to pick: ${esc(x.avail.join(', '))}</span>` : ''}</span></div>`); });
   if (R.sm1 != null && R.sm1 !== R.sm0) news.push(`<div><span class="mulic">×</span><span><b>Battle bonus ×${R.sm0.toFixed(1)} → ×${R.sm1.toFixed(1)}</b><br><span class="sm">${R.sm1 >= goalTop() ? 'You reached your goal: this is the top for today.' : `It peaks at ×${goalTop().toFixed(1)} when you reach ${hrs(goalMin())} h.`}</span></span></div>`);
@@ -958,11 +1003,12 @@ const A = {
   tab: el => { if (!dayOpenQ()) return; U.tab = el.dataset.k; render(); $('#main').scrollTop = 0; enter(); },
   smore: () => { U.more = !U.more; render(); },
   adm: () => { if (!isAdmin()) return; U.adm = !admOn(); try { localStorage.setItem(KEY + '.adm', U.adm ? '1' : '0'); } catch (_) {} render(); toast(U.adm ? 'Admin view is on: everything is open, and the Sandbox is here.' : 'Admin view is off: you see what everyone sees.'); },
-  wnok: () => { closeSheet(); if (!giftSheet() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
+  wnok: () => { closeSheet(); if (!giftSheet() && !jAfter() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
   fpk: () => { const k = Object.keys(S.fpk || {}).find(x => PACKS[x]); if (!k) return render(); const out = openPack(k); if (!out) return toast('Catch some of your waiting encounters first.'); sfx.coin(); render(); packShow(k, out); },
   newsok: el => { S.news = (S.news || []).filter(k => k !== el.dataset.k); save(true); render(); },
   /* «Done for today»: resten av appen kommer fram. Er det studert nok til kampene (og de er åpnet for deg), åpnes kampdagen med det samme. */
   dn: () => { if (typeof fairGate === 'function' && fairGate()) return; S.dn = dayKey(); stamp(); save(); sfx.open(); render(); $('#main').scrollTop = 0; enter();
+    if (jReveal()) { U.jfrom = 'dn'; return; }
     if (has('battles') && S.party.length && openNeed() <= 0 && (!S.lad.day || (dayOld() && dayDone()))) BA.bdone(); else if (typeof raidArrive === 'function') raidArrive(); },
   lagv: el => { U.lag = el.dataset.k; render(); enter(); },
   fag: el => { U.fag = el.dataset.k; render(); },
@@ -974,8 +1020,9 @@ const A = {
   pause: () => { togglePause(); paintTimer(); },
   early: () => endTimer(),
   quit: () => { if (!U.quit) { U.quit = 1; $('#t-quit').textContent = 'Tap again to cancel'; setTimeout(() => { U.quit = 0; const b = $('#t-quit'); if (b) b.textContent = 'Cancel'; }, 3000); return; } clearInterval(tick); dropAwake(); S.timer = null; save(true); document.title = 'Fokusdex'; closeOv(); render(); },
-  home: () => { encQuiet(); closeOv(); render(); if (!giftSheet() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
-  hunt: () => hunt(),
+  home: () => { encQuiet(); closeOv(); render(); if (!jAfter() && !giftSheet() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
+  hunt: () => { if (jOn() && (S.jx || {}).sh === 1 && $('#sheet').hidden) { closeOv(); render(); jAfter(); return; } closeSheet(); hunt(); },
+  jok: () => { closeSheet(); if (jAfter()) return; const d = U.jfrom === 'dn'; U.jfrom = ''; if (d && has('battles') && S.party.length && openNeed() <= 0 && (!S.lad.day || (dayOld() && dayDone()))) BA.bdone(); else if (typeof raidArrive === 'function' && raidGo()) raidArrive(); },
   later: () => { cancelAnimationFrame(E.raf); encQuiet(); closeOv(); render(); },
   skip: () => { if (E.busy) return; cancelAnimationFrame(E.raf); dropPend(E.e); S.cst = 0; save(); hunt(); },
   toshop: () => { closeOv(); U.tab = 'butikk'; render(); },
@@ -1148,7 +1195,7 @@ window.addEventListener('storage', ev => { if (ev.key === KEY) tabShow(); });
 render();
 clockCheck();
 netTime().then(o => { if (o != null && clockCheck() && $('#ov').hidden) render(); });
-if (S.started && S.timer) showTimer(); else if (!(typeof liveGate === 'function' && liveGate()) && S.started) { if (S.tour !== TOURV) tourShow(0); else if (!whatsNew() && !giftSheet() && typeof raidArrive === 'function' && raidGo()) raidArrive(); }
+if (S.started && S.timer) showTimer(); else if (!(typeof liveGate === 'function' && liveGate()) && S.started) { if (S.tour !== TOURV) tourShow(0); else if (!whatsNew() && !giftSheet() && !jAfter() && typeof raidArrive === 'function' && raidGo()) raidArrive(); }
 ghPull();
 setTimeout(() => PACK.init(), 2500);
 /* Adressen …/#lab åpner demoen direkte. */

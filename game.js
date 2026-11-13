@@ -355,8 +355,8 @@ function wildLv(id, t) {
 const KEY = 'fokusdex.v1';
 function fresh() {
   return {
-    v: 1, mig: 14, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
-    items: { poke: 15, great: 0, ultra: 0, dusk: 0, master: 0, gberry: 0, candy: 0, stone: 0, mstone: 0, incense: 0, potion: 0, super: 0, hyper: 0, maxp: 0, heal: 0, revive: 0, maxrev: 0, ash: 0 }, charm: 0, ring: 0, lst: {},
+    v: 1, mig: 15, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
+    items: { poke: 20, great: 0, ultra: 0, dusk: 0, master: 0, gberry: 0, candy: 0, stone: 0, mstone: 0, incense: 0, potion: 0, super: 0, hyper: 0, maxp: 0, heal: 0, revive: 0, maxrev: 0, ash: 0 }, charm: 0, ring: 0, lst: {},
     lure: 0, slure: 0, prism: 0, shb: null,
     mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, routes: [1], eggs: [], pend: [], incOn: 0,
     log: {}, fm: {},
@@ -392,19 +392,42 @@ function migrate11() {
 }
 /* Mewtwo og Deoxys har byttet klasse (Mewtwo står nå sammen med Arceus, Deoxys er mytisk): et raid som venter, får nivået den nye klassen gir.
    En Dark Mewtwo du alt eier, får det den mørke alltid har (IV 31, Timid, og EV fullt ut hvis den ikke er trent ferdig). */
-/* NYE TING KOMMER ETTER HVERT (FEATS: nøkkel, trenernivå, navn, tekst på kortet som sier fra). S.ulk = det som er åpnet, S.news = kort som ikke er
-   lest. De som var i gang før dette kom (migrate13), beholder alt. */
-const FEATS = [['battles', 2, 'Battles', 'When you are done for the day, your team can fight: the League is eight battles to a Champion.'],
-  ['train', 3, 'Training', 'Open a Pokémon in Team and tap Train to raise its stats for coins.'],
-  ['held', 4, 'Held items', 'A Pokémon can hold a berry, a plate or gear. See its card in Team, or the Shop.']];
+/* REISEN: nye spillere får ting åpnet etter STUDIEDAGER (ikke trenernivå), én ny ting per dag, og ser det når dagen er ferdig («Done for today»).
+   JOURNEY: [nøkkel, studiedag, navn, tekst på arket]. S.j = 1 for dem som startet etter v63 (begin). S.jd = antall studiedager (en dag teller når
+   den når OPENMIN minutter, se grant). S.ulk = det som er åpnet, S.js = det som er vist. S.jx = engangsting underveis: b = første kamp er spilt,
+   r = raidintroen (1 = vis forklaringen, 2 = vist), sh = den garanterte shinyen (1 = vis arket, 2 = vist), mv = angrepstypene forklart.
+   JFREE = gaver når steget vises. De som startet før reisen fantes, har alt åpent (migrate13/15). */
+const JOURNEY = [['battles', 1, 'Battles', 'When the day is done, your team can fight. Pick the League, the Battle Frontier or the World Tournament for the day.'],
+  ['shop', 2, 'The Shop', 'Spend your coins on balls, packs and things for your team. A free Poké Pack and 10 Great Balls are yours.'],
+  ['shiny', 3, 'Shiny Pokémon', 'A shiny is rare, and here it is more than a new colour: perfect IVs, and every stat a little higher.'],
+  ['nature', 4, 'Nature and potential', 'Two of the same Pokémon are never quite equal. Here is why, and why it pays to keep the good ones.'],
+  ['train', 5, 'Training', 'Open a Pokémon in Team and tap Train to raise its stats with coins. A free Ultra Pack is yours.'],
+  ['held', 6, 'Held items', 'A Pokémon can hold a berry, a plate or gear in battle. See its card in Team, or the Shop.']];
+const FEATS = JOURNEY, JFREE = { shop: { pk: 'poke', great: 10 }, shiny: { pk: 'great' }, train: { pk: 'ultra' } }, JLAST = JOURNEY[JOURNEY.length - 1][1];
+/* Den garanterte shinyen på dag 3: en svak art fra områdene dine (den skal vise hva en shiny er, ikke bære laget). */
+const JSHINY = [19, 161, 263, 399, 504];
+const jOn = () => !!S.j && !S.jdone;
 const has = k => !!(S.ulk && S.ulk[k]);
 /* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
    Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
 const WNV = 62, WN = ['Deoxys is back among the rarest raids, next to Mewtwo and Arceus.', 'Cynthia now fights about as hard as Ghetsis, and Iris a little softer.', 'Beating Cynthia or Ghetsis pays far more than before. See for yourself.'];
-function featCheck() { S.ulk = S.ulk || {}; S.news = S.news || []; const l = tlv(); let ch = 0; for (const [k, lv] of FEATS) if (!S.ulk[k] && l >= lv) { S.ulk[k] = 1; S.news.push(k); ch = 1; } return ch; }
+function featCheck() { S.ulk = S.ulk || {}; if (!jOn()) return 0; let ch = 0; for (const [k, d] of JOURNEY) if (!S.ulk[k] && (S.jd || 0) >= d) { S.ulk[k] = 1; ch = 1; } return ch; }
+/* Alt åpent, uten ark (de som startet før reisen, og når reisen er ferdig). */
+function jAll() { S.ulk = S.ulk || {}; JOURNEY.forEach(f => { S.ulk[f[0]] = 1; }); S.news = []; }
+/* Gaven som hører til et steg, gitt når arket vises. Svaret er linjene til arket. */
+function jGift(k) {
+  const g = JFREE[k], out = []; if (!g) return out;
+  if (g.pk && PACKS[g.pk]) { S.fpk = S.fpk || {}; S.fpk[g.pk] = (S.fpk[g.pk] || 0) + 1; out.push(`A free ${PACKS[g.pk].n}: open it from the Focus page or the Shop`); }
+  if (g.great) { S.items.great = (S.items.great || 0) + g.great; out.push(`${g.great} Great Balls in your bag`); }
+  return out;
+}
+/* Den garanterte shinyen: første art fra JSHINY som finnes i områdene dine. Den blir fanget uansett (sure). */
+function jShiny() { const id = JSHINY.find(x => S.regions.includes(regOf(x))) || JSHINY[0], e = genEnc({ ids: [id] }); e.sh = 1; e.sure = 1; return e; }
 /* Deoxys er tilbake i øverste klasse (v62): et vanlig Deoxys-raid som venter, får nivået og HP-en den klassen gir. */
 function migrate14() { const R = S.raid; if (R && !R.dk && !R.ev && R.id === 386 && typeof LEG !== 'undefined') { delete R.hx; raidRelevel(R); } S.mig = 14; }
-function migrate13() { if (S.started) { S.ulk = {}; FEATS.forEach(f => { S.ulk[f[0]] = 1; }); S.news = []; } S.mig = 13; }
+function migrate13() { if (S.started) jAll(); S.mig = 13; }
+/* Reisen (v63) gjelder bare dem som starter etter den. Alle andre får alt (også det som var nytt i reisen: butikken, shiny, nature). */
+function migrate15() { if (S.started && !S.j) jAll(); S.mig = 15; }
 function migrate12() {
   const R = S.raid;
   if (R && !R.dk && (R.id === 150 || R.id === 386) && typeof LEG !== 'undefined') { delete R.hx; raidRelevel(R); }
@@ -438,6 +461,7 @@ function adopt(o) {
   if (!o.mig || o.mig < 12) migrate12();
   if (!o.mig || o.mig < 13) migrate13();
   if (!o.mig || o.mig < 14) migrate14();
+  if (!o.mig || o.mig < 15) migrate15();
   /* Et forsøk kan ikke være eldre enn raidet selv (S.raid.at = dagen det kom). Et slikt merke kommer fra en eldre appversjon som flettet inn
      forsøkene fra et tidligere raid av samme art: de gjelder ikke dette. */
   if (S.raid && S.raid.at && S.raid.day && S.raid.day < S.raid.at) { S.raid.tries = 0; S.raid.day = ''; }
@@ -695,7 +719,7 @@ function genEnc(o = {}) {
   return { id, lv, sh: Math.random() < Math.min(SHINYCAP, shinyOdds() * (o.egg ? 4 : 1) * (o.shm || 1) * (typeof evShiny === 'function' ? evShiny() : 1)) ? 1 : 0, t: tierOf(id), tr: isLeg(id) ? 4 : 3, g: rollG(id) };
 }
 /* Sjansen for fangst. zone: 0 = bom, 1 = grønn sone, 2 = gull. */
-const catchP = (id, ball, zone, e) => ball === 'master' ? 1 : Math.min(0.97, Math.pow(D(id)[3] / 255, 0.45) * BALLM[ball] * (ball === 'dusk' && isLeg(id) ? LEGBALL : 1) * (e && e.fed ? BERRYM : 1) * [0.5, 1, 1.6][zone]);
+const catchP = (id, ball, zone, e) => ball === 'master' || (e && e.sure) ? 1 : Math.min(0.97, Math.pow(D(id)[3] / 255, 0.45) * BALLM[ball] * (ball === 'dusk' && isLeg(id) ? LEGBALL : 1) * (e && e.fed ? BERRYM : 1) * [0.5, 1, 1.6][zone]);
 /* Sonene på timing-måleren i prosent: grønn bredde og gull bredde. Sjeldnere = smalere og raskere. */
 const zones = (e, ball) => ({ g: Math.max(14, 36 - e.t * 5 + (ball === 'great' ? 4 : ball === 'poke' ? 0 : 8)), au: 7, sp: 0.9 + e.t * 0.22 });
 /* Det en fangst gir utover Pokémonen: mynter for en ny art (NEWCOIN etter sjeldenhet), for et perfekt kast (PERFCOIN), og for flere fangster på rad uten
@@ -788,6 +812,8 @@ function grant(fag, real, full, plan, re) {
     if (m.lv > l0) R.ups.push(Object.assign({ u, l0, l1: m.lv, evo: evoOpts(m).some(x => x.ok) }, learnUp(m, l0)));
   });
   for (const q of QUESTS) if (day.m - min < q.m && day.m >= q.m) { q.give(); R.gifts.push(`Daily goal, ${q.n}: ${q.r}`); }
+  /* Reisen: dagen teller som en studiedag når den når OPENMIN minutter (én gang per dag). */
+  if (jOn() && day.m - min < OPENMIN && day.m >= OPENMIN && S.jt !== k) { S.jt = k; S.jd = (S.jd || 0) + 1; featCheck(); R.jday = S.jd; }
   /* Raid: sjeldent, og aldri til fast tid (raidRoll i league.js). Dagens første OPENMIN minutter teller som en studiedag og gir én trekning,
      og dagsmålet nådd gir én til. */
   if (typeof raidRoll === 'function' && S.party.length) {
@@ -837,6 +863,7 @@ function grant(fag, real, full, plan, re) {
       else { encs.push(legEnc()); R.gifts.push(`The ${F(fag).n} badge is yours. A legendary encounter is waiting.`); }
     }
   }
+  if (jOn() && has('shiny') && !(S.jx || {}).sh) { (S.jx = S.jx || {}).sh = 1; encs.push(jShiny()); R.jsh = 1; }
   R.enc = encs.length;
   if (S.charm > 0 && n > 0) { S.charm--; R.gifts.push(`Shiny Charm: ${CHARM.m}× shiny odds this session${S.charm ? ` · ${S.charm} more session${S.charm > 1 ? 's' : ''}` : ' · it has now faded'}`); }
   S.pend.push(...encs);
@@ -997,7 +1024,7 @@ function toggleRoute(r) {
 function dexCount(r) { const g = REG[r]; let c = 0; for (let id = g.a; id <= g.b; id++) if (S.caught[id]) c++; return c; }
 /* Første start: timer som alt er gjort i fagene gir 60 mynter per time og et forsprang på merkene. */
 function begin(id) {
-  S.started = 1; S.wn = WNV;
+  S.started = 1; S.wn = WNV; S.j = 1; S.jd = 0; S.ulk = {}; S.js = []; S.jx = {}; if (typeof TOURV !== 'undefined') S.tour = TOURV;
   let head = 0;
   for (const f in S.fag) { const g = S.fag[f]; head += g.b; g.ms = Math.min(3, Math.floor(g.b / (g.t * 60) * 4)); }
   const coins = Math.round(Math.min(head, STARTCAP) / 60 * 60);
