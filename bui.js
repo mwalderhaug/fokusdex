@@ -502,15 +502,16 @@ function ladderCard() {
   const prog = lapPips(), row = `<div class="lrow myst"><span class="tsb qmb" aria-hidden="true"><i>?</i></span><div class="sp"><div class="sm tn">${esc(leagueTag())}</div><b>${nextHint()}</b></div></div>`;
   const fac = `<div class="modec"><span class="ficon">F</span><div class="sp"><b>Battle Frontier</b><div class="sm tn">${R ? `Round ${R.round} · ${R.w}/${FACN} wins · streak ${R.streak}` : `Rent 4 of 7 random Pokémon · everything is Lv ${FACLV}${S.fac.best ? ' · best streak ' + S.fac.best : ''}`}</div></div></div>`;
   const tag = m => bo.mode === m ? `<span class="bonus">Bonus · coins ×${DAYCOIN}</span>` : '';
-  const lab = isAdmin() ? '<button type="button" class="btn wide nf" data-a="lab">Sandbox · test anything</button>' : '', rules = '<button type="button" class="btn wide nf" data-a="rules">Rules and rewards</button>';
+  /* Sandbox og regelarket ligger i Profile, ikke på forsiden. */
+  const lab = '', rules = '';
   /* World Tournament: dagens cup. */
   const W = pwt(), WR = pwtRun(), wc = WR ? CUPS[WR.wd] : cupNow();
   const charm = S.charm > 0 ? `<p class="sm" style="color:var(--gold)">Shiny Charm: ${CHARM.m}× shiny odds for your next ${S.charm} focus session${S.charm > 1 ? 's' : ''}.</p>` : '';
   const one = MODESN < MODES.length;
   /* Ingen kampdag er åpen – eller den som står åpen, er fra en tidligere dag og ferdig: da er forsiden tilbake til vanlig, og kampene åpnes med «Done for today». */
   if (!L.day || (dayOld() && dayDone())) return `<div class="card stack"><div class="row" style="justify-content:space-between"><b>Battles</b><span class="pill tn">Lap ${L.lap + 1}</span></div>${row}${prog}
-    <p class="sm">${one ? `When you are done studying, you choose ${MODESN === 1 ? 'one' : MODESN} of three ways to battle for the day` : 'Three ways to battle once you are done studying'}: the League (your own team, eight battles to a Champion, and one loss ends the lap), the Battle Frontier (rental Pokémon at Lv ${FACLV}, items and encounters) ${one ? 'or' : 'and'} the World Tournament (a daily cup, three on three, for coins and a pack of encounters).${one ? ' One of them pays bonus coins each day: you see which when you choose.' : ''}</p>
-    ${openNeed() > 0 ? `<p class="sm tn" style="color:var(--gold)">The battles open after ${OPENMIN} minutes of focus today: ${openNeed()} to go.</p>` : ''}<button type="button" class="btn wide" data-a="bdone"${openNeed() > 0 ? ' disabled' : ''}>Done for today · open battles</button>${lab}${rules}</div>${charm}`;
+    <p class="sm">League, Battle Frontier or World Tournament: ${one ? 'you choose when the battles open' : 'all three are yours once the battles open'}.</p>
+    ${openNeed() > 0 ? `<p class="sm tn" style="color:var(--gold)">${openNeed()} more ${openNeed() === 1 ? 'minute' : 'minutes'} of focus today opens them.</p>` : ''}<button type="button" class="btn wide" data-a="bdone"${openNeed() > 0 ? ' disabled' : ''}>Open the battles</button></div>${charm}`;
   /* Kamper fra en tidligere dag kan tas helt til en ny økt starter. Da gjelder den dagens fokus og den dagens bonus, og det skal være tydelig. */
   const old = dayOld(), when = dayWord(L.day), oldc = old ? `<div class="card stack oldday"><div class="row" style="justify-content:space-between"><b>Battles from ${when.replace(/^on /, '')}</b><span class="pill tn">${dayDone() ? 'Done' : 'Not played yet'}</span></div><p class="sm">These are the battles you opened ${when}. They pay by that day's focus (coins ×${studyMult()} from ${hrs(ladMin())} h) and that day's bonus mode. They close when you start a focus session.</p></div>` : '';
   /* Kampene er åpnet, men dagens modus er ikke valgt ennå (valget ble utsatt). */

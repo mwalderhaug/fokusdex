@@ -1499,6 +1499,17 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .sbxbar .sp{display:flex;flex-direction:column;flex:1 1 auto;min-width:0}.sbxbar b{color:var(--gold);font-size:14px;letter-spacing:.02em}
 .sbxbar .btn.gold{background:var(--gold);color:#2a2109}
 .sprb.plt>.spr{filter:var(--pf)}
+/* Studiemodus: forsiden før «Done for today». Luftig, og bare det som trengs. */
+.study{display:flex;flex-direction:column;gap:16px;padding-top:10px}
+.st-top{padding:4px 58px 0 4px}
+.st-l{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2)}
+.st-q{margin-top:9px}
+.st-done{margin-top:4px;background:transparent;border:1px solid rgba(255,255,255,.16)}
+.st-cap{text-align:center;margin-top:-6px}
+.morel{display:block;margin:14px auto 0;padding:4px 8px;background:none;border:0;color:var(--ink2);font:inherit;font-size:13px;text-decoration:underline;text-underline-offset:3px}
+.newsc{border:1px solid var(--sage)}
+.newsp{display:inline-block;margin-right:4px;padding:2px 7px;border-radius:999px;background:var(--sage);color:#141310;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.lockc{opacity:.75}
 .dkskip{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:60;padding:6px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.28);background:rgba(10,12,18,.72);color:#fff;font:600 12px/1 inherit;letter-spacing:.02em;backdrop-filter:blur(4px)}
 /* Shiny Arceus: en gullglød rundt figuren, også med plate. Den følger størrelsen på figuren (--s) og har ingen egen animasjon, så den aldri tar
    plassen til en annen (avsløringen ved fangst, partneren som vipper). */

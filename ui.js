@@ -221,17 +221,31 @@ function renderNav() {
 function render() {
   buildFags();
   if (!S.started) { $('#nav').hidden = true; $('#main').innerHTML = ''; return intro(); }
-  $('#nav').hidden = false;
-  /* Achievements: summen regnes én gang per tegning. Når et nytt mål er nådd siden sist, sies det fra én gang. */
-  { const as = U.as = achSum(); if (U.asN != null && as.open > U.asN) setTimeout(() => toast('Achievement reached. Tap your picture to claim the reward.'), 700); U.asN = as.open; }
+  /* Før «Done for today» finnes bare Focus, uten faner (dayOpenQ). */
+  const open = dayOpenQ(); if (!open) U.tab = 'fokus'; $('#nav').hidden = !open;
+  if (featCheck()) save(true);
+  /* Achievements: summen regnes én gang per tegning. Når et nytt mål er nådd siden sist, sies det fra én gang (ikke mens en studerer). */
+  { const as = U.as = achSum(); if (open) { if (U.asN != null && as.open > U.asN) setTimeout(() => toast('Achievement reached. Tap your picture to claim the reward.'), 700); U.asN = as.open; } }
   renderNav();
   /* På en eventdag får forsiden eventets farger og en annen oppstilling (se VIEW.fokus). Eventet trekkes når dagens modus velges (modePick). */
   const E = U.tab === 'fokus' && S.party.length && typeof evNow === 'function' ? evNow() : null, EI = E ? evInfo(E) : null;
   $('#main').innerHTML = `<div class="wrap${E ? ' evpage ev-' + E.k : ''}${SBX ? ' insbx' : ''}"${E ? ` style="--ec:${EI.c};--ec2:${EI.c2 || EI.c}"` : ''}>${typeof sbxBar === 'function' ? sbxBar() : ''}${helpBtn()}${VIEW[U.tab]()}</div>`;
   /* Et område som nettopp ble åpnet (av nivå eller antall arter), sies fra om én gang. */
-  if (S.nreg && S.nreg.length) { const l = S.nreg; S.nreg = []; save(true); setTimeout(() => toast(`New area: ${l.join(' and ')} ${l.length > 1 ? 'are' : 'is'} open. See Shop · Routes.`), 400); }
+  if (open && S.nreg && S.nreg.length) { const l = S.nreg; S.nreg = []; save(true); setTimeout(() => toast(`New area: ${l.join(' and ')} ${l.length > 1 ? 'are' : 'is'} open. See Shop · Routes.`), 400); }
 }
 const VIEW = {};
+/* DAGEN HAR TO DELER. Før du har trykket «Done for today», viser appen bare det som har med studiet å gjøre: fag, lengde, Start, dagens framdrift og
+   fangsten etter en økt. Laget, kampene, butikken og resten kommer fram når du er ferdig (S.dn = dagen det ble trykket). En kampdag som alt er åpnet
+   i dag, og Sandbox, teller som ferdig. */
+const dayOpenQ = () => !S.started || !!SBX || S.dn === dayKey() || (S.lad && S.lad.day === dayKey());
+function studyView(lock, mid, td) {
+  const st = streak(), q = QUESTS.find(x => td < x.m);
+  return `<div class="study"><div class="st-top"><div class="row" style="justify-content:space-between"><span class="st-l">Today</span><span class="sm tn">${hrs(td)} of ${hrs(S.cap)} h${st >= 2 ? ` · ${st}-day streak` : ''}</span></div><div class="bar" style="margin-top:8px"><i style="width:${Math.min(100, Math.round(td / S.cap * 100))}%"></i></div>${q ? `<p class="sm st-q">Next: ${q.n} · ${q.r}</p>` : ''}</div>${lock}${mid}
+    <button type="button" class="btn wide st-done" data-a="dn">Done for today</button><p class="sm st-cap">Your team, the battles and the shop open when you are done.</p></div>`;
+}
+/* Kort som sier fra om noe nytt (FEATS), og kortet som står der kampene kommer. */
+const newsEl = () => (S.news || []).map(k => { const f = FEATS.find(x => x[0] === k); return f ? `<div class="card newsc"><div class="row" style="justify-content:space-between"><b><span class="newsp">New</span> ${f[2]}</b><button type="button" class="btn sm2" data-a="newsok" data-k="${k}">Got it</button></div><p class="sm" style="margin-top:6px">${f[3]}</p></div>` : ''; }).join('');
+const lockCard = k => { const f = FEATS.find(x => x[0] === k); return f ? `<div class="card lockc"><b>${f[2]}</b><p class="sm" style="margin-top:4px">Opens at trainer level ${f[1]}. You are level ${tlv()}.</p></div>` : ''; };
 function enter() { const w = $('#main .wrap'); if (w) w.classList.add('enter'); }
 
 /* ---------- Din egen figur ----------
@@ -350,6 +364,7 @@ VIEW.fokus = () => {
   const w = rateOf(fag), em = Math.round(min * w), subj = Object.keys(FAGS).filter(isSubj), oth = Object.keys(FAGS).filter(k => !isSubj(k)), chip = k => `<button type="button" class="chip" data-a="fag" data-k="${k}" aria-pressed="${fag === k}">${esc(F(k).n)}</button>`;
   const n = Math.floor(Math.min(em, left) / 20) + (min * w >= 25 && left >= em ? 1 : 0) + (S.incOn ? 1 : 0) + (S.lure > 0 ? 1 : 0);
   const rested = !(S.log[dayKey()] || {}).s, dx = (S.log[dayKey()] || {}).x || 0;
+  const hasMore = (subj.length > 0 && oth.length > 0) || S.regions.length > 1, more = !!U.more || (subj.length > 0 && !isSubj(fag));
   let top = topBar(), h = '';
   if (p) {
     const ev = evoOpts(p), nx = ev.find(x => !x.ok), rdy = ev.find(x => x.ok), a = xpAt(p.lv), b = xpAt(p.lv + 1);
@@ -359,12 +374,15 @@ VIEW.fokus = () => {
       <div class="bar" style="margin-top:5px"><i style="width:${Math.round((p.xp - a) / (b - a) * 100)}%"></i></div></div></button>`;
   }
   if (S.party.length > 1 || S.mons.length > 1) h += `<button type="button" class="card teamrow" data-a="tab" data-k="lag" aria-label="Open team"><span class="sm">Team</span><span class="tr-s">${S.party.slice(1).map(u => { const m = monBy(u); return m ? spr(m.id, { it: m.item, sh: m.sh, mega: m.mega, s: '38px' }) : ''; }).join('')}${Array.from({ length: 6 - S.party.length }, () => '<i></i>').join('')}</span><span class="sm tn">${S.mons.length} in box ›</span></button>`;
+  const iPend = h.length;
   if (S.pend.length) h += `<button type="button" class="card pendb" data-a="hunt" style="text-align:left;width:100%"><span class="grass live"><i></i><i></i><i></i><i></i></span><span class="sp"><b>${S.pend.length} ${S.pend.length === 1 ? 'encounter waiting' : 'encounters waiting'}</b><br><span class="sm">Something is rustling in the grass. Tap to step in.</span></span></button>`;
-  h += `<div class="card">${subj.length ? `<div class="lab">Subject</div><div class="chips">${subj.map(chip).join('')}</div><div class="lab" style="margin-top:14px">Other things · count at half value</div><div class="chips">${oth.map(chip).join('')}</div>` : `<div class="lab">Subject</div><div class="chips">${oth.map(chip).join('')}</div>`}
+  h += `<div class="card">${subj.length ? `<div class="lab">Subject</div><div class="chips">${subj.map(chip).join('')}</div>${more ? `<div class="lab" style="margin-top:14px">Other things · count at half value</div><div class="chips">${oth.map(chip).join('')}</div>` : ''}` : `<div class="lab">Subject</div><div class="chips">${oth.map(chip).join('')}</div>`}
     <div class="lab" style="margin-top:14px">Length</div><div class="chips">${[25, 45, 60, 75, 90].map(m => `<button type="button" class="chip tn" data-a="min" data-k="${m}" aria-pressed="${min === m}">${m} min</button>`).join('')}</div>
-    ${S.regions.length > 1 ? `<div class="lab" style="margin-top:14px">Routes · tap to turn on or off</div><div class="chips">${S.regions.map(r => `<button type="button" class="chip" data-a="reg" data-k="${r}" aria-pressed="${S.routes.includes(r)}">${REG[r].n}</button>`).join('')}</div>` : ''}
+    ${more && S.regions.length > 1 ? `<div class="lab" style="margin-top:14px">Routes · tap to turn on or off</div><div class="chips">${S.regions.map(r => `<button type="button" class="chip" data-a="reg" data-k="${r}" aria-pressed="${S.routes.includes(r)}">${REG[r].n}</button>`).join('')}</div>` : ''}
+    ${hasMore ? `<button type="button" class="morel" data-a="smore" aria-expanded="${more}">${more ? 'Fewer options' : 'More options'}</button>` : ''}
     <button type="button" class="go" data-a="start" style="margin-top:16px">Start ${min} min</button>
     <p class="sm" style="margin-top:10px;text-align:center">${left <= 0 ? 'Your team is tired today: half XP and no encounters. Rest gives a bonus tomorrow.' : `${n} ${n === 1 ? 'encounter' : 'encounters'} · ${nb(Math.min(em, left) * 10 * (rested ? 1.5 : 1))} XP${rested ? ' with rested bonus' : ''}${F(fag).ty.length ? ' · more ' + F(fag).ty.map(t => TYN[t].toLowerCase()).join(' and ') : ''}${w < 1 ? `<br>${esc(F(fag).n)} counts at half value: ${min} min is worth ${em}.` : ''}`}</p></div>`;
+  const iToday = h.length;
   h += `<div class="card"><div class="row" style="justify-content:space-between"><b>Today</b><span class="sm tn">${hrs(td)} of ${hrs(S.cap)} h</span></div><div class="bar" style="margin-top:8px"><i style="width:${Math.min(100, Math.round(td / S.cap * 100))}%"></i></div>${dx ? `<p class="sm tn" style="margin-top:6px">Includes ${hrs(dx)} h of other things, counted as ${hrs(dx * OTHERW)} h.</p>` : ''}
     ${mulBox(td)}
     <div class="quests">${QUESTS.map(q => `<span class="${td >= q.m ? 'on' : ''}"><b>${td >= q.m ? '✓ ' : ''}${q.n}</b>${q.r}</span>`).join('')}</div>
@@ -372,7 +390,9 @@ VIEW.fokus = () => {
     ${S.incOn ? '<p class="sm" style="margin-top:10px">Incense is lit for your next session.</p>' : ''}${S.lure > 0 ? `<p class="sm" style="margin-top:10px">Lure: one more encounter in your next ${S.lure} session${S.lure > 1 ? 's' : ''}.</p>` : ''}${S.slure > 0 ? `<p class="sm" style="margin-top:10px">Super Lure: rarer Pokémon in your next ${S.slure} session${S.slure > 1 ? 's' : ''}.</p>` : ''}${shinyBoost() > 1 ? `<p class="sm" style="margin-top:10px;color:var(--gold)">${SHOP[S.shb.k] ? SHOP[S.shb.k].n : 'Shiny incense'}: shiny odds ×${shinyBoost()} for ${hLeft(S.shb.until - Date.now())} more.</p>` : ''}${S.prism ? '<p class="sm" style="margin-top:10px;color:var(--gold)">Prism Lure: the next raid has a 1 in 5 chance of being shiny.</p>' : ''}${S.boost ? `<p class="sm" style="margin-top:10px;color:var(--gold)">Boss perk: ${S.boost.m}× coins for your next ${S.boost.n} session${S.boost.n > 1 ? 's' : ''}.</p>` : ''}</div>`;
   /* En vanlig dag ligger kampene nederst. På en eventdag står eventet og kampene øverst, og det som har med studeringen å gjøre, under. */
   const CL = clockLock(); if (CL) top += clockCard(CL);
-  const battles = S.party.length ? raidCard() + ladderCard() : '', E = battles && typeof evNow === 'function' ? evNow() : null;
+  if (!dayOpenQ()) return studyView(CL ? clockCard(CL) : '', h.slice(iPend, iToday), td);
+  top += newsEl();
+  const battles = S.party.length ? (has('battles') ? raidCard() + ladderCard() : lockCard('battles')) : '', E = battles && has('battles') && typeof evNow === 'function' ? evNow() : null;
   return E ? `${top}${battles}<div class="evsep"><span>Study</span></div>${h}` : top + h + battles;
 };
 
@@ -449,7 +469,7 @@ function monSheet(m) {
   openSheet(`<div class="shead">${spr(m.id, { it: m.item, ani: 1, sh: m.sh, mega: m.mega })}<div class="sp"><div class="sm tn">No. ${m.id} · ${REG[regOf(m.id)].n}${m.sh === 2 ? ' · <b style="color:#ff8a2a">Dark</b>' : m.sh ? ' · <b style="color:var(--gold)">Shiny</b>' : ''}</div>${ed ? `<div class="nkrow"><input class="nkin" id="nkin" maxlength="12" value="${esc(m.nn || '')}" placeholder="${esc(d[0])}" autocomplete="off" autocapitalize="words" aria-label="Nickname"><button type="button" class="btn sm2 pri" data-a="nicksave" data-u="${m.u}">Save</button></div>` : `<div class="pn">${esc(mName(m))}${gs(m)}<button type="button" class="nkb" data-a="nick" data-u="${m.u}" aria-label="Give a nickname">✎</button></div>`}${m.nn && !ed ? `<div class="sm">${esc(spName(m))}</div>` : ''}<div class="row" style="margin-top:6px;flex-wrap:wrap;gap:6px">${types(m.id)} ${tierEl(m.id)}${fm && fm[1] === 'Origin' ? ' <span class="pill">Origin Forme</span>' : canForm ? ' <span class="pill">Altered Forme</span>' : ''}</div></div></div>
     <div><div class="row sm tn" style="justify-content:space-between"><span>Level ${m.lv}</span><span>${n > 1 ? 'You have ' + n + ' of these' : 'Your only one'}</span></div><div class="bar" style="margin-top:6px"><i style="width:${Math.round((m.xp - a) / (b - a) * 100)}%"></i></div></div>
     <div class="card2" style="--tc:var(--t${d[1]})">${hexEl(m)}
-      <div class="row" style="flex-wrap:wrap;gap:6px;justify-content:center"><span class="pill">${NAT[m.nat]}${up !== dn ? ` · +${SN[up]} −${SN[dn]}` : ' · neutral'}</span><span class="pill" style="color:${j.sum >= 121 ? 'var(--gold)' : j.sum >= 91 ? 'var(--sage)' : 'var(--ink2)'}">Judge: ${j.t}${j.sum >= 186 ? '' : ' · best ' + SN[j.best]}</span><span class="pill tn">EVs ${evt} of 510</span></div>${abLine(m.id, m.mega)}<button type="button" class="btn sm2 wide" data-a="train" data-u="${m.u}" style="margin-top:6px">Train · raise its stats for coins</button><button type="button" class="btn sm2 wide" data-a="candy" data-u="${m.u}"${S.items.candy > 0 && m.lv < 100 ? '' : ' disabled'}>Rare Candy · one level up (${S.items.candy})</button></div>
+      <div class="row" style="flex-wrap:wrap;gap:6px;justify-content:center"><span class="pill">${NAT[m.nat]}${up !== dn ? ` · +${SN[up]} −${SN[dn]}` : ' · neutral'}</span><span class="pill" style="color:${j.sum >= 121 ? 'var(--gold)' : j.sum >= 91 ? 'var(--sage)' : 'var(--ink2)'}">Judge: ${j.t}${j.sum >= 186 ? '' : ' · best ' + SN[j.best]}</span>${has('train') ? `<span class="pill tn">EVs ${evt} of 510</span>` : ''}</div>${abLine(m.id, m.mega)}${has('train') ? `<button type="button" class="btn sm2 wide" data-a="train" data-u="${m.u}" style="margin-top:6px">Train · raise its stats for coins</button>` : ''}<button type="button" class="btn sm2 wide" data-a="candy" data-u="${m.u}"${S.items.candy > 0 && m.lv < 100 ? '' : ' disabled'}>Rare Candy · one level up (${S.items.candy})</button></div>
     ${heldCard(m)}
     <div><div class="lab">Base stats${isMega(m) ? ' · Mega form' : ''}</div>${bstEl(m.id, m.mega, m.sh)}</div>
     <div><div class="row" style="justify-content:space-between;margin-bottom:7px"><div class="lab" style="margin:0">Moves${fresh ? ' · <b style="color:var(--gold)">new move learned</b>' : ''}</div>${more ? `<button type="button" class="btn sm2" data-a="mvpick" data-u="${m.u}">Change moves</button>` : ''}</div>
@@ -466,6 +486,7 @@ function monSheet(m) {
 }
 /* Det den holder, på kortet. Arceus med en plate: typen står der. */
 function heldCard(m) {
+  if (!has('held')) return '';
   const h = heldOf(m), own = Object.keys(HELD).some(k => S.items[k] > 0);
   return `<div class="card heldc"><div class="item" style="padding:0"><span class="ic">${h ? heldEl(m.item, '30px') : '<span class="hnone"></span>'}</span><div class="sp"><div class="lab" style="margin:0 0 2px">Holding</div><b>${h ? h.n : 'Nothing'}</b><div class="sm">${h ? h.d + (h.g === 'once' ? ' · used up when it works' : '') + (plateTy(m) >= 0 ? ` · ${D(m.id)[0]} is ${TYN[h.ty]} type` : '') : own ? 'Give it a berry, a plate or a piece of gear.' : 'Berries, plates and gear are sold in the Shop.'}</div></div><button type="button" class="btn sm2" data-a="held" data-u="${m.u}">${h ? 'Change' : 'Give'}</button></div></div>`;
 }
@@ -587,7 +608,7 @@ VIEW.butikk = () => {
     ${SHELF.map(([name, ks]) => `<h2 class="h">${name}</h2>${SHELFD[name] ? `<p class="sm">${SHELFD[name]()}</p>` : ''}<div class="card" style="padding-top:6px;padding-bottom:6px">${ks.map(k => { const it = SHOP[k], lock = (it.lv && l < it.lv) || (it.ring && !S.ring), full = shopFull(k);
       return `<div class="item${lock ? ' lk' : ''}"><span class="ic">${ic(k)}</span><div class="sp"><b>${it.n}</b> <span class="sm tn">· ${shopHave(k)}</span><div class="sm">${it.d}</div></div><button type="button" class="btn sm2 ${S.coins >= it.p && !lock && !full ? 'pri' : ''}" data-a="buy" data-k="${k}"${S.coins < it.p || lock || full ? ' disabled' : ''}>${lock ? (it.ring && !S.ring ? 'Mega Ring' : 'Level ' + it.lv) : full ? shopFullTxt(k) : nb(it.p)}</button></div>`; }).join('')}</div>`).join('')}
     <h2 class="h">To hold in battle</h2><p class="sm">Berries, plates and gear. Each Pokémon can hold one, and it works by itself in the League, the tournament and raids.</p>
-    <button type="button" class="btn wide" data-a="heldshop">${(() => { const n = Object.keys(HELD).reduce((a, k) => a + heldTotal(k), 0); return `Berries, plates and gear · you own ${n}`; })()}</button>
+    <button type="button" class="btn wide" data-a="heldshop"${has('held') ? '' : ' hidden'}>${(() => { const n = Object.keys(HELD).reduce((a, k) => a + heldTotal(k), 0); return `Berries, plates and gear · you own ${n}`; })()}</button>
     <h2 class="h">Routes</h2>
     <div class="card" style="padding-top:6px;padding-bottom:6px">${[1, 2, 3, 4, 5].map(r => { const g = REG[r], has = S.regions.includes(r);
       return `<div class="item"><span class="ic"><span class="map"></span></span><div class="sp"><b>${g.n}</b><div class="sm tn">${g.b - g.a + 1} species · ${dexCount(r)} caught</div>${has ? '' : `<div class="sm tn" style="margin-top:4px">Opens at trainer level ${g.lv} (you are ${tlv()}) or ${g.dex} species caught (you have ${dexAll()})</div><div class="bar" style="margin-top:6px"><i style="width:${Math.round(Math.min(1, Math.max((tlv() - 1) / Math.max(1, g.lv - 1), dexAll() / g.dex)) * 100)}%"></i></div>`}</div>${has ? `<button type="button" class="btn sm2${S.routes.includes(r) ? ' sage' : ''}" data-a="reg" data-k="${r}">${S.routes.includes(r) ? 'On' : 'Off'}</button>` : '<span class="pill">Locked</span>'}</div>`; }).join('')}</div>
@@ -610,7 +631,7 @@ VIEW.profil = () => {
       return `<div class="card avcard" style="--rk:${R.c}"><button type="button" class="avpb" data-a="ach" aria-label="Achievements. Rank: ${R.n}">${avFrame(R, 'lg', 1)}</button><span class="sp"><span class="sm">${S.av ? esc(avName()) : 'No character yet'}</span><b>${R.n}</b>
         <span class="bar"><i style="width:${pct}%;background:${R.c}"></i></span><span class="sm tn">${R.p} of ${achTotal()} medals${R.nn ? ` · ${R.next - R.p} more to ${R.nn}` : ''}</span></span></div>
       <div class="row"><button type="button" class="btn sp${as.open ? ' gold' : ''}" data-a="ach">${as.open ? `${as.open} reward${as.open > 1 ? 's' : ''} ready` : 'Achievements'}</button><button type="button" class="btn sp" data-a="avatar">${S.av ? 'Change character' : 'Pick a character'}</button></div>`; })()}
-    <div class="card stack shwc"><div><b>Show the game</b><p class="sm" style="margin-top:4px">A trailer and an overview of what is in here, without giving away what is waiting. Made for showing a friend.</p></div><div class="row"><button type="button" class="btn sp gold" data-a="show">Open the showcase</button><button type="button" class="btn sp" data-a="tour">Start guide</button></div></div>
+    <div class="card stack shwc"><div><b>Show the game</b><p class="sm" style="margin-top:4px">A trailer and an overview of what is in here, without giving away what is waiting. Made for showing a friend.</p></div><div class="row"><button type="button" class="btn sp gold" data-a="show">Open the showcase</button><button type="button" class="btn sp" data-a="tour">Start guide</button></div><div class="row"><button type="button" class="btn sp" data-a="rules">Rules and rewards</button>${isAdmin() ? '<button type="button" class="btn sp" data-a="lab">Sandbox</button>' : ''}</div></div>
     <h2 class="h">Badges</h2><div class="card" style="padding-top:6px;padding-bottom:6px">${badges}</div>
     <p class="sm">Each badge fills with focus hours in that subject. 25, 50 and 75% give an epic encounter, and a full badge gives a legendary one. A reward needs time logged here in the app: ${MSGATE / 60} hours in the subject for each one, and ${BADGEGATE / 60} hours in all for the legendary.</p>
     <h2 class="h">Stats</h2>
@@ -917,7 +938,12 @@ function evoShow(m, from) {
 
 /* ---------- Handlinger ---------- */
 const A = {
-  tab: el => { U.tab = el.dataset.k; render(); $('#main').scrollTop = 0; enter(); },
+  tab: el => { if (!dayOpenQ()) return; U.tab = el.dataset.k; render(); $('#main').scrollTop = 0; enter(); },
+  smore: () => { U.more = !U.more; render(); },
+  newsok: el => { S.news = (S.news || []).filter(k => k !== el.dataset.k); save(true); render(); },
+  /* «Done for today»: resten av appen kommer fram. Er det studert nok til kampene (og de er åpnet for deg), åpnes kampdagen med det samme. */
+  dn: () => { if (typeof fairGate === 'function' && fairGate()) return; S.dn = dayKey(); stamp(); save(); sfx.open(); render(); $('#main').scrollTop = 0; enter();
+    if (has('battles') && S.party.length && openNeed() <= 0 && (!S.lad.day || (dayOld() && dayDone()))) BA.bdone(); else if (typeof raidArrive === 'function') raidArrive(); },
   lagv: el => { U.lag = el.dataset.k; render(); enter(); },
   fag: el => { U.fag = el.dataset.k; render(); },
   min: el => { U.min = +el.dataset.k; render(); },
@@ -928,7 +954,7 @@ const A = {
   pause: () => { togglePause(); paintTimer(); },
   early: () => endTimer(),
   quit: () => { if (!U.quit) { U.quit = 1; $('#t-quit').textContent = 'Tap again to cancel'; setTimeout(() => { U.quit = 0; const b = $('#t-quit'); if (b) b.textContent = 'Cancel'; }, 3000); return; } clearInterval(tick); dropAwake(); S.timer = null; save(true); document.title = 'Fokusdex'; closeOv(); render(); },
-  home: () => { encQuiet(); closeOv(); render(); if (typeof raidArrive === 'function') raidArrive(); },
+  home: () => { encQuiet(); closeOv(); render(); if (typeof raidArrive === 'function' && dayOpenQ()) raidArrive(); },
   hunt: () => hunt(),
   later: () => { cancelAnimationFrame(E.raf); encQuiet(); closeOv(); render(); },
   skip: () => { if (E.busy) return; cancelAnimationFrame(E.raf); dropPend(E.e); S.cst = 0; save(); hunt(); },
@@ -1095,14 +1121,14 @@ window.addEventListener('orientationchange', () => setTimeout(fixViewport, 300))
 load(); ghLoad();
 saveHook = ghSoon;
 /* kept = minutter fra økter som fulgte med da to lagringer møttes (jrMerge i game.js). */
-ghHook = (adopted, kept) => { const s = $('#gh-s'); if (s) s.textContent = ghState === 'ok' ? 'Sync is on.' : ghState; if ((adopted || kept) && !S.timer && ($('#ov').hidden || $('#nav').hidden)) { closeOv(); render(); toast(adopted ? 'Loaded a newer save from another device.' + (kept ? ` Your ${kept} min of focus on this device were kept.` : '') : `${kept} min of focus from another device were added.`); } };
+ghHook = (adopted, kept) => { const s = $('#gh-s'); if (s) s.textContent = ghState === 'ok' ? 'Sync is on.' : ghState; if ((adopted || kept) && !S.timer && ($('#ov').hidden || !S.started)) { closeOv(); render(); toast(adopted ? 'Loaded a newer save from another device.' + (kept ? ` Your ${kept} min of focus on this device were kept.` : '') : `${kept} min of focus from another device were added.`); } };
 /* En annen fane av appen har lagret noe nyere (tabSync i game.js): da vises det som gjelder nå. En økt som går, eier skjermen. */
 function tabShow() { if (!tabSync()) return false; if (S.timer) showTimer(); else if ($('#ov').hidden) render(); return true; }
 window.addEventListener('storage', ev => { if (ev.key === KEY) tabShow(); });
 render();
 clockCheck();
 netTime().then(o => { if (o != null && clockCheck() && $('#ov').hidden) render(); });
-if (S.started && S.timer) showTimer(); else if (!(typeof liveGate === 'function' && liveGate()) && S.started) { if (S.tour !== TOURV) tourShow(0); else if (typeof raidArrive === 'function') raidArrive(); }
+if (S.started && S.timer) showTimer(); else if (!(typeof liveGate === 'function' && liveGate()) && S.started) { if (S.tour !== TOURV) tourShow(0); else if (typeof raidArrive === 'function' && dayOpenQ()) raidArrive(); }
 ghPull();
 setTimeout(() => PACK.init(), 2500);
 /* Adressen …/#lab åpner demoen direkte. */

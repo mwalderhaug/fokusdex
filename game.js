@@ -355,7 +355,7 @@ function wildLv(id, t) {
 const KEY = 'fokusdex.v1';
 function fresh() {
   return {
-    v: 1, mig: 11, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
+    v: 1, mig: 13, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
     items: { poke: 15, great: 0, ultra: 0, dusk: 0, master: 0, gberry: 0, candy: 0, stone: 0, mstone: 0, incense: 0, potion: 0, super: 0, hyper: 0, maxp: 0, heal: 0, revive: 0, maxrev: 0, ash: 0 }, charm: 0, ring: 0, lst: {},
     lure: 0, slure: 0, prism: 0, shb: null,
     mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, routes: [1], eggs: [], pend: [], incOn: 0,
@@ -392,6 +392,14 @@ function migrate11() {
 }
 /* Mewtwo og Deoxys har byttet klasse (Mewtwo står nå sammen med Arceus, Deoxys er mytisk): et raid som venter, får nivået den nye klassen gir.
    En Dark Mewtwo du alt eier, får det den mørke alltid har (IV 31, Timid, og EV fullt ut hvis den ikke er trent ferdig). */
+/* NYE TING KOMMER ETTER HVERT (FEATS: nøkkel, trenernivå, navn, tekst på kortet som sier fra). S.ulk = det som er åpnet, S.news = kort som ikke er
+   lest. De som var i gang før dette kom (migrate13), beholder alt. */
+const FEATS = [['battles', 2, 'Battles', 'When you are done for the day, your team can fight: the League is eight battles to a Champion.'],
+  ['train', 3, 'Training', 'Open a Pokémon in Team and tap Train to raise its stats for coins.'],
+  ['held', 4, 'Held items', 'A Pokémon can hold a berry, a plate or gear. See its card in Team, or the Shop.']];
+const has = k => !!(S.ulk && S.ulk[k]);
+function featCheck() { S.ulk = S.ulk || {}; S.news = S.news || []; const l = tlv(); let ch = 0; for (const [k, lv] of FEATS) if (!S.ulk[k] && l >= lv) { S.ulk[k] = 1; S.news.push(k); ch = 1; } return ch; }
+function migrate13() { if (S.started) { S.ulk = {}; FEATS.forEach(f => { S.ulk[f[0]] = 1; }); S.news = []; } S.mig = 13; }
 function migrate12() {
   const R = S.raid;
   if (R && !R.dk && (R.id === 150 || R.id === 386) && typeof LEG !== 'undefined') { delete R.hx; raidRelevel(R); }
@@ -423,6 +431,7 @@ function adopt(o) {
   if (!o.mig || o.mig < 10) migrate10();
   if (!o.mig || o.mig < 11) migrate11();
   if (!o.mig || o.mig < 12) migrate12();
+  if (!o.mig || o.mig < 13) migrate13();
   /* Et forsøk kan ikke være eldre enn raidet selv (S.raid.at = dagen det kom). Et slikt merke kommer fra en eldre appversjon som flettet inn
      forsøkene fra et tidligere raid av samme art: de gjelder ikke dette. */
   if (S.raid && S.raid.at && S.raid.day && S.raid.day < S.raid.at) { S.raid.tries = 0; S.raid.day = ''; }
