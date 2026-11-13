@@ -266,14 +266,15 @@ function liveLoss() {
    Noen kampdager er spesielle. Hva som skjer, avgjøres i det kampene åpnes («Done for today») og vises ikke før da. Alt er fordeler: ingen event
    gjør noe vanskeligere, og en dag uten event er en helt vanlig dag. Dagene telles i kampdager, ikke i kalenderdager, så en dag uten studering
    bruker ikke opp noe. S.evt = { day, k, ty, stars } gjelder kampdagen day (k = '' når dagen er vanlig), S.evg = kampdager siden sist.
-   surge:  alle på din side som har en Mega-form, starter kampen i den (uten ring og stein).
+   surge:  høyst SURGEN av dine som har en Mega-form, starter kampen i den (uten ring og stein). Du velger hvem (S.evt.mg = u-ene deres);
+           uten valg er det de første på laget som har en form. Leide Pokémon i Frontier: de SURGEN første på laget.
    type:   dagens type får +15 % i alle verdier, og møtene du vinner er oftere av den typen.
    stars:  tre av dine egne som ikke står på laget, står i rampelyset: de kjemper på lagets nivå med +20 % i alle verdier.
    little: de som ennå kan utvikle seg, får +35 % i alle verdier.
    gold:   alle kamper gir 1,5 ganger så mange mynter. wind: ett forsøk til i ligaen og ett løp til i Frontier.
    lucky:  fem ganger så stor sjanse for shiny på alt du vinner eller åpner, og hver boss gir ett møte ekstra. camp: trening koster 40 % mindre. */
 const EVENTS = {
-  surge: { n: 'Mega Surge', c: '#b9a5e8', c2: '#7fd4f5', ic: 'M', s: 'Mega forms for free', d: 'Every Pokémon on your side that has a Mega form starts each battle Mega Evolved. No ring and no stones needed, and your own Mega is still yours to use.' },
+  surge: { n: 'Mega Surge', c: '#b9a5e8', c2: '#7fd4f5', ic: 'M', s: 'Three Mega forms for free', d: 'Three of your Pokémon that have a Mega form start each battle Mega Evolved today, and you choose which three. No ring and no stones needed, and your own Mega is still yours to use.' },
   type: { n: 'Festival', c: '#a6c59c', c2: '#e3c577', ic: '✦', s: '+15 % in every stat', d: '' },
   stars: { n: 'Spotlight', c: '#e3c577', c2: '#f1ede6', ic: '★', s: 'Three of yours shine', d: "Three Pokémon from your box are in the spotlight. Put them on the team: they fight at your team's level with +20 % in every stat, and keep the XP they earn." },
   little: { n: 'Little League', c: '#a6c59c', c2: '#7fa8e6', ic: '◔', s: '+35 % for the small ones', d: 'Your Pokémon that can still evolve get +35 % in every stat today.' },
@@ -282,7 +283,7 @@ const EVENTS = {
   lucky: { n: 'Lucky Day', c: '#e3a8cb', c2: '#e3c577', ic: '✧', s: 'Shiny odds ×5', d: 'Shiny odds are five times as high on every encounter you win or open today, and every boss gives one encounter more.' },
   camp: { n: 'Training Camp', c: '#d98f7e', c2: '#e3c577', ic: '▲', s: 'Training −40 %', d: 'Training points and Hyper Training cost 40 % less today.' }
 };
-const EVGAP = [0, 0.35, 0.65, 1], EVSTAT = { type: 1.15, stars: 1.2, little: 1.35 }, EVCOIN = 1.5, EVSHINY = 5, EVCAMP = 0.6;
+const EVGAP = [0, 0.35, 0.65, 1], EVSTAT = { type: 1.15, stars: 1.2, little: 1.35 }, EVCOIN = 1.5, EVSHINY = 5, EVCAMP = 0.6, SURGEN = 3;
 const evNow = () => { const e = S.evt; return e && e.k && EVENTS[e.k] && !!S.lad.day && e.day === S.lad.day ? e : null; };
 const evIs = k => { const e = evNow(); return !!e && e.k === k; };
 const evCoin = () => evIs('gold') ? EVCOIN : 1, evShiny = () => evIs('lucky') ? EVSHINY : 1, evPrice = () => evIs('camp') ? EVCAMP : 1;
@@ -305,6 +306,22 @@ function evInfo(e) {
   if (e.k === 'wind' && MODESN < MODES.length) { const ks = modeSt().ks; if (ks.length === 1 && ks[0] === 'league') return Object.assign({}, E, { s: 'One more attempt', d: 'You can lose once in the League today and still go on.' }); if (ks.length === 1 && ks[0] === 'factory') return Object.assign({}, E, { s: 'One more run', d: 'One more run in the Battle Frontier today.' }); }
   return E;
 }
+/* Mega Surge: hvem av dine som starter i Mega-formen i dag (u-ene, høyst SURGEN). Valget ligger i e.mg; før noe er valgt, er det de første på laget
+   som har en form. surgeCan = alle du eier som kan velges. surgeToggle legger til eller tar bort én (false når det allerede står SURGEN der). */
+const surgeOk = u => { const m = monBy(u); return !!m && megaOpts(m.id).length > 0; };
+function surgeList(e) {
+  e = e || evNow(); if (!e || e.k !== 'surge') return [];
+  return (Array.isArray(e.mg) ? e.mg : S.party).filter(surgeOk).slice(0, SURGEN);
+}
+const surgeCan = () => S.mons.filter(m => megaOpts(m.id).length > 0).sort((a, b) => (S.party.includes(b.u) - S.party.includes(a.u)) || b.lv - a.lv);
+function surgeToggle(u) {
+  const e = evNow(); if (!e || e.k !== 'surge' || !surgeOk(u)) return false;
+  const l = surgeList(e), i = l.indexOf(u);
+  if (i >= 0) l.splice(i, 1); else { if (l.length >= SURGEN) return false; l.push(u); }
+  e.mg = l; return true;
+}
+/* Er dette en av dine egne (og ikke en leid i Frontier eller en kopi uten plass i boksen)? */
+const evOwn = src => src.u != null && !!monBy(src.u) && monBy(src.u).id === src.id;
 /* Fordelen en av dine får i dag: m = ganger i alle verdier (1 = ingen), mega = formen den starter i, lv = nivået den kjemper på. */
 function evBoost(src, e) {
   e = e || evNow(); const o = { m: 1, mega: 0, lv: 0 }; if (!e || !src) return o;
@@ -312,7 +329,7 @@ function evBoost(src, e) {
   if (e.k === 'type' && ty.includes(e.ty)) o.m = EVSTAT.type;
   else if (e.k === 'stars' && src.u && (e.stars || []).includes(src.u)) { o.m = EVSTAT.stars; const L = Math.round(leagueLv()); if (src.lv < L) o.lv = L; }
   else if (e.k === 'little' && canEvolve(src.id)) o.m = EVSTAT.little;
-  else if (e.k === 'surge' && !src.mega) { const k = megaOpts(src.id); if (k.length) o.mega = k.includes(src.ms) ? src.ms : k[0]; }
+  else if (e.k === 'surge' && !src.mega && (!evOwn(src) || surgeList(e).includes(src.u))) { const k = megaOpts(src.id); if (k.length) o.mega = k.includes(src.ms) ? src.ms : k[0]; }
   return o;
 }
 /* De som står i rampelyset kjemper på lagets nivå: kampen får en kopi med det nivået. XP-en går likevel til den ekte (grantXp slår opp på u). */
@@ -321,9 +338,12 @@ const evSrc = m => { const b = evBoost(m); return b.lv ? Object.assign({}, m, { 
 function evApply(B) {
   const e = evNow(); if (!e || !B || B.mode === 'lab') return B;
   B.ev = e.k;
+  let mg = 0;
   for (const b of B.me) {
     const o = evBoost(b.src, e);
-    if (o.mega && !b.mega) { const st = statsOf(Object.assign({}, b.src, { mega: o.mega })), g = MEGA[o.mega - 1]; b.st = [b.st[0]].concat(st.slice(1)); b.ty = [g[2], g[3]]; b.mega = o.mega; b.mg = 0; b.name = b.src.nn || megaName(o.mega); b.evb = 'surge'; }
+    /* Høyst SURGEN starter som Mega: dine egne er valgt på forhånd (surgeList), leide telles i rekkefølgen de står. */
+    if (o.mega && !b.mega && mg >= SURGEN) o.mega = 0;
+    if (o.mega && !b.mega) { mg++; const st = statsOf(Object.assign({}, b.src, { mega: o.mega })), g = MEGA[o.mega - 1]; b.st = [b.st[0]].concat(st.slice(1)); b.ty = [g[2], g[3]]; b.mega = o.mega; b.mg = 0; b.name = b.src.nn || megaName(o.mega); b.evb = 'surge'; }
     if (o.m > 1) { b.st = b.st.map(v => Math.max(1, Math.round(v * o.m))); b.max = b.hp = b.st[0]; b.evb = e.k; }
   }
   return B;
@@ -1093,7 +1113,8 @@ function raidBattle(lead, demo) {
   const dd = diff(), lv = Math.max(10, Math.round(R.lv * dd.rlv)), e = Math.round((R.dk ? 85 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : R.sh ? 1 : 0, g: rollG(R.id), mega: defForm(R.id), ms: raidMega(R), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: (R.dk && dkMoves()) || raidMoves(R.id, lv) };
   const B = mkBattle(demo ? party : party.map(evSrc), [foe], legTr(R.id, R.dk), { mode: demo ? 'lab' : 'raid', raid: 1, st: TCL.supreme, k: 'legend', rd: 0, n: 0, lap: 0, ti: 0, bag: bagN(), xm: 3 * dd.xp, sm: 1, dc: dd.coin, boost: { mode: '', m: 1, xp: 1 } });
   B.tr.skill = dd.sk; if (demo) labMega(B); else evApply(B);
-  const f = B.foe[0], big = RAIDHP[L.t - 1] * dd.rhp * (R.dk ? 1 : R.hx || 1); f.max = f.hp = Math.round(f.max * big); f.big = big; if (R.dk) f.short = 'D.Mewtwo';
+  /* I demoen har Mewtwo vanlig HP (ikke raid-HP), så en kommer fram til forvandlingen: det er den demoen er til for. */
+  const f = B.foe[0], big = demo === 150 ? 1 : RAIDHP[L.t - 1] * dd.rhp * (R.dk ? 1 : R.hx || 1); f.max = f.hp = Math.round(f.max * big); f.big = big; if (R.dk) f.short = 'D.Mewtwo';
   return B;
 }
 function finishRaid(B) {
@@ -1128,4 +1149,5 @@ function finishRaid(B) {
   }
   save(); return res;
 }
-const finishLab = B => ({ mode: 'lab', win: B.over === 'win', ups: [], items: [], encs: [], coins: 0, trade: null, perks: [], note: '', kind: B.k });
+/* I demoen er Mewtwo hele historien: slår du den, reiser den seg som Dark Mewtwo (dark), akkurat som i et ekte raid. */
+const finishLab = B => ({ mode: 'lab', win: B.over === 'win', ups: [], items: [], encs: [], coins: 0, trade: null, perks: [], note: '', kind: B.k, dark: B.over === 'win' && B.raid && B.tr && B.tr.leg === 150 && !B.tr.dk ? 1 : 0 });

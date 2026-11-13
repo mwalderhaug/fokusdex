@@ -246,6 +246,9 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .evms{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .evm{display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 4px 9px;border-radius:16px;background:rgba(0,0,0,.22);box-shadow:0 0 0 1px var(--line);text-align:center;min-width:0}
 .evm.on{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--ec) 70%,transparent)}
+.evm.pk{cursor:pointer;opacity:.62;transition:opacity .15s,box-shadow .15s,background .15s}
+.evm.pk.on{opacity:1;background:color-mix(in srgb,var(--ec) 16%,rgba(0,0,0,.22));box-shadow:0 0 0 2px var(--ec)}
+.evpk-h{margin:2px 0 8px}
 .evm .sprb{--s:52px}
 .evm b{font-size:12.5px;font-weight:750;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .evm .sm{font-size:11px}
@@ -1235,6 +1238,18 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .ecall{position:absolute;left:50%;top:2%;transform:translateX(-50%);padding:4px 14px;border-radius:14px;font-size:13px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;color:#17130f;background:var(--rc);box-shadow:0 0 22px color-mix(in srgb,var(--rc) 70%,transparent);animation:eCall 2.4s ease-out both;pointer-events:none}
 .mid.shy .ecall{background:var(--gold);box-shadow:0 0 22px color-mix(in srgb,var(--gold) 70%,transparent)}
 @keyframes eCall{0%,42%{opacity:0;transform:translateX(-50%) scale(.6)}52%{opacity:1;transform:translateX(-50%) scale(1.18)}62%{transform:translateX(-50%) scale(1)}90%{opacity:1}100%{opacity:0}}
+.dgrp{padding:12px 14px 6px}
+.drow{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.dgrp>.row{padding-bottom:10px}
+.dmon{display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-align:left}
+.dmon .sprb{--s:46px;flex:none}
+.dpot{display:inline-flex;gap:2px;flex:none}
+.dpot i{width:11px;height:11px;background:rgba(255,255,255,.14);clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+.dpot i.on{background:var(--gold)}
+.dnat{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill.ivp{color:#1d1707;background:var(--gold)}
+.pill.dwhy{color:var(--ink2);flex:none}
+.dsell{flex:none}
 .encq{display:flex;gap:6px;justify-content:center;margin-top:-6px}
 .encq i{width:8px;height:8px;border-radius:50%;background:var(--ink2);opacity:.55}
 .pill.estk{color:var(--gold)}

@@ -219,6 +219,8 @@
       else for (let i = 0; i < n * 3; i++) { const an = rnd(i, 4) * TAU; bolt(256 + cos(an) * 320, 192 + sin(an) * 240, 256 + cos(an) * (150 - n * 20), 192 + sin(an) * (110 - n * 14), { seed: i * 7, col: cc, core: '#fff', w: 1.4, a: 0.7, depth: 4 }); }
       for (let i = 0; i < 4; i++) { const q = floor(t * 12 + i * 3); if (rnd(q, i) > 0.72) rect(0, rnd(q, i + 1) * H, W, 2 + rnd(q, i + 2) * 6, i % 2 ? cc : '#fff', 0.2, 1); }
       L.forEach((q, i) => { txt(q.slice(0, max(0, left)), 256, 201 - (L.length - 1) * 14 + i * 28, { size: 25, col: '#fff', sh: blend(cc, '#000000', 0.4), sd: 2, a: 1 - seg(t, 2.6, 2.8) }); left -= q.length; });
+      /* o.warn: et ord over rammen som blinker (bare den mørke har det). */
+      if (o.warn) txt(o.warn, 256, 147, { size: 17, col: cc, sh: '#000000', sd: 2, a: c01(seg(t, 0.05, 0.25)) * (1 - seg(t, 2.6, 2.8)) * (floor(t * 5) % 2 ? 0.45 : 1) });
       const X = K.g; X.save(); X.globalAlpha = c01(seg(t, 0.1, 0.4) * (1 - seg(t, 2.6, 2.8))); X.strokeStyle = cc; X.lineWidth = 2; X.beginPath(); X.moveTo(256 - 190, 160); X.lineTo(256 + 190, 160); X.moveTo(256 - 190, 230); X.lineTo(256 + 190, 230); X.stroke(); X.restore();
       fill('#fff', seg(t, 2.7, 3.0));
     } });
@@ -332,13 +334,14 @@
   const calm0 = CINE.calmFilm; CINE.calmFilm = id => { const f = calm0(id); if (f && f.bg && !f.staged) { f.staged = 1; const b0 = f.bg; f.bg = (t, k, cc) => { const c2 = cc || K.cur.cc || '#ffffff'; b0(t, k, cc); stage(autoPlat(c2), c2, [0.35, '#02030a']); }; } return f; };
 
   /* ================= DARK MEWTWO =================
-     Låta er Mewtwo-temaet fra X og Y, og filmen følger den fra første sekund: et støt på 1.07, takter på 1,333 s, to raske slag (7.31, 7.48), fire tunge
+     Med pakken spilles filmen til den første kamplåta («Villain's Ascent»), og filmtiden strekkes så bildene faller på slagene i den (DKWARP i bui.js).
+     Tidene under er filmens egne. De er lagt på Mewtwo-temaet fra X og Y, som fortsatt brukes når den andre låta mangler: et støt på 1.07, takter på 1,333 s, to raske slag (7.31, 7.48), fire tunge
      (9.07, 9.74, 10.41, 11.07), hovedtemaet på 11.74, det sterkeste slaget på 15.73 og et til på 17.07.
      Filmen: den begynner som en helt vanlig Mewtwo-raid, med navnet på plass. Så stikker den første krystallen av skygge inn i bildet. For hver takt kommer flere,
      fargen suges ut, navnet går i stykker, og Mewtwo blinker mellom seg selv og noe annet. Fire tunge slag i fire klipp: øyet, den svarte sola, negativet,
      og alt som trekker seg sammen til ett punkt. Så sprenger Dark Mewtwo seg ut, lader en kule av skygge, fyrer den rett mot oss så bildet knuser – og navnet slår ned. */
   const DH = [9.07, 9.74, 10.41, 11.07], DR = 11.74, DSP = [[-10, 250, 3.74], [522, 120, 5.07], [150, -10, 6.4], [380, 394, 6.4], [-10, 80, 7.74], [522, 300, 7.74], [300, -10, 7.74], [120, 394, 7.74]], GL = '#%&?!X/\\';
-  film('dk150', { len: 19.6, at: 0, R: DR, outc: '#000', sps: [150], use: ['vortex', 'redswirl', 'cracks', 'arcs', 'burst', 'smoke', 'curtain1', 'curtain2', 'sparkle', 'evilbg', 'rings', 'sphere'],
+  film('dk150', { len: 19.6, at: 0, R: DR, omen: 1, outc: '#000', sps: [150], use: ['vortex', 'redswirl', 'cracks', 'arcs', 'burst', 'smoke', 'curtain1', 'curtain2', 'sparkle', 'evilbg', 'rings', 'sphere'],
     cues: [[1.07, 'thud'], [3.74, 'boom'], [5.07, 'boom'], [6.4, 'boom'], [7.31, 'thud'], [7.48, 'thud'], [7.74, 'boom'], [9.07, 'boom'], [9.74, 'boom'], [10.41, 'boom'], [11.07, 'boom'], [DR, 'cry'], [DR, 'boom'], [13.07, 'thud'], [15.73, 'boom'], [17.07, 'boom']],
     draw(t, P, c) {
       const cx = 256, cy = 184, sp = c.sp, ex = sp ? (0.45 - 0.5) * sp.bw : -3, ey = sp ? (0.225 - 0.5) * sp.bh : -18, crk = tintArt('cracks', '#ff8a2a'), X = K.g;

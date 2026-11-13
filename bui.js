@@ -233,7 +233,8 @@ async function envFx(B, e) {
   await bwait(ok ? 320 : 800);
 }
 /* ---------- Dark Mewtwo: to låter og forvandlingen (bildene ligger i darkf.js, reglene i darkShift i league.js) ----------
-   Kampen mot Dark Mewtwo har sin egen låt, som spilles én gang (pakka: «Villain's Ascent»). Når den er slutt – DKSEC sekunder ut i kampen – og Dark Mewtwo
+   Kampen mot Dark Mewtwo har sin egen låt, som spilles én gang (pakka: «Villain's Ascent»). Den starter i det forvandlingen starter (filmen, rett etter
+   varselet), og går uavbrutt inn i kampen (dkStart). Når den er slutt – DKSEC sekunder ut i LÅTA, altså snaut to og et halvt minutt ut i kampen – og Dark Mewtwo
    fortsatt står, forvandles den. Det som spilles av, gjøres ferdig først. Så toner den første låta ut, «Something is happening…» skrives, og den neste låta
    («Where Is Your God Now», CINE.SIN.at sekunder inn) starter sammen med bildene. På utbruddet er den «provoked»: helsa løftes til 75 %, Sp. Atk og Speed går
    opp, og skyen og de lysende øynene blir stående resten av kampen (B.sin).
@@ -260,10 +261,18 @@ function dkCheck(B) {
 }
 function dkPause() { const B = BT.dkB; clearTimeout(BT.dkTm); if (B && B.dks && B.dks.ph === 1) B.dks.el = dkEl(B); BT.dkB = null; }
 const dkTick = B => { if (BT.dkB === B && B.dks && B.dks.ph === 1) B.dks.el = dkEl(B); };
-/* Kampen er tegnet: den første låta tar over etter filmen, og klokka starter i det låta gjør det. */
+/* Filmen til Dark Mewtwo er lagt på slagene i X og Y-låta. Nå starter den første kamplåta («Villain's Ascent») i det forvandlingen starter, og da
+   strekkes filmtiden så de samme bildene faller på slagene i DEN: [sekunder i låta, sekunder i filmen]. Skyggene kommer på 4.87, 6.67, 8.47 og 9.66,
+   de fire tunge klippene på 12.07–15.67, utbruddet på 16.87, skuddet som knuser bildet på låtas sterkeste slag (21.67), og navnet på 22.86. */
+const DKWARP = [[0, 0], [4.87, 3.74], [6.67, 5.07], [8.47, 6.4], [9.66, 7.74], [12.07, 9.07], [13.26, 9.74], [14.47, 10.41], [15.67, 11.07], [16.87, 11.74], [21.67, 15.73], [22.86, 17.07], [25.2, 19.6]];
+const dkWarp = t => { for (let i = 1; i < DKWARP.length; i++) { const a = DKWARP[i - 1], b = DKWARP[i]; if (t <= b[0]) return a[1] + (b[1] - a[1]) * (t - a[0]) / (b[0] - a[0]); } const z = DKWARP[DKWARP.length - 1]; return z[1] + (t - z[0]); };
+/* Kampen er tegnet. Spiller den første låta allerede (den startet med filmen), går den bare videre, og klokka stilles etter hvor langt den er kommet:
+   forvandlingen midt i kampen kommer når låta er slutt. Ellers (uten film, eller i hurtigvarianten) starter låta her. */
 function dkStart(B) {
   if (!dkOn(B)) return; const s = B.dks || (B.dks = { ph: 0, el: 0 }); if (s.ph) return;
-  s.ph = 1; dkClock(B, 0);
+  const V0 = PACK.special(/Villain/), on = !!V0 && !B.dkq && PACK.track() === V0, c0 = on ? PACK.clock() : 0;
+  s.ph = 1; dkClock(B, c0 > 0 ? c0 : 0);
+  if (on) { music(''); const G = PACK.special(/God Now/); if (G) PACK.cue(G); return; }
   const V = PACK.special(/Villain/); if (!V) return;
   PACK.music(V, { loop: false, at: dkAt(B, V), fade: 1.2, from: 0.05, out: 1.4 }).then(ok => { if (!ok || BT.B !== B || s.ph !== 1) return; music(''); dkClock(B, 0); const G = PACK.special(/God Now/); if (G) PACK.cue(G); });
 }
@@ -388,22 +397,24 @@ async function legendIntro(B) {
   if (!info) { battleMusic(B); return; }
   ov(`<div class="lgi" id="lgi" style="--cc:${tr.cc}"><div class="lgi-s"><canvas class="lgi-cv" id="lgicv" width="512" height="384"></canvas></div><i class="lgi-wait"></i><button type="button" class="lgi-skip" id="lgiskip" hidden>Skip</button></div>`, 'battle vsov');
   const root = $('#lgi'), cv = $('#lgicv'), gone = () => BT.B !== B || !root.isConnected, o = { name: tr.n, cap: tr.title, lv: 0, cc: tr.cc };
-  const tk = PACK.trackFor(B), ready = CINE.prep(id, 6000);
-  if (calm()) { await ready; if (gone()) return; root.classList.add('on'); await CINE.still(cv, id, Math.min(info.len - 0.6, info.R + 2), o); battleMusic(B, { fade: 1.2, from: 0.1 }); cry(f.id, 300, 0.5); await T(2600); if (gone()) return; root.classList.add('d'); await T(260); return; }
+  /* Dark Mewtwo: den første kamplåta starter med forvandlingen (filmen) og går rett videre inn i kampen. Finnes den ikke i pakken, er alt som før. */
+  const V = tr.dk ? PACK.special(/Villain/) : '', tk = V || PACK.trackFor(B), ready = CINE.prep(id, 6000);
+  if (V) PACK.cue(V);
+  if (calm()) { await ready; if (gone()) return; root.classList.add('on'); await CINE.still(cv, id, Math.min(info.len - 0.6, info.R + 2), o); if (V) PACK.music(V, { loop: false, at: 0, fade: 1.2, from: 0.1 }).then(k => { if (k) music(''); }); else battleMusic(B, { fade: 1.2, from: 0.1 }); cry(f.id, 300, 0.5); await T(2600); if (gone()) return; root.classList.add('d'); await T(260); return; }
   /* Låta og filmen starter samtidig. Uten låt i pakken spilles den innebygde oppbyggingen, med drønnet i det den viser seg. */
   await ready; if (gone()) return;
   /* De aller sjeldneste varsles først: mørket puster, bildet slår sprekker, og så starter filmen. */
   if (info.omen) {
     await CINE.fxPrep('omen'); if (gone()) return; root.classList.add('on'); PACK.music(''); music(''); BSFX.dread();
-    await CINE.fx(cv, 'omen', { cc: tr.cc, txt: tr.leg === 493 ? 'The one who shaped\nthe world draws near' : 'Something from beyond\nthe sky draws near', cue: n => { if (gone()) return; if (n === 'beat') { BSFX.beat(); buzz([70, 90, 110]); } else if (n === 'boom') { BSFX.mv('boom', 3); buzz([90, 60, 240]); } } });
+    await CINE.fx(cv, 'omen', { cc: tr.cc, warn: tr.dk ? 'WARNING' : '', txt: tr.dk ? 'A power that could end\nthe galaxy is awakening' : tr.leg === 493 ? 'The one who shaped\nthe world draws near' : 'Something from beyond\nthe sky draws near', cue: n => { if (gone()) return; if (n === 'beat') { BSFX.beat(); buzz([70, 90, 110]); } else if (n === 'boom') { BSFX.mv('boom', 3); buzz([90, 60, 240]); } } });
     if (gone()) return;
   }
-  const started = tk ? await PACK.music(tk, { at: info.at }) : false; if (gone()) return;
+  const started = tk ? await PACK.music(tk, V ? { at: 0, loop: false, out: 0.3 } : { at: info.at }) : false; if (gone()) return;
   let stop = () => {};
   if (started) music(''); else { PACK.music(''); stop = epicIntro('ultra', info.R); }
   root.classList.add('on'); sfx.appear(); buzz([40, 60, 40]);
   const cue = n => { if (gone()) return; if (n === 'cry') { cry(f.id, 0, 0.6); buzz([80, 40, 260]); if (!started) battleMusic(B); } else if (n === 'boom') buzz([90, 60, 90, 60, 240]); else if (n === 'thud') buzz(45); else buzz(18); };
-  const pl = CINE.play(cv, id, Object.assign({ clock: () => started ? PACK.clock() : -1, cue }, o)), sk = $('#lgiskip');
+  const pl = CINE.play(cv, id, Object.assign({ clock: () => started ? PACK.clock() : -1, cue, warp: V && started ? dkWarp : null }, o)), sk = $('#lgiskip');
   let skipped = false; const skip = () => { if (skipped) return; skipped = true; sfx.tap(); stop(); pl.skip(); };
   setTimeout(() => { if (!gone() && sk) sk.hidden = false; }, 1200); if (sk) sk.addEventListener('click', skip);
   const key = e => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') skip(); }; document.addEventListener('keydown', key);
@@ -425,15 +436,22 @@ function evChip(e) {
   const I = evInfo(e);
   return `<button type="button" class="evchip${e.seen ? '' : ' new'}" data-a="evinfo" style="--ec:${I.c};--ec2:${I.c2 || I.c}" aria-label="Special event: ${esc(I.n)}. Tap to see what it does"><span class="evc-ic" aria-hidden="true">${I.ic}</span><span class="sp"><span class="evc-k">Special event · today only</span><b>${esc(I.n)}</b><span class="evc-s">${esc(I.s)}</span></span><span class="evc-go">${e.seen ? 'Details' : 'Tap to see'} ›</span></button>`;
 }
+/* Mega Surge: de du kan velge blant (alle du eier som har en Mega-form, laget først). Et trykk velger eller velger bort; høyst SURGEN. */
+function surgePickEl(e) {
+  const on = surgeList(e), l = surgeCan().slice(0, 12);
+  return `<p class="sm evpk-h" style="position:relative;text-align:center"><b class="tn">${on.length} of ${SURGEN}</b> chosen · tap to choose who starts Mega Evolved</p>
+    <div class="evms">${l.map(m => { const k = megaOpts(m.id), g = k.includes(m.ms) ? m.ms : k[0], sel = on.includes(m.u), team = S.party.includes(m.u);
+      return `<button type="button" class="evm pk${sel ? ' on' : ''}" data-a="evpick" data-u="${m.u}" aria-pressed="${sel}">${spr(m.id, { sh: m.sh, mega: sel ? g : m.mega, s: '52px' })}<b>${esc(mName(m))}</b><span class="sm tn">${sel ? 'Mega today' : 'Lv ' + m.lv}</span><span class="sm">${team ? 'on the team' : 'in the box'}</span></button>`; }).join('')}</div>`;
+}
 /* Hva dagens event gjør, og hvem av dine som har glede av det. Åpnes fra symbolet over modusen og fra regelarket. */
 function evSheet(e) {
-  const I = evInfo(e), who = evWho(e, 6), stat = e.k === 'surge' || EVSTAT[e.k], rent = modeOn('factory') && MODESN < MODES.length && (e.k === 'surge' || e.k === 'type');
+  const I = evInfo(e), who = evWho(e, 6), stat = e.k === 'surge' || EVSTAT[e.k], pick = e.k === 'surge' && surgeCan().length > 0, rent = modeOn('factory') && MODESN < MODES.length && (e.k === 'surge' || e.k === 'type');
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Today only</span></div>
     <div class="evrev"><div class="evr-rays"></div><div class="evr-ic">${I.ic}</div><div class="evr-k">Special event ${hq('events', 'What are special events?')}</div><h1 class="evr-n">${esc(I.n)}</h1><p class="evr-s">${esc(I.s)}</p>
       <p class="evr-d">${esc(I.d)}</p>${rent ? '<p class="sm" style="position:relative;text-align:center">In the Battle Frontier it counts for the rental Pokémon you pick. Your own get it in raids.</p>' : ''}
-      ${stat ? (who.length ? `<div class="evms">${who.map(evMon).join('')}</div>` : '<p class="sm" style="position:relative;text-align:center">None of your own Pokémon qualify today. It costs you nothing: everything else is as usual.</p>') : ''}
+      ${pick ? `<div id="evpk" style="position:relative;width:100%">${surgePickEl(e)}</div>` : stat ? (who.length ? `<div class="evms">${who.map(evMon).join('')}</div>` : '<p class="sm" style="position:relative;text-align:center">None of your own Pokémon qualify today. It costs you nothing: everything else is as usual.</p>') : ''}
       <p class="sm" style="text-align:center">Events are only ever for you, never for your opponents. Nothing gets harder, and nothing is lost if you sit it out.</p></div>
-    <div class="acts">${stat && who.some(x => !x.on) || e.k === 'camp' ? `<button type="button" class="btn" data-a="tab" data-k="lag">${e.k === 'camp' ? 'Open your team to train' : 'Change your team'}</button>` : e.k === 'lucky' ? '<button type="button" class="btn" data-a="tab" data-k="butikk">Packs are in the Shop</button>' : ''}<button type="button" class="btn gold" data-a="home">Got it</button></div>`, 'tint evov', I.c);
+    <div class="acts">${stat && (who.some(x => !x.on) || (pick && surgeCan().some(m => !S.party.includes(m.u)))) || e.k === 'camp' ? `<button type="button" class="btn" data-a="tab" data-k="lag">${e.k === 'camp' ? 'Open your team to train' : 'Change your team'}</button>` : e.k === 'lucky' ? '<button type="button" class="btn" data-a="tab" data-k="butikk">Packs are in the Shop</button>' : ''}<button type="button" class="btn gold" data-a="home">Got it</button></div>`, 'tint evov', I.c);
 }
 /* Rundens kamper som streker: de du har slått, i fargen til klassen (L.seen = klasse + nummer), den som venter, og finalen med gullkant. */
 function lapPips() {
@@ -1320,7 +1338,7 @@ async function darkRise(B) {
   BSFX.dread(); buzz([40, 60, 40, 60, 200]); shake(1100, 3); ar.classList.add('dkrise');
   await Promise.all([say('…but a shadow closes around it!'), new Promise(r => setTimeout(r, 1400))]); if (!ok()) return;
   await say('Your team is restored. This is not over.'); if (!ok()) return;
-  BT.busy = false; startBattle(raidBattle(BT.lead));
+  BT.busy = false; startBattle(raidBattle(BT.lead, B.mode === 'lab' ? 'dk' : undefined));
 }
 
 /* ---------- Etter kampen ---------- */
@@ -1458,7 +1476,7 @@ function rulesSheet() {
       ${row('Gear · it lasts', 'Leftovers: 1/16 HP every turn · Shell Bell: 1/8 of the damage dealt<br>Life Orb: ×1.3, costs 1/10 HP per attack · Expert Belt: ×1.2 when super effective<br>Muscle Band and Wise Glasses: ×1.1 · Scope Lens: more critical hits<br>Rocky Helmet: contact costs the attacker 1/6 HP · Eviolite: Def and Sp. Def ×1.5 for one that can still evolve')}
       ${row('Focus Sash · used up', 'at full HP it survives a knockout hit')}${row('Found', `a berry after some sessions of ${BERRYMIN} minutes or more<br>the plate of its type from every legendary you beat`)}</div>
     <div class="card stack"><b>Special events</b><p class="sm">Some battle days are special. You find out once you have chosen today's mode: the event shows as a symbol above it, and a tap tells you what it does. An event is only ever for you, never for your opponents: nothing gets harder, and a day you sit out costs nothing. They are counted in battle days, come about every third one, and never two days running.</p>
-      ${Object.keys(EVENTS).map(k => row(k === 'type' ? 'Type Festival' : EVENTS[k].n, k === 'surge' ? 'your Pokémon with a Mega form start in it' : k === 'type' ? 'one type gets +15 % in every stat' : k === 'stars' ? 'three from your box: team level and +20 %' : k === 'little' ? '+35 % for those that can still evolve' : k === 'gold' ? 'coins ×1.5 from every battle' : k === 'wind' ? 'one more attempt in the League, one more run in the Frontier' : k === 'lucky' ? 'shiny odds ×5, one more encounter from bosses' : 'training costs 40 % less')).join('')}</div>
+      ${Object.keys(EVENTS).map(k => row(k === 'type' ? 'Type Festival' : EVENTS[k].n, k === 'surge' ? `${SURGEN} of your Pokémon with a Mega form start in it, and you choose which` : k === 'type' ? 'one type gets +15 % in every stat' : k === 'stars' ? 'three from your box: team level and +20 %' : k === 'little' ? '+35 % for those that can still evolve' : k === 'gold' ? 'coins ×1.5 from every battle' : k === 'wind' ? 'one more attempt in the League, one more run in the Frontier' : k === 'lucky' ? 'shiny odds ×5, one more encounter from bosses' : 'training costs 40 % less')).join('')}</div>
     <div class="card stack"><b>Mega Evolution</b><p class="sm">The first Champion or Supreme Boss you beat gives you the Mega Ring and a Mega Stone. A Pokémon that has a Mega form and holds a stone can Mega Evolve from the move menu: once a battle for your team, before it attacks, and it stays that way until the battle is over. Its HP is the same, its other stats and sometimes its types change. Stones are given on the Pokémon's card, and you get the stone back if you sell or trade it.</p>
       ${row('Mega Stone', `${nb(SHOP.mstone.p)} coins in the Shop, with the ring`)}${row('Won from', `Supreme Boss: always · Champion: ${Math.round(MSTONE[1] * 100)} % · Evil Leader: ${Math.round(MSTONE[0] * 100)} %<br>the Champions Cup · raids against the great ones`)}${row('Opponents', 'Champions and Supreme Bosses, on Normal and Hard')}
       <p class="sm"><b>Arceus</b> takes the type of the plate it holds, and Judgment with it.</p>
@@ -1596,6 +1614,7 @@ const BA = {
     const to = chip || c; if (to && to.scrollIntoView) to.scrollIntoView({ block: 'start', behavior: calm() ? 'auto' : 'smooth' });
   },
   evinfo: () => { const e = evNow(); if (!e) return; closeSheet(); if (!e.seen) { e.seen = 1; save(true); } sfx.open(); evSheet(e); },
+  evpick: el => { const e = evNow(), u = +el.dataset.u; if (!e || e.k !== 'surge') return; if (!surgeToggle(u)) { sfx.warn(); return toast(`Three at most. Tap one of the chosen to free a place.`); } save(true); sfx.tap(); const box = $('#evpk'); if (box) box.innerHTML = surgePickEl(e); },
   bpre: () => { if (!ladderOpen()) { closeOv(); return render(); } BT.B = null; BT.busy = false; preBattle(); },
   blead: el => { BT.lead = +el.dataset.u; preBattle(); },
   bteam: () => { closeOv(); U.tab = 'lag'; U.lag = 'lag'; render(); },

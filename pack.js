@@ -263,6 +263,8 @@ const PACK = (() => {
   P.stinging = () => !!sting;
   P.stingOut = sec => { if (sting) { fadeOut(sting, sec == null ? 1.2 : sec); sting = null; } };
   P.playing = () => !!cur;
+  /* Hvilken låt som spiller nå (stien), eller ''. */
+  P.track = () => cur;
   /* Låtene i «special» velges aldri av trackFor: de hentes ved navn (Dark Mewtwo sine to). lenOf = lengden i sekunder når manifestet oppgir den (d). */
   P.special = re => { const e = P.ok && P.man.music && P.man.music.find(x => x.c === 'special' && re.test(x.t)); return e ? e.f : ''; };
   P.lenOf = path => { const e = path && ent(path); return e && e.d ? e.d : 0; };

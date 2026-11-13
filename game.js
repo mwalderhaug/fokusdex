@@ -895,6 +895,8 @@ function evolve(m, to) {
   save(); return true;
 }
 /* Pokémon fra kjøpte pakker selges for 30 %, ellers kunne en pakke kjøpes og selges med fortjeneste. */
+/* Svært gode medfødte IV («Outstanding» eller «Flawless», summen fra IVTOP av 186). Hyper Training teller ikke med: det er det den ble født med. */
+const IVTOP = 151, ivTop = m => m.iv.reduce((a, b) => a + b, 0) >= IVTOP;
 const PKSELL = 0.3;
 /* Salgsverdien følger sjeldenheten, ikke nivået: før vokste den med nivået (og ville Pokémon følger laget ditt), så salg av duplikater ble den
    største inntektskilden sent i spillet. */
@@ -906,11 +908,19 @@ function sell(m) {
   if (!S.party.length && S.mons.length) S.party.push(S.mons[0].u);
   S.coins += v; return v;
 }
-/* Duplikater som kan selges samlet: beholder den beste av hver art, og rører ikke laget, favoritter eller shiny. */
+/* Artene du har mer enn én av, de sjeldneste først. best = den som beholdes når alle selges samlet (shiny foran, så høyest nivå). */
+function dupGroups() {
+  const by = {}; for (const m of S.mons) (by[m.id] = by[m.id] || []).push(m);
+  return Object.keys(by).map(Number).filter(id => by[id].length > 1).map(id => { const l = by[id].slice().sort((a, b) => b.sh - a.sh || b.lv - a.lv); return { id, best: l[0], list: l }; })
+    .sort((a, b) => tierOf(b.id) - tierOf(a.id) || a.id - b.id);
+}
+/* Hvorfor en av dem ikke selges fra Duplicates ('' = kan selges). Den kan fortsatt selges fra sitt eget ark. */
+const dupWhy = (m, best) => S.party.includes(m.u) ? 'Team' : m.sh ? 'Shiny' : m.fav ? 'Favourite' : m.ms ? 'Mega Stone' : evSum(m) ? 'Trained' : m === best ? 'Kept' : '';
+/* Duplikater som selges samlet: beholder den beste av hver art, og rører ikke laget, favoritter, shiny, trente eller dem med svært gode IV. */
 function dupes() {
-  const best = {};
-  for (const m of S.mons) { const b = best[m.id]; if (!b || m.sh > b.sh || (m.sh === b.sh && m.lv > b.lv)) best[m.id] = m; }
-  return S.mons.filter(m => best[m.id] !== m && !m.fav && !m.sh && !m.ms && !evSum(m) && !S.party.includes(m.u));
+  const out = [];
+  for (const g of dupGroups()) for (const m of g.list) if (!dupWhy(m, g.best) && !ivTop(m)) out.push(m);
+  return out;
 }
 function setPartner(m) { S.party = [m.u, ...S.party.filter(u => u !== m.u)].slice(0, 6); save(); }
 function toggleParty(m) {

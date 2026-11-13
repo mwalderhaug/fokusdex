@@ -77,7 +77,7 @@ const HELP = [
     ${hRow(hSym('Lv', 'var(--sage)'), 'Levels', 'Study and League battles give XP. A higher level means higher stats and new moves.')}
     ${hRow(hSym('⇪', 'var(--violet)'), 'Evolution', 'When a Pokémon is ready, its card says so. Open it under Team and press Evolve. Some need an Evolution Stone from the Shop.')}
     ${hRow(hSym('4', 'var(--red)'), 'Four moves', 'A Pokémon knows four moves in battle. You choose which four on its card, among everything it has learned.')}
-    ${hRow(hSym('▦', 'var(--ink2)'), 'The Box', 'Everything else you have caught. Duplicates can be sold for coins.')}
+    ${hRow(hSym('▦', 'var(--ink2)'), 'The Box', 'Everything else you have caught. The Duplicates tab beside it lists every species you have more than one of, so the extra ones can be sold for coins. ★ Top IVs marks the ones worth keeping.')}
     ${hH('Types')}
     ${hP('Every move and every Pokémon has a type. A move that is <b>super effective</b> does double damage, and one that is not very effective does half. Water beats Fire, Fire beats Grass, Grass beats Water, and so on. In battle the move menu shows how each move will hit.')}
     <div class="hmore">${hLink('train', 'Training')}${hLink('held', 'Items to hold')}${hLink('mega', 'Mega Evolution')}</div>` },
@@ -160,7 +160,7 @@ const HELP = [
     ${hH('Where coins come from')}
     ${hRow(hSym('◷', 'var(--sage)'), 'Study', '3 coins a minute, and a little extra for a finished session.')}
     ${hRow(hSym('⚔', 'var(--red)'), 'Battles', 'Most of your coins. Multiplied by today\'s battle bonus.')}
-    ${hRow(ballEl('poke', '30px'), 'Catching and selling', 'New species give coins, and duplicates can be sold from the Box.')}
+    ${hRow(ballEl('poke', '30px'), 'Catching and selling', 'New species give coins, and duplicates can be sold from the Duplicates tab under Team.')}
     ${hH('What to buy')}
     ${hRow(ballEl('great', '30px'), 'Balls', 'You always need some. Better balls for rarer Pokémon, and a Dusk Ball for a legendary.')}
     ${hRow(hSym('❋', 'var(--sage)'), 'For the hunt', 'Lures give more or rarer encounters for three sessions. Incense raises the shiny odds for one to three days.')}
@@ -196,7 +196,7 @@ const HELP = [
     ${hRow(hSym('♪', 'var(--violet)'), 'Your own graphics and music', 'Optional: a folder called pack in your sync repository can hold your own battle graphics, sounds and music. Without it the app uses what is built in.')}` }
 ];
 /* Det hvert event gjør, i én linje. */
-const HEV = { surge: 'Your Pokémon that have a Mega form start every battle in it. No ring or stone needed.', type: 'One type gets +15 % in every stat, and you find more of that type.', stars: 'Three Pokémon from your Box fight at your team\'s level with +20 %.', little: 'Pokémon that can still evolve get +35 %.',
+const HEV = { surge: 'Three of your Pokémon that have a Mega form start every battle in it. You choose which three in the event. No ring or stone needed.', type: 'One type gets +15 % in every stat, and you find more of that type.', stars: 'Three Pokémon from your Box fight at your team\'s level with +20 %.', little: 'Pokémon that can still evolve get +35 %.',
   gold: 'Every battle pays one and a half times the coins.', wind: 'One more attempt in the League, or one more run in the Frontier.', lucky: 'Shiny odds are five times as high, and bosses give one more encounter.', camp: 'Training costs 40 % less.' };
 /* De tre modusene, kort. (Hentes fra reglene, så teksten følger med når de endres.) */
 function helpModes() {

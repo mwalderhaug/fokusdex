@@ -181,7 +181,7 @@ function cry(id, delay = 0, vol = 0.45) {
   }).catch(() => {});
 }
 /* Lyd per type trykk. Handlinger med egen lyd (kast, kjøp, utvikling osv.) får ikke en ekstra. */
-const OWN = new Set(['mgive', 'triv', 'trev', 'mvtog', 'start', 'throw', 'buy', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'honyes', 'clkagain', 'help', 'tour', 'tourgo', 'tourend', 'tourhub', 'trtipok', 'trtip', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats', 'achget', 'achall', 'sbxsnd', 'held', 'heldgive', 'heldoff', 'heldshop', 'heldbuy']);
+const OWN = new Set(['evpick', 'dsell', 'mgive', 'triv', 'trev', 'mvtog', 'start', 'throw', 'buy', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'honyes', 'clkagain', 'help', 'tour', 'tourgo', 'tourend', 'tourhub', 'trtipok', 'trtip', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats', 'achget', 'achall', 'sbxsnd', 'held', 'heldgive', 'heldoff', 'heldshop', 'heldbuy']);
 const SND = {
   tab: 'tab', lagv: 'tab', dexr: 'tab',
   fag: 'chip', min: 'chip', reg: 'chip', sort: 'chip', filt: 'chip', sety: 'chip', extog: 'chip',
@@ -369,8 +369,18 @@ VIEW.fokus = () => {
 
 /* ---------- Laget ---------- */
 VIEW.lag = () => {
-  const head = `<div class="row" style="justify-content:space-between"><h1 class="big">${U.lag === 'boks' ? 'Box' : 'Team'}</h1>${coinEl(S.coins)}</div>
-    <div class="seg">${[['lag', `Team · ${S.party.length}`], ['boks', `Box · ${S.mons.length}`]].map(([k, n]) => `<button type="button" data-a="lagv" data-k="${k}" aria-pressed="${U.lag === k}">${n}</button>`).join('')}</div>`;
+  const head = `<div class="row" style="justify-content:space-between"><h1 class="big">${U.lag === 'boks' ? 'Box' : U.lag === 'dup' ? 'Duplicates' : 'Team'}</h1>${coinEl(S.coins)}</div>
+    <div class="seg">${[['lag', `Team · ${S.party.length}`], ['boks', `Box · ${S.mons.length}`], ['dup', `Duplicates · ${S.mons.length - new Set(S.mons.map(m => m.id)).size}`]].map(([k, n]) => `<button type="button" data-a="lagv" data-k="${k}" aria-pressed="${U.lag === k}">${n}</button>`).join('')}</div>`;
+  /* Duplikater: hver art du har flere av, med alle ved siden av hverandre. Selges én og én, eller alle samlet. ★ = svært gode medfødte IV. */
+  if (U.lag === 'dup') {
+    const G = dupGroups(), du = dupes(), val = du.reduce((s, m) => s + sellValue(m), 0), JT = ['Decent', 'Above average', 'Great', 'Outstanding', 'Flawless'];
+    const pot = j => { const st = JT.indexOf(j.t) + 1; return `<span class="dpot" role="img" aria-label="Potential: ${j.t}, ${st} of 5 stars">${'<i class="on"></i>'.repeat(st)}${'<i></i>'.repeat(5 - st)}</span>`; };
+    const row = (m, g) => { const why = dupWhy(m, g.best), top = ivTop(m), j = judge(m);
+      return `<div class="drow"><button type="button" class="dmon" data-a="mon" data-u="${m.u}" aria-label="${esc(mName(m))}, level ${m.lv}, ${j.t} potential">${spr(m.id, { it: m.item, sh: m.sh, mega: m.mega, s: '46px', lazy: 1 })}<span class="sp"><span class="row" style="gap:6px"><b class="tn">Lv ${m.lv}</b><span class="sm dnat">${NAT[m.nat]}</span>${top ? '<span class="pill ivp">★ Top IVs</span>' : ''}</span><span class="row sm" style="gap:6px;margin-top:3px">${pot(j)}<span class="dnat">${j.t}</span></span></span></button>${why ? `<span class="pill dwhy">${why}</span>` : `<button type="button" class="btn sm2 dsell" data-a="dsell" data-u="${m.u}"${top ? ' data-top="1"' : ''}>Sell · ${nb(sellValue(m))}</button>`}</div>`; };
+    return `${head}${G.length ? `<p class="sm">Every species you have more than one of. <b style="color:var(--gold)">★ Top IVs</b> marks the ones born with outstanding or flawless potential: worth keeping whatever the level.</p>
+      ${du.length ? `<button type="button" class="btn wide" data-a="selldupes">Sell ${du.length} ${du.length === 1 ? 'duplicate' : 'duplicates'} for ${coinEl(val)}</button><p class="sm" style="margin-top:-2px">Selling them all keeps the highest level of each species (marked Kept) and every one with top IVs. The team, favourites, shinies and trained ones are never sold from here.</p>` : ''}
+      <div class="stack">${G.map(g => `<div class="card dgrp"><div class="row" style="justify-content:space-between"><b>${esc(D(g.id)[0])} <span class="sm tn">× ${g.list.length}</span></b>${tierEl(g.id)}</div>${g.list.map(m => row(m, g)).join('')}</div>`).join('')}</div>` : '<div class="card"><p class="sm" style="text-align:center">No duplicates right now. When you catch a species you already have, it shows up here.</p></div>'}`;
+  }
   if (U.lag !== 'boks') {
     const rows = Array.from({ length: 6 }, (_, i) => monBy(S.party[i])).map((m, i) => {
       if (!m) return `<button type="button" class="tcard empty" data-a="lagv" data-k="boks"><span class="plus">+</span><span class="sm">Empty slot. Pick one from the box.</span></button>`;
@@ -958,6 +968,7 @@ const A = {
   trclr: el => { const m = monBy(U.tru); if (!m) return; const i = U.tri; if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = `Tap again: remove ${m.ev[i]}`; return; } clearEv(m, i); render(); trainSheet(m); toast(`${SN[i]} training removed. The points are free again.`); },
   evolve: el => { const m = monBy(+el.dataset.u), from = m.id; if (evolve(m, +el.dataset.k)) { render(); evoShow(m, from); } },
   sell: el => { const m = monBy(+el.dataset.u); if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.innerHTML = 'Tap again to sell'; return; } const v = sell(m); save(); sfx.sell(); closeSheet(); render(); toast(`Sold for ${nb(v)} coins.`); },
+  dsell: el => { const m = monBy(+el.dataset.u); if (!m) return render(); if (el.dataset.top === '1' && el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = 'Top IVs · tap again'; sfx.warn(); return; } const n = mName(m), v = sell(m); if (!v) return; save(); sfx.sell(); render(); toast(`${n} sold for ${nb(v)} coins.`); },
   selldupes: el => { const du = dupes(); if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = `Tap again to sell ${du.length}`; return; } let v = 0; du.forEach(m => { v += sell(m); }); save(); sfx.sell(); render(); toast(`${du.length} sold for ${nb(v)} coins.`); },
   buy: el => { if (buy(el.dataset.k)) { (el.dataset.k === 'egg' ? sfx.egg : sfx.coin)(); render(); toast(`${SHOP[el.dataset.k].n} bought.`); } },
   pack: el => { const k = el.dataset.k, out = openPack(k); if (!out) return toast(S.pend.length > PACKMAX ? 'Catch some of your waiting encounters first.' : 'Not enough coins.'); sfx.coin(); packShow(k, out); },
