@@ -123,7 +123,7 @@
   /* En søyle av lys som slår ned i t0 og blir stående og dirre litt. */
   const pillar = (t, t0, x, col, w, y1) => { const k = seg(t, t0, t0 + 0.14), d = hit(t, t0, 1.5); if (k <= 0 || d <= 0) return; const yb = (y1 || H) * eo(k), ww = (w || 26) * (0.35 + 0.65 * d) * (1 + 0.12 * sin(t * 50)); beam(x, ww * 4, 0, yb, col, 0.5 * d); beam(x, ww * 1.3, 0, yb, col, d); if (k >= 1) { glow(x, yb, 90 * d + 30, col, 0.8 * d, 1); ring(x, yb, (1 - d) * 150 + 10, { col, a: d * 0.8, w: 4, sy: 0.3 }); } };
   const aPlates = (t, x, y, R, k, a, spin) => { for (let i = 0; i < 16; i++) { const an = i / 16 * TAU + spin, px = x + cos(an) * R * k, py = y + sin(an) * R * 0.42 * k, z = sin(an), s = 1 + z * 0.25, X = K.g; glow(px, py, 22 * s, PLATE[i], 0.5 * a, 1); X.save(); X.translate(px, py); X.rotate(sin(t * 2 + i) * 0.25); X.globalAlpha = c01(a); X.fillStyle = PLATE[i]; X.fillRect(-6 * s, -9 * s, 12 * s, 18 * s); X.fillStyle = 'rgba(255,255,255,.65)'; X.fillRect(-6 * s, -9 * s, 12 * s, 3 * s); X.fillStyle = 'rgba(0,0,0,.35)'; X.fillRect(-6 * s, 6 * s, 12 * s, 3 * s); X.restore(); } };
-  film(493, { len: 19.3, R: 14.8, use: ['space', 'goldvortex', 'shine', 'goldshine', 'burst', 'sparkle', 'glowring', 'ring', 'goldpart', 'shinesoft'],
+  film(493, { len: 19.3, R: 14.8, at: 1.18, use: ['space', 'goldvortex', 'shine', 'goldshine', 'burst', 'sparkle', 'glowring', 'ring', 'goldpart', 'shinesoft'],
     cues: [[0.39, 'boom'], [3.6, 'thud'], [6.4, 'thud'], [8.39, 'thud'], [10.0, 'thud'], [11.6, 'thud'], [13.2, 'thud'], [14.8, 'cry'], [14.8, 'boom'], [16.4, 'thud']],
     draw(t, P, c) {
       const cx = 256, cy = 176;
@@ -542,7 +542,7 @@
   });
   /* Rim som kryper inn fra kantene: forgrenede krystaller. k = hvor langt de har kommet. */
   const frost = (k, a) => { for (let i = 0; i < 16; i++) { const e = i % 4, p = rnd(i, 7), x0 = e === 0 ? p * W : e === 1 ? W : e === 2 ? p * W : 0, y0 = e === 0 ? 0 : e === 1 ? p * H : e === 2 ? H : p * H, an = Math.atan2(192 - y0, 256 - x0) + (rnd(i, 8) - 0.5) * 0.9, L = (50 + rnd(i, 9) * 90) * k; if (L > 4) bolt(x0, y0, x0 + cos(an) * L, y0 + sin(an) * L, { seed: i * 5 + 1, col: '#9fe8ff', core: '#e8faff', w: 1.3, a: a * 0.8, jag: 0.12, depth: 3, br: 3 }); } };
-  film(646, { len: 10.5, R: ZR, use: ['loc_icepath', 'fog', 'cracks', 'sparkle', 'ring', 'shinesoft', 'smoke', 'burst'],
+  film(646, { len: 10.5, R: ZR, at: 2.72, use: ['loc_icepath', 'fog', 'cracks', 'sparkle', 'ring', 'shinesoft', 'smoke', 'burst'],
     cues: [[0.29, 'thud'], [ZR, 'boom'], [ZR, 'cry'], [7.84, 'thud']],
     draw(t, P, c) {
       const cx = 256, cy = 180, fin = t >= ZR, bt = hits(t, [ZR, 7.84, 8.58, 10.29], 0.45), ch = seg(t, 0.29, ZR), s = 3.0, ice = tintArt('cracks', '#bff4ff');
@@ -611,7 +611,7 @@
   const RAINB = ['#ff4a4a', '#ff9a3a', '#ffe14a', '#5ad85a', '#4aa8ff', '#5a5aff', '#b05aff'];
   /* En pagode i svart: fem tak som blir smalere oppover. */
   const pagoda = (x, y, s, col) => { for (let i = 0; i < 5; i++) { const w = (92 - i * 14) * s, yy = y - i * 44 * s, h = 14 * s; poly([[x - w, yy], [x - w * 1.12, yy + h * 0.2], [x - w * 0.8, yy - h], [x + w * 0.8, yy - h], [x + w * 1.12, yy + h * 0.2], [x + w, yy]], col); rect(x - w * 0.62, yy, w * 1.24, 32 * s, col); } rect(x - 2 * s, y - 5 * 44 * s - 40 * s, 4 * s, 50 * s, col); };
-  film(250, { len: 12.6, R: 9.1, use: ['loc_tintower', 'sun', 'rainbow', 'shine2', 'sparkle', 'curtain1', 'curtain2', 'burst', 'goldpart', 'ring', 'skydawn'],
+  film(250, { len: 12.6, R: 9.1, at: 2.32, use: ['loc_tintower', 'sun', 'rainbow', 'shine2', 'sparkle', 'curtain1', 'curtain2', 'burst', 'goldpart', 'ring', 'skydawn'],
     cues: [[0.31, 'bell'], [3.4, 'bell'], [5.3, 'bell'], [7.2, 'bell'], [9.1, 'boom'], [9.1, 'cry'], [10.25, 'thud']],
     draw(t, P, c) {
       const cx = 256, fin = t >= 9.1, bt = hits(t, [9.1, 10.25, 11.58], 0.5), open = io(seg(t, 3.4, 6.2)), z = 1.04 + seg(t, 0.3, 9.1) * 0.22;
@@ -722,17 +722,20 @@
   /* ================= DE ANDRE =================
      Trioene og de mindre legendariske får roligere filmer, så de store beholder tyngden: et sted (bildene fra HeartGold og SoulSilver), stemningen der,
      skikkelsen som viser seg på sin egen måte, og så navnet. Alle følger samme løp: den viser seg på R (rundt 4.5 sekunder), lagt på et slag i låta.
-     Hver rad: sted, mørkning (farge og styrke), stemning, måten den kommer på, hvor i låta filmen starter, og når den viser seg. */
-  const TR = { Raikou: [0, 4.16], Lugia: [8.3, 4.6], 'Ho-oh': [4.6, 4.5], Mewtwo: [5.1, 4.47], Heatran: [2.2, 4.49], Rayquaza: [0.9, 4.34], Deoxys: [0, 3.91], Uxie: [1.0, 4.49], Entei: [0.3, 4.61], Reshiram: [1.9, 4.49], Cobalion: [1.4, 4.43] };
+     Hver rad: sted, mørkning (farge og styrke), stemning, måten den kommer på, og låta (TR: hvor i låta filmen starter, og når den viser seg).
+     De fleste har egne låter fra 14.11; der er starten valgt så den viser seg på et tydelig slag. Filmene lages på nytt i stegene. */
+  const TR = { Raikou: [4.49, 4.5], Birds: [9.72, 4.5], Mew: [5.19, 4.5], Suicune: [9.35, 4.5], Celebi: [2.84, 4.5], Regis: [2.28, 4.5], Regigigas: [2.09, 4.5],
+    Latios: [2.62, 4.5], Jirachi: [2.87, 4.5], Crescent: [7.47, 4.5], Manaphy: [0.27, 4.5], Shaymin: [7.01, 4.5], Victini: [3.71, 4.5], Swords: [3.07, 4.5],
+    Forces: [3.21, 4.5], Meloetta: [28.05, 4.5], Genesect: [6.32, 4.5], Lugia: [8.3, 4.6], 'Ho-oh': [4.6, 4.5], Mewtwo: [5.1, 4.47], Heatran: [2.2, 4.49], Rayquaza: [0.9, 4.34], Deoxys: [0, 3.91], Uxie: [1.0, 4.49], Entei: [0.3, 4.61], Reshiram: [1.9, 4.49], Cobalion: [1.4, 4.43] };
   const CALM = {
-    144: ['loc_icepath', '#04122a', 0.35, 'ice', 'fall', 'Ho-oh'], 145: ['', '#000', 0, 'bolt', 'fall', 'Ho-oh'], 146: ['loc_mortar', '#2a0600', 0.3, 'fire', 'fall', 'Ho-oh'], 151: ['loc_ilexday', '#1a0a2a', 0.25, 'dream', 'orbit', 'Mewtwo'],
-    243: ['loc_burned', '#0a0a04', 0.25, 'bolt', 'dash', 'Entei'], 244: ['loc_burned', '#1a0400', 0.25, 'fire', 'dash', 'Entei'], 245: ['loc_tohjo', '#041a2a', 0.35, 'water', 'dash', 'Entei'], 251: ['loc_ilex', '#000', 0, 'forest', 'orbit', 'Ho-oh'],
-    377: ['loc_alph', '#1a0e04', 0.3, 'regi', 'dots', 'Heatran'], 378: ['loc_icepath', '#04122a', 0.5, 'regi', 'dots', 'Heatran'], 379: ['loc_alph', '#0a0e14', 0.45, 'regi', 'dots', 'Heatran'], 486: ['loc_alph', '#14140a', 0.35, 'regi', 'dots', 'Heatran'],
-    380: ['loc_dragonsden', '#0a1a3a', 0.3, 'wind', 'dash', 'Rayquaza'], 381: ['loc_dragonsden', '#0a1a3a', 0.3, 'wind', 'dash', 'Rayquaza'], 385: ['', '#000', 0, 'star', 'fall', 'Deoxys'],
+    144: ['loc_icepath', '#04122a', 0.35, 'ice', 'fall', 'Birds'], 145: ['', '#000', 0, 'bolt', 'fall', 'Birds'], 146: ['loc_mortar', '#2a0600', 0.3, 'fire', 'fall', 'Birds'], 151: ['loc_ilexday', '#1a0a2a', 0.25, 'dream', 'orbit', 'Mew'],
+    243: ['loc_burned', '#0a0a04', 0.25, 'bolt', 'dash', 'Raikou'], 244: ['loc_burned', '#1a0400', 0.25, 'fire', 'dash', 'Entei'], 245: ['loc_tohjo', '#041a2a', 0.35, 'water', 'dash', 'Suicune'], 251: ['loc_ilex', '#000', 0, 'forest', 'orbit', 'Celebi'],
+    377: ['loc_alph', '#1a0e04', 0.3, 'regi', 'dots', 'Regis'], 378: ['loc_icepath', '#04122a', 0.5, 'regi', 'dots', 'Regis'], 379: ['loc_alph', '#0a0e14', 0.45, 'regi', 'dots', 'Regis'], 486: ['loc_alph', '#14140a', 0.35, 'regi', 'dots', 'Regigigas'],
+    380: ['loc_dragonsden', '#0a1a3a', 0.3, 'wind', 'dash', 'Latios'], 381: ['loc_dragonsden', '#0a1a3a', 0.3, 'wind', 'dash', 'Latios'], 385: ['', '#000', 0, 'star', 'fall', 'Jirachi'],
     480: ['loc_mortar', '#1a1400', 0.3, 'lake', 'orbit', 'Uxie'], 481: ['loc_mortar', '#2a0618', 0.3, 'lake', 'orbit', 'Uxie'], 482: ['loc_mortar', '#04102a', 0.3, 'lake', 'orbit', 'Uxie'],
-    485: ['loc_darkcave', '#3a0800', 0.35, 'fire', 'rise', 'Heatran'], 488: ['loc_national', '#0a0a2a', 0.3, 'moon', 'fall', 'Uxie'], 490: ['loc_whirl', '#041a3a', 0.35, 'water', 'orbit', 'Uxie'], 492: ['loc_ilexday', '#000', 0, 'petal', 'rise', 'Uxie'],
-    494: ['loc_victory', '#2a0a00', 0.3, 'fire', 'orbit', 'Reshiram'], 638: ['loc_victory', '#0a1420', 0.3, 'steel', 'dash', 'Cobalion'], 639: ['loc_union', '#1a1004', 0.25, 'rock', 'dash', 'Cobalion'], 640: ['loc_ilexday', '#04140a', 0.15, 'forest', 'dash', 'Cobalion'], 647: ['loc_tohjo', '#041a2a', 0.25, 'water', 'dash', 'Cobalion'],
-    641: ['', '#000', 0, 'wind', 'fall', 'Reshiram'], 642: ['', '#000', 0, 'bolt', 'fall', 'Reshiram'], 645: ['loc_mortar', '#1a0e00', 0.3, 'rock', 'fall', 'Reshiram'], 648: ['loc_national', '#0a1a0a', 0.2, 'music', 'orbit', 'Reshiram'], 649: ['', '#000', 0, 'tech', 'rise', 'Reshiram']
+    485: ['loc_darkcave', '#3a0800', 0.35, 'fire', 'rise', 'Heatran'], 488: ['loc_national', '#0a0a2a', 0.3, 'moon', 'fall', 'Crescent'], 490: ['loc_whirl', '#041a3a', 0.35, 'water', 'orbit', 'Manaphy'], 492: ['loc_ilexday', '#000', 0, 'petal', 'rise', 'Shaymin'],
+    494: ['loc_victory', '#2a0a00', 0.3, 'fire', 'orbit', 'Victini'], 638: ['loc_victory', '#0a1420', 0.3, 'steel', 'dash', 'Swords'], 639: ['loc_union', '#1a1004', 0.25, 'rock', 'dash', 'Swords'], 640: ['loc_ilexday', '#04140a', 0.15, 'forest', 'dash', 'Swords'], 647: ['loc_tohjo', '#041a2a', 0.25, 'water', 'dash', 'Swords'],
+    641: ['', '#000', 0, 'wind', 'fall', 'Forces'], 642: ['', '#000', 0, 'bolt', 'fall', 'Forces'], 645: ['loc_mortar', '#1a0e00', 0.3, 'rock', 'fall', 'Forces'], 648: ['loc_national', '#0a1a0a', 0.2, 'music', 'orbit', 'Meloetta'], 649: ['', '#000', 0, 'tech', 'rise', 'Genesect']
   };
   /* Stemningene: det som er i lufta på stedet. t = tiden, k = styrken, cc = fargen til den legendariske. */
   const MOOD = {

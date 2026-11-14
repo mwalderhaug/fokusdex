@@ -460,6 +460,7 @@ const LNO = {
   'You can mute the encounter sound: tap the bell during a session.': 'Du kan slå av lyden når et møte dukker opp: trykk på bjella under en økt.',
   'Explanations can now be read in Norwegian: Profile → Language for explanations.': 'Forklaringer kan nå leses på norsk: Profile → Language for explanations.',
   'Some adjustments to raids, bosses and rewards, and bug fixes.': 'Noen justeringer på raid, bosser og belønninger, og feilrettinger.',
+  'Minor boss adjustments.': 'Små justeringer på bossene.',
   'Exam period: Profile → Badges. Your badges count down to your exams, and subjects no longer need planned hours.': 'Eksamensperiode: Profile → Badges. Merkene teller ned til eksamen, og fagene trenger ikke lenger planlagte timer.',
   'Work days: Profile → Settings → Advanced options.': 'Arbeidsdager: Profile → Settings → Advanced options.',
   'Other activities now give encounters every 20 minutes, and the bell in a session mutes the encounter sound.': 'Andre aktiviteter gir nå møter hvert 20. minutt, og bjella i en økt slår av lyden for møter.',
@@ -504,7 +505,7 @@ function jFriend() {
 const has = k => !!(S.ulk && S.ulk[k]);
 /* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
    Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
-const WNV = 68, WN = ['Exam period: Profile → Badges. Your badges count down to your exams, and subjects no longer need planned hours.', 'Work days: Profile → Settings → Advanced options.', 'Other activities now give encounters every 20 minutes, and the bell in a session mutes the encounter sound.', 'Some adjustments to raids, bosses and rewards, and bug fixes.'];
+const WNV = 69, WN = ['Minor boss adjustments.'];
 /* Første linje for dem som går reisen (whatsNew i ui.js). */
 const WNJ = 'Your journey: new things now open one study day at a time. See the card on the Focus page.';
 function featCheck() { S.ulk = S.ulk || {}; if (!jOn()) return 0; let ch = 0; for (const [k, d] of JOURNEY) if (!S.ulk[k] && (S.jd || 0) >= d) { S.ulk[k] = 1; ch = 1; } return ch; }
