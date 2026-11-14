@@ -133,8 +133,15 @@ const PACK = (() => {
     if (tr.kind === 'legend') { l = by('legend', re); if (!l.length) l = by('legend'); }
     else if (tr.kind === 'brain') { l = by('frontier', re); if (!l.length) l = by('frontier', /Frontier Brain/); }
     else if (tr.boss) { if (re) { l = by(tr.kind, re); for (const c of FALL[tr.kind] || []) if (!l.length) l = by(c, re); } if (!l.length) l = by(tr.kind); }
-    /* Battle Frontier: de første trenerne får trenerlåter, de siste får de store. Alt i Frontier-mappa som ikke er en Brain-låt eller den rolige, hører til de store. */
-    else if (tr.fr) { l = (B.w || 0) >= 2 ? by('frontier').filter(x => !/Frontier Brain|Aether/.test(x.t)).concat(by('e4')) : by('frontier', /Aether/).concat(by('trainer')); h = (B.w || 0) + (B.round || 0) * 3; }
+    /* Battle Frontier stiger gjennom runden og fra runde til runde: trinnet er hvilken trener i runden (w, 0–3) pluss to for hver runde etter den første.
+       0–1: trenerlåtene og den rolige, 2–3: de store (Elite Four og Frontier-låtene uten trinn), 4–5: trinn 2 i manifestet (i: 2), 6 og over: trinn 3 (i: 3),
+       den mest intense. Mangler pakken et trinn (en eldre pakke), brukes de store som før. Brain-låtene og den rolige hører ikke til de store. */
+    else if (tr.fr) {
+      const lv = (B.w || 0) + 2 * Math.max(0, (B.round || 1) - 1), F = by('frontier').filter(x => !/Frontier Brain|Aether/.test(x.t)), at = n => F.filter(x => (x.i || 1) === n);
+      l = lv < 2 ? by('frontier', /Aether/).concat(by('trainer')) : lv < 4 ? at(1).concat(by('e4')) : lv < 6 ? at(2) : at(3);
+      if (!l.length && lv >= 4) l = lv >= 6 && at(2).length ? at(2) : F.concat(by('e4'));
+      h = (B.w || 0) + (B.round || 0) * 3;
+    }
     /* Vanlige trenere bytter mellom trenerlåtene fra kamp til kamp. */
     if (!l.length) { l = by('trainer'); if (l.length) { if (B.pick == null) B.pick = B.mode === 'league' ? (B.rd || 0) + (B.lap || 0) : Math.floor(Math.random() * 97); return l[B.pick % l.length].f; } }
     if (!l.length) return '';
