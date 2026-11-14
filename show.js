@@ -331,7 +331,7 @@ function jPreview(n) {
   S.log[dayKey()] = { m: OPENMIN + 5, s: 1, f: {} }; S.jt = dayKey(); S.dn = ''; S.wn = WNV; S.gift = 'g1113';
   BT.B = null; BT.res = null; U.tab = 'fokus'; closeSheet(); closeOv(); render(); toast(`Journey preview: study day ${n}. Press Done for today to see what is new.`);
 }
-const sbxBar = () => SBX && SBX.jp ? `<div class="sbxbar"><span class="sp"><b>Journey preview</b><span class="sm">Study day ${S.jd || 0} as a new player · nothing is saved</span></span><button type="button" class="btn sm2" data-a="jsess">Session</button><button type="button" class="btn sm2" data-a="jnext">Next day</button><button type="button" class="btn sm2 gold" data-a="sbxleave">Leave</button></div>` : SBX ? `<div class="sbxbar"><span class="sp"><b>Sandbox</b><span class="sm">A copy of your save · nothing is saved</span></span><button type="button" class="btn sm2" data-a="sbxtools">Tools</button><button type="button" class="btn sm2 gold" data-a="sbxleave">Leave</button></div>` : '';
+const sbxBar = () => SBX && SBX.jp ? `<div class="sbxbar"><span class="sp"><b>Journey preview</b><span class="sm">Study day ${S.jd || 0} as a new player · nothing is saved</span></span><button type="button" class="btn sm2" data-a="jsess">Session</button><button type="button" class="btn sm2" data-a="jnext">Next day</button><button type="button" class="btn sm2 gold" data-a="sbxleave">Leave</button></div>` : SBX ? `<div class="sbxbar"><button type="button" class="sp sbxhome" data-a="lab"><b>Sandbox ›</b><span class="sm">A copy of your save · nothing is saved</span></button><button type="button" class="btn sm2" data-a="sbxtools">Tools</button><button type="button" class="btn sm2 gold" data-a="sbxleave">Leave</button></div>` : '';
 function sbxEnter() {
   if (!isAdmin()) return false;
   if (S.timer) { toast('Finish your focus session first.'); return false; }
@@ -351,7 +351,12 @@ function sbxDay(only) {
 }
 /* Ferdige oppsett: finalen mot en bestemt, Frontier fra en bestemt runde, en bestemt cup. */
 function sbxFinal(k, i) { const L = S.lad; L.n = LAPN - 1; L.c = CLIMBTOP; L.seen = []; const t = { n: L.n, lap: L.lap, k, i, sup: 0 }; if ((POOL[k][i][6] || {}).fx) t.v = drawTeam(POOL[k][i]); L.next = t; }
-function sbxFac(r) { S.fac.run = { round: r, w: 0, streak: (r - 1) * FACN, offer: facOffer(r), open: 0, team: null, foe: null }; }
+/* o (valgene i sandkassa): boss = løpet starter ved bossen i runden, mega = en Mega blant de første sju, top = toppboss til slutt i hver runde. */
+function sbxFac(r, o) {
+  o = o || {}; const w = o.boss ? FACN - 1 : 0;
+  S.fac.run = { round: r, w, streak: (r - 1) * FACN + w, offer: facOffer(r, o.mega), open: 0, team: null, foe: null };
+  if (o.top) S.fac.run.top = 1;
+}
 function sbxRaid(id, sh, show) { const t = LEG[id].t; S.raid = { id, lv: raidLvFor(t), hx: +raidHx(t).toFixed(2), day: '', tries: 0, at: dayKey(), nw: 0, hid: 1, sh: sh ? 1 : 0 }; if (show) raidUnhide(); }
 const SBXT = [['coins', '+100 000 coins'], ['level', 'Trainer level +10'], ['items', '5 of every item in the Shop'], ['held', 'One of everything a Pokémon can hold'], ['team', 'My team to Lv 100'], ['enc', 'A legendary encounter in the grass'], ['shenc', 'A shiny encounter in the grass'], ['raid', 'A legendary raid · hidden until the battles are done'], ['raidnow', 'A legendary raid · shown now'], ['shraid', 'A shiny legendary raid · shown now'], ['day', 'A new battle day · all three modes open'], ['dayl', 'A new battle day · League only (Simulate works)'], ['dayf', 'A new battle day · Frontier only'], ['dayp', 'A new battle day · Tournament only']];
 function sbxTool(k) {
@@ -377,43 +382,88 @@ function sbxSounds() {
     <div class="stack" style="margin-top:10px">${Object.keys(sfx).map(k => `<button type="button" class="btn wide sndb" data-a="sbxsnd" data-k="${k}"><b>${k}</b><span class="sm">${SNDUSE[k] || ''}</span>${PACK.sysPath(k) ? '<span class="pill">Pack</span>' : ''}</button>`).join('')}</div>
     <button type="button" class="btn wide nf" data-a="sbxtools">Back to the tools</button>`);
 }
+/* Verktøyene i grupper, med korte navn på knappene (det lange navnet i SBXT står i bekreftelsen). */
+const SBXG = [['Resources', [['coins', '+100 000 coins'], ['level', 'Trainer level +10'], ['items', '5 of every item'], ['held', 'One of every held item'], ['team', 'My team to Lv 100']]],
+  ['In the grass', [['enc', 'A legendary'], ['shenc', 'A shiny']]],
+  ['A legendary raid', [['raid', 'After the battles'], ['raidnow', 'Shown now'], ['shraid', 'Shiny, shown now']]],
+  ['A new battle day', [['day', 'All three modes'], ['dayl', 'League only'], ['dayf', 'Frontier only'], ['dayp', 'Tournament only']]]];
 function sbxTools() {
-  openSheet(`<h2 class="h" style="margin-top:0">Sandbox tools</h2><p class="sm">Everything here changes the copy only. Leave the sandbox, and your real save is exactly as it was.</p>
-    <div class="stack" style="margin-top:10px">${SBXT.map(([k, n]) => `<button type="button" class="btn wide" data-a="sbxtool" data-k="${k}">${n}</button>`).join('')}</div>
-    <button type="button" class="btn wide" data-a="sbxsounds">Sounds · hear every interface sound</button>
-    <button type="button" class="btn wide nf" data-a="lab">Back to the Sandbox screen</button><button type="button" class="btn wide gold" data-a="sbxleave">Leave the sandbox</button>`);
+  openSheet(`<h2 class="h" style="margin-top:0">Sandbox tools</h2><p class="sm">They change the copy only. Leave it, and your real save is exactly as it was.</p>
+    ${SBXG.map(([t, l]) => `<div class="lab" style="margin-top:12px">${t}</div><div class="sbxtg">${l.map(([k, n]) => `<button type="button" class="btn" data-a="sbxtool" data-k="${k}">${n}</button>`).join('')}</div>`).join('')}
+    <div class="stack" style="margin-top:14px"><button type="button" class="btn wide" data-a="sbxsounds">Sounds · hear every interface sound</button>
+    <div class="row"><button type="button" class="btn sp nf" data-a="lab">Sandbox screen</button><button type="button" class="btn sp gold" data-a="sbxleave">Leave the copy</button></div></div>`);
 }
+/* Finalen i ligaen: hvem som venter i siste kamp. Du møter dem med ditt eget lag, i en kopi av lagringen. */
 function sbxPick(what) {
-  if (what === 'final') return openSheet(`<h2 class="h" style="margin-top:0">The League final</h2><p class="sm">Choose who is waiting in battle ${LAPN}. You meet them with your own team, in a copy of your save.</p>
+  if (what !== 'final') return;
+  openSheet(`<h2 class="h" style="margin-top:0">The League final</h2><p class="sm">Choose who is waiting in battle ${LAPN}. You meet them with your own team, in a copy of your save.</p>
     ${['champ', 'supreme'].map(k => `<div class="lab" style="margin-top:10px">${TCL[k].n}</div><div class="labtr">${POOL[k].map((d, i) => `<button type="button" data-a="sbxfinal" data-k="${k}" data-i="${i}">${tsprite(d[1])}<b>${esc(d[0])}</b><span class="sm">${esc((d[6] || {}).cn || d[2])}</span></button>`).join('')}</div>`).join('')}`);
-  if (what === 'fac') return openSheet(`<h2 class="h" style="margin-top:0">Battle Frontier</h2><p class="sm">Start a run from a round of your choice. Later rounds have stronger rentals and stronger opponents.</p>
-    <div class="row" style="flex-wrap:wrap;margin-top:10px">${[1, 2, 3, 5, 8].map(r => `<button type="button" class="btn sp" data-a="sbxfac" data-k="${r}">Round ${r}</button>`).join('')}</div>`);
-  openSheet(`<h2 class="h" style="margin-top:0">World Tournament</h2><p class="sm">Choose the cup. It is normally decided by the day of the week.</p>
-    <div class="stack" style="margin-top:10px">${CUPS.map((c, i) => `<button type="button" class="btn wide" data-a="sbxcup" data-k="${i}">${esc(c.n)} · ×${c.f}</button>`).join('')}</div>`);
 }
+/* ---------- Sandkassa-skjermen ----------
+   Fem faner (U.sbt). Alle ligger i siden, så et trykk bare bytter hvilken som vises (sbxtab). Modes står først: Battle Frontier (runden du
+   starter i, hva runden betyr og valgene å teste), ligaen, cupene og hele spillet i en kopi. Alt som starter en modus, lager kopien og går
+   rett inn i skjermen for modusen (sbxIn), så du slipper å lete på forsiden. Valgene for Frontier huskes i U.sbf så lenge appen er åpen. */
+const SBXTABS = [['modes', 'Modes'], ['battles', 'Battles'], ['raids', 'Raids'], ['films', 'Films'], ['packs', 'Packs']];
+const SBXFO = [['boss', 'Start at the boss'], ['mega', 'A Mega in the first seven'], ['top', 'A top boss at the end']];
+const sbxF = () => U.sbf || (U.sbf = { r: 1, boss: 0, mega: 0, top: 0 });
+/* Hva runden betyr, regnet fra de samme tallene som spillet bruker: leiepoolen (FACBST), sjansen for toppboss (facTopP) og hvor ofte trenerne
+   velger det beste angrepet (facSk, fra den første til den siste vanlige treneren i runden, ganget med vanskelighetsgraden). */
+function sbxFacPeek(r) {
+  const [a, b] = FACBST(r), up = dayBoost().mode === 'factory' ? 1.5 : 1, p = facTopP(r, up), sk = diff().sk, s0 = facSk(r, 0) * sk, s1 = facSk(r, FACN - 2) * sk;
+  const pc = x => Math.round(x * 100), m = (n, f, v) => `<span>${n}</span><span class="bar gold"><i style="width:${pc(Math.max(0.05, Math.min(1, f)))}%"></i></span><b class="tn">${v}</b>`;
+  return `<div class="sbxm">${m('Rentals', Math.min(4, r) / 4, `base stats ${a}–${b}`)}${m('Top boss', p / 0.6, `${pc(p)} %`)}${m('Trainers', (s0 + s1) / 2 / 0.95, `skill ${pc(s0) === pc(s1) ? pc(s0) : pc(s0) + '–' + pc(s1)} %`)}</div>
+    <p class="sm tn">${r >= 4 ? 'From round 4 the rentals and the bosses are as strong as they get. Later rounds bring more top bosses and sharper trainers.' : 'Rentals and bosses get stronger every round until round 4.'}${up > 1 ? ' Frontier bonus today: top bosses 1.5× as often.' : ''}</p>`;
+}
+function sbxFacCard() {
+  const f = sbxF(), R = SBX && !SBX.jp ? S.fac.run : null;
+  return `<div class="card stack sbxfc" id="sbxfc"><div class="row" style="justify-content:space-between"><b class="h">Battle Frontier</b>${R ? `<span class="pill tn">In the copy · round ${R.round}</span>` : ''}</div>
+    <p class="sm">Start in any round. The run then goes on, round after round, until you lose.</p>
+    <div class="sbxr" role="group" aria-label="Start in round">${[1, 2, 3, 4, 5, 6, 7, 8].map(r => `<button type="button" data-a="sbxr" data-k="${r}" aria-pressed="${f.r === r}">${r}</button>`).join('')}</div>
+    ${sbxFacPeek(f.r)}
+    <div class="chips sbxo">${SBXFO.map(([k, n]) => `<button type="button" class="chip" data-a="sbxo" data-k="${k}" aria-pressed="${!!f[k]}">${n}</button>`).join('')}</div>
+    <button type="button" class="go gold" data-a="sbxfac" data-k="${f.r}">Start in round ${f.r}</button>
+    ${R ? `<button type="button" class="btn wide" data-a="fenter">Continue · round ${R.round}, battle ${Math.min(FACN, R.w + 1)} of ${FACN}</button>` : ''}</div>`;
+}
+function sbxLeagueCard() {
+  const L = S.lad;
+  return `<div class="card stack"><div class="row" style="justify-content:space-between"><b class="h">Trainer League</b><span class="pill tn">Battle ${Math.min(LAPN, (L.n || 0) + 1)} of ${LAPN}</span></div>
+    <div class="row"><button type="button" class="btn sp" data-a="sbxlgo">Next battle</button><button type="button" class="btn sp" data-a="sbxpick" data-k="final">The final…</button></div></div>`;
+}
+function sbxCupCard() {
+  const today = CUPS[new Date(dayKey() + 'T12:00:00').getDay()];
+  return `<div class="card stack"><b class="h">World Tournament</b><p class="sm">Pick a cup. Normally the day of the week decides it.</p>
+    <div class="sbxcups">${CUPS.map((c, i) => `<button type="button" class="btn" data-a="sbxcup" data-k="${i}"><b>${esc(c.n.replace(' Leaders Cup', '').replace(/ Cup$/, ''))}</b><span class="sm tn">×${c.f}${c === today ? ' · today' : ''}</span></button>`).join('')}</div></div>`;
+}
+const sbxCopyCard = () => `<div class="card stack"><b class="h">The whole game</b><p class="sm">A copy of your save with all three modes open and the bonus at its peak. The Shop, the grass, raids and Simulate work as usual.</p>
+  <button type="button" class="btn wide" data-a="sbxopen">${SBX ? 'Back into the copy' : 'Open a copy of my save'}</button></div>`;
+const sbxNow = () => SBX && !SBX.jp ? `<div class="sbxnow"><span class="sp"><b>You are in a copy of your save</b><span class="sm">Nothing in it is saved or synced</span></span><button type="button" class="btn sm2" data-a="sbxtools">Tools</button><button type="button" class="btn sm2 nf" data-a="sbxleave">Leave</button></div>` : '';
 function sbxScreen() {
-  const rent = !!BT.labRent, sec = (t, s) => `<div class="lab">${t}</div>${s ? `<p class="sm" style="margin-top:-4px">${s}</p>` : ''}`;
+  const t = SBXTABS.some(x => x[0] === U.sbt) ? U.sbt : 'modes', rent = !!BT.labRent, sec = (h, s) => `<div class="lab">${h}</div>${s ? `<p class="sm" style="margin-top:-4px">${s}</p>` : ''}`;
+  const tab = (k, h) => `<div class="stack sbxt" data-sbt="${k}"${t === k ? '' : ' hidden'}>${h}</div>`;
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Sandbox · only you</span></div>
-    <div><h1 class="big">Test anything.</h1><p class="mut" style="margin-top:6px">Nothing in here gives rewards, and nothing touches your progress. Only you can open it.</p></div>
+    <div><h1 class="big">Test anything.</h1><p class="mut" style="margin-top:6px">Nothing here gives rewards or touches your progress.</p></div>
     ${PACK.ok ? '' : `<div class="card nopack"><b>Built-in graphics and music</b><p class="sm" style="margin-top:4px">${GH && GH.ok ? `Sync is on, but your pack is not loaded${PACK.err ? ' (error ' + esc(PACK.err) + ')' : ' yet'}.` : 'Sync is off on this device, so your own pack is not loaded: music, HP boxes, sounds and move animations are the built-in ones.'}</p><button type="button" class="btn wide" data-a="${GH && GH.ok ? 'packre' : 'sync'}" style="margin-top:8px">${GH && GH.ok ? 'Look for the pack again' : 'Connect Sync'}</button></div>`}
-    <div class="card stack sbxc">${sec('The whole game, on a copy of your save', 'All three modes open, the bonus at its peak, and the Shop, the grass, raids and the simulation working as usual. Nothing is saved or synced.')}
-      <button type="button" class="go gold" data-a="sbxopen">${SBX ? 'Back into the copy' : 'Open a copy of my save'}</button>
-      <div class="row"><button type="button" class="btn sp" data-a="sbxpick" data-k="final">League final…</button><button type="button" class="btn sp" data-a="sbxpick" data-k="fac">Frontier round…</button><button type="button" class="btn sp" data-a="sbxpick" data-k="cup">Cup…</button></div>
-      ${SBX ? '<div class="row"><button type="button" class="btn sp" data-a="sbxtools">Tools</button><button type="button" class="btn sp nf" data-a="sbxleave">Leave the copy</button></div>' : ''}</div>
-    <div class="stack">${sec('Single battles', 'One battle against a class, and you choose who you meet.')}
+    ${sbxNow()}
+    <div class="seg sbxseg" role="tablist" aria-label="Sandbox">${SBXTABS.map(([k, n]) => `<button type="button" role="tab" data-a="sbxtab" data-k="${k}" aria-selected="${t === k}" aria-pressed="${t === k}">${n}</button>`).join('')}</div>
+    ${tab('modes', sbxFacCard() + sbxLeagueCard() + sbxCupCard() + sbxCopyCard())}
+    ${tab('battles', `${sec('Single battles', 'One battle against a class, and you choose who you meet.')}
       <div class="row labm"><button type="button" class="btn sp${rent ? ' nf' : ''}" data-a="labmode" data-k="0" aria-pressed="${!rent}">My team</button><button type="button" class="btn sp${rent ? '' : ' nf'}" data-a="labmode" data-k="1" aria-pressed="${rent}">Rentals · Lv ${FACLV}</button></div>
-      <div class="lablist">${ORDER.map(k => { const c = TCL[k]; return `<button type="button" data-a="${k === 'trainer' || k === 'evilteam' ? 'labgo' : 'labpick'}" data-k="${k}" class="k-${TIER(k)}"><span class="cno">${c.i}</span><span class="sp"><b>${c.n}</b><br><span class="sm">${LABD[k]}</span></span>${ULTRA.has(k) ? `<span class="pill">${RARE[k].replace(' boss', '')}</span>` : ''}</button>`; }).join('')}</div></div>
-    <div class="stack">${sec('Legendary raids', 'The film, the entrance, the place and the fight, with your own team.')}${[['The greatest', id => LEG[id].t === 4 || LEG[id].t === 2], ['Mythical', id => LEG[id].t === 3], ['Legendary', id => LEG[id].t === 1]].map(([n, f]) => `<div class="sm tn">${n}</div><div class="legl">${Object.keys(LEG).map(Number).filter(f).sort((a, b) => (LEG[b].t === 4) - (LEG[a].t === 4)).map(id => `<button type="button" data-a="labraid" data-k="${id}" style="--cc:${LEG[id].cc}">${spr(id, { lazy: 1, mega: defForm(id) })}<b>${id === 150 ? 'Mewtwo → Dark' : esc(D(id)[0])}</b></button>`).join('')}</div>`).join('')}
-      <p class="sm tn">Mewtwo is the whole story in one demo: beat it and it rises again as Dark Mewtwo, which transforms once more when its first song has ended, about two and a half minutes into that fight. In the demo Mewtwo has ordinary health, so you get that far.</p></div>
-    <div class="stack">${sec('Films', 'Only the film, without the fight.')}<div class="shw-f"><button type="button" data-a="showfilm" data-k="boss" data-i="Cynthia" style="--cc:#e9d28a">${tsprite('cynthia')}<b>Cynthia</b><span class="sm">Sinnoh Champion</span></button><button type="button" data-a="showfilm" data-k="boss" data-i="Ghetsis" style="--cc:#c8102e">${tsprite('ghetsis')}<b>Ghetsis</b><span class="sm">Champions Edition</span></button></div>
+      <div class="lablist">${ORDER.map(k => { const c = TCL[k]; return `<button type="button" data-a="${k === 'trainer' || k === 'evilteam' ? 'labgo' : 'labpick'}" data-k="${k}" class="k-${TIER(k)}"><span class="cno">${c.i}</span><span class="sp"><b>${c.n}</b><br><span class="sm">${LABD[k]}</span></span>${ULTRA.has(k) ? `<span class="pill">${RARE[k].replace(' boss', '')}</span>` : ''}</button>`; }).join('')}</div>`)}
+    ${tab('raids', `${sec('Legendary raids', 'The film, the entrance, the place and the fight, with your own team.')}${[['The greatest', id => LEG[id].t === 4 || LEG[id].t === 2], ['Mythical', id => LEG[id].t === 3], ['Legendary', id => LEG[id].t === 1]].map(([n, f]) => `<div class="sm tn">${n}</div><div class="legl">${Object.keys(LEG).map(Number).filter(f).sort((a, b) => (LEG[b].t === 4) - (LEG[a].t === 4)).map(id => `<button type="button" data-a="labraid" data-k="${id}" style="--cc:${LEG[id].cc}">${spr(id, { lazy: 1, mega: defForm(id) })}<b>${id === 150 ? 'Mewtwo → Dark' : esc(D(id)[0])}</b></button>`).join('')}</div>`).join('')}
+      <p class="sm tn">Mewtwo is the whole story in one demo: beat it and it rises again as Dark Mewtwo, which transforms once more when its first song has ended, about two and a half minutes into that fight. In the demo Mewtwo has ordinary health, so you get that far.</p>`)}
+    ${tab('films', `${sec('Films', 'Only the film, without the fight.')}<div class="shw-f"><button type="button" data-a="showfilm" data-k="boss" data-i="Cynthia" style="--cc:#e9d28a">${tsprite('cynthia')}<b>Cynthia</b><span class="sm">Sinnoh Champion</span></button><button type="button" data-a="showfilm" data-k="boss" data-i="Ghetsis" style="--cc:#c8102e">${tsprite('ghetsis')}<b>Ghetsis</b><span class="sm">Champions Edition</span></button></div>
       <div class="legl">${showLegs().concat([491]).map(id => `<button type="button" data-a="showfilm" data-k="leg" data-i="${id}" style="--cc:${LEG[id].cc}">${spr(id, { lazy: 1, mega: defForm(id) })}<b>${esc(D(id)[0])}</b></button>`).join('')}<button type="button" data-a="showfilm" data-k="leg" data-i="dk" style="--cc:${DARK.cc}">${spr(150, { sh: 2 })}<b>Dark Mewtwo</b></button></div>
-      <div class="row"><button type="button" class="btn sp" data-a="showplay">The trailer</button><button type="button" class="btn sp" data-a="show">The showcase</button></div></div>
-    <div class="stack">${sec('Packs', 'Open them for free and see what really comes out.')}<div class="row labpk">${Object.keys(PACKS).map(k => `<button type="button" class="btn sp" data-a="pkdemo" data-k="${k}" style="--pc:${PACKS[k].c}"><span class="pk-ic"><i></i></span>${PACKS[k].n.replace(' Pack', '')}</button>`).join('')}</div><button type="button" class="btn wide nf" data-a="packlab">Pack odds · open a thousand</button></div>
+      <div class="row"><button type="button" class="btn sp" data-a="showplay">The trailer</button><button type="button" class="btn sp" data-a="show">The showcase</button></div>`)}
+    ${tab('packs', `${sec('Packs', 'Open them for free and see what really comes out.')}<div class="row labpk">${Object.keys(PACKS).map(k => `<button type="button" class="btn sp" data-a="pkdemo" data-k="${k}" style="--pc:${PACKS[k].c}"><span class="pk-ic"><i></i></span>${PACKS[k].n.replace(' Pack', '')}</button>`).join('')}</div><button type="button" class="btn wide nf" data-a="packlab">Pack odds · open a thousand</button>`)}
     ${PACK.ok ? `<p class="sm tn">Your pack is loaded: ${Object.keys(PACK.man.scenes || {}).length} arenas, ${(PACK.man.music || []).length} tracks and ${Object.keys(PACK.man.sfx || {}).length} sounds.</p>` : ''}`, 'tint', 'var(--gold)');
   /* Bildene av de to fra pakken settes inn når de er hentet. */
   if (PACK.ok) PACK.portraits(['cynthia', 'ghetsis']).then(n => { if (n) document.querySelectorAll('#ov .shw-f button').forEach(b => { const o = b.querySelector('.tsb'); if (o) o.outerHTML = tsprite(b.dataset.i.toLowerCase()); }); }).catch(() => {});
 }
 const sbxGo = msg => { closeSheet(); closeOv(); BT.B = null; BT.busy = false; stopMusic(); U.tab = 'fokus'; render(); toast(msg); };
+/* Rett inn i en modus i kopien: forsiden tegnes under, og skjermen for modusen åpnes over den. */
+const sbxIn = (msg, go) => { closeSheet(); closeOv(); BT.B = null; BT.busy = false; stopMusic(); U.tab = 'fokus'; render(); go(); toast(msg); };
+const facGo = () => { BT.fsel = []; BT.fpick = false; BT.fview = null; facScreen(); };
+const sbxFacRe = () => { const c = $('#sbxfc'); if (c) c.outerHTML = sbxFacCard(); };
 const XA = {
   rcdone: () => { if (BT.res) overview(); else { closeOv(); render(); } },
   labpick: el => { if (!isAdmin()) return; sfx.open(); labPick(el.dataset.k); },
@@ -429,11 +479,20 @@ const XA = {
   exstop: () => { const B = BT.B; if (B) B.watch = 0; const b = $('#exb'); if (b) b.remove(); toast('You are in control now.'); },
   exexit: () => { BT.B = null; BT.busy = false; stopMusic(0.4); sfx.tap(); showcase(); },
   sbxopen: () => { const first = !SBX; if (!sbxEnter()) return; if (first) sbxDay(); sbxGo(first ? 'Sandbox: this is a copy of your save. Nothing is saved.' : 'Back in the copy.'); },
-  sbxpick: el => { if (!isAdmin()) return; sfx.open(); sbxPick(el.dataset.k); },
-  sbxfinal: el => { const k = el.dataset.k, i = +el.dataset.i; if (!POOL[k] || !POOL[k][i] || !sbxEnter()) return; sbxDay(); sbxFinal(k, i); sbxGo(`Sandbox: ${POOL[k][i][0]} is waiting in the final.`); },
-  sbxfac: el => { const r = Math.max(1, +el.dataset.k || 1); if (!sbxEnter()) return; sbxDay(); sbxFac(r); sbxGo(`Sandbox: a Frontier run from round ${r}.`); },
-  sbxcup: el => { const i = +el.dataset.k; if (!CUPS[i] || !sbxEnter()) return; sbxDay(); SBX.cup = i; sbxGo(`Sandbox: the ${CUPS[i].n}.`); },
-  sbxtools: () => { if (!SBX) return; sfx.open(); sbxTools(); },
+  sbxpick: el => { if (!isAdmin()) return; sbxPick(el.dataset.k); },
+  sbxtab: el => { const k = el.dataset.k, o = $('#ov'); if (!SBXTABS.some(x => x[0] === k)) return; U.sbt = k;
+    o.querySelectorAll('[data-sbt]').forEach(d => { d.hidden = d.dataset.sbt !== k; });
+    o.querySelectorAll('[data-a="sbxtab"]').forEach(b => { const on = String(b.dataset.k === k); b.setAttribute('aria-pressed', on); b.setAttribute('aria-selected', on); });
+    if (o.scrollTop > 0) o.scrollTop = 0; },
+  sbxr: el => { sbxF().r = Math.max(1, Math.min(8, +el.dataset.k || 1)); sbxFacRe(); },
+  sbxo: el => { const f = sbxF(), k = el.dataset.k; if (k in f && k !== 'r') { f[k] = f[k] ? 0 : 1; sbxFacRe(); } },
+  sbxfinal: el => { const k = el.dataset.k, i = +el.dataset.i; if (!POOL[k] || !POOL[k][i] || !sbxEnter()) return; sbxDay(); sbxFinal(k, i); sbxIn(`Sandbox: ${POOL[k][i][0]} is waiting in the final.`, () => BA.bpre()); },
+  sbxlgo: () => { if (!sbxEnter()) return; sbxDay(); sbxIn('Sandbox: your next League battle.', () => BA.bpre()); },
+  /* Frontier fra en runde, med valgene fra kortet. SBX.fr huskes, så et nytt løp i kopien starter likt (BA.fenter og «Again»). */
+  sbxfac: el => { const f = sbxF(), r = Math.max(1, +el.dataset.k || f.r); if (!sbxEnter()) return; sbxDay(); SBX.fr = { r, boss: f.boss, mega: f.mega, top: f.top }; sbxFac(r, SBX.fr); sbxIn(`Sandbox: a Frontier run from round ${r}.`, facGo); },
+  sbxagain: () => { if (!SBX || !SBX.fr) return; sbxDay(); sbxFac(SBX.fr.r, SBX.fr); sbxIn(`Sandbox: again from round ${SBX.fr.r}.`, facGo); },
+  sbxcup: el => { const i = +el.dataset.k; if (!CUPS[i] || !sbxEnter()) return; sbxDay(); SBX.cup = i; sbxIn(`Sandbox: the ${CUPS[i].n}.`, () => BA.wenter()); },
+  sbxtools: () => { if (!SBX) return; sbxTools(); },
   sbxsounds: () => { if (!SBX) return; sbxSounds(); },
   sbxsnd: el => { const k = el.dataset.k; if (sfx[k]) sfx[k](k === 'wob' ? 1 : undefined); },
   sbxtool: el => { if (!SBX) return; const k = el.dataset.k; sbxTool(k); sfx.ok(); closeSheet(); render(); toast((SBXT.find(x => x[0] === k) || ['', 'Done'])[1] + ': done.'); },

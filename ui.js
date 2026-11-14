@@ -193,8 +193,9 @@ function cry(id, delay = 0, vol = 0.45) {
 /* Lyd per type trykk. Handlinger med egen lyd (kast, kjøp, utvikling osv.) får ikke en ekstra. */
 const OWN = new Set(['evpick', 'dsell', 'mgive', 'triv', 'trev', 'mvtog', 'start', 'throw', 'buy', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'honyes', 'clkagain', 'help', 'tour', 'tourgo', 'tourend', 'tourhub', 'trtipok', 'trtip', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats', 'achget', 'achall', 'sbxsnd', 'held', 'heldgive', 'heldoff', 'heldshop', 'heldbuy']);
 const SND = {
-  tab: 'tab', lagv: 'tab', dexr: 'tab',
-  fag: 'chip', min: 'chip', reg: 'chip', sort: 'chip', filt: 'chip', sety: 'chip', extog: 'chip',
+  tab: 'tab', lagv: 'tab', dexr: 'tab', sbxtab: 'tab',
+  fag: 'chip', min: 'chip', reg: 'chip', sort: 'chip', filt: 'chip', sety: 'chip', extog: 'chip', sbxr: 'chip', sbxo: 'chip',
+  sbxpick: 'open', sbxtools: 'open', sbxfac: 'open', sbxlgo: 'open', sbxcup: 'open', sbxfinal: 'open', sbxagain: 'open',
   ball: 'ball', spec: 'open', plan: 'open', sync: 'open', backup: 'open', snext: 'ok', seadd: 'open', avatar: 'open', avall: 'open', avpick: 'ok', ach: 'open', rkok: 'ok',
   close: 'close', home: 'close', later: 'close', sback: 'close', sedel: 'close', skip: 'close', syncoff: 'close', toshop: 'open',
   train: 'open', trsel: 'chip', trback: 'close', trclr: 'warn',

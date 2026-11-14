@@ -1496,7 +1496,27 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .shw-sil.leg .raid-sp.qm{width:44px;height:44px;margin:0 0 0 6px}.shw-sil.leg .raid-sp.qm i{font-size:24px}
 /* Sandkassa: stripa øverst mens kopien er i bruk, og kortet som åpner den. */
 .sbxbar{display:flex;align-items:center;gap:8px;margin-right:42px;padding:9px 10px 9px 14px;border-radius:16px;background:color-mix(in srgb,var(--gold) 16%,var(--card));box-shadow:0 0 0 1.5px color-mix(in srgb,var(--gold) 55%,transparent)}
-.sbxbar .sp{display:flex;flex-direction:column;flex:1 1 auto;min-width:0}.sbxbar b{color:var(--gold);font-size:14px;letter-spacing:.02em}
+.sbxbar .sp{display:flex;flex-direction:column;flex:1 1 auto;min-width:0}
+/* Sandkassa (m20): tittelen i linja åpner Sandbox-skjermen; fanene står fast øverst når du blar; Frontier-kortet med rundene, målerne og
+   valgene; cupene og verktøyene i rutenett; resultatet i kopien har en egen rad. */
+.sbxhome{align-items:flex-start;text-align:left}
+.sbxseg{position:sticky;top:calc(env(safe-area-inset-top,0px) + 6px);z-index:3;box-shadow:0 0 0 1px var(--line),0 8px 18px rgba(0,0,0,.45)}
+.sbxr{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:5px}
+.sbxr button{min-height:42px;border-radius:13px;background:var(--soft);font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;transition:transform .12s ease}
+.sbxr button:active{transform:scale(.94)}
+.sbxr button[aria-pressed="true"]{background:var(--gold);color:#2a2109}
+.sbxm{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px 10px;align-items:center;font-size:12.5px;padding:2px 0}
+.sbxm>span:not(.bar){color:var(--ink2)}
+.sbxm .bar{height:6px}
+.sbxm>b{font-weight:750;text-align:right;white-space:nowrap}
+.sbxo .chip{min-height:34px;font-size:12.5px;padding:0 12px}
+.sbxo .chip[aria-pressed="true"]{background:var(--gold);color:#2a2109}
+.sbxcups,.sbxtg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.sbxcups .btn{min-height:52px;border-radius:16px;flex-direction:column;gap:1px;padding:6px 10px;font-size:14px;line-height:1.2}
+.sbxtg .btn{min-height:46px;border-radius:15px;padding:0 10px;font-size:13px;line-height:1.2;text-align:center}
+.sbxnow{display:flex;align-items:center;gap:8px;padding:10px 10px 10px 14px;border-radius:16px;background:color-mix(in srgb,var(--gold) 12%,var(--card));box-shadow:0 0 0 1px color-mix(in srgb,var(--gold) 45%,transparent)}
+.sbxnow .sp{display:flex;flex-direction:column;min-width:0}.sbxnow b{font-size:13.5px}
+.sbxacts{gap:8px}.sbxacts .btn{min-height:46px;border-radius:23px}.sbxbar b{color:var(--gold);font-size:14px;letter-spacing:.02em}
 .sbxbar .btn.gold{background:var(--gold);color:#2a2109}
 .sprb.plt>.spr{filter:var(--pf)}
 /* Studiemodus: forsiden før «Done for today». Luftig, og bare det som trengs. */

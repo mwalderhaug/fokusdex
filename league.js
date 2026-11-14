@@ -645,6 +645,9 @@ function doTrade(x, mine) {
 const FACLV = 50, FACN = 5, FACROUND = r => 200 + 100 * Math.min(4, r - 1);
 const FACBST = r => [[430, 525], [455, 545], [475, 570], [495, 600]][Math.min(3, r - 1)];
 const FACD = [-55, -35, -15, 0];
+/* Sjansen for at bossen i runde r er en toppboss (klasse 7–9; up = 1.5 på Frontier-bonusdagen), og hvor ofte en vanlig trener velger det beste
+   angrepet (w = 0–3: hvilken trener i runden). Egne navn fordi sandkassa viser dem (sbxFacPeek i show.js). */
+const facTopP = (r, up = 1) => Math.min(0.6, (0.12 + 0.06 * (r - 1)) * up), facSk = (r, w) => Math.min(0.95, 0.3 + 0.1 * r + 0.08 * w);
 const facW = (s, a, b) => { const m = (a + b) / 2, h = (b - a) / 2 || 1; return 0.35 + 0.65 * (1 - Math.abs(s - m) / h); };
 /* Hvor sterk en leie-Pokémon er, i stjerner (1–5), og ballen den ligger i før den åpnes. Mega er alltid fem. */
 const facStars = m => { if (m.mega) return 5; const s = bstSum(m.id); return s < 455 ? 1 : s < 485 ? 2 : s < 515 ? 3 : s < 545 ? 4 : 5; };
@@ -677,9 +680,10 @@ function megaPick(used) {
   for (let i = 0; i < c.length; i++) { r -= w[i]; if (r <= 0) return c[i]; }
   return c[0];
 }
-function facOffer(r) {
+/* mg: én av de sju er alltid en Mega (bare fra sandkassa). */
+function facOffer(r, mg) {
   const used = new Set(), tys = {}, l = Array.from({ length: 7 }, () => facMon(r, used, 0, tys));
-  if (Math.random() < MEGAP) { const k = megaPick(used), g = MEGA[k], i = rnd(7); l[i] = { id: g[0], mega: k + 1, lv: FACLV, sh: 0, iv: l[i].iv, ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: foeMoves(g[0], FACLV, 1) }; }
+  if (mg || Math.random() < MEGAP) { const k = megaPick(used), g = MEGA[k], i = rnd(7); l[i] = { id: g[0], mega: k + 1, lv: FACLV, sh: 0, iv: l[i].iv, ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: foeMoves(g[0], FACLV, 1) }; }
   return l;
 }
 function facStart() { S.fac.run = { round: 1, w: 0, streak: 0, offer: facOffer(1), open: 0, team: null, foe: null }; save(); }
@@ -694,7 +698,8 @@ function facFoe() {
   const boss = R.w === FACN - 1, used = new Set(R.team.map(m => m.id)), cnt = {};
   let f;
   if (boss) {
-    const up = dayBoost().mode === 'factory' ? 1.5 : 1, ultra = Math.random() < Math.min(0.6, (0.12 + 0.06 * (R.round - 1)) * up);
+    /* R.top: toppboss hver gang (bare fra sandkassa). */
+    const up = dayBoost().mode === 'factory' ? 1.5 : 1, ultra = !!R.top || Math.random() < facTopP(R.round, up);
     const k = ultra ? pickUltra(R.round - 1) : Math.random() < 0.5 ? 'brain' : ['gym', 'eviladmin', 'e4', 'rival'][rnd(4)], i = rnd(POOL[k].length);
     /* Bossen vokser med rundene: i første runde er laget dårligere oppdrettet og de som utvikler seg sent, står i en tidligere form.
        De sjeldne (u = 1 til 3 for klasse 7 til 9) ligger alltid et hakk eller mer over, så de sjeldneste er vanskeligst også her. */
@@ -713,7 +718,7 @@ function facFoe() {
 function facInfo(f) {
   const R = S.fac.run;
   if (f.boss) return trainerOf(f.k, f.i, { skill: (f.sk || 1) * diff().sk, fr: 1, arena: 'hall', int: f.k === 'brain' ? 3 : TCL[f.k].i - 1 });
-  return trainerOf('trainer', f.ci, { ty: f.hint, skill: Math.min(0.95, 0.3 + 0.1 * R.round + 0.08 * R.w) * diff().sk, fr: 1, arena: 'factory', v: 0, int: R.w >= 2 ? 1 : 0 });
+  return trainerOf('trainer', f.ci, { ty: f.hint, skill: facSk(R.round, R.w) * diff().sk, fr: 1, arena: 'factory', v: 0, int: R.w >= 2 ? 1 : 0 });
 }
 function facBattle() {
   const R = S.fac.run, f = facFoe();
