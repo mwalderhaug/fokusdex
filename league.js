@@ -296,8 +296,10 @@ const evIs = k => { const e = evNow(); return !!e && e.k === k; };
 const evCoin = () => evIs('gold') ? EVCOIN : 1, evShiny = () => evIs('lucky') ? EVSHINY : 1, evPrice = () => evIs('camp') ? EVCAMP : 1;
 const evSm = () => Math.round(studyMult() * evCoin() * 10) / 10;
 /* Ekstra forsøk i Frontier i dag, gitt i lagringen (S.fac.xb = { d, n }; Jazz 16.11). carry rører det ikke, så det overlever en ny lagring. */
+/* Ekstra forsøk i Frontier til alle en bestemt kampdag (Jazz 16.11: «Ett forsøk til hos begge»). Går ut av seg selv dagen etter. */
+const FACGIFT = { '2026-11-16': 1 }, facGift = () => FACGIFT[S.lad.day || dayKey()] || 0;
 const facXb = () => { const x = S.fac && S.fac.xb, d = S.lad.day || dayKey(); return x && x.d === d ? Math.max(0, x.n | 0) : 0; };
-const ladLives = () => (diff().lives || LIVES) + (evIs('wind') ? 1 : 0), facLives = () => FACLIVES + (evIs('wind') ? 1 : 0) + facXb();
+const ladLives = () => (diff().lives || LIVES) + (evIs('wind') ? 1 : 0), facLives = () => FACLIVES + (evIs('wind') ? 1 : 0) + facXb() + facGift();
 /* Et tap i ligaen på kampdagen d. Er forsøkene brukt opp, er runden over: ligaen stenger for dagen, og neste ligadag starter du på kamp 1 igjen
    (S.lad.fell = hvor langt du kom). Har du et forsøk igjen (Easy, eller Second Wind), står den samme treneren der til omkamp. Gir forsøk igjen i dag. */
 function ladLose(d) {
