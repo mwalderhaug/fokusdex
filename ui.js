@@ -1214,6 +1214,8 @@ const pkPct = x => x >= 0.9995 ? '100 %' : x >= 0.995 ? '99 %' : x >= 0.1 ? Math
    U.pk = { k, packs (hver sortert med det beste sist), i = pakken som står framme, demo, rel = settet som slippes, fin = ferdig valgt, pick }. */
 const pkIv = e => e.iv ? e.iv.reduce((a, b) => a + b, 0) : 0;
 const pkHot = e => !!(e.myst || e.t >= 3 || e.sh);
+/* Valget mellom å beholde og å slippe for mynter: på reisen først fra dag 4 (steget «nature»). */
+const pkPickOn = () => !jOn() || has('nature');
 const pkBig = e => pkHot(e) || (szOn() && e.sz === 3) || !!(potOn() && e.iv && starsFor(pkIv(e)) >= 5);
 const pkQ = e => (e.myst ? 100 : 0) + e.t * 10 + (e.sh ? 25 : 0) + (e.iv ? starsFor(pkIv(e)) : 0) + (e.sz === 3 ? 4 : e.sz === 2 ? 1 : 0);
 const pkWord = e => e.myst ? 'Legendary' : [e.sh ? 'Shiny' : '', szOn() && e.sz === 3 ? 'Giant' : '', e.t >= 3 ? TIERS[e.t] : !e.sh && potOn() && e.iv && starsFor(pkIv(e)) >= 5 ? 'Five stars' : ''].filter(Boolean).join(' · ');
@@ -1268,7 +1270,7 @@ function pkEnd() {
   const X = U.pk, st = $('#pkst'); if (!X || !st) return; clearTimeout(pkPackDone.t);
   const all = X.packs.reduce((a, p) => a.concat(p), []), n = X.packs.length, live = all.filter(e => X.demo || S.pend.includes(e));
   const tray = $('#pktray'), top = $('#pko .pk-top'); if (tray) tray.hidden = true; if (top) top.hidden = true;
-  const sum = n > 1 || !!X.pick;
+  const sum = n > 1 || !!X.pick; if (sum && !pkPickOn()) X.fin = 1;
   if (!X.rel) { const keep = X.demo || !sum ? null : packKeepers(all); X.rel = new Set(keep ? all.filter(e => !keep.has(e)) : []); }
   const best = all.reduce((a, x) => Math.max(a, x.t + (x.sh ? 2 : 0)), 0), nw = new Set(all.filter(e => !e.myst && !S.caught[e.id]).map(e => e.id)).size, cnt = f => live.filter(f).length;
   const word = all.some(x => x.myst) ? 'A legendary! Step into the grass to see who it is.' : best >= 4 ? 'What a pull!' : best >= 3 ? 'A great pack.' : X.demo ? 'An ordinary pack.' : 'They are waiting in the grass.';
@@ -1282,7 +1284,7 @@ function pkEnd() {
   $('#pkt').textContent = X.demo ? word : sum && !X.fin ? (rel.length ? tl('The dimmed ones are duplicates no better than what you have. Tap a card to change it.') : tl('Tap a card to let it go for coins instead of catching it.')) : live.length ? word : 'All let go.';
   $('#pka').innerHTML = X.demo ? `<button type="button" class="btn gold" data-a="pkdemo" data-k="${X.k}">Open another</button><button type="button" class="btn" data-a="pkdemo" data-k="${X.k}" data-n="10">Open ten</button><button type="button" class="btn nf" data-a="${U.pkFrom === 'odds' ? 'packlab' : 'lab'}">${U.pkFrom === 'odds' ? 'Back to the odds' : 'Back to the Sandbox'}</button>`
     : sum && !X.fin ? `${rel.length ? `<button type="button" class="btn gold" data-a="pkrel">Let ${rel.length} go for ${coinEl(val)}</button>` : ''}<button type="button" class="btn${rel.length ? ' nf' : ' gold'}" data-a="pkkeep">${rel.length ? 'Keep them all' : 'Done'}</button>`
-    : `${live.length ? '<button type="button" class="btn gold" data-a="pkhunt">Catch them now</button>' : ''}<button type="button" class="btn nf" data-a="pkdone">${live.length ? 'Later' : 'Done'}</button>${!sum && live.some(e => !e.myst) ? '<button type="button" class="btn nf pk-lg" data-a="pkpick">Let some go for coins</button>' : ''}`;
+    : `${live.length ? '<button type="button" class="btn gold" data-a="pkhunt">Catch them now</button>' : ''}<button type="button" class="btn nf" data-a="pkdone">${live.length ? 'Later' : 'Done'}</button>${!sum && pkPickOn() && live.some(e => !e.myst) ? '<button type="button" class="btn nf pk-lg" data-a="pkpick">Let some go for coins</button>' : ''}`;
 }
 function ov(html, cls, tc) { const o = $('#ov'); o.className = 'ov' + (cls ? ' ' + cls : ''); o.style.setProperty('--tc', tc || 'var(--sage)'); o.innerHTML = `<div class="ovin">${html}</div>`; o.hidden = false; }
 function closeOv() { const o = $('#ov'); o.hidden = true; o.innerHTML = ''; }
@@ -1622,6 +1624,7 @@ const A = {
     if (el.classList.contains('on')) { if (!st.querySelector('.pk-card:not(.on)') && X.i < X.packs.length - 1) A.pknext(); return; }
     const e = X.packs[X.i][+el.dataset.k]; if (!e) return;
     el.classList.add('on'); if (!e.myst && !X.demo) S.seen[e.id] = 1;
+    el.setAttribute('aria-label', e.myst ? 'A legendary Pokémon. Who it is, you find out in the grass' : `${D(e.id)[0]}, ${e.sh ? 'shiny, ' : ''}${TIERS[e.t]}, level ${e.lv}${S.caught[e.id] ? '' : ', new species'}`);
     if (e.myst) { sfx.event(); buzz([80, 50, 80, 50, 80, 50, 320]); } else if (e.t >= 3 || e.sh) { sfx.evo(); buzz([60, 40, 60, 40, 220]); } else if (e.t >= 2) { sfx.got(); buzz(40); } else { sfx.found(); buzz(15); }
     if (!e.myst) cry(e.id, 280, 0.35);
     const big = pkBig(e); if (big) pkHero(el, e);
