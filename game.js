@@ -54,11 +54,13 @@ const SHOP = {
   gleam: { n: 'Gleam Incense', p: 6000, d: 'Shiny odds ×3 for 48 hours on new encounters while it burns · trainer level 16', lv: 16, img: 'pure-incense', bc: '#e3c577', sb: [3, 48] },
   radiant: { n: 'Radiant Incense', p: 18000, d: 'Shiny odds ×5 for 72 hours on new encounters while it burns · trainer level 24', lv: 24, img: 'full-incense', bc: '#e3c577', sb: [5, 72] },
   prism: { n: 'Prism Lure', p: 12000, d: 'The next legendary raid has a 1 in 5 chance of being shiny · trainer level 20', lv: 20, img: 'prism-scale', bc: '#b295e6' },
-  candy: { n: 'Rare Candy', p: 150, d: 'One level up for one Pokémon', ic: 'candy' },
+  candy: { n: 'Rare Candy', p: 150, d: 'One level up for one Pokémon', img: 'rare-candy', bc: '#7fa8e6' },
   mstone: { n: 'Mega Stone', p: 3000, d: 'Give it to one Pokémon that has a Mega form. It can then Mega Evolve once a battle', ic: 'gem', ring: 1 },
   stone: { n: 'Evolution Stone', p: 300, d: 'For those that do not evolve by level alone', ic: 'gem' },
   egg: { n: 'Egg', p: 250, d: 'Hatches after 120 focus minutes. Can be from any region', ic: 'egg' }
 };
+/* Varene man kjøper mange av: de kan kjøpes ti om gangen (buyN). Ikke det som har et tak, virker over tid eller trenger noe annet først. */
+const SHOPTEN = new Set(['poke', 'great', 'ultra', 'dusk', 'gberry', 'candy', 'stone', 'potion', 'super', 'hyper', 'maxp', 'heal', 'revive', 'maxrev']);
 /* Hyllene i butikken, i den rekkefølgen de står. Det som er låst, vises med trenernivået det krever: noe å se fram til. */
 const SHELF = [['Balls', ['poke', 'great', 'ultra', 'dusk', 'master']], ['For the hunt', ['incense', 'lure', 'slure', 'gberry']], ['Shiny hunting', ['glint', 'gleam', 'radiant', 'prism']],
   ['For your Pokémon', ['candy', 'stone', 'mstone', 'egg']], ['For battles', ['potion', 'super', 'hyper', 'maxp', 'heal', 'revive', 'maxrev', 'ash']]];
@@ -478,6 +480,7 @@ const LNO = {
   'counts half for the bonus': 'teller halvt for bonusen',
   'Exam period: the bonus and XP are at full strength.': 'Eksamensperiode: bonusen og XP er på full styrke.',
   'Outside the exam period the top bonus and XP are {p} % lower. Start it under Profile when your exams are near.': 'Utenfor eksamensperioden er toppen på bonusen og XP {p} % lavere. Start den under Profile når eksamenene nærmer seg.',
+  'Wild Pokémon from here show up in your encounters when the route is on.': 'Ville Pokémon herfra dukker opp i møtene dine når ruta er på.',
   // Steg 1 (Dusk): flere
 };
 const tl = (s, v) => { const x = typeof S !== 'undefined' && S && S.lang === 'no' && LNO[s] != null ? LNO[s] : s; return v ? x.replace(/\{(\w+)\}/g, (m, k) => v[k] != null ? v[k] : m) : x; };
@@ -1193,6 +1196,12 @@ function buy(k) {
   else if (it.sb) S.shb = { k, m: it.sb[0], until: Date.now() + it.sb[1] * 36e5 };
   else S.items[k] = (S.items[k] || 0) + 1;
   S.coins -= it.p; save(); return true;
+}
+/* Ti om gangen (ønske 23). Bare for SHOPTEN, og bare når det er råd til alle n. */
+function buyN(k, n) {
+  const it = SHOP[k];
+  if (!it || !SHOPTEN.has(k) || !(n > 0) || S.coins < it.p * n || (it.lv && tlv() < it.lv) || (it.ring && !S.ring)) return false;
+  S.items[k] = (S.items[k] || 0) + n; S.coins -= it.p * n; save(); return true;
 }
 /* Områdene åpnes av trenernivå eller antall arter fanget (REG). Nye områder slås på med en gang. Gir navnene på dem som ble åpnet nå;
    de legges også i S.nreg, så skjermen kan si fra én gang. */

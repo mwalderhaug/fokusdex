@@ -380,8 +380,8 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 /* Butikk og lister */
 .item{display:flex;align-items:center;gap:12px;padding:12px 0}
 .item+.item{border-top:1px solid var(--line)}
-.item b{font-weight:700}
-.ic{width:42px;height:42px;border-radius:13px;background:var(--card2);display:flex;align-items:center;justify-content:center;flex:none}
+.item b{font-weight:600}
+.ic{width:42px;height:42px;border-radius:50%;background:var(--card2);display:flex;align-items:center;justify-content:center;flex:none}
 .gem{width:18px;height:22px;background:var(--violet);clip-path:polygon(50% 0,100% 35%,50% 100%,0 35%)}
 .gem.mg{background:conic-gradient(from 200deg,#ff8a8a,#ffe08a,#9af0a8,#7fd4f5,#c3a3ff,#ff8a8a);clip-path:circle(50%);width:20px;height:20px}
 /* Mega: kortet på Pokémonen og merket på motstandere som bærer stein. */
@@ -1311,13 +1311,43 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .mulic{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:color-mix(in srgb,var(--gold) 20%,transparent);color:var(--gold);font-weight:800;font-size:18px;flex:none}
 
 /* ---------- Encounter-pakker ---------- */
+/* ---------- SHOP (Dusk): fire faner, korte rader ---------- */
+.seg .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gold);margin-left:5px;vertical-align:middle}
+.lab.sh{margin:6px 2px -4px;font-size:12px;letter-spacing:.02em}
+.slist{padding:2px 12px}
+.srow{display:flex;align-items:center;gap:8px;min-height:56px}
+.srow+.srow{border-top:1px solid var(--line)}
+.srow-m{flex:1;min-width:0;display:flex;align-items:center;gap:10px;text-align:left;min-height:56px}
+.srow-m .sp{display:flex;flex-direction:column;min-width:0}
+.srow-m b{font-weight:500;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.srow.lk .srow-m{opacity:.5}
+.srow .ic,.srow-l .ic{width:38px;height:38px;border-radius:50%;background:var(--card2)}
+.srow .price{min-width:58px;padding:0 12px;background:var(--goldsoft);color:var(--gold);font-weight:600;font-variant-numeric:tabular-nums}
+.srow .ten{padding:0 10px;font-weight:600;color:var(--ink2)}
+.srow .btn:disabled{opacity:.35}
+.pill.on{background:var(--accsoft);color:var(--acc)}
+.pill.lk{color:var(--ink2);gap:4px}
+.srow-l{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 14px 10px 12px}
+.srow-l .sp{display:flex;flex-direction:column}.srow-l b{font-weight:500}.srow-l>.icn{color:var(--ink3)}
+.odds{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;padding:16px}
+.odds b{font-size:34px;font-weight:300;letter-spacing:-.02em;line-height:1.1;color:var(--gold)}
+.odds .pill{margin-top:4px}
+.shead.it{gap:12px}.shead.it .pn{font-size:22px}
+.ic.big{width:60px;height:60px;border-radius:50%}
+/* Pakkene: fire kort, to i bredden. Trykk åpner, «i» viser hva som er i den. */
 .packs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.pkb{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:12px 12px 10px;border-radius:18px;border:0;background:linear-gradient(160deg,color-mix(in srgb,var(--pc) 26%,var(--card)),var(--card) 70%);box-shadow:0 0 0 1px color-mix(in srgb,var(--pc) 45%,transparent);color:var(--ink);font:inherit;cursor:pointer;min-width:0}
-.pkb b{font-size:15px}
-.pkb .sm{font-size:11.5px;line-height:1.3}
-.pkb .pk-p{margin-top:auto;padding-top:6px;font-weight:750;font-size:13.5px}
-.pkb.off{opacity:.55;cursor:default}
-.pkb:active:not(.off){filter:brightness(1.15)}
+.pkb{position:relative;border-radius:var(--r-card);background:linear-gradient(160deg,color-mix(in srgb,var(--pc) 24%,var(--card)),var(--card) 70%);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--pc) 45%,transparent),inset 0 1px 0 0 var(--hi)}
+.pkb-m{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;padding:18px 10px 14px;transition:transform .12s ease}
+.pkb-m:active:not(:disabled){transform:scale(.96)}
+.pkb-m:disabled{opacity:1}
+.pkb b{font-size:15px;font-weight:500}
+.pkb .pk-p{display:inline-flex;align-items:center;gap:5px;font-weight:600;font-size:13.5px;color:var(--ink2)}
+.pkb .pk-p .coin{font-size:13.5px;color:var(--ink)}
+.pkb.off .pk-ic,.pkb.off b{opacity:.5}
+.pkb.free{box-shadow:inset 0 0 0 1.5px var(--gold),0 0 24px -8px var(--gold)}.pkb.free .pk-p{color:var(--gold)}
+.pkb .hq{position:absolute;top:10px;right:10px;margin:0}
+.pkb .pk-ic{width:44px;height:58px;border-radius:9px}
+.pkb .pk-ic i{width:18px;height:18px}
 .pk-ic{display:inline-flex;width:34px;height:44px;border-radius:7px;background:linear-gradient(165deg,color-mix(in srgb,var(--pc) 85%,#fff),var(--pc) 45%,color-mix(in srgb,var(--pc) 60%,#000));box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.28),0 2px 6px rgba(0,0,0,.4);align-items:center;justify-content:center}
 .pk-ic i{width:14px;height:14px;border-radius:50%;background:linear-gradient(#fff 0 44%,#1b1b1f 44% 56%,#f3f3f3 56%);box-shadow:0 0 0 1.5px #1b1b1f}
 .pk-ic.big{width:120px;height:160px;border-radius:16px}

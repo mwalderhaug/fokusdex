@@ -191,9 +191,9 @@ function cry(id, delay = 0, vol = 0.45) {
   }).catch(() => {});
 }
 /* Lyd per type trykk. Handlinger med egen lyd (kast, kjøp, utvikling osv.) får ikke en ekstra. */
-const OWN = new Set(['evpick', 'dsell', 'mgive', 'triv', 'trev', 'mvtog', 'start', 'throw', 'buy', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'honyes', 'clkagain', 'help', 'tour', 'tourgo', 'tourend', 'tourhub', 'trtipok', 'trtip', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats', 'achget', 'achall', 'sbxsnd', 'held', 'heldgive', 'heldoff', 'heldshop', 'heldbuy']);
+const OWN = new Set(['evpick', 'dsell', 'mgive', 'triv', 'trev', 'mvtog', 'start', 'throw', 'buy', 'buy10', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'honyes', 'clkagain', 'help', 'tour', 'tourgo', 'tourend', 'tourhub', 'trtipok', 'trtip', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats', 'achget', 'achall', 'sbxsnd', 'held', 'heldgive', 'heldoff', 'heldshop', 'heldbuy']);
 const SND = {
-  tab: 'tab', lagv: 'tab', dexr: 'tab', sbxtab: 'tab',
+  tab: 'tab', lagv: 'tab', dexr: 'tab', sbxtab: 'tab', shopt: 'tab', sinfo: 'open', pinfo: 'open',
   fag: 'chip', min: 'chip', reg: 'chip', sort: 'chip', filt: 'chip', sety: 'chip', extog: 'chip', sbxr: 'chip', sbxo: 'chip',
   sbxpick: 'open', sbxtools: 'open', sbxfac: 'open', sbxlgo: 'open', sbxcup: 'open', sbxfinal: 'open', sbxagain: 'open',
   ball: 'ball', spec: 'open', plan: 'open', sync: 'open', backup: 'open', snext: 'ok', seadd: 'open', avatar: 'open', avall: 'open', avpick: 'ok', ach: 'open', rkok: 'ok',
@@ -242,7 +242,7 @@ function render() {
   $('#main').classList.toggle('nonav', !open);
   $('#main').innerHTML = `${GRADDEF}<div class="wrap${E ? ' evpage ev-' + E.k : ''}${SBX ? ' insbx' : ''}"${E ? ` style="--ec:${EI.c};--ec2:${EI.c2 || EI.c}"` : ''}>${typeof sbxBar === 'function' ? sbxBar() : ''}${helpBtn()}${VIEW[U.tab]()}</div>`;
   /* Et område som nettopp ble åpnet (av nivå eller antall arter), sies fra om én gang. */
-  if (open && S.nreg && S.nreg.length) { const l = S.nreg; S.nreg = []; save(true); setTimeout(() => toast(`New area: ${l.join(' and ')} ${l.length > 1 ? 'are' : 'is'} open. See Shop · Routes.`), 400); }
+  if (open && S.nreg && S.nreg.length) { const l = S.nreg; S.nreg = []; save(true); setTimeout(() => toast(`New area: ${l.join(' and ')} ${l.length > 1 ? 'are' : 'is'} open. See the Dex.`), 400); }
 }
 const VIEW = {};
 /* DAGEN HAR TO DELER. Før du har trykket «Done for today», viser appen bare det som har med studiet å gjøre: fag, lengde, Start, dagens framdrift og
@@ -737,7 +737,9 @@ VIEW.dex = () => {
   const all = [1, 2, 3, 4, 5].reduce((s, x) => s + dexCount(x), 0);
   return `<div class="row" style="justify-content:space-between"><h1 class="big">Dex</h1><span class="pill tn">${all} of 649</span></div>
     <div class="seg">${[1, 2, 3, 4, 5].map(x => `<button type="button" data-a="dexr" data-k="${x}" aria-pressed="${r === x}">${REG[x].n}</button>`).join('')}</div>
-    <div class="card"><div class="row" style="justify-content:space-between"><b>${g.n}</b><span class="sm tn">${dexCount(r)} of ${g.b - g.a + 1} caught</span></div><div class="bar" style="margin-top:8px"><i style="width:${Math.round(dexCount(r) / (g.b - g.a + 1) * 100)}%"></i></div>${open ? '' : `<p class="sm" style="margin-top:8px">This area is locked. It opens at trainer level ${g.lv} or when you have caught ${g.dex} species (you are level ${tlv()} with ${dexAll()}).</p>`}</div>
+    <div class="card"><div class="row" style="justify-content:space-between"><b>${g.n}</b><span class="sm tn">${dexCount(r)} of ${g.b - g.a + 1} caught</span></div><div class="bar" style="margin-top:8px"><i style="width:${Math.round(dexCount(r) / (g.b - g.a + 1) * 100)}%"></i></div>
+      ${open ? `<div class="row" style="justify-content:space-between;margin-top:10px"><span class="sm">${tl('Wild Pokémon from here show up in your encounters when the route is on.')}</span><button type="button" class="btn sm2${S.routes.includes(r) ? ' pri' : ''}" data-a="reg" data-k="${r}" aria-pressed="${S.routes.includes(r)}">Route ${S.routes.includes(r) ? 'on' : 'off'}</button></div>`
+        : `<p class="sm tn" style="margin-top:10px">${icn('lock')} Opens at trainer level ${g.lv} (you are ${tlv()}) or ${g.dex} species caught (you have ${dexAll()}).</p><div class="bar gold" style="margin-top:6px"><i style="width:${Math.round(Math.min(1, Math.max((tlv() - 1) / Math.max(1, g.lv - 1), dexAll() / g.dex)) * 100)}%"></i></div>`}</div>
     <div class="grid">${cells}</div>`;
 };
 function specSheet(id) {
@@ -754,29 +756,52 @@ function specSheet(id) {
 const hLeft = ms => { const h = Math.max(1, Math.ceil(ms / 36e5)); return h >= 48 ? Math.ceil(h / 24) + ' days' : h + ' h'; };
 const shopHave = k => k === 'lure' || k === 'slure' ? (S[k] > 0 ? `${S[k]} session${S[k] > 1 ? 's' : ''} left` : 'not in use') : k === 'prism' ? (S.prism ? 'waiting for the next raid' : 'not in use') : SHOP[k].sb ? (S.shb && S.shb.k === k && shinyBoost() > 1 ? `burning · ${hLeft(S.shb.until - Date.now())} left` : 'not lit') : k === 'incense' ? (S.incOn ? 'lit' : 'not lit') : `own ${shopOwn(k)}`;
 const shopFullTxt = k => SHOP[k].sb || k === 'lure' || k === 'slure' || k === 'incense' || k === 'prism' ? 'Active' : 'Full';
+/* Det hver hylle er til. Står i arket til varen (itemSheet), ikke på siden. */
 const SHELFD = {
   'For the hunt': () => 'More and better encounters from your focus sessions, and help with the ones that are hard to catch.',
-  'Shiny hunting': () => `A shiny is born with perfect IVs, and every stat is 5 % higher: a shiny of a strong species is the best Pokémon there is. Your odds right now: 1 in ${nb(Math.round(1 / Math.min(SHINYCAP, shinyOdds())))}${shinyBoost() > 1 ? ` (×${shinyBoost()} from the incense)` : ''}. The incense works on encounters, packs and eggs, not on raids.`,
+  'Shiny hunting': () => `A shiny is born with perfect IVs, and every stat is ${Math.round((SHINYST - 1) * 100)} % higher: a shiny of a strong species is the best Pokémon there is. The incense works on encounters, packs and eggs, not on raids.`,
   'For battles': () => 'Use these from the Bag in League battles and raids. Using one takes your turn, and the Bag has a limit per battle.'
 };
+/* FANENE (Dusk): Packs · Balls · Items · Shiny. Hver vare er én kort rad: bilde, navn, hva du har, og prisen. Trykk på raden for hva den gjør.
+   ×10 står på det man kjøper mange av (SHOPTEN i game.js). Rutene ligger i Dex (de er ikke varer). */
+const SHOPTABS = [['packs', 'Packs'], ['balls', 'Balls'], ['items', 'Items'], ['shiny', 'Shiny']];
+const SHOPGRP = { balls: ['Balls', 'For the hunt'], items: ['For your Pokémon', 'For battles'], shiny: ['Shiny hunting'] };
+const shopIc = (k, s) => SHOP[k].img ? ballEl(k, s || '30px') : SHOP[k].ic === 'egg' ? '<span class="egg" style="transform:scale(.7)"></span>' : `<span class="${SHOP[k].ic}${k === 'mstone' ? ' mg' : ''}"></span>`;
+const shopLock = k => { const it = SHOP[k]; return it.ring && !S.ring ? 'Mega Ring' : it.lv && tlv() < it.lv ? 'Level ' + it.lv : ''; };
+function shopRow(k) {
+  const it = SHOP[k], lock = shopLock(k), full = shopFull(k), ten = SHOPTEN.has(k);
+  return `<div class="srow${lock ? ' lk' : ''}"><button type="button" class="srow-m" data-a="sinfo" data-k="${k}" aria-label="${it.n}: what it does"><span class="ic">${shopIc(k)}</span><span class="sp"><b>${it.n}</b><span class="sm tn">${shopHave(k)}</span></span></button>
+    ${lock ? `<span class="pill lk">${icn('lock')}${lock}</span>` : full ? `<span class="pill on">${shopFullTxt(k)}</span>` : `<button type="button" class="btn sm2 price" data-a="buy" data-k="${k}"${S.coins < it.p ? ' disabled' : ''} aria-label="Buy ${it.n} for ${nb(it.p)} coins">${nb(it.p)}</button>${ten ? `<button type="button" class="btn sm2 ten" data-a="buy10" data-k="${k}"${S.coins < it.p * 10 ? ' disabled' : ''} aria-label="Buy ten for ${nb(it.p * 10)} coins">×10</button>` : ''}`}</div>`;
+}
+/* Arket til en vare: hva den gjør, hva hylla er til, og kjøpet. */
+function itemSheet(k) {
+  const it = SHOP[k]; if (!it) return;
+  const lock = shopLock(k), full = shopFull(k), ten = SHOPTEN.has(k), grp = (SHELF.find(([, ks]) => ks.includes(k)) || [''])[0];
+  openSheet(`<div class="shead it"><span class="ic big">${shopIc(k, '44px')}</span><div class="sp"><div class="pn">${it.n}</div><div class="sm tn">${shopHave(k)}</div></div>${coinEl(S.coins)}</div>
+    <p>${it.d.replace(/ · trainer level \d+$/, '')}.</p>${SHELFD[grp] ? `<p class="sm">${SHELFD[grp]()}</p>` : ''}
+    ${lock ? `<p class="sm au">${it.ring && !S.ring ? 'You need the Mega Ring first: beat a Champion.' : `Opens at trainer level ${it.lv}. You are level ${tlv()}.`}</p>` : ''}
+    <div class="acts">${lock ? '' : full ? `<span class="pill on" style="align-self:center">${shopFullTxt(k)}</span>` : `<button type="button" class="btn pri" data-a="buy" data-k="${k}" data-s="1"${S.coins < it.p ? ' disabled' : ''}>Buy · ${nb(it.p)}</button>${ten ? `<button type="button" class="btn pri" data-a="buy10" data-k="${k}" data-s="1"${S.coins < it.p * 10 ? ' disabled' : ''} aria-label="Buy ten for ${nb(it.p * 10)} coins">×10 · ${nb(it.p * 10)}</button>` : ''}`}<button type="button" class="btn nf" data-a="close">Close</button></div>`);
+}
+/* Arket til en pakke: hva som er i den (sjansene), og kjøpet. */
+function packSheet(k) {
+  const P = PACKS[k]; if (!P) return;
+  const free = !!(S.fpk && S.fpk[k] > 0), lock = !free && P.lv && tlv() < P.lv, full = S.pend.length > PACKMAX, can = (free || S.coins >= P.p) && !lock && !full;
+  openSheet(`<div class="shead it" style="--pc:${P.c}"><span class="pk-ic"><i></i></span><div class="sp"><div class="pn">${P.n}</div><div class="sm tn">Three encounters, opened on the spot</div></div>${coinEl(S.coins)}</div>
+    <p>${P.d}</p><p class="sm">The last slot is the good one: the dearer the pack, the better the odds of something rare. Pokémon from packs sell for less than wild ones. The greatest legendaries are not in packs; they have to be met in raids.</p>
+    ${lock ? `<p class="sm au">Opens at trainer level ${P.lv}. You are level ${tlv()}.</p>` : full ? '<p class="sm au">Catch some of the encounters that are waiting before you open more packs.</p>' : ''}
+    <div class="acts"><button type="button" class="btn gold" data-a="pack" data-k="${k}"${can ? '' : ' disabled'}>${free ? 'Open · free' : `Open · ${nb(P.p)}`}</button><button type="button" class="btn nf" data-a="close">Close</button></div>`);
+}
 VIEW.butikk = () => {
-  const l = tlv();
-  const ic = k => SHOP[k].img ? ballEl(k, '30px') : SHOP[k].ic === 'egg' ? '<span class="egg" style="transform:scale(.7)"></span>' : `<span class="${SHOP[k].ic}${k === 'mstone' ? ' mg' : ''}"></span>`;
-  const full = S.pend.length > PACKMAX;
+  const tab = SHOPTABS.some(t => t[0] === U.shop) ? U.shop : 'packs', l = tlv(), full = S.pend.length > PACKMAX;
+  let body = '';
+  if (tab === 'packs') body = `<div class="packs">${Object.keys(PACKS).map(k => { const P = PACKS[k], free = !!(S.fpk && S.fpk[k] > 0), lock = !free && P.lv && l < P.lv, can = (free || S.coins >= P.p) && !lock && !full;
+      return `<div class="pkb${can ? '' : ' off'}${free ? ' free' : ''}" style="--pc:${P.c}"><button type="button" class="pkb-m" data-a="pack" data-k="${k}"${can ? '' : ' disabled'} aria-label="Open ${aN(P.n)}${free ? ', free' : ` for ${nb(P.p)} coins`}"><span class="pk-ic"><i></i></span><b>${P.n}</b><span class="pk-p tn">${free ? `${icn('gift')}Free` : lock ? `${icn('lock')}Level ${P.lv}` : coinEl(P.p)}</span></button><button type="button" class="hq" data-a="pinfo" data-k="${k}" aria-label="What is in ${aN(P.n)}?">i</button></div>`; }).join('')}</div>
+    <p class="sm" style="text-align:center">${full ? 'Catch some of the encounters that are waiting before you open more packs.' : 'Three encounters in every pack. Tap a pack to open it.'}</p>`;
+  else body = SHOPGRP[tab].map(name => { const ks = SHELF.find(s => s[0] === name)[1]; return `${SHOPGRP[tab].length > 1 ? `<div class="lab sh">${name}</div>` : ''}<div class="card slist">${ks.map(shopRow).join('')}</div>`; }).join('');
+  if (tab === 'shiny') body = `<button type="button" class="card odds" data-a="sinfo" data-k="glint" aria-label="Your shiny odds right now"><span class="sm">Your shiny odds now</span><b class="tn">1 in ${nb(Math.round(1 / Math.min(SHINYCAP, shinyOdds())))}</b>${shinyBoost() > 1 ? `<span class="pill on tn">×${shinyBoost()} incense</span>` : ''}</button>` + body;
+  if (tab === 'items' && has('held')) body += `<div class="lab sh">To hold in battle</div><button type="button" class="card srow-l" data-a="heldshop"><span class="ic">${heldEl('oran', '30px')}</span><span class="sp"><b>Berries, plates and gear</b><span class="sm tn">own ${Object.keys(HELD).reduce((a, k) => a + heldTotal(k), 0)}</span></span>${icn('chev')}</button>`;
   return `<div class="row" style="justify-content:space-between"><h1 class="big">Shop</h1>${coinEl(S.coins)}</div>
-    <h2 class="h">Encounter packs</h2>
-    <div class="packs">${Object.keys(PACKS).map(k => { const P = PACKS[k], free = !!(S.fpk && S.fpk[k] > 0), lock = !free && P.lv && l < P.lv, can = (free || S.coins >= P.p) && !lock && !full;
-      return `<button type="button" class="pkb${can ? '' : ' off'}" data-a="pack" data-k="${k}" style="--pc:${P.c}"${can ? '' : ' disabled'}><span class="pk-ic"><i></i></span><b>${P.n}</b><span class="sm">${P.d}</span><span class="pk-p tn">${free ? 'Free · a gift' : lock ? 'Trainer level ' + P.lv : coinEl(P.p)}</span></button>`; }).join('')}</div>
-    <p class="sm">${full ? 'Catch some of the encounters that are waiting before you open more packs.' : 'Three encounters in every pack, opened on the spot. The last slot is the good one: the dearer the pack, the better the odds of something rare. Pokémon from packs sell for less than wild ones. The greatest legendaries are not in packs; they have to be met in raids.'}</p>
-    ${SHELF.map(([name, ks]) => `<h2 class="h">${name}</h2>${SHELFD[name] ? `<p class="sm">${SHELFD[name]()}</p>` : ''}<div class="card" style="padding-top:6px;padding-bottom:6px">${ks.map(k => { const it = SHOP[k], lock = (it.lv && l < it.lv) || (it.ring && !S.ring), full = shopFull(k);
-      return `<div class="item${lock ? ' lk' : ''}"><span class="ic">${ic(k)}</span><div class="sp"><b>${it.n}</b> <span class="sm tn">· ${shopHave(k)}</span><div class="sm">${it.d}</div></div><button type="button" class="btn sm2 ${S.coins >= it.p && !lock && !full ? 'pri' : ''}" data-a="buy" data-k="${k}"${S.coins < it.p || lock || full ? ' disabled' : ''}>${lock ? (it.ring && !S.ring ? 'Mega Ring' : 'Level ' + it.lv) : full ? shopFullTxt(k) : nb(it.p)}</button></div>`; }).join('')}</div>`).join('')}
-    <h2 class="h">To hold in battle</h2><p class="sm">Berries, plates and gear. Each Pokémon can hold one, and it works by itself in the League, the tournament and raids.</p>
-    <button type="button" class="btn wide" data-a="heldshop"${has('held') ? '' : ' hidden'}>${(() => { const n = Object.keys(HELD).reduce((a, k) => a + heldTotal(k), 0); return `Berries, plates and gear · you own ${n}`; })()}</button>
-    <h2 class="h">Routes</h2>
-    <div class="card" style="padding-top:6px;padding-bottom:6px">${[1, 2, 3, 4, 5].map(r => { const g = REG[r], has = S.regions.includes(r);
-      return `<div class="item"><span class="ic"><span class="map"></span></span><div class="sp"><b>${g.n}</b><div class="sm tn">${g.b - g.a + 1} species · ${dexCount(r)} caught</div>${has ? '' : `<div class="sm tn" style="margin-top:4px">Opens at trainer level ${g.lv} (you are ${tlv()}) or ${g.dex} species caught (you have ${dexAll()})</div><div class="bar" style="margin-top:6px"><i style="width:${Math.round(Math.min(1, Math.max((tlv() - 1) / Math.max(1, g.lv - 1), dexAll() / g.dex)) * 100)}%"></i></div>`}</div>${has ? `<button type="button" class="btn sm2${S.routes.includes(r) ? ' sage' : ''}" data-a="reg" data-k="${r}">${S.routes.includes(r) ? 'On' : 'Off'}</button>` : '<span class="pill">Locked</span>'}</div>`; }).join('')}</div>
-    <p class="sm">New areas open by themselves as you gain experience or fill the Pokédex, whichever comes first. Every route that is on takes part in your encounters: more routes means more variety, fewer means better odds for the ones you are hunting.</p>
-    <p class="sm">Most coins come from battles, and they pay more the closer you are to your daily goal. Focus minutes give 3 coins each, and duplicates can be sold.</p>`;
+    <div class="seg">${SHOPTABS.map(([k, n]) => `<button type="button" data-a="shopt" data-k="${k}" aria-pressed="${tab === k}">${n}${k === 'packs' && S.fpk && Object.keys(S.fpk).length ? '<i class="dot"></i>' : ''}</button>`).join('')}</div>${body}`;
 };
 
 /* ---------- Profil: merker, statistikk, innstillinger ---------- */
@@ -1254,8 +1279,12 @@ const A = {
   sell: el => { const m = monBy(+el.dataset.u); if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.innerHTML = 'Tap again to sell'; return; } const v = sell(m); save(); sfx.sell(); closeSheet(); render(); toast(`Sold for ${nb(v)} coins.`); },
   dsell: el => { const m = monBy(+el.dataset.u); if (!m) return render(); if (el.dataset.top === '1' && el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = 'Top IVs · tap again'; sfx.warn(); return; } const n = mName(m), v = sell(m); if (!v) return; save(); sfx.sell(); render(); toast(`${n} sold for ${nb(v)} coins.`); },
   selldupes: el => { const du = dupes(); if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = `Tap again to sell ${du.length}`; return; } let v = 0; du.forEach(m => { v += sell(m); }); save(); sfx.sell(); render(); toast(`${du.length} sold for ${nb(v)} coins.`); },
-  buy: el => { const k = el.dataset.k; if (buy(k)) { (k === 'egg' ? sfx.egg : sfx.coin)(); render(); toast(BOUGHT[k] || `${SHOP[k].n} bought.`); } },
-  pack: el => { const k = el.dataset.k, out = openPack(k); if (!out) return toast(S.pend.length > PACKMAX ? 'Catch some of your waiting encounters first.' : 'Not enough coins.'); sfx.coin(); packShow(k, out); },
+  buy: el => { const k = el.dataset.k; if (buy(k)) { (k === 'egg' ? sfx.egg : sfx.coin)(); render(); if (el.dataset.s) itemSheet(k); toast(BOUGHT[k] || `${SHOP[k].n} bought.`); } },
+  buy10: el => { const k = el.dataset.k; if (buyN(k, 10)) { sfx.coin(); setTimeout(sfx.coin, 90); render(); if (el.dataset.s) itemSheet(k); toast(`10 × ${SHOP[k].n} bought.`); } },
+  shopt: el => { U.shop = el.dataset.k; render(); },
+  sinfo: el => itemSheet(el.dataset.k),
+  pinfo: el => packSheet(el.dataset.k),
+  pack: el => { closeSheet(); const k = el.dataset.k, out = openPack(k); if (!out) return toast(S.pend.length > PACKMAX ? 'Catch some of your waiting encounters first.' : 'Not enough coins.'); sfx.coin(); packShow(k, out); },
   pkopen: () => { const o = $('#pko'); if (!o || o.classList.contains('open')) return; o.classList.add('open'); sfx.appear(); buzz([30, 40, 30]); $('#pkt').textContent = 'Tap the cards to turn them'; },
   pkflip: el => {
     if (el.classList.contains('on') || !$('#pko').classList.contains('open')) return;
