@@ -270,13 +270,13 @@ function giftSheet() {
    journeyCard: hva som er åpnet, og hva som kommer (med et hint om neste studiedag). jReveal: arket for det som er nytt (ett om gangen, etter
    «Done for today»). jAfter: det som hører til rett etter en økt eller en kamp (forklaringen av raid, shinyen, angrepstypene), og ellers jReveal.
    Tekstene går gjennom tl (norsk eller engelsk, S.lang). */
-const JIC = { battles: 'B', shop: 'S', shiny: '✦', nature: 'N', train: 'T', held: 'H' };
+const JIC = { battles: 'sword', shop: 'bag', shiny: 'spark', nature: 'star', train: 'gym', held: 'gift', size: 'scale' };
 const jNext = () => JOURNEY.find(f => !has(f[0]));
 function journeyCard() {
   if (!jOn() || !S.started) return '';
   const next = jNext();
   return `<div class="card jrn"><div class="row" style="justify-content:space-between"><b>${tl('Your journey')}</b><span class="pill tn">${tl('Study day {d}', { d: S.jd || 0 })}</span></div>
-    <div class="jrn-t">${JOURNEY.map(f => { const on = has(f[0]), nx = next && next[0] === f[0]; return `<span class="jt${on ? ' on' : ''}${nx ? ' nx' : ''}"><i>${on ? JIC[f[0]] : '?'}</i><small>${on ? tl(JSHORT[f[0]]) : nx ? tl('Next') : ''}</small></span>`; }).join('')}</div>
+    <div class="jrn-t">${JOURNEY.map(f => { const on = has(f[0]), nx = next && next[0] === f[0]; return `<span class="jt${on ? ' on' : ''}${nx ? ' nx' : ''}"><i>${on ? icn(JIC[f[0]]) : '?'}</i><small>${on ? tl(JSHORT[f[0]]) : nx ? tl('Next') : ''}</small></span>`; }).join('')}</div>
     <p class="sm">${next ? tl('Next study day ({min} min): {hint}', { min: OPENMIN, hint: tl(JHINT[next[0]]) }) : tl('Everything is open. The rest is yours to find.')}</p></div>`;
 }
 /* To av samme art på nivå 50: født med full potensial og en nature som hjelper, mot født svak med en nature som trekker ned. */
@@ -288,13 +288,36 @@ function jNature() {
   const col = (x, t) => `<div class="jn-c"><div class="jn-h">${spr(id, { s: '44px' })}<span><b>${t}</b><span class="sm tn">${NAT[x.nat]}</span></span></div>${x.st.map((v, i) => `<div class="jn-r"><span class="sm">${SN[i]}</span><span class="jn-b"><i style="width:${Math.round(v / top * 100)}%"></i></span><b class="tn">${v}</b></div>`).join('')}</div>`;
   return `<div class="jn">${col(A, tl('Born strong'))}${col(Z, tl('Born weak'))}</div><p class="sm">${tl('Same Pokémon, same level. Potential (IVs) is set when it is born: 0 to 31 in each stat. A nature lifts one stat by 10 % and lowers another. Keep the ones born strong: the stars on the catch screen show it.')}</p>`;
 }
-const jMoveTypes = () => `<div class="jmv"><div><span class="mcat ph"></span><span><b>Physical</b><span class="sm">${tl('Contact moves. They use Attack against Defense.')}</span></span></div><div><span class="mcat spc"></span><span><b>Special</b><span class="sm">${tl('Energy from a distance. They use Sp. Atk against Sp. Def.')}</span></span></div><div><span class="mcat stt"></span><span><b>Status</b><span class="sm">${tl('No damage. They change stats, the weather or the foe.')}</span></span></div></div><p class="sm">${tl('A Pokémon with a high Sp. Atk hits harder with special moves, and one with a high Attack with physical ones. Look at its stats before you pick its moves.')}</p>`;
-/* Hintet nederst i et ark: hva som kommer neste studiedag (ingenting når reisen er ferdig). */
-const jTease = () => { const n = jNext(); return n ? `<p class="jtease">${tl('Next study day: {hint}', { hint: tl(JHINT[n[0]]) })}</p>` : ''; };
+/* ARKENE PÅ REISEN (steg 1.11): samme mal for alle. Ett bilde eller en liten animasjon, én idé (høyst rundt 30 ord), gavene som egne linjer,
+   hintet om neste studiedag, og «Got it». jPic(k) = bildet til steget, jCard(o) = arket. Tekstene går gjennom tl. */
+/* En vanlig og en shiny av samme art på samme nivå: hvor mye sterkere shinyen er, i tall (ønske 15). a = vanlig (IV 15), b = shiny. */
+const shinyEx = (id, lv) => { const m = { id, lv, sh: 0, iv: [15, 15, 15, 15, 15, 15], ev: [0, 0, 0, 0, 0, 0], nat: 0 }; return { a: pwOf(m), b: pwOf(Object.assign({}, m, { sh: 1, iv: [31, 31, 31, 31, 31, 31] })) }; };
+const jStars = n => `<span class="jp-st">${'★'.repeat(n)}<i>${'★'.repeat(5 - n)}</i></span>`;
+function jPic(k, o) {
+  const p = partner(), pid = p ? p.id : 4; o = o || {};
+  if (k === 'battles') return `<div class="tr-vs">${spr(pid, { ani: 1, s: '84px' })}<b>VS</b>${spr(19, { s: '84px', sil: 1 })}</div>`;
+  if (k === 'shop') return `<div class="jp-row"><span class="coin jp-coin"><i></i></span>${ballEl('great', '42px')}<span class="jp-pack" style="--c:${PACKS.poke.c}"><i></i><i></i><i></i></span></div>`;
+  if (k === 'shiny') { const id = o.id || pid, lv = o.lv || (p ? p.lv : 5), x = shinyEx(id, lv);
+    return `<div class="jp-two"><span>${spr(id, { ani: 1, s: '84px' })}<small class="tn">${tl('Power {n}', { n: nb(x.a) })}</small></span>${icn('arrow')}<span class="shy">${spr(id, { ani: 1, sh: 1, s: '84px' })}<small class="tn au">${tl('Power {n}', { n: nb(x.b) })}</small></span></div>`; }
+  if (k === 'nature') { const lv = Math.max(20, p ? p.lv : 20), mk = iv => pwOf({ id: pid, lv, sh: 0, iv: [iv, iv, iv, iv, iv, iv], ev: [0, 0, 0, 0, 0, 0], nat: 0 });
+    return `<div class="jp-two"><span>${spr(pid, { ani: 1, s: '80px' })}${jStars(5)}<small class="tn">${tl('Power {n}', { n: nb(mk(31)) })}</small></span><span class="lo">${spr(pid, { ani: 1, s: '80px' })}${jStars(1)}<small class="tn">${tl('Power {n}', { n: nb(mk(3)) })}</small></span></div>`; }
+  if (k === 'train') return `<div class="jp-train">${spr(pid, { ani: 1, s: '84px' })}<span class="jp-bars">${[62, 38, 80].map((w, i) => `<i style="--w:${w}%;--i:${i}"><b></b></i>`).join('')}</span></div>`;
+  if (k === 'held') return `<div class="jp-held">${spr(pid, { ani: 1, s: '88px' })}<span class="jp-it">${heldEl('sitrus', '40px')}</span></div>`;
+  if (k === 'size') return `<div class="jp-size">${[0, 1, 2, 3].map(z => `<span class="z${z}">${spr(pid, { ani: 1, s: '56px' })}<small>${SZN[z]}</small><b class="tn">${z === 1 ? 'HP' : (SZHP[z] > 1 ? '+' : '−') + Math.abs(Math.round((SZHP[z] - 1) * 100)) + ' %'}</b></span>`).join('')}</div>`;
+  if (k === 'raid') return '<span class="raid-sp qm hqm tr-raid"><i>?</i></span>';
+  if (k === 'incense') return `<div class="jp-inc">${itPic('glint', '56px')}${icn('spark')}</div>`;
+  return '';
+}
 const jOk = () => `<button type="button" class="btn wide gold" data-a="jok" style="margin-top:14px">${tl('Got it')}</button>`;
+/* Hintet nederst i et ark: hva som kommer neste studiedag (ingenting når reisen er ferdig). */
+const jTease = () => { const n = jNext(); return n ? `<p class="jtease">${icn('clock')}<span>${tl('Next study day: {hint}', { hint: tl(JHINT[n[0]]) })}</span></p>` : ''; };
+const jCard = o => `<div class="jsh"><div class="jsh-pic">${o.pic || ''}</div><div class="jsh-k">${o.k}</div><h2>${o.n}</h2><p class="jsh-t">${o.t}</p>${o.x || ''}${(o.g || []).map(x => `<p class="jsh-g">${icn('gift')}<span>${x}</span></p>`).join('')}${o.tease === false ? '' : jTease()}${o.acts || jOk()}</div>`;
+/* Tre slags angrep (vises første gang et nytt angrep læres etter dag 4). */
+const jMoveTypes = () => `<div class="jmv"><div><span class="mcat ph"></span><span><b>Physical</b><span class="sm">${tl('Contact moves. They use Attack against Defense.')}</span></span></div><div><span class="mcat spc"></span><span><b>Special</b><span class="sm">${tl('Energy from a distance. They use Sp. Atk against Sp. Def.')}</span></span></div><div><span class="mcat stt"></span><span><b>Status</b><span class="sm">${tl('No damage. They change stats, the weather or the foe.')}</span></span></div></div>`;
+/* Potensial (dag 4): den som er ny, får bare stjernene her. Naturen kommer som en egen liten forklaring på kortet (cardTip). */
 function jSheet(f, g) {
-  const body = f[0] === 'nature' ? jNature() : '';
-  return `<div class="jsh"><div class="sm">${tl('New · study day {d}', { d: f[1] })}</div><h2 style="margin:2px 0 6px">${tl(f[2])}</h2><p class="mut">${tl(f[3])}</p>${body}${g && g.length ? `<ul class="wnl">${g.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}${f[0] === 'shop' ? `<p class="sm" style="margin-top:8px">${tl('New areas open as your trainer level rises, and their Pokémon then show up in your encounters. See Routes under More options on the Focus page.')}</p>` : ''}${jTease()}${jOk()}</div>`;
+  const k = f[0];
+  return jCard({ pic: jPic(k), k: tl('New · study day {d}', { d: f[1] }), n: tl(f[2]), t: tl(f[3]), g, x: k === 'nature' && know() > 0 ? `<p class="jsh-s">${tl('A nature lifts one stat by 10 % and lowers another. You see both on its card.')}</p>` : '' });
 }
 function jReveal() {
   if (!jOn() || !S.started || S.timer || !dayOpenQ() || !$('#sheet').hidden || !$('#ov').hidden) return false;
@@ -303,17 +326,26 @@ function jReveal() {
   if (JOURNEY.every(x => S.js.includes(x[0]))) S.jdone = 1;
   save(true); render(); openSheet(jSheet(f, g)); return true;
 }
+/* Shiny-røkelsen (ønske 16, for alle): ett ark når den åpnes i Shop (trenernivå SHOP.glint.lv). */
+function incSheet() {
+  if (!S.started || S.timer || !$('#sheet').hidden || !$('#ov').hidden || (S.tip && S.tip.inc) || tlv() < SHOP.glint.lv || (jOn() && !has('shop'))) return false;
+  (S.tip || (S.tip = {})).inc = 1; save(true);
+  openSheet(jCard({ pic: jPic('incense'), k: tl('New in the Shop'), n: tl('Shiny incense'), t: tl('While it burns, new encounters are shiny more often: sessions you finish, packs you open and eggs that hatch. Those already waiting in the grass do not change.'), tease: false }));
+  return true;
+}
 function jAfter() {
   if (!jOn() || !S.started || S.timer || !$('#sheet').hidden || !$('#ov').hidden) return false;
   const x = S.jx || (S.jx = {});
-  if (x.r === 1) { x.r = 2; save(true); openSheet(`<div class="jsh"><div class="sm">${tl('Now you know')}</div><h2 style="margin:2px 0 6px">Legendary raids</h2><p class="mut">${tl('Now and then a legendary Pokémon shows itself after the day\'s battles. It fights your whole team. You get {n} attempts, one a day, and if you win, it joins you.', { n: RAIDTRIES })}</p><ul class="wnl"><li>${tl('The stronger your team, the better your chances.')}</li><li>${tl('The first ones are fair fights. Deoxys was not.')}</li><li>${tl('The next one shows itself in a few days.')}</li></ul>${jOk()}</div>`); return true; }
+  if (x.r === 1) { x.r = 2; save(true); openSheet(jCard({ pic: jPic('raid'), k: tl('Now you know'), n: 'Legendary raids', t: tl('Now and then a legendary Pokémon shows itself after the day\'s battles. It fights your whole team. You get {n} attempts, one a day, and if you win, it joins you.', { n: RAIDTRIES }), x: `<p class="jsh-s">${tl('That one was not a fair fight. The next ones are, and the first shows itself in a few days.')}</p>`, tease: false })); return true; }
   if (x.sh === 1) {
     x.sh = 2; let g = []; if (!(S.js || []).includes('shiny')) { (S.js = S.js || []).push('shiny'); g = jGift('shiny'); }
     const e = S.pend.slice().reverse().find(q => q.sure && q.sh); save(true);
-    openSheet(`<div class="jsh"><div class="sm">${tl('Look closer')}</div><h2 style="margin:2px 0 6px">${tl('A shiny {name}', { name: e ? esc(D(e.id)[0]) : 'Pokémon' })}</h2>${e ? `<div class="jsh-pic">${spr(e.id, { ani: 1, sh: 1, s: '96px' })}</div>` : ''}<p class="mut">${tl('In the main games a shiny is just another colour. Here it is stronger: born with perfect IVs, and every stat {p} % higher. This one is yours whatever ball you throw.', { p: Math.round((SHINYST - 1) * 100) })}</p>${g.length ? `<ul class="wnl">${g.map(y => `<li>${y}</li>`).join('')}</ul>` : ''}<p class="sm" style="margin-top:8px">${tl('That is enough distraction. Study on, fill up today\'s bonus, and catch it when you like.')}</p>${jTease()}<div class="acts" style="margin-top:12px"><button type="button" class="btn gold" data-a="hunt">${tl('Catch it now')}</button><button type="button" class="btn nf" data-a="jok">${tl('Later')}</button></div></div>`);
+    openSheet(jCard({ pic: e ? jPic('shiny', { id: e.id, lv: e.lv }) : '', k: tl('Look closer'), n: tl('A shiny {name}', { name: e ? esc(D(e.id)[0]) : 'Pokémon' }), g,
+      t: tl('A shiny has another colour, and here it is stronger too: born as strong as its kind can be, with every stat {p} % higher. This one is yours whatever ball you throw.', { p: Math.round((SHINYST - 1) * 100) }),
+      acts: `<div class="acts" style="margin-top:12px"><button type="button" class="btn gold" data-a="hunt">${tl('Catch it now')}</button><button type="button" class="btn nf" data-a="jok">${tl('Later')}</button></div>` }));
     return true;
   }
-  if (U.jmv && !x.mv && (S.jd || 0) >= 4) { x.mv = 1; U.jmv = 0; save(true); openSheet(`<div class="jsh"><div class="sm">${tl('A new move')}</div><h2 style="margin:2px 0 6px">${tl('Three kinds of moves')}</h2>${jMoveTypes()}${jOk()}</div>`); return true; }
+  if (U.jmv && !x.mv && (S.jd || 0) >= 4) { x.mv = 1; U.jmv = 0; save(true); openSheet(jCard({ pic: '', k: tl('A new move'), n: tl('Three kinds of moves'), t: tl('A Pokémon with a high Sp. Atk hits harder with special moves, and one with a high Attack with physical ones.'), x: jMoveTypes(), tease: false })); return true; }
   return jReveal();
 }
 function whatsNew() {
@@ -1564,7 +1596,7 @@ const A = {
   minfo: el => modeInfo(el.dataset.k || ''),
   boinfo: el => { const k = el.dataset.k, it = SHOP[k], st = boostState(k); if (!it) return; toast(st === 'on' ? `${it.n} is already active.` : st === 'lk' ? `${it.n} opens at trainer level ${it.lv}.` : `${it.n} costs ${nb(it.p)} coins. You have ${nb(S.coins)}.`); },
   adm: () => { if (!isAdmin()) return; U.adm = !admOn(); try { localStorage.setItem(KEY + '.adm', U.adm ? '1' : '0'); } catch (_) {} render(); setRe(); toast(U.adm ? 'Admin view is on: everything is open, and the Sandbox is here.' : 'Admin view is off: you see what everyone sees.'); },
-  wnok: () => { closeSheet(); if (!giftSheet() && !jAfter() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
+  wnok: () => { closeSheet(); if (!giftSheet() && !jAfter() && !incSheet() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
   fpk: () => { const k = Object.keys(S.fpk || {}).find(x => PACKS[x]); if (!k) return render(); const out = openPacks(k, Math.min(10, S.fpk[k])); if (!out) return toast('Catch some of your waiting encounters first.'); sfx.coin(); render(); packShow(k, out); },
   newsok: el => { S.news = (S.news || []).filter(k => k !== el.dataset.k); save(true); render(); },
   /* «Done for today»: resten av appen kommer fram. Er det studert nok til kampene (og de er åpnet for deg), åpnes kampdagen med det samme. */
@@ -1581,9 +1613,9 @@ const A = {
   pause: () => { togglePause(); paintTimer(); },
   early: () => endTimer(),
   quit: () => { if (!U.quit) { U.quit = 1; $('#t-quit').textContent = 'Tap again to cancel'; setTimeout(() => { U.quit = 0; const b = $('#t-quit'); if (b) b.textContent = 'Cancel'; }, 3000); return; } clearInterval(tick); dropAwake(); S.timer = null; save(true); document.title = 'Fokusdex'; closeOv(); render(); },
-  home: () => { encQuiet(); closeOv(); render(); if (!jAfter() && !giftSheet() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
+  home: () => { encQuiet(); closeOv(); render(); if (!jAfter() && !incSheet() && !giftSheet() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
   hunt: () => { if (jOn() && (S.jx || {}).sh === 1 && $('#sheet').hidden) { closeOv(); render(); jAfter(); return; } closeSheet(); hunt(); },
-  jok: () => { closeSheet(); if (jAfter()) return; const d = U.jfrom === 'dn'; U.jfrom = ''; if (d && has('battles') && S.party.length && openNeed() <= 0 && (!S.lad.day || (dayOld() && dayDone()))) BA.bdone(); else if (typeof raidArrive === 'function' && raidGo()) raidArrive(); },
+  jok: () => { closeSheet(); if (jAfter() || incSheet()) return; const d = U.jfrom === 'dn'; U.jfrom = ''; if (d && has('battles') && S.party.length && openNeed() <= 0 && (!S.lad.day || (dayOld() && dayDone()))) BA.bdone(); else if (typeof raidArrive === 'function' && raidGo()) raidArrive(); },
   later: () => { cancelAnimationFrame(E.raf); encQuiet(); closeOv(); render(); },
   skip: () => { if (E.busy) return; cancelAnimationFrame(E.raf); dropPend(E.e); S.cst = 0; save(); hunt(); },
   toshop: () => { closeOv(); U.tab = 'butikk'; render(); },
@@ -1816,7 +1848,7 @@ window.addEventListener('storage', ev => { if (ev.key === KEY) tabShow(); });
 render();
 clockCheck();
 netTime().then(o => { if (o != null && clockCheck() && $('#ov').hidden) render(); });
-if (S.started && S.timer) showTimer(); else if (!(typeof liveGate === 'function' && liveGate()) && S.started) { if (S.tour !== TOURV) tourShow(0); else if (!whatsNew() && !giftSheet() && !jAfter() && typeof raidArrive === 'function' && raidGo()) raidArrive(); }
+if (S.started && S.timer) showTimer(); else if (!(typeof liveGate === 'function' && liveGate()) && S.started) { if (S.tour !== TOURV) tourShow(0); else if (!whatsNew() && !giftSheet() && !jAfter() && !incSheet() && typeof raidArrive === 'function' && raidGo()) raidArrive(); }
 ghPull();
 setTimeout(() => PACK.init(), 2500);
 /* Adressen …/#lab åpner demoen direkte. */

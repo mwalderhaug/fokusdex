@@ -71,7 +71,7 @@ const HELP = [
     ${hRow(hStars(4), 'Potential · IVs', `The stars show how good the Pokémon was born: one star is plain, five is flawless. From Lv ${HTLV} Hyper Training can make up for low ones.`)}
     ${hRow('<span class="szt sz3">Giant</span>', 'Size', `Most Pokémon are Normal. A few are born Small, Large or Giant, which moves their HP a little: ${Math.round((SZHP[0] - 1) * 100)} % for a Small one, +${Math.round((SZHP[3] - 1) * 100)} % for a Giant. A Giant is rare.`)}
     ${hRow(coinEl(PERFCOIN), 'Small bonuses', `A perfect throw gives +${PERFCOIN} coins, and from the third catch in a row you get a little more for each one.`)}
-    ${hRow(hSym('✦', 'var(--gold)'), 'Shiny Pokémon', `A rare other colour. It is born with perfect IVs and has ${Math.round((SHINYST - 1) * 100)} % higher stats, so a trained shiny is the best of its kind. Incense from the Shop raises the odds for a while.`)}
+    ${hRow(hSym('✦', 'var(--gold)'), 'Shiny Pokémon', (() => { const p = partner(), x = p ? shinyEx(p.id, p.lv) : null; return `A rare other colour. It is born with perfect IVs, and every finished stat is ${Math.round((SHINYST - 1) * 100)} % higher on top of that${x ? `: a shiny ${esc(D(p.id)[0])} at level ${p.lv} has ${nb(x.b)} power against ${nb(x.a)} for an average one` : ''}. Incense from the Shop raises the odds for a while.`; })())}
     <div class="hmore">${hLink('train', 'IVs, EVs and training')}${hLink('shop', 'Balls and packs')}</div>` },
 
   { k: 'team', n: 'Your team', s: 'Partner, levels, evolution and moves', ic: () => hSym('☗', 'var(--blue)'), body: () => `

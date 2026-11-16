@@ -374,7 +374,7 @@ function pickStars() {
 const EVMODE = { league: ['surge', 'type', 'stars', 'little', 'gold', 'wind', 'lucky', 'camp'], factory: ['surge', 'type', 'gold', 'wind', 'lucky', 'camp'], pwt: ['surge', 'type', 'stars', 'little', 'gold', 'lucky', 'camp'] };
 function evRoll(mode) {
   const day = S.lad.day; if (!day) return null;
-  if (jOn() && (S.jd || 0) < JLAST) { S.evt = { day, k: '' }; return null; }
+  if (jOn() && (S.jd || 0) < JOURNEY.find(f => f[0] === 'held')[1]) { S.evt = { day, k: '' }; return null; }
   if (S.evt && S.evt.day === day) return evNow();
   const first = !S.evt, gap = S.evg || 0;
   if (!first && !(Math.random() < EVGAP[Math.min(3, gap)])) { S.evt = { day, k: '' }; S.evg = gap + 1; return null; }

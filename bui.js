@@ -1684,9 +1684,29 @@ function pwtScreen() {
     <div class="acts"><button type="button" class="btn gold" data-a="wgo"${sel.length === R.n ? '' : ' disabled'}>${sel.length === R.n ? 'Start the ' + ROUNDN[R.r].toLowerCase() : `Pick ${R.n - sel.length} more`}</button></div>`, 'tint', `var(--t${tr.ty})`);
 }
 /* Reglene samlet: hva som gir hva, og når det skjer. Tallene hentes fra de samme tabellene som spillet bruker. */
+/* REGELKORTET (steg 1.11): rulesSheet skriver alt som før, og rulesFold folder det etter tema. Hvert tema blir en rad som åpnes, med tabellen
+   (radene med tall) først og forklaringen under. RULGRP = gruppene; et tema som ikke står der, havner i «More». */
+const RULGRP = [['Study', ['Today', 'Focus sessions', 'Battle bonus']], ['Battles', ['One mode a day', 'No time to battle', 'Trainer League', 'Battle Frontier', 'World Tournament', 'Legendary raids', 'Special events']],
+  ['Your Pokémon', ['Catching', 'Encounter packs', 'Training: IVs and EVs', 'Shiny Pokémon', 'Items to hold', 'Mega Evolution']], ['More', []]];
+function rulesFold() {
+  const sh = document.querySelector('#sheet .sheet'), host = sh && sh.querySelector('.stack'); if (!host) return;
+  sh.classList.add('rulsh');
+  const secs = RULGRP.map(([n]) => { const s = document.createElement('section'); s.className = 'rulg'; s.innerHTML = `<h3 class="lab">${tl(n)}</h3>`; return s; }), last = secs[secs.length - 1];
+  [...host.querySelectorAll(':scope > .card.stack')].forEach(c => {
+    const t = c.querySelector(':scope > b'); if (!t) return;
+    const name = t.textContent, gi = RULGRP.findIndex(g => g[1].includes(name)), kids = [...c.children].filter(x => x !== t);
+    const d = document.createElement('details'); d.className = 'card rul'; if (name === 'Today') d.open = true;
+    const s = document.createElement('summary'); s.innerHTML = `<b>${t.innerHTML}</b>${icn('down')}`;
+    const tb = document.createElement('div'); tb.className = 'rul-t'; kids.filter(x => x.classList.contains('row')).forEach(r => tb.appendChild(r));
+    const tx = document.createElement('div'); tx.className = 'rul-x'; kids.filter(x => !x.classList.contains('row')).forEach(r => tx.appendChild(r));
+    d.append(s); if (tb.children.length) d.append(tb); if (tx.children.length) d.append(tx);
+    d.dataset.o = gi >= 0 ? RULGRP[gi][1].indexOf(name) : 99; (gi >= 0 ? secs[gi] : last).appendChild(d); c.remove();
+  });
+  secs.filter(s => s.children.length > 1).forEach(s => { [...s.querySelectorAll(':scope > .rul')].sort((a, b) => a.dataset.o - b.dataset.o).forEach(d => s.appendChild(d)); host.appendChild(s); });
+}
 function rulesSheet() {
   const d = diff(), g = hm(goalMin()), pk = k => `${PACKS[k].n} ${nb(PACKS[k].p)}`, row = (a, b) => `<div class="row" style="justify-content:space-between;gap:12px;align-items:flex-start"><span class="sm" style="color:var(--ink);flex:none">${a}</span><span class="sm tn" style="text-align:right">${b}</span></div>`;
-  openSheet(`<h2 class="h" style="margin-top:0">Rules and rewards</h2>
+  openSheet(`<h2 class="h" style="margin-top:0">Rules and rewards</h2><p class="sm rul-i">${tl('Every number in the game. Tap a topic to open it.')}</p>
     <div class="stack">
     ${S.lad.day && MODESN < MODES.length && !modePicks() ? `<div class="card stack"><b>Today</b>${row('Mode', modeSt().ks.map(k => MODEN[k]).join(', '))}${row('Bonus coins today', `${MODEN[dayBoost().mode]} · ×${DAYCOIN}`)}${evNow() ? row('Special event', esc(evInfo(evNow()).n) + ' · ' + esc(evInfo(evNow()).s)) + '<button type="button" class="btn sm2 wide" data-a="evinfo">See what today\'s event does</button>' : row('Special event', 'none today')}</div>` : ''}
     <div class="card stack"><b>Focus sessions</b><p class="sm">Your subjects count in full: 10 XP and 3 coins a minute, an encounter every 20 minutes, and every minute moves the battle bonus. Other things you log, such as job applications, music or reading, give encounters and coins the same way, but count at half value for the battle bonus and your daily goal, give a little less XP and do not train your partner. Their hours are kept apart from your subject hours. The first session of the day gives ×1.5.</p>
@@ -1754,6 +1774,7 @@ function rulesSheet() {
       ${row('Legendary in the last card', ['poke', 'great', 'ultra', 'master'].map(k => `${PACKS[k].n.replace(' Pack', '')} ${+(PACKS[k].slots[2].leg * 100).toFixed(1)} %`).join(' · '))}
       <p class="sm">A legendary card does not say who it is: you find out when you meet it in the grass. It can be any legendary you do not own from your areas. Mythical Pokémon come a little more often, and the greatest ones are rare in packs. They are more often met in raids.</p></div>
     </div><button type="button" class="btn wide" data-a="close" style="margin-top:12px">Close</button>`);
+  rulesFold();
 }
 function facScreen() {
   const R = S.fac.run; if (!R) return;

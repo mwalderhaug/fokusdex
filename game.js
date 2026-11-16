@@ -614,6 +614,26 @@ const LNO = {
   'The dimmed ones are duplicates no better than what you have. Tap a card to change it.': 'De dempede er duplikater som ikke er bedre enn det du har. Trykk på et kort for å endre det.',
   'Tap a card to let it go for coins instead of catching it.': 'Trykk på et kort for å slippe det for mynter i stedet for å fange det.',
   // Steg 1 (Dusk): flere
+  'Every number in the game. Tap a topic to open it.': 'Hvert tall i spillet. Trykk på et tema for å åpne det.',
+  'Study': 'Lesing',
+  'Your team can fight when the day is done. Pick one way to battle each day: the more you studied, the more a win pays.': 'Laget ditt kan kjempe når dagen er ferdig. Velg én måte å kjempe på hver dag: jo mer du har lest, jo mer gir en seier.',
+  'Spend your coins on balls, packs and things for your team.': 'Bruk myntene dine på baller, pakker og ting til laget.',
+  'A shiny is rare, and here it is stronger too: born as strong as its kind can be, with every stat a little higher.': 'En shiny er sjelden, og her er den sterkere også: født så sterk som arten kan bli, med hver verdi litt høyere.',
+  'Potential': 'Potensial',
+  'Two of the same Pokémon are not equally strong. The stars show what each was born with, so keep the ones with many.': 'To av samme Pokémon er ikke like sterke. Stjernene viser hva hver er født med, så behold dem med mange.',
+  'Open a Pokémon in Team and tap Train. Coins raise the stats you choose, and your partner trains a little while you study.': 'Åpne en Pokémon i Team og trykk Train. Mynter løfter verdiene du velger, og partneren din trener litt mens du leser.',
+  'A Pokémon can hold one item in battle: a berry, a plate or gear. Give it on its card in Team.': 'En Pokémon kan holde én gjenstand i kamp: et bær, en plate eller utstyr. Gi den på kortet i Team.',
+  'Size': 'Størrelse',
+  'Some Pokémon are born Small, Large or Giant. Size moves HP a little, and it can never be trained, so a Giant is one to keep.': 'Noen Pokémon er født Small, Large eller Giant. Størrelsen flytter HP litt, og den kan aldri trenes, så en Giant er en å beholde.',
+  'Not all of them are the same size.': 'Ikke alle er like store.',
+  'Power {n}': 'Styrke {n}',
+  'A nature lifts one stat by 10 % and lowers another. You see both on its card.': 'En natur løfter én verdi med 10 % og senker en annen. Du ser begge på kortet.',
+  'New in the Shop': 'Nytt i Shop',
+  'Shiny incense': 'Shiny-røkelse',
+  'While it burns, new encounters are shiny more often: sessions you finish, packs you open and eggs that hatch. Those already waiting in the grass do not change.': 'Mens den brenner, er nye møter oftere shiny: økter du fullfører, pakker du åpner og egg som klekkes. De som alt venter i gresset, endres ikke.',
+  'That one was not a fair fight. The next ones are, and the first shows itself in a few days.': 'Den der var ingen rettferdig kamp. De neste er det, og den første viser seg om noen dager.',
+  'A shiny has another colour, and here it is stronger too: born as strong as its kind can be, with every stat {p} % higher. This one is yours whatever ball you throw.': 'En shiny har en annen farge, og her er den sterkere også: født så sterk som arten kan bli, med hver verdi {p} % høyere. Denne er din uansett hvilken ball du kaster.',
+  'A Pokémon with a high Sp. Atk hits harder with special moves, and one with a high Attack with physical ones.': 'En Pokémon med høy Sp. Atk treffer hardere med spesialangrep, og en med høy Attack med fysiske.',
   'Every Pokémon and every move has a type. Types beat each other like rock, paper, scissors: Water beats Fire, Fire beats Grass, Grass beats Water.': 'Hver Pokémon og hvert angrep har en type. Typene slår hverandre som stein, saks, papir: Water slår Fire, Fire slår Grass, Grass slår Water.',
   'Filled stars are what it was born with, and they never change. Fainter stars come from training.': 'Fylte stjerner er det den er født med, og de endres aldri. Svakere stjerner kommer av trening.',
   'Its nature, {n}, lifts {a} by 10 % and lowers {b}.': 'Naturen dens, {n}, løfter {a} med 10 % og senker {b}.',
@@ -692,15 +712,16 @@ const tl = (s, v) => { const x = typeof S !== 'undefined' && S && S.lang === 'no
    den når OPENMIN minutter, se grant). S.ulk = det som er åpnet, S.js = det som er vist. S.jx = engangsting underveis: b = første kamp er spilt,
    r = raidintroen (1 = vis forklaringen, 2 = vist), sh = den garanterte shinyen (1 = vis arket, 2 = vist), mv = angrepstypene forklart.
    JFREE = gaver når steget vises. De som startet før reisen fantes, har alt åpent (migrate13/15). */
-const JOURNEY = [['battles', 1, 'Battles', 'When the day is done, your team can fight. Pick the League, the Battle Frontier or the World Tournament for the day.'],
-  ['shop', 2, 'The Shop', 'Spend your coins on balls, packs and things for your team. A free Poké Pack and 10 Great Balls are yours.'],
-  ['shiny', 3, 'Shiny Pokémon', 'A shiny is rare, and here it is more than a new colour: perfect IVs, and every stat a little higher.'],
-  ['nature', 4, 'Nature and potential', 'Two of the same Pokémon are never quite equal. Here is why, and why it pays to keep the good ones.'],
-  ['train', 5, 'Training', 'Open a Pokémon in Team and tap Train to raise its stats with coins. A free Ultra Pack is yours.'],
-  ['held', 6, 'Held items', 'A Pokémon can hold a berry, a plate or gear in battle. See its card in Team, or the Shop.']];
+const JOURNEY = [['battles', 1, 'Battles', 'Your team can fight when the day is done. Pick one way to battle each day: the more you studied, the more a win pays.'],
+  ['shop', 2, 'The Shop', 'Spend your coins on balls, packs and things for your team.'],
+  ['shiny', 3, 'Shiny Pokémon', 'A shiny is rare, and here it is stronger too: born as strong as its kind can be, with every stat a little higher.'],
+  ['nature', 4, 'Potential', 'Two of the same Pokémon are not equally strong. The stars show what each was born with, so keep the ones with many.'],
+  ['train', 5, 'Training', 'Open a Pokémon in Team and tap Train. Coins raise the stats you choose, and your partner trains a little while you study.'],
+  ['held', 6, 'Held items', 'A Pokémon can hold one item in battle: a berry, a plate or gear. Give it on its card in Team.'],
+  ['size', 7, 'Size', 'Some Pokémon are born Small, Large or Giant. Size moves HP a little, and it can never be trained, so a Giant is one to keep.']];
 /* Korte navn til rutene på kortet, og hintet om hva som kommer neste studiedag. */
-const JSHORT = { battles: 'Battles', shop: 'Shop', shiny: 'Shiny', nature: 'Nature', train: 'Training', held: 'Items' };
-const JHINT = { battles: 'Your team gets to fight.', shop: 'Somewhere to spend your coins.', shiny: 'Something rare in the grass.', nature: 'Why two of the same are not equal.', train: 'A way to make your team stronger.', held: 'Something for your team to carry.' };
+const JSHORT = { battles: 'Battles', shop: 'Shop', shiny: 'Shiny', nature: 'Stars', train: 'Training', held: 'Items', size: 'Size' };
+const JHINT = { battles: 'Your team gets to fight.', shop: 'Somewhere to spend your coins.', shiny: 'Something rare in the grass.', nature: 'Why two of the same are not equal.', train: 'A way to make your team stronger.', held: 'Something for your team to carry.', size: 'Not all of them are the same size.' };
 const FEATS = JOURNEY, JFREE = { shop: { pk: 'poke', great: 10 }, shiny: { pk: 'great' }, train: { pk: 'ultra' } }, JLAST = JOURNEY[JOURNEY.length - 1][1];
 /* Den garanterte shinyen på dag 3: en svak art fra områdene dine (den skal vise hva en shiny er, ikke bære laget). */
 const JSHINY = [19, 161, 263, 399, 504];
@@ -767,6 +788,7 @@ function migrate17() {
     const r = (((m.u * 2246822519 + ((m.at || 0) % 1000003) * 3266489917) >>> 0) % 10000) / 10000, z = rollSz(m.id, r);
     if (z > 1) m.sz = z;
   }
+  if (tlv() >= SHOP.glint.lv) (S.tip = S.tip || {}).inc = 1;
   /* Sjeldenheten følger nå utviklingslinja: møtene som alt venter i gresset, får klassen sin etter den nye regelen (sonene på måleren følger den). */
   for (const e of S.pend || []) if (e && e.id && e.t != null) e.t = tierOf(e.id);
   S.mig = 17;

@@ -2422,3 +2422,71 @@ button.pkm{cursor:pointer}
 .mdc-top .sp .sm{white-space:normal;line-height:1.35}
 .mdc-st{font-style:normal;font-size:11px;font-weight:650;letter-spacing:.02em;margin-left:6px;padding:2px 8px;border-radius:9px;background:var(--goldsoft);color:var(--gold);vertical-align:2px}
 .mc-s{margin-top:0}.sheet .tipc{margin-bottom:2px}
+
+/* ===== ARKENE PÅ REISEN (steg 1.11): samme mal, ett bilde, én idé ===== */
+.jsh{display:flex;flex-direction:column;align-items:center;text-align:center;gap:0}
+.jsh-pic{min-height:112px;width:100%;display:grid;place-items:center;margin:2px 0 8px}
+.jsh-pic:empty{display:none}
+.jsh-k{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--acc)}
+.jsh h2{font-size:24px;font-weight:400;margin:4px 0 8px}
+.jsh-t{margin:0;font-size:15.5px;line-height:1.5;color:var(--ink);max-width:34ch}
+.jsh-s{margin:10px 0 0;font-size:13.5px;line-height:1.45;color:var(--ink2);max-width:36ch}
+.jsh-g{display:flex;align-items:center;gap:10px;margin:10px 0 0;padding:9px 14px;border-radius:16px;background:var(--goldsoft);font-size:13.5px;text-align:left;align-self:stretch}
+.jsh-g .icn{flex:none;width:18px;height:18px;color:var(--gold)}
+.jsh .jtease{display:flex;align-items:center;gap:9px;align-self:stretch;text-align:left;margin-top:14px;background:var(--soft);box-shadow:none}
+.jsh .jtease .icn{flex:none;width:16px;height:16px;color:var(--ink3)}
+.jsh .btn.wide,.jsh .acts{align-self:stretch}
+.jsh .jmv{align-self:stretch;text-align:left}
+.jp-row{display:flex;align-items:center;gap:22px}
+.jp-coin i{width:38px;height:38px}
+.jp-pack{position:relative;width:48px;height:56px}
+.jp-pack i{position:absolute;inset:0;border-radius:8px;background:linear-gradient(150deg,color-mix(in srgb,var(--c) 85%,#fff),var(--c));box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.35),0 4px 10px -4px var(--shade)}
+.jp-pack i:nth-child(1){transform:rotate(-12deg) translateX(-8px)}.jp-pack i:nth-child(3){transform:rotate(12deg) translateX(8px)}
+.jp-two{display:flex;align-items:flex-end;justify-content:center;gap:18px}
+.jp-two>span{display:flex;flex-direction:column;align-items:center;gap:3px}
+.jp-two>.icn{width:20px;height:20px;color:var(--ink3);margin-bottom:34px}
+.jp-two small{font-size:12.5px;color:var(--ink2)}
+.jp-two .lo{opacity:.62}
+.jp-two .shy small{color:var(--gold);font-weight:600}
+.jp-st{font-size:13px;letter-spacing:1.5px;color:var(--gold)}.jp-st i{font-style:normal;opacity:.3}
+.jp-train{display:flex;align-items:center;gap:16px}
+.jp-bars{display:flex;flex-direction:column;gap:9px;width:120px}
+.jp-bars i{display:block;height:7px;border-radius:4px;background:var(--track);overflow:hidden}
+.jp-bars b{display:block;height:100%;width:var(--w);border-radius:4px;background:var(--acc);animation:jpGrow 1.6s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(.25s + var(--i)*.18s)}
+@keyframes jpGrow{from{width:12%}}
+.jp-held{position:relative;display:inline-grid;place-items:center}
+.jp-held>.jp-it{position:absolute;right:-22px;bottom:-4px;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:var(--panel);box-shadow:inset 0 0 0 1px var(--line),0 6px 14px -6px var(--shade);animation:jpPop .5s .3s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes jpPop{from{transform:scale(.4);opacity:0}}
+.jp-size{display:flex;align-items:flex-end;justify-content:center;gap:6px}
+.jp-size>span{display:flex;flex-direction:column;align-items:center;gap:2px;width:74px}
+.jp-size .sprb{transform-origin:50% 100%}
+.jp-size{min-height:104px}.jp-size .z0 .sprb{transform:scale(.74)}.jp-size .z2 .sprb{transform:scale(1.18)}.jp-size .z3 .sprb{transform:scale(1.42)}
+.jp-size small{font-size:11.5px;color:var(--ink2);margin-top:4px}
+.jp-size b{font-size:12px;font-weight:600}
+.jp-size .z3 small,.jp-size .z3 b{color:var(--gold)}
+.jp-inc{position:relative;display:inline-grid;place-items:center}
+.jp-inc>.icn{position:absolute;right:-18px;top:-8px;width:22px;height:22px;color:var(--gold);animation:stGlowI 2.4s ease-in-out infinite}
+@keyframes stGlowI{50%{transform:scale(1.25);opacity:.6}}
+@media (prefers-reduced-motion:reduce){.jp-bars b,.jp-held>.jp-it,.jp-inc>.icn{animation:none}}
+.jrn-t{grid-template-columns:repeat(7,1fr)}
+
+/* ===== REGELKORTET (steg 1.11): foldet etter tema ===== */
+.rulsh>.stack{gap:6px}
+.rul-i{margin:-4px 0 6px}
+.rulg{display:flex;flex-direction:column;gap:8px}
+.rulg .lab{margin:10px 2px 0;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);font-weight:600}
+.rul{padding:0;overflow:hidden}
+.rul summary{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:50px;padding:0 16px;cursor:pointer;list-style:none;font-size:15.5px}
+.rul summary::-webkit-details-marker{display:none}
+.rul summary b{font-weight:550}
+.rul summary .icn{width:15px;height:15px;color:var(--ink3);transition:transform .2s;flex:none}
+.rul[open] summary .icn{transform:rotate(180deg)}
+.rul[open] summary{box-shadow:inset 0 -1px 0 var(--line)}
+.rul-t{display:flex;flex-direction:column;padding:4px 16px 6px}
+.rul-t .row{padding:9px 0;border-top:1px solid var(--line)}
+.rul-t .row:first-child{border-top:0}
+.rul-t .row .sm:first-child{font-weight:550;max-width:44%}
+.rul-x{display:flex;flex-direction:column;gap:8px;padding:10px 16px 14px;border-top:1px solid var(--line)}
+.rul-x:first-of-type{border-top:0}
+.rul-x p{margin:0;color:var(--ink2)}
+.rul-x .btn{align-self:stretch}
