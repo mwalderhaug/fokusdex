@@ -685,10 +685,27 @@ function megaPick(used) {
   for (let i = 0; i < c.length; i++) { r -= w[i]; if (r <= 0) return c[i]; }
   return c[0];
 }
-/* mg: én av de sju er alltid en Mega (bare fra sandkassa). */
+/* Ett av de sju er alltid et trekkplaster (Jazz 16.11: «bittelitt mer spennende pokemon som midlertidig løsning», til 1c.2 gjør leiepoolen
+   ordentlig): trukket jevnt blant de fullt utviklede fra like under toppen av rundens spenn og litt over, aldri under 526 (FACSTAR), for eksempel Charizard,
+   Arcanine, Gyarados og Lapras i runde 1 og de pseudo-legendariske fra runde 3. Bare for spilleren: motstanderne trekkes som før. */
+const FACSTAR = { lo: 526, under: 20, over: 45 }, facStarRange = r => { const b = FACBST(r)[1]; return [Math.max(FACSTAR.lo, b - FACSTAR.under), b + FACSTAR.over]; };
+function facStar(r, used, tys) {
+  const [lo, hi] = facStarRange(r), pool = [];
+  for (let id = 1; id <= 649; id++) {
+    if (isLeg(id) || used.has(id) || (D(id)[6] & 4) || (EVO[id] && EVO[id].length) || reqLv(id) > FACLV + 12) continue;
+    const s = bstSum(id); if (s < lo || s > hi) continue;
+    if (tys && (tys[D(id)[1]] || 0) >= 2) continue;
+    pool.push(id);
+  }
+  if (!pool.length) return null;
+  const id = pool[rnd(pool.length)]; used.add(id); if (tys) tys[D(id)[1]] = (tys[D(id)[1]] || 0) + 1;
+  return { id, lv: FACLV, sh: 0, iv: Array.from({ length: 6 }, () => Math.max(0, Math.min(31, 4 * r + 6 + rnd(14)))), ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: foeMoves(id, FACLV, 1) };
+}
+/* mg: én av de sju er alltid en Mega (bare fra sandkassa). En Mega tar aldri plassen til trekkplasteret. */
 function facOffer(r, mg) {
-  const used = new Set(), tys = {}, l = Array.from({ length: 7 }, () => facMon(r, used, 0, tys));
-  if (mg || Math.random() < MEGAP) { const k = megaPick(used), g = MEGA[k], i = rnd(7); l[i] = { id: g[0], mega: k + 1, lv: FACLV, sh: 0, iv: l[i].iv, ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: foeMoves(g[0], FACLV, 1) }; }
+  const used = new Set(), tys = {}, l = Array.from({ length: 6 }, () => facMon(r, used, 0, tys)), si = rnd(7);
+  l.splice(si, 0, facStar(r, used, tys) || facMon(r, used, 0, tys));
+  if (mg || Math.random() < MEGAP) { const k = megaPick(used), g = MEGA[k], i = (si + 1 + rnd(6)) % 7; l[i] = { id: g[0], mega: k + 1, lv: FACLV, sh: 0, iv: l[i].iv, ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: foeMoves(g[0], FACLV, 1) }; }
   return l;
 }
 function facStart() { S.fac.run = { round: 1, w: 0, streak: 0, offer: facOffer(1), open: 0, team: null, foe: null }; save(); }
