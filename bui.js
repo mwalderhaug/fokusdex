@@ -753,14 +753,63 @@ function mvInfo(x, m) {
   const acc = mv[3] ? mv[3] + ' %' : mv[4] > 0 || (mv[17] !== 1 && (mv[6] === 1 || mv[6] === 5 || mv[7] > 0)) ? 'never misses' : '';
   return { n, ty: mv[1], cls: mv[4], pw, acc, pp: mv[18], txt: txt.length ? txt.join(' ') : mv[4] > 0 ? 'A plain attack with no extra effect.' : '', dead };
 }
-function fxTag(B, m) {
-  const foe = B.foe[B.b]; if (S.hfx === 0 || !foe || foe.hp <= 0 || !m || m[4] == null) return '';
-  const e = typeEff(m[1], foe), tag = (c, t) => `<span class="mfx ${c}">${t}</span>`;
-  if (m[4] === 0) return m[0] === 'Thunder Wave' && e === 0 ? tag('n', 'No effect') : '';
-  if (e === 0) return tag('n', 'No effect');
-  if ((typeof FIXED !== 'undefined' && FIXED[m[0]]) || m[6] === 9) return '';
-  return e > 1 ? tag('s', 'Super effective') : e < 1 ? tag('w', 'Not very effective') : '';
+/* TYPEHJELPEN I KAMPEN (steg 1.8, ønske 7 og 9). Tre ting, alle på den nederste skjermen så kampen aldri dekkes:
+     1. merket på hvert angrep skiller 4× fra 2× og ¼ fra ½ (fxTag; «Move hints» i Settings slår det av)
+     2. trykk på en HP-boks (eller typemerkene): hvor hardt hver angrepstype treffer den som står der (BT.menu = 'types')
+     3. «i» i angrepsmenyen, eller hold på et angrep: hva angrepet gjør, med samme forklaring som på kortet (mvInfo), og «USE» rett derfra.
+   effOf = hvor hardt angrepet treffer den som står ute; null når typen ikke sier noe (statusangrep, faste tall, ett-slags-KO). */
+function effOf(B, m) {
+  const foe = B.foe[B.b]; if (!foe || foe.hp <= 0 || !m || m[4] == null) return null;
+  const e = typeEff(m[1], foe);
+  if (m[4] === 0) return m[0] === 'Thunder Wave' && e === 0 ? 0 : null;
+  if (e === 0) return 0;
+  if ((typeof FIXED !== 'undefined' && FIXED[m[0]]) || m[6] === 9) return null;
+  return e;
 }
+const effN = e => e >= 4 ? '4×' : e >= 2 ? '2×' : e === 0 ? '0×' : e <= 0.25 ? '¼' : e < 1 ? '½' : '1×';
+const effC = e => e >= 4 ? 's s4' : e >= 2 ? 's' : e === 0 ? 'n' : e <= 0.25 ? 'w w4' : e < 1 ? 'w' : 'e1';
+const effW = e => e > 1 ? 'Super effective' : e === 0 ? 'No effect' : e < 1 ? 'Not very effective' : '';
+function fxTag(B, m) { if (S.hfx === 0) return ''; const e = effOf(B, m); return e == null || e === 1 ? '' : `<span class="mfx ${effC(e)}"><i>${effN(e)}</i>${effW(e)}</span>`; }
+/* Hvorfor tallet ble som det ble, i én setning: hver av typene til motstanderen for seg. */
+function effWhy(B, m) {
+  const foe = B.foe[B.b], e = effOf(B, m); if (e == null || e === 1 || !foe) return '';
+  const tys = (foe.v && foe.v.roost ? foe.ty.filter(t => t !== 2) : foe.ty).filter((t, i, a) => t >= 0 && a.indexOf(t) === i), one = t => typeEff(m[1], { ty: [t, -1], v: foe.v || {} });
+  const pick = f => tys.filter(t => f(one(t))).map(t => TYN[t]), and = l => l.join(' and '), a = TYN[m[1]];
+  if (Math.abs(tys.reduce((p, t) => p * one(t), 1) - e) > 0.001) return '';
+  if (e === 0) { const im = pick(x => x === 0); return im.length ? tl('{b} is immune to {a} moves.', { a, b: and(im) }) : tl('{a} moves cannot reach it right now.', { a }); }
+  const up = pick(x => x > 1), dn = pick(x => x > 0 && x < 1);
+  if (up.length && dn.length) return tl('Strong against {b}, but {c} resists it.', { b: and(up), c: and(dn) });
+  return up.length ? tl('{a} is strong against {b}.', { a, b: and(up) }) : dn.length > 1 ? tl('{b} both resist {a}.', { a, b: and(dn) }) : tl('{b} resists {a}.', { a, b: and(dn) });
+}
+/* Alle angrepstypene mot én som står ute, samlet etter hvor hardt de treffer. */
+function typeChart(b) { const g = { 4: [], 2: [], 0.5: [], 0.25: [], 0: [] }; TYN.forEach((_, t) => { const e = typeEff(t, b); if (g[e]) g[e].push(t); }); return g; }
+const tyPill = t => `<i style="background:var(--t${t})">${TYN[t]}</i>`;
+function typesPanel(B, cancel) {
+  const side = BT.tside === 'me' ? 'me' : 'foe', b = side === 'me' ? B.me[B.a] : B.foe[B.b], g = typeChart(b), ty = b.ty.filter((t, i) => t >= 0 && b.ty.indexOf(t) === i);
+  const row = (k, cls) => g[k].length ? `<div class="tyh-r ${cls}"><b>${effN(+k)}</b><span>${g[k].map(tyPill).join('')}</span></div>` : '';
+  const n = g[4].length + g[2].length + g[0.5].length + g[0.25].length + g[0].length;
+  return `<div class="bw bw-list bw-types${n > 11 ? ' many' : ''}">${MVBG2}<div class="tyh"><p class="tyh-h"><b>${esc(b.short || b.name)}</b><span class="tyh-ty">${ty.map(tyPill).join('')}</span></p>
+    <p class="tyh-s">${tl(side === 'me' ? 'How hard each type of move hits your Pokémon' : 'How hard each type of move hits it')}</p>
+    ${row(4, 's s4')}${row(2, 's')}${row(0.5, 'w')}${row(0.25, 'w w4')}${row(0, 'n')}</div><p class="bw-tip">${tl('Every other type: normal damage')}</p>${cancel('btyback', 'Back')}</div>`;
+}
+/* Foten i angrepsmenyen når «i» er på: forklaringen til det valgte angrepet, og «USE». */
+function moveFoot(B, me, k) {
+  const x = me.mv[k]; if (!x) return '';
+  const m = mvEff(B, me, MOVES[x.i]), i = mvInfo(x.i, me.src), e = effOf(B, m), why = effWhy(B, m), ok = moveOk(B, k);
+  const nums = [i.cls ? `Power <b>${i.pw}</b>` : '', i.acc ? (i.acc === 'never misses' ? 'Never misses' : `Accuracy <b>${i.acc}</b>`) : ''].filter(Boolean).join('<u>·</u>');
+  return `<div class="mvd${i.txt.length + why.length > 120 ? ' lg' : ''}" style="--c:var(--t${m[1]})"><p class="mvd-n"><span class="mcat s ${['stt', 'ph', 'spc'][i.cls]}"></span>${['Status', 'Physical', 'Special'][i.cls]}${nums ? '<u>·</u>' + nums : ''}</p>
+    ${i.txt ? `<p class="mvd-t">${esc(i.txt)}</p>` : ''}${e != null && e !== 1 ? `<p class="mvd-e ${effC(e)}"><i>${effN(e)}</i>${esc(why || effW(e))}</p>` : ''}</div>
+    <button type="button" class="bw-use" data-a="buse" data-k="${k}" style="--c:#4fae5d"${ok ? '' : ' disabled'}>${MFR}<span>${ok ? 'USE' : 'NO PP'}</span></button>`;
+}
+/* Hold på et angrep: forklaringen åpnes med det angrepet valgt (det samme som «i»). */
+let LPT = 0;
+document.addEventListener('pointerdown', ev => {
+  const el = ev.target.closest ? ev.target.closest('.bw-moves .bw-m[data-k]') : null; clearTimeout(LPT);
+  if (!el || BT.info || +el.dataset.k < 0 || BT.busy) return;
+  const k = +el.dataset.k;
+  LPT = setTimeout(() => { if (BT.busy || BT.menu !== 'moves' || !BT.B || BT.B.over) return; BT.info = 1; BT.ik = k; BT.lp = performance.now(); if (typeof sfx !== 'undefined') sfx.open(); if (typeof buzz === 'function') buzz(15); drawMenu(); }, 430);
+});
+['pointerup', 'pointercancel', 'pointermove'].forEach(t => document.addEventListener(t, ev => { if (t === 'pointermove' && Math.abs(ev.movementX || 0) + Math.abs(ev.movementY || 0) < 6) return; clearTimeout(LPT); }));
 /* Typene til den som står ute, som små merker ved HP-boksen (kan slås av i innstillingene). */
 const tyBadge = b => S.hty === 0 || !b ? '' : b.ty.filter((t, i) => t >= 0 && b.ty.indexOf(t) === i).map(t => `<span style="background:var(--t${t})">${TYN[t]}</span>`).join('');
 function paintBox(side) {
@@ -773,7 +822,8 @@ function paintBox(side) {
   const cur = teamOf(side)[BT.v[side].i], th = tyBadge(cur) + (isMega(cur) ? `<span class="mgt">${megaOf(cur)[1] === 'Primal' ? 'Primal' : 'Mega'}</span>` : '') + (cur.evb && cur.evb !== 'surge' ? '<span class="evt">Event</span>' : '');
   /* Dine egne merker står på den nederste skjermen (drawMenu setter dem inn, og de oppdateres her når en ny kommer ut). Motstanderens står oppå boksen dens. */
   if (side === 'me') { BT.tyme = th; const o0 = el.querySelector('.tyb'); if (o0) o0.remove(); const m = $('#bty-me'); if (m && m.dataset.h !== th) { m.dataset.h = th; m.innerHTML = th; } }
-  else { let tb = el.querySelector('.tyb'); if (!tb) { tb = document.createElement('div'); tb.className = 'tyb'; el.appendChild(tb); } if (tb.dataset.h !== th) { tb.dataset.h = th; tb.innerHTML = th; } }
+  else { const thq = th + (S.hty === 0 ? '' : '<i class="tyq">?</i>'); let tb = el.querySelector('.tyb'); if (!tb) { tb = document.createElement('div'); tb.className = 'tyb'; el.appendChild(tb); } if (tb.dataset.h !== thq) { tb.dataset.h = thq; tb.innerHTML = thq; } }
+  if (!el.dataset.a) { el.dataset.a = 'btypes'; el.dataset.s = side; el.setAttribute('role', 'button'); el.setAttribute('aria-label', side === 'me' ? 'What hits your Pokémon hard' : 'What hits the foe hard'); }
   el.hidden = false;
 }
 /* Størrelsen i kamp følger høyden i Pokédexen: de små litt mindre, de store tydelig større (Joltik 0,84 · 1 m = 1 · Charizard 1,1 · Lugia 1,3 · Wailord 1,42).
@@ -936,6 +986,8 @@ const MVRED = '<polygon points="0,3 91,3 83,19 0,13" fill="#b93226"/><polygon po
 const MVSVG = x => `<svg class="mvbg" viewBox="0 0 256 192" preserveAspectRatio="none" aria-hidden="true">${MVDEF}${x}</svg>`;
 /* Angrepsmenyen har den lyse V-en nederst. Listene (veska og RUN) har en rett fot i stedet, så feltene får plass. */
 const MVBG = MVSVG(MVRED + '<polygon points="0,126 82,133 97,157 128,166 159,157 174,133 256,126 256,192 0,192" fill="#4a4c52"/><path d="M0,126L82,133L97,157L128,166L159,157L174,133L256,126" fill="none" stroke="#e8e8ec" stroke-width="1.4"/><path d="M0,128.4L80.6,135.2L95.4,159L128,168.6L160.6,159L175.4,135.2L256,128.4" fill="none" stroke="#1d1e22" stroke-width="1"/>');
+/* Når forklaringen til angrepene vises: de røde feltene øverst som i angrepsmenyen, og en rett fot med plass til teksten. */
+const MVBG3 = MVSVG(MVRED + '<polygon points="0,117 256,117 256,192 0,192" fill="#4a4c52"/><path d="M0,117H256" stroke="#e8e8ec" stroke-width="1.4"/><path d="M0,119.2H256" stroke="#1d1e22" stroke-width="1"/>');
 const MVBG2 = MVSVG('<polygon points="0,0 256,0 256,6 0,6" fill="#b93226"/><path d="M0,6.6H256" stroke="#e8e8ec" stroke-width="1.2"/><polygon points="0,148 256,148 256,192 0,192" fill="#4a4c52"/><path d="M0,148H256" stroke="#e8e8ec" stroke-width="1.4"/><path d="M0,150.2H256" stroke="#1d1e22" stroke-width="1"/>');
 const RET = '<span class="ret"><svg viewBox="0 0 18 12" aria-hidden="true"><path d="M6,0V3H12A4.5,4.5 0 0 1 12,12H3V9H12A1.5,1.5 0 0 0 12,6H6V9L0,4.5Z"/></svg></span>';
 /* Ett panel på lagskjermen. act = handlingen når det trykkes, ok = kan velges, cur = står inne i kampen nå. */
@@ -951,9 +1003,11 @@ function drawMenu() {
   { const B0 = BT.B, ar = $('#arena'), on = !!(B0 && !B0.over && !BT.busy && B0.mode === 'lab' && B0.raid && B0.tr && B0.tr.leg === 150 && !B0.tr.dk), b = $('#dkskip');
     if (on && ar && !b) ar.insertAdjacentHTML('beforeend', '<button type="button" id="dkskip" class="dkskip" data-a="dkskip">Skip to Dark Mewtwo ›</button>'); else if (!on && b) b.remove(); }
   const B = BT.B, pk = PACK.menu ? ' pk' : '', bg = mim('pbg'), cancel = (a, t) => `<button type="button" class="bw-cancel bback" data-a="${a || 'bback'}" aria-label="${t || 'Back'}" style="--c:#2f84e6">${MFR}${RET}</button>`;
-  const myTy = `<span class="tyb bw-ty" id="bty-me" data-h="">${BT.tyme || ''}</span>`;
+  const myTy = `<button type="button" class="tyb bw-ty" id="bty-me" data-a="btypes" data-s="me" data-h="" aria-label="What hits your Pokémon hard">${BT.tyme || ''}</button>`;
   if (!B || BT.busy || B.over) { el.innerHTML = `<div class="bw bw-main bw-idle${pk}" style="${mim('ball')}">${B && !B.over ? myTy : ''}</div>`; return; }
   const me = B.me[B.a];
+  if (BT.menu === 'types') { el.innerHTML = typesPanel(B, cancel); return; }
+  if (BT.menu !== 'moves') BT.info = 0;
   if (B.need || BT.menu === 'team') {
     el.innerHTML = `<div class="bw bw-party bsw${pk}" style="${bg}">${B.me.map((b, i) => partyPanel(b, i, 'bsw', b.hp > 0 && !(i === B.a && B.need !== 1), i === B.a && B.need !== 1)).join('')}<p class="bw-tip">${B.need === 1 ? 'Choose a Pokémon.' : 'Switch to which Pokémon?'}</p>${B.need ? '' : cancel()}</div>`;
     return;
@@ -961,10 +1015,11 @@ function drawMenu() {
   if (BT.menu !== 'moves') BT.mega = 0;
   if (BT.menu === 'moves') {
     const any = me.mv.some((x, k) => moveOk(B, k)), fv = BT.v.foe, mg = canMega(B, 'me'); if (!mg) BT.mega = 0;
-    const mvb = (k, m, pp, ok) => `<button type="button" class="bw-m" data-a="bmove" data-k="${k}" style="--c:var(--b${m[1]})"${ok ? '' : ' disabled'}>${MFR}<b>${esc(m[0])}</b><span class="mty">${TYN[m[1]]}</span><span class="pp tn">${pp}</span>${k >= 0 ? fxTag(B, m) : ''}</button>`;
-    el.innerHTML = `<div class="bw bw-moves bmv${S.hfx === 0 ? '' : ' hfx'}">${MVBG}<span class="mv-foe">${B.foe.map((b, i) => `<i class="${b.hp <= 0 ? 'out' : i === fv.i ? 'on' : ''}"></i>`).join('')}</span>
+    const inf = any && BT.info ? 1 : 0; if (!inf) BT.info = 0; else if (!(BT.ik >= 0 && BT.ik < me.mv.length)) BT.ik = Math.max(0, me.mv.findIndex((x, k) => moveOk(B, k)));
+    const mvb = (k, m, pp, ok) => `<button type="button" class="bw-m${TYN[m[1]].length > 6 ? ' lg' : ''}${inf && k === BT.ik ? ' sel' : ''}${inf && !ok ? ' nopp' : ''}" data-a="bmove" data-k="${k}" style="--c:var(--b${m[1]})"${ok || inf ? '' : ' disabled'}${inf ? ` aria-pressed="${k === BT.ik}"` : ''}>${MFR}<b>${esc(m[0])}</b><span class="mty">${TYN[m[1]]}</span><span class="pp tn">${pp}</span>${k >= 0 ? fxTag(B, m) : ''}</button>`;
+    el.innerHTML = `<div class="bw bw-moves bmv${S.hfx === 0 ? '' : ' hfx'}${inf ? ' inf' : ''}">${inf ? MVBG3 : MVBG}<span class="mv-foe">${B.foe.map((b, i) => `<i class="${b.hp <= 0 ? 'out' : i === fv.i ? 'on' : ''}"></i>`).join('')}</span>
       ${any ? me.mv.map((x, k) => mvb(k, mvEff(B, me, MOVES[x.i]), `<em>PP</em>${x.pp}/${x.max}`, moveOk(B, k))).join('') : mvb(-1, ['Struggle', 0], '<em>No PP left</em>', true)}
-      <span class="mv-balls">${Array.from({ length: 6 }, (_, i) => { const b = B.me[i]; return `<i class="${!b ? 'no' : b.hp <= 0 ? 'out' : b.status ? 'st' : ''}${i === B.a ? ' cur' : ''}"></i>`; }).join('')}</span>${myTy}${mg ? `<button type="button" class="bw-mega${BT.mega ? ' on' : ''}" data-a="bmega" aria-pressed="${!!BT.mega}" aria-label="${MEGA[me.mg - 1][1] === 'Primal' ? 'Primal Reversion' : 'Mega Evolve'} with the next move"><span>${MEGA[me.mg - 1][1] === 'Primal' ? 'PRIMAL' : 'MEGA'}</span></button>` : ''}${cancel()}</div>`;
+      <span class="mv-balls">${Array.from({ length: 6 }, (_, i) => { const b = B.me[i]; return `<i class="${!b ? 'no' : b.hp <= 0 ? 'out' : b.status ? 'st' : ''}${i === B.a ? ' cur' : ''}"></i>`; }).join('')}</span>${myTy}${mg ? `<button type="button" class="bw-mega${BT.mega ? ' on' : ''}" data-a="bmega" aria-pressed="${!!BT.mega}" aria-label="${MEGA[me.mg - 1][1] === 'Primal' ? 'Primal Reversion' : 'Mega Evolve'} with the next move"><span>${MEGA[me.mg - 1][1] === 'Primal' ? 'PRIMAL' : 'MEGA'}</span></button>` : ''}${any && !inf ? '<button type="button" class="bw-info" data-a="binfo" aria-label="What the moves do">i</button>' : ''}${inf ? moveFoot(B, me, BT.ik) : ''}${cancel(inf ? 'binfo' : 'bback')}</div>`;
     return;
   }
   if (BT.menu === 'pause') {
@@ -1790,7 +1845,12 @@ const BA = {
   /* Angrepsanimasjonene: de store fra Elite Battle DX, eller de enklere arkene og kodetegnede effektene (for den som vil ha det raskere, eller hvis noe ser rart ut). */
   bdx: () => { S.dx = S.dx === 0 ? 1 : 0; save(true); drawMenu(); },
   bmusic: () => { S.music = S.music === 0 ? 1 : 0; save(true); if (S.music === 0) stopMusic(); else battleMusic(BT.B); drawMenu(); },
-  bmove: el => { if (BT.busy || BT.B.over) return; const mega = BT.mega ? 1 : 0; BT.mega = 0; BT.menu = 'main'; playEv(runTurn(BT.B, { t: 'move', k: +el.dataset.k, mega })); },
+  bmove: (el, use) => { if (BT.busy || BT.B.over) return; if (BT.info && use !== true) { BT.ik = +el.dataset.k; sfx.tap(); return drawMenu(); } if (performance.now() - (BT.lp || 0) < 500) return; BT.info = 0; const mega = BT.mega ? 1 : 0; BT.mega = 0; BT.menu = 'main'; playEv(runTurn(BT.B, { t: 'move', k: +el.dataset.k, mega })); },
+  /* Typehjelpen (steg 1.8): «i» slår forklaringen av og på, USE bruker angrepet derfra, og en HP-boks viser hva som treffer hardt. */
+  binfo: () => { if (BT.busy || !BT.B || BT.B.over) return; BT.info = BT.info ? 0 : 1; BT.ik = -1; drawMenu(); },
+  buse: el => { if (BT.busy || !BT.B || BT.B.over || !moveOk(BT.B, +el.dataset.k)) return; BA.bmove(el, true); },
+  btypes: el => { const B = BT.B; if (!B || B.over) return; if (BT.busy) { if (BT.tap) BT.tap(); return; } if (BT.menu === 'types' && BT.tside === el.dataset.s) return BA.btyback(); if (BT.menu !== 'types') BT.tprev = BT.menu; BT.tside = el.dataset.s === 'me' ? 'me' : 'foe'; BT.menu = 'types'; sfx.open(); drawMenu(); },
+  btyback: () => { BT.menu = BT.tprev && BT.tprev !== 'types' ? BT.tprev : 'main'; BT.tprev = ''; drawMenu(); },
   bmega: () => { if (BT.busy || !BT.B || !canMega(BT.B, 'me')) return; BT.mega = BT.mega ? 0 : 1; if (BT.mega) BSFX.megaArm(); drawMenu(); },
   bsw: el => { if (BT.busy) return; const B = BT.B, i = +el.dataset.k; BT.menu = 'main'; playEv(B.need ? sendIn(B, i) : runTurn(B, { t: 'switch', i })); },
   bforfeit: el => { if (BT.busy) return; if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.innerHTML = MFR + '<span>TAP AGAIN</span><b>to give up</b>'; return; } BT.B.over = 'loss'; endBattle(); },
