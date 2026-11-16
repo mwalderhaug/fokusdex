@@ -434,6 +434,15 @@ function mulBox(td) {
     <div class="mulsteps" style="--n:${gh}">${Array.from({ length: gh }, (_, i) => `<span class="${td >= (i + 1) * 60 ? 'on' : td > i * 60 ? 'cur' : ''}"><i>${i + 1} h</i><b>×${at((i + 1) * 60).toFixed(1)}</b></span>`).join('')}</div>
     <p class="sm" style="margin-top:6px">${td >= g ? `Goal reached: battles pay ×${top.toFixed(1)} coins today.` : `It grows with every minute of focus and peaks at ×${top.toFixed(1)} at your goal of ${gh} h.${nx ? ` Next step: ×${at(Math.min(g, nx)).toFixed(1)} in ${Math.min(g, nx) - td} min.` : ''}`}</p>${purseNote()}</div>`;
 }
+/* Kjøp rett før økta (midlertidig, Jazz 16.11; den ordentlige versjonen er ønske 12 i steg 1): er du tom for Incense, Lure eller Super Lure,
+   kan du kjøpe her uten å gå til Shop. Bare det som er åpnet, ikke er aktivt og som du har råd til; ingenting når Shop ikke er åpnet ennå. */
+function quickBuy() {
+  if (jOn() && !has('shop')) return '';
+  const l = tlv(), ks = ['incense', 'lure', 'slure'].filter(k => { const it = SHOP[k]; return !shopFull(k) && !(it.lv && l < it.lv) && S.coins >= it.p; });
+  if (!ks.length) return '';
+  const ic = k => SHOP[k].img ? ballEl(k, '30px') : `<span class="${SHOP[k].ic}"></span>`;
+  return `<div class="card qbuy" style="padding-top:12px;padding-bottom:4px"><div class="lab" style="margin-bottom:0">For your next session</div>${ks.map(k => `<div class="item"><span class="ic">${ic(k)}</span><div class="sp"><b>${SHOP[k].n}</b><div class="sm">${SHOP[k].d.replace(/ · trainer level \d+$/, '')}</div></div><button type="button" class="btn sm2 pri" data-a="buy" data-k="${k}">${nb(SHOP[k].p)}</button></div>`).join('')}</div>`;
+}
 VIEW.fokus = () => {
   const p = partner(), fag = FAGS[U.fag] ? U.fag : curFag(), min = U.min || S.last.min, td = todayMin(), tdb = (S.log[dayKey()] || {}).b || 0, left = Math.max(0, S.cap - td);
   /* Andre aktiviteter enn fagene teller halvt (rateOf): em = det økta er verdt. */
@@ -458,6 +467,7 @@ VIEW.fokus = () => {
     ${hasMore ? `<button type="button" class="morel" data-a="smore" aria-expanded="${more}">${more ? 'Fewer options' : 'More options'}</button>` : ''}
     <button type="button" class="go" data-a="start" style="margin-top:16px">Start ${min} min</button>
     <p class="sm" style="margin-top:10px;text-align:center">${left <= 0 ? 'Your team is tired today: half XP and no encounters. Rest gives a bonus tomorrow.' : `${n} ${n === 1 ? 'encounter' : 'encounters'} · ${nb(Math.round(Math.min(min, rl) * 10 * (w === 1 ? 1 : OTHERXP) * exf() * (rested ? 1.5 : 1)))} XP${rested ? ' with rested bonus' : ''}${F(fag).ty.length ? ' · more ' + F(fag).ty.map(t => TYN[t].toLowerCase()).join(' and ') : ''}${w < 1 ? `<br>${esc(F(fag).n)} counts at half value for the battle bonus: ${min} min counts as ${em} there.` : ''}`}</p></div>`;
+  if (left > 0) h += quickBuy();
   const iToday = h.length;
   h += `<div class="card"><div class="row" style="justify-content:space-between"><b>Today</b><span class="sm tn">${hm(td)} of ${hm(S.cap)}</span></div><div class="bar" style="margin-top:8px"><i style="width:${Math.min(100, Math.round(td / S.cap * 100))}%"></i></div>${dx ? `<p class="sm tn" style="margin-top:6px">Includes ${hm(dx)} of other things, counted as ${hm(dx * OTHERW)}.</p>` : ''}
     ${tdb ? `<p class="sm tn" style="margin-top:6px">Work adds ${hm(tdb)} to the battle bonus today.</p>` : ''}
