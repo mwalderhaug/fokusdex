@@ -46,7 +46,7 @@ const SHOP = {
   revive: { n: 'Revive', p: 120, d: 'Brings back a fainted Pokémon with half its HP', img: 'revive', bc: '#e3c577', bt: 1 },
   maxrev: { n: 'Max Revive', p: 300, d: 'Brings back a fainted Pokémon with all its HP', img: 'max-revive', bc: '#e3c577', bt: 1 },
   ash: { n: 'Sacred Ash', p: 4000, d: 'Raids only: every fainted Pokémon is back with half its HP. You can carry two · trainer level 16', lv: 16, img: 'sacred-ash', bc: '#e3c577', bt: 1, max: 2 },
-  incense: { n: 'Incense', p: 80, d: 'Next session: one extra encounter and rarer finds', ic: 'smoke' },
+  incense: { n: 'Incense', p: 80, d: 'Next session: one extra encounter and rarer finds', img: 'odd-incense', bc: '#b28fe0' },
   lure: { n: 'Lure', p: 350, d: 'One more encounter in each of your next 3 sessions · trainer level 6', lv: 6, img: 'lure', bc: '#7fa8e6' },
   slure: { n: 'Super Lure', p: 1200, d: 'Rarer Pokémon in your next 3 sessions · trainer level 12', lv: 12, img: 'super-lure', bc: '#e3c577' },
   gberry: { n: 'Golden Razz Berry', p: 600, d: 'Feed it to a Pokémon you meet: one more throw and better odds · trainer level 14', lv: 14, img: 'golden-razz-berry', bc: '#e3c577' },
@@ -471,7 +471,14 @@ const LNO = {
   'Work days: Profile → Settings → Advanced options.': 'Arbeidsdager: Profile → Settings → Advanced options.',
   'Other activities now give encounters every 20 minutes, and the bell in a session mutes the encounter sound.': 'Andre aktiviteter gir nå møter hvert 20. minutt, og bjella i en økt slår av lyden for møter.',
   'Your journey: new things now open one study day at a time. See the card on the Focus page.': 'Reisen din: nye ting åpner seg nå én studiedag om gangen. Se kortet på Focus-siden.',
-  'A new version of Fokusdex is ready.': 'En ny versjon av Fokusdex er klar.'
+  'A new version of Fokusdex is ready.': 'En ny versjon av Fokusdex er klar.',
+  // Steg 1 (Dusk): forsiden
+  'opens battles and the tabs': 'åpner kampene og fanene',
+  'Your team is tired today: half XP and no encounters.': 'Laget er slitent i dag: halv XP og ingen møter.',
+  'counts half for the bonus': 'teller halvt for bonusen',
+  'Exam period: the bonus and XP are at full strength.': 'Eksamensperiode: bonusen og XP er på full styrke.',
+  'Outside the exam period the top bonus and XP are {p} % lower. Start it under Profile when your exams are near.': 'Utenfor eksamensperioden er toppen på bonusen og XP {p} % lavere. Start den under Profile når eksamenene nærmer seg.',
+  // Steg 1 (Dusk): flere
 };
 const tl = (s, v) => { const x = typeof S !== 'undefined' && S && S.lang === 'no' && LNO[s] != null ? LNO[s] : s; return v ? x.replace(/\{(\w+)\}/g, (m, k) => v[k] != null ? v[k] : m) : x; };
 /* REISEN: nye spillere får ting åpnet etter STUDIEDAGER (ikke trenernivå), én ny ting per dag, og ser det når dagen er ferdig («Done for today»).

@@ -197,7 +197,7 @@ const SND = {
   fag: 'chip', min: 'chip', reg: 'chip', sort: 'chip', filt: 'chip', sety: 'chip', extog: 'chip', sbxr: 'chip', sbxo: 'chip',
   sbxpick: 'open', sbxtools: 'open', sbxfac: 'open', sbxlgo: 'open', sbxcup: 'open', sbxfinal: 'open', sbxagain: 'open',
   ball: 'ball', spec: 'open', plan: 'open', sync: 'open', backup: 'open', snext: 'ok', seadd: 'open', avatar: 'open', avall: 'open', avpick: 'ok', ach: 'open', rkok: 'ok',
-  close: 'close', home: 'close', later: 'close', sback: 'close', sedel: 'close', skip: 'close', syncoff: 'close', toshop: 'open',
+  today: 'open', boinfo: 'warn', close: 'close', home: 'close', later: 'close', sback: 'close', sedel: 'close', skip: 'close', syncoff: 'close', toshop: 'open',
   train: 'open', trsel: 'chip', trback: 'close', trclr: 'warn',
   lead: 'ok', sesave: 'ok', syncsave: 'ok', bkcopy: 'ok', bkload: 'ok', party: 'ok', fav: 'fav',
   quit: 'warn', reset: 'warn', early: 'ok', pause: 'chip'
@@ -239,7 +239,8 @@ function render() {
   renderNav();
   /* På en eventdag får forsiden eventets farger og en annen oppstilling (se VIEW.fokus). Eventet trekkes når dagens modus velges (modePick). */
   const E = U.tab === 'fokus' && S.party.length && typeof evNow === 'function' ? evNow() : null, EI = E ? evInfo(E) : null;
-  $('#main').innerHTML = `<div class="wrap${E ? ' evpage ev-' + E.k : ''}${SBX ? ' insbx' : ''}"${E ? ` style="--ec:${EI.c};--ec2:${EI.c2 || EI.c}"` : ''}>${typeof sbxBar === 'function' ? sbxBar() : ''}${helpBtn()}${VIEW[U.tab]()}</div>`;
+  $('#main').classList.toggle('nonav', !open);
+  $('#main').innerHTML = `${GRADDEF}<div class="wrap${E ? ' evpage ev-' + E.k : ''}${SBX ? ' insbx' : ''}"${E ? ` style="--ec:${EI.c};--ec2:${EI.c2 || EI.c}"` : ''}>${typeof sbxBar === 'function' ? sbxBar() : ''}${helpBtn()}${VIEW[U.tab]()}</div>`;
   /* Et område som nettopp ble åpnet (av nivå eller antall arter), sies fra om én gang. */
   if (open && S.nreg && S.nreg.length) { const l = S.nreg; S.nreg = []; save(true); setTimeout(() => toast(`New area: ${l.join(' and ')} ${l.length > 1 ? 'are' : 'is'} open. See Shop · Routes.`), 400); }
 }
@@ -253,7 +254,7 @@ const dayOpenQ = () => !S.started || !!SBX || admOn() || S.dn === dayKey() || (S
 const admOn = () => { if (U.adm == null) { try { U.adm = localStorage.getItem(KEY + '.adm') === '1'; } catch (_) { U.adm = false; } } return !!U.adm && isAdmin(); };
 const admRow = () => isAdmin() ? `<div class="admrow"><button type="button" class="btn sm2" data-a="adm" aria-pressed="${admOn()}">Admin view · ${admOn() ? 'on' : 'off'}</button>${admOn() ? '<button type="button" class="btn sm2" data-a="lab">Sandbox</button><button type="button" class="btn sm2" data-a="jprev">Journey preview</button>' : ''}</div>` : '';
 /* Foten på forsiden før «Done for today». */
-const studyFoot = () => `<button type="button" class="btn wide st-done" data-a="dn">Done for today</button><p class="sm st-cap">Battles, raids and the tabs open when you are done.</p>`;
+const studyFoot = () => `<button type="button" class="btn wide st-done" data-a="dn"><b>Done for today</b>${jOn() ? `<small>${tl('opens battles and the tabs')}</small>` : ''}</button>`;
 /* Raidet vises ellers først når dagen er åpnet; gaveraidet (ev) vises med en gang. */
 const raidGo = () => dayOpenQ() || !!(S.raid && S.raid.ev);
 function giftSheet() {
@@ -410,13 +411,46 @@ function rankUp(R) {
   d.innerHTML = `<div class="lab">New rank</div>${avFrame(R, 'xl')}<span class="stamp">${R.n}</span><p class="sm">Your picture has a new frame.${R.nn ? ` ${R.next - R.p} more medals to ${R.nn}.` : ' This is the highest rank there is.'}</p><button type="button" class="btn gold" data-a="rkok">Continue</button>`;
   w.appendChild(d); sfx.rank(); buzz([20, 60, 90]);
 }
+/* ---------- Egne ikoner ----------
+   Små strekikoner tegnet for appen (24 × 24). icn('navn') gir en <svg> som arver fargen og følger skriftstørrelsen (.icn i style.css).
+   'f' = fylt i stedet for strek. Ingen av dem kommer fra spillene eller andre. */
+const ICN = {
+  flame: ['f', 'M13 2c.6 3.4-3.8 5-3.8 9.2 0 .8.3 1.5.8 2 .1-1.9 1.1-3.1 2.4-4.1 2.6 1.6 4.4 3.8 4.4 6.5a5.3 5.3 0 0 1-10.6.2C6.2 10.6 11.5 8.2 13 2z'],
+  grass: ['', 'M5 20c0-5 .8-8 3-10.5M12 20c-.5-6 0-10 .5-14M19 20c0-5-1-8-3.200-10.500M8.500 20c.2-3 .5-4.500 1.200-6M15.500 20c-.2-3-.5-4.500-1.200-6'],
+  chev: ['', 'M9 5l7 7-7 7'], down: ['', 'M5 9l7 7 7-7'], back: ['', 'M15 5l-7 7 7 7'], x: ['', 'M6 6l12 12M18 6L6 18'], plus: ['', 'M12 5v14M5 12h14'],
+  check: ['', 'M5 12.500l4.500 4.500L19 7.500'], arrow: ['', 'M4 12h15M13 6l6 6-6 6'],
+  lock: ['', 'M7.700 10.500h8.600a2.200 2.200 0 0 1 2.200 2.200v5.100a2.200 2.200 0 0 1-2.200 2.200H7.700a2.200 2.200 0 0 1-2.200-2.200v-5.100a2.200 2.200 0 0 1 2.200-2.200zM8.500 10.500V8a3.500 3.500 0 0 1 7 0v2.500'],
+  spark: ['f', 'M12 2c.7 5.200 2.800 7.300 8 8-5.200.7-7.300 2.800-8 8-.7-5.200-2.800-7.300-8-8 5.200-.7 7.300-2.800 8-8zM19 16c.3 2 1 2.700 3 3-2 .3-2.700 1-3 3-.3-2-1-2.700-3-3 2-.3 2.700-1 3-3z'],
+  star: ['f', 'M12 2.500l2.700 6.100 6.600.6-5 4.400 1.500 6.500-5.800-3.400-5.800 3.400 1.500-6.500-5-4.400 6.600-.6z'],
+  cap: ['', 'M2.500 9.500L12 5l9.500 4.500L12 14 2.500 9.500zM6.500 11.800v4c0 1.400 2.500 2.700 5.500 2.700s5.500-1.300 5.500-2.700v-4M21.500 9.500v5'],
+  egg: ['', 'M12 3c3.300 0 6.500 5.200 6.500 10.200A6.500 6.500 0 0 1 12 20a6.500 6.500 0 0 1-6.500-6.800C5.500 8.200 8.700 3 12 3z'],
+  gift: ['', 'M4 11h16v9H4zM3 7.500h18V11H3zM12 7.500V20M12 7.500C10 7.500 8 6.500 8 5s2-2 4 2.500zM12 7.500c2 0 4-1 4-2.500s-2-2-4 2.500z'],
+  box: ['', 'M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8'],
+  info: ['', 'M12 11v6M12 7.500v.1M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z'],
+  swap: ['', 'M7 4L3.500 7.500 7 11M3.500 7.500H17M17 13l3.500 3.500L17 20M20.500 16.500H7'],
+  scale: ['', 'M12 4v16M5 20h14M5 7h14M5 7l-2.500 6a2.900 2.900 0 0 0 5 0zM19 7l-2.500 6a2.900 2.900 0 0 0 5 0z'],
+  sun: ['', 'M12 16.500a4.500 4.500 0 1 0 0-9 4.500 4.500 0 0 0 0 9zM12 2.500v2M12 19.500v2M2.500 12h2M19.500 12h2M5.300 5.300l1.400 1.400M17.300 17.300l1.400 1.400M5.300 18.700l1.400-1.400M17.300 6.700l1.400-1.400'],
+  moon: ['', 'M20 14.500A8.500 8.500 0 0 1 9.500 4a8.500 8.500 0 1 0 10.500 10.500z'],
+  bag: ['', 'M5 8h14l-1.200 11.200H6.200zM9 8V6.500a3 3 0 0 1 6 0V8'],
+  clock: ['', 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7.500V12l3 2'],
+  up: ['f', 'M12 5l7 9H5z'], dn: ['f', 'M12 19l7-9H5z'],
+  bolt: ['f', 'M13.500 2L5 13.500h5.500L9.500 22 19 10h-5.800z'], sword: ['', 'M14.500 4H20v5.500L9 20.500 3.500 15zM6 18l-2.500 2.500M5 13l6 6'],
+  shield: ['', 'M12 3l7.500 3v5.500c0 4.500-3 8-7.500 9.500-4.500-1.500-7.500-5-7.500-9.500V6z'], heart: ['', 'M12 20s-7.500-4.600-7.500-10A4.300 4.300 0 0 1 12 7.500 4.300 4.300 0 0 1 19.500 10c0 5.400-7.500 10-7.500 10z']
+};
+const icn = (k, cls) => { const d = ICN[k]; return d ? `<svg class="icn${d[0] ? ' f' : ''}${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" aria-hidden="true"><path d="${d[1]}"/></svg>` : ''; };
+/* En ring som fylles (XP, egget): r = radius i en boks på size × size, f = 0–1. Fargen er aksentens overgang (#dg defineres én gang i siden). */
+const ringEl = (size, r, f, w) => { const C = 2 * Math.PI * r, c = size / 2; return `<svg class="ringsv" viewBox="0 0 ${size} ${size}" aria-hidden="true"><circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="var(--track)" stroke-width="${w}"/><circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="url(#dg)" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="${(C * Math.max(0, Math.min(1, f))).toFixed(1)} ${C.toFixed(1)}"/></svg>`; };
+/* Overgangen alle ringer og buer bruker. Står én gang øverst i siden (render). */
+const GRADDEF = '<svg class="defs" width="0" height="0" aria-hidden="true"><defs><linearGradient id="dg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--acc)"/><stop offset="1" stop-color="var(--acc2)"/></linearGradient></defs></svg>';
+
+/* Toppstripa: bildet ditt i rangens ramme (eller nivået i en ring), rangen med XP-streken, dager på rad og mynter. Trykk på bildet: Achievements. */
 function topBar() {
-  const l = tlv(), a = tlvXp(l), b = tlvXp(l + 1), st = streak(), as = U.as || achSum(), R = as.R;
-  return `<div class="top"><button type="button" class="avb avf rk${R.i}${S.av ? '' : ' noav'}" data-a="ach" style="--rk:${R.c}" aria-label="Achievements. Rank: ${R.n}${as.open ? `. ${as.open} reward${as.open > 1 ? 's' : ''} to claim` : ''}">${S.av ? `${avIn(R)}<span class="avl tn">${l}</span>` : `${R.i >= RANKS.length - 1 ? '<i class="rkring"><i></i></i>' : ''}<span class="lv tn"><small>LVL</small>${l}</span>`}${as.open ? '<i class="dot"></i>' : ''}</button>
-    <div class="sp"><div class="row" style="justify-content:space-between"><b class="rkt" style="color:${R.c}">${R.n}</b>${st >= 2 ? `<span class="pill" style="color:var(--sage)">${st}-day streak</span>` : ''}</div>
-    <div class="bar" style="margin-top:7px"><i style="width:${Math.round((S.xp - a) / (b - a) * 100)}%"></i></div>
-    <div class="sm tn" style="margin-top:4px">${nb(S.xp - a)} of ${nb(b - a)} XP to level ${l + 1}</div></div>
-    ${coinEl(S.coins)}</div>`;
+  const l = tlv(), a = tlvXp(l), b = tlvXp(l + 1), st = streak(), as = U.as || achSum(), R = as.R, f = Math.max(0, Math.min(1, (S.xp - a) / (b - a)));
+  const lab = `Achievements. Rank: ${R.n}. Trainer level ${l}, ${nb(S.xp - a)} of ${nb(b - a)} XP to level ${l + 1}${as.open ? `. ${as.open} reward${as.open > 1 ? 's' : ''} to claim` : ''}`;
+  return `<div class="top">${S.av ? `<button type="button" class="avb avf rk${R.i}" data-a="ach" style="--rk:${R.c}" aria-label="${lab}">${avIn(R)}<span class="avl tn">${l}</span>${as.open ? '<i class="dot"></i>' : ''}</button>`
+    : `<button type="button" class="lvring" data-a="ach" style="--rk:${R.c};--f:${Math.round(f * 100)}" aria-label="${lab}"><b class="tn">${l}</b>${as.open ? '<i class="dot"></i>' : ''}</button>`}
+    <div class="top-r"><b class="rkt" style="color:${R.c}">${R.n}</b>${S.av ? `<span class="bar" title="${nb(S.xp - a)} of ${nb(b - a)} XP to level ${l + 1}"><i style="width:${Math.round(f * 100)}%"></i></span>` : ''}</div>
+    ${st >= 2 ? `<span class="tk st" role="img" aria-label="${st}-day streak">${icn('flame')}<b class="tn">${st}</b></span>` : ''}${coinEl(S.coins)}</div>`;
 }
 
 /* Kampbonusen (multiplikatoren på mynter fra kamper) slik den står akkurat nå, og trinnene time for time fram til dagsmålet. */
@@ -428,56 +462,94 @@ function purseNote() {
   if (!p.day) return `<p class="sm purse"><b>A purse is waiting.</b> Your next battle day pays ${pc} % more coins.</p>`;
   return '';
 }
-function mulBox(td) {
-  const g = goalMin(), gh = Math.max(1, Math.round(g / 60)), top = goalTop(), at = m => Math.round((0.5 + Math.min(1, m / g) * (top - 0.5)) * 10) / 10, now = at(td), nx = td < g ? Math.ceil((td + 1) / 60) * 60 : 0;
-  return `<div class="mulbox"><div class="row" style="justify-content:space-between;align-items:baseline"><span class="sm">Battle bonus so far today ${hq('bonus', 'What is the battle bonus?')}</span><b class="mulnow tn">×${now.toFixed(1)}</b></div>
-    <div class="mulsteps" style="--n:${gh}">${Array.from({ length: gh }, (_, i) => `<span class="${td >= (i + 1) * 60 ? 'on' : td > i * 60 ? 'cur' : ''}"><i>${i + 1} h</i><b>×${at((i + 1) * 60).toFixed(1)}</b></span>`).join('')}</div>
-    <p class="sm" style="margin-top:6px">${td >= g ? `Goal reached: battles pay ×${top.toFixed(1)} coins today.` : `It grows with every minute of focus and peaks at ×${top.toFixed(1)} at your goal of ${gh} h.${nx ? ` Next step: ×${at(Math.min(g, nx)).toFixed(1)} in ${Math.min(g, nx) - td} min.` : ''}`}</p>${purseNote()}</div>`;
+/* Bonusen på et gitt antall minutter i dag (0,5 ved start, toppen ved dagsmålet). */
+const mulAt = m => { const g = goalMin(), top = goalTop(); return Math.round((0.5 + Math.min(1, m / g) * (top - 0.5)) * 10) / 10; };
+/* BUEN: dagens kampbonus som en halvsirkel fra start til dagsmålet. Prikkene er timene, de små ringene er dagens tre delmål (QUESTS). */
+function bonusArc(td, tq) {
+  const g = goalMin(), gh = Math.max(1, Math.round(g / 60)), top = goalTop(), f = Math.min(1, td / g), ax = 75, ay = 76, ar = 64;
+  const pt = x => [ax - Math.cos(Math.PI * x) * ar, ay - Math.sin(Math.PI * x) * ar], arc = x => { const [px, py] = pt(x); return `M${ax - ar} ${ay}A${ar} ${ar} 0 0 1 ${px.toFixed(1)} ${py.toFixed(1)}`; };
+  const hrs = Array.from({ length: gh - 1 }, (_, i) => { const x = (i + 1) * 60 / g, [px, py] = pt(x); return `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="1.600" class="${td >= (i + 1) * 60 ? 'hd on' : 'hd'}"/>`; }).join('');
+  const qs = QUESTS.filter(q => q.m < g).map(q => { const [px, py] = pt(q.m / g), on = tq >= q.m; return `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4" class="${on ? 'qd on' : 'qd'}"/>`; }).join('');
+  const [kx, ky] = pt(f);
+  return `<div class="arc"><svg viewBox="0 0 150 84" aria-hidden="true"><path d="${arc(1)}" class="a0"/>${f > 0.01 ? `<path d="${arc(f)}" class="a1"/>` : ''}${hrs}${qs}<circle cx="${kx.toFixed(1)}" cy="${ky.toFixed(1)}" r="6" class="kn"/></svg><div class="v"><b class="tn">×${mulAt(td).toFixed(1)}</b><small class="tn">${td >= g ? 'top bonus' : `max ×${top.toFixed(1)}`}</small></div></div>`;
 }
-/* Kjøp rett før økta (midlertidig, Jazz 16.11; den ordentlige versjonen er ønske 12 i steg 1): er du tom for Incense, Lure eller Super Lure,
-   kan du kjøpe her uten å gå til Shop. Bare det som er åpnet, ikke er aktivt og som du har råd til; ingenting når Shop ikke er åpnet ennå. */
-function quickBuy() {
+/* Det som virker akkurat nå utover røkelsen og lokkemidlene i raden under Start: shiny-røkelsen, Prism Lure, bossens premie og Shiny Charm. */
+function fxTags() {
+  const out = [];
+  if (shinyBoost() > 1) out.push(`<span class="tg au">${icn('spark')}×${shinyBoost()}<i class="sep"></i>${hLeft(S.shb.until - Date.now())}</span>`);
+  if (S.prism) out.push(`<span class="tg au">${icn('spark')}Prism Lure</span>`);
+  if (S.boost) out.push(`<span class="tg au"><i class="c"></i>×${S.boost.m}<i class="sep"></i>${S.boost.n}</span>`);
+  return out.join('');
+}
+/* Eksamensperioden på forsiden: hvilket fag som er nærmest, og hvor mange dager. Utenfor perioden: at den er av (bonusen er da litt lavere). */
+function examTag() {
+  const fs = Object.keys(S.fag || {}); if (!fs.length) return '';
+  if (!examOn()) return jOn() && !fs.some(f => S.fag[f].d) ? '' : `<button type="button" class="tg ex off" data-a="exam">${icn('cap')}Exam period off</button>`;
+  const k = dayKey(), nx = Object.keys(S.fag).map(f => S.fag[f]).filter(g => g.d && g.xs && g.d >= k).sort((a, b) => a.d < b.d ? -1 : 1)[0];
+  const dd = nx ? dIdx(nx.d) - dIdx(k) : 0;
+  return `<button type="button" class="tg ex" data-a="exam">${icn('cap')}Exam period${nx ? `<i class="sep"></i>${esc(nx.n)} ${dd > 0 ? `in ${dd} d` : 'today'}` : ''}</button>`;
+}
+/* KJØP RETT FØR ØKTA (ønske 12): røkelsen og lokkemidlene under Start. Det som er aktivt, lyser; det som er låst, viser nivået.
+   Ett trykk kjøper (handlingen buy), og linja over viser med en gang hva økta gir nå. Skjult til Shop er åpnet på reisen. */
+const BOOSTS = ['incense', 'lure', 'slure'];
+/* Det kjøpet sier når det gjelder neste økt: hva som nå er i gang. */
+const BOUGHT = { incense: 'Incense lit: one extra encounter and rarer finds in your next session.', lure: `Lure on: one more encounter in each of your next ${LUREN} sessions.`, slure: `Super Lure on: rarer Pokémon in your next ${LUREN} sessions.` };
+const boostState = k => { const it = SHOP[k]; return shopFull(k) ? 'on' : it.lv && tlv() < it.lv ? 'lk' : S.coins >= it.p ? 'ok' : 'no'; };
+function boostRow() {
   if (jOn() && !has('shop')) return '';
-  const l = tlv(), ks = ['incense', 'lure', 'slure'].filter(k => { const it = SHOP[k]; return !shopFull(k) && !(it.lv && l < it.lv) && S.coins >= it.p; });
-  if (!ks.length) return '';
-  const ic = k => SHOP[k].img ? ballEl(k, '30px') : `<span class="${SHOP[k].ic}"></span>`;
-  return `<div class="card qbuy" style="padding-top:12px;padding-bottom:4px"><div class="lab" style="margin-bottom:0">For your next session</div>${ks.map(k => `<div class="item"><span class="ic">${ic(k)}</span><div class="sp"><b>${SHOP[k].n}</b><div class="sm">${SHOP[k].d.replace(/ · trainer level \d+$/, '')}</div></div><button type="button" class="btn sm2 pri" data-a="buy" data-k="${k}">${nb(SHOP[k].p)}</button></div>`).join('')}</div>`;
+  const ic = k => ballEl(k, '26px');
+  return `<div class="boost" role="group" aria-label="For your next session">${BOOSTS.map(k => { const it = SHOP[k], st = boostState(k);
+    const txt = st === 'on' ? (k === 'incense' ? 'lit' : `${S[k]} left`) : st === 'lk' ? `Level ${it.lv}` : nb(it.p);
+    return `<button type="button" class="bo ${st}" data-a="${st === 'ok' ? 'buy' : 'boinfo'}" data-k="${k}" aria-label="${it.n}: ${st === 'on' ? 'active, ' + txt : st === 'lk' ? 'opens at trainer level ' + it.lv : nb(it.p) + ' coins'}"><span class="ic">${ic(k)}</span><span class="t"><b>${it.n}</b><i class="tn">${txt}</i></span></button>`; }).join('')}</div>`;
 }
+/* Arket bak Today-kortet: trinnene time for time, dagens tre delmål og det som virker nå. Her står forklaringene som før lå på forsiden. */
+function todaySheet() {
+  const td = todayMin(), L = S.log[dayKey()] || {}, tdb = L.b || 0, dx = L.x || 0, g = goalMin(), gh = Math.max(1, Math.round(g / 60)), top = goalTop(), t = td + tdb, nx = t < g ? Math.ceil((t + 1) / 60) * 60 : 0;
+  const fx = [S.incOn ? 'Incense is lit for your next session.' : '', S.lure > 0 ? `Lure: one more encounter in your next ${S.lure} session${S.lure > 1 ? 's' : ''}.` : '', S.slure > 0 ? `Super Lure: rarer Pokémon in your next ${S.slure} session${S.slure > 1 ? 's' : ''}.` : '',
+    shinyBoost() > 1 ? `${SHOP[S.shb.k] ? SHOP[S.shb.k].n : 'Shiny incense'}: shiny odds ×${shinyBoost()} for ${hLeft(S.shb.until - Date.now())} more.` : '', S.prism ? 'Prism Lure: the next raid has a 1 in 5 chance of being shiny.' : '',
+    S.boost ? `Boss perk: ${S.boost.m}× coins for your next ${S.boost.n} session${S.boost.n > 1 ? 's' : ''}.` : '', S.charm > 0 ? `Shiny Charm: ${CHARM.m}× shiny odds for your next ${S.charm} focus session${S.charm > 1 ? 's' : ''}.` : ''].filter(Boolean);
+  openSheet(`<div class="row" style="justify-content:space-between"><h2 class="h" style="margin:0">Today</h2><span class="sm tn">${hm(td)} of ${hm(S.cap)}</span></div>
+    <div><div class="row" style="justify-content:space-between;align-items:baseline"><span class="lab" style="margin:0">Battle bonus ${hq('bonus', 'What is the battle bonus?')}</span><b class="mulnow tn">×${mulAt(t).toFixed(1)}</b></div>
+      <div class="mulsteps" style="--n:${gh}">${Array.from({ length: gh }, (_, i) => `<span class="${t >= (i + 1) * 60 ? 'on' : t > i * 60 ? 'cur' : ''}"><i>${i + 1} h</i><b>×${mulAt((i + 1) * 60).toFixed(1)}</b></span>`).join('')}</div>
+      <p class="sm" style="margin-top:8px">${t >= g ? `Goal reached: battles pay ×${top.toFixed(1)} coins today.` : `It grows with every minute of focus and peaks at ×${top.toFixed(1)} at your goal of ${gh} h.${nx ? ` Next step: ×${mulAt(Math.min(g, nx)).toFixed(1)} in ${Math.min(g, nx) - t} min.` : ''}`}</p>
+      ${examOn() ? `<p class="sm" style="color:var(--acc)">${tl('Exam period: the bonus and XP are at full strength.')}</p>` : Object.keys(S.fag || {}).length ? `<p class="sm">${tl('Outside the exam period the top bonus and XP are {p} % lower. Start it under Profile when your exams are near.', { p: Math.round((1 - EXN) * 100) })}</p>` : ''}
+      ${dx ? `<p class="sm tn">Includes ${hm(dx)} of other things, counted as ${hm(dx * OTHERW)}.</p>` : ''}${tdb ? `<p class="sm tn">Work adds ${hm(tdb)} to the battle bonus today.</p>` : ''}${purseNote()}</div>
+    <div><div class="lab">Goals today</div><div class="quests">${QUESTS.map(q => `<span class="${td >= q.m ? 'on' : ''}"><b>${td >= q.m ? '✓ ' : ''}${q.n}</b>${q.r}</span>`).join('')}</div></div>
+    ${S.eggs.length ? `<div class="row"><span class="egg"></span><div class="sp"><div class="row sm tn" style="justify-content:space-between"><span>Egg${S.eggs.length > 1 ? ' (' + S.eggs.length + ')' : ''}</span><span>${S.eggs[0].need - S.eggs[0].got} min left</span></div><div class="bar gold" style="margin-top:5px"><i style="width:${Math.round(S.eggs[0].got / S.eggs[0].need * 100)}%"></i></div></div></div>` : ''}
+    ${fx.length ? `<div><div class="lab">Active now</div>${fx.map(x => `<p class="sm" style="margin-top:4px">${x}</p>`).join('')}</div>` : ''}
+    <button type="button" class="btn wide" data-a="close">Close</button>`);
+}
+/* FORSIDEN. Før «Done for today»: toppstripa, partneren i XP-ringen med laget under, økta (fag, lengde, Start og det som kan kjøpes til den),
+   Today (buen) og «Done for today». Etterpå kommer reisen, raidet og kampene i tillegg (se nederst). Alt annet ligger bak et trykk. */
 VIEW.fokus = () => {
-  const p = partner(), fag = FAGS[U.fag] ? U.fag : curFag(), min = U.min || S.last.min, td = todayMin(), tdb = (S.log[dayKey()] || {}).b || 0, left = Math.max(0, S.cap - td);
+  const p = partner(), fag = FAGS[U.fag] ? U.fag : curFag(), min = U.min || S.last.min, td = todayMin(), tdb = (S.log[dayKey()] || {}).b || 0, left = Math.max(0, S.cap - td), open = dayOpenQ();
   /* Andre aktiviteter enn fagene teller halvt (rateOf): em = det økta er verdt. */
   const w = rateOf(fag), em = Math.round(min * w), subj = Object.keys(FAGS).filter(isSubj), oth = Object.keys(FAGS).filter(k => !isSubj(k)), chip = k => `<button type="button" class="chip" data-a="fag" data-k="${k}" aria-pressed="${fag === k}">${esc(F(k).n)}</button>`;
   const rl = w === 1 ? left : Math.round(left / w), n = Math.floor(Math.min(min, rl) / 20) + (min >= 25 && rl >= min ? 1 : 0) + (S.incOn ? 1 : 0) + (S.lure > 0 ? 1 : 0);
-  const rested = !(S.log[dayKey()] || {}).s, dx = (S.log[dayKey()] || {}).x || 0;
+  const rested = !(S.log[dayKey()] || {}).s, xp = Math.round(Math.min(min, rl) * 10 * (w === 1 ? 1 : OTHERXP) * exf() * (rested ? 1.5 : 1));
   const hasMore = (subj.length > 0 && oth.length > 0) || S.regions.length > 1, more = !!U.more || (subj.length > 0 && !isSubj(fag));
   let top = topBar(), h = '';
   if (p) {
-    const ev = evoOpts(p), nx = ev.find(x => !x.ok), rdy = ev.find(x => x.ok), a = xpAt(p.lv), b = xpAt(p.lv + 1);
-    h += `<button type="button" class="card partner" data-a="mon" data-u="${p.u}" style="--tc:var(--t${D(p.id)[1]});text-align:left;width:100%">${spr(p.id, { ani: 1, sh: p.sh, mega: p.mega })}
-      <div class="sp"><div class="sm">Partner</div><div class="pn">${esc(D(p.id)[0])}</div>
-      <div class="row sm tn" style="justify-content:space-between;margin-top:6px"><span>Level ${p.lv}</span><span>${rdy ? '<b style="color:var(--gold)">Ready to evolve</b>' : nx ? 'evolves ' + nx.why : ''}</span></div>
-      <div class="bar" style="margin-top:5px"><i style="width:${Math.round((p.xp - a) / (b - a) * 100)}%"></i></div></div></button>`;
+    const ev = evoOpts(p), nx = ev.find(x => !x.ok), rdy = ev.find(x => x.ok), a = xpAt(p.lv), b = xpAt(p.lv + 1), egg = S.eggs[0];
+    h += `<div class="hero" style="--tc:var(--t${mTypes(p)[0]})">
+      ${egg ? `<button type="button" class="hside l" data-a="today" aria-label="Egg: ${egg.need - egg.got} minutes of focus left">${ringEl(52, 23, egg.got / egg.need, 3)}<span class="egg"></span><small class="tn">${egg.need - egg.got} min</small></button>` : ''}
+      <button type="button" class="orb" data-a="mon" data-u="${p.u}" aria-label="${esc(mName(p))}, your partner, level ${p.lv}">${ringEl(148, 66, (p.xp - a) / (b - a), 3)}${spr(p.id, { it: p.item, ani: 1, sh: p.sh, mega: p.mega })}</button>
+      ${S.pend.length ? `<button type="button" class="hside r" data-a="hunt" aria-label="${S.pend.length} ${S.pend.length === 1 ? 'encounter' : 'encounters'} waiting in the grass"><span class="grass live"><i></i><i></i><i></i><i></i></span><b class="tn">${S.pend.length}</b><small>in the grass</small></button>` : ''}
+      <div class="pn">${esc(mName(p))}${gs(p)}</div><div class="pl tn">Level ${p.lv}${rdy ? ' · <b class="au">ready to evolve</b>' : nx ? ` · evolves ${nx.why}` : ''}</div>
+      ${S.party.length > 1 || S.mons.length > 1 ? `<div class="bub">${S.party.slice(1).map(u => { const m = monBy(u); return m ? `<button type="button" data-a="mon" data-u="${m.u}" aria-label="${esc(mName(m))}, level ${m.lv}">${spr(m.id, { it: m.item, sh: m.sh, mega: m.mega, s: '34px' })}</button>` : ''; }).join('')}${Array.from({ length: 6 - S.party.length }, () => '<i></i>').join('')}<${open ? 'button type="button" data-a="tab" data-k="lag"' : 'span'} class="n tn" aria-label="${S.mons.length} Pokémon in all${open ? '. Open Team' : ''}">${icn('box')}${S.mons.length}</${open ? 'button' : 'span'}></div>` : ''}</div>`;
   }
-  if (S.party.length > 1 || S.mons.length > 1) h += `<button type="button" class="card teamrow" data-a="tab" data-k="lag" aria-label="Open team"><span class="sm">Team</span><span class="tr-s">${S.party.slice(1).map(u => { const m = monBy(u); return m ? spr(m.id, { it: m.item, sh: m.sh, mega: m.mega, s: '38px' }) : ''; }).join('')}${Array.from({ length: 6 - S.party.length }, () => '<i></i>').join('')}</span><span class="sm tn">${S.mons.length} in box ›</span></button>`;
-  const iPend = h.length;
-  if (S.pend.length) h += `<button type="button" class="card pendb" data-a="hunt" style="text-align:left;width:100%"><span class="grass live"><i></i><i></i><i></i><i></i></span><span class="sp"><b>${S.pend.length} ${S.pend.length === 1 ? 'encounter waiting' : 'encounters waiting'}</b><br><span class="sm">Something is rustling in the grass. Tap to step in.</span></span></button>`;
-  h += `<div class="card">${subj.length ? `<div class="lab">Subject</div><div class="chips">${subj.map(chip).join('')}</div>${more ? `<div class="lab" style="margin-top:14px">Other things · half value for the battle bonus</div><div class="chips">${oth.map(chip).join('')}</div>` : ''}` : `<div class="lab">Subject</div><div class="chips">${oth.map(chip).join('')}</div>`}
-    <div class="lab" style="margin-top:14px">Length</div><div class="chips">${[25, 45, 60, 75, 90].map(m => `<button type="button" class="chip tn" data-a="min" data-k="${m}" aria-pressed="${min === m}">${m} min</button>`).join('')}</div>
-    ${more && S.regions.length > 1 ? `<div class="lab" style="margin-top:14px">Routes · tap to turn on or off</div><div class="chips">${S.regions.map(r => `<button type="button" class="chip" data-a="reg" data-k="${r}" aria-pressed="${S.routes.includes(r)}">${REG[r].n}</button>`).join('')}</div>` : ''}
-    ${hasMore ? `<button type="button" class="morel" data-a="smore" aria-expanded="${more}">${more ? 'Fewer options' : 'More options'}</button>` : ''}
-    <button type="button" class="go" data-a="start" style="margin-top:16px">Start ${min} min</button>
-    <p class="sm" style="margin-top:10px;text-align:center">${left <= 0 ? 'Your team is tired today: half XP and no encounters. Rest gives a bonus tomorrow.' : `${n} ${n === 1 ? 'encounter' : 'encounters'} · ${nb(Math.round(Math.min(min, rl) * 10 * (w === 1 ? 1 : OTHERXP) * exf() * (rested ? 1.5 : 1)))} XP${rested ? ' with rested bonus' : ''}${F(fag).ty.length ? ' · more ' + F(fag).ty.map(t => TYN[t].toLowerCase()).join(' and ') : ''}${w < 1 ? `<br>${esc(F(fag).n)} counts at half value for the battle bonus: ${min} min counts as ${em} there.` : ''}`}</p></div>`;
-  if (left > 0) h += quickBuy();
-  const iToday = h.length;
-  h += `<div class="card"><div class="row" style="justify-content:space-between"><b>Today</b><span class="sm tn">${hm(td)} of ${hm(S.cap)}</span></div><div class="bar" style="margin-top:8px"><i style="width:${Math.min(100, Math.round(td / S.cap * 100))}%"></i></div>${dx ? `<p class="sm tn" style="margin-top:6px">Includes ${hm(dx)} of other things, counted as ${hm(dx * OTHERW)}.</p>` : ''}
-    ${tdb ? `<p class="sm tn" style="margin-top:6px">Work adds ${hm(tdb)} to the battle bonus today.</p>` : ''}
-    ${mulBox(td + tdb)}
-    <div class="quests">${QUESTS.map(q => `<span class="${td >= q.m ? 'on' : ''}"><b>${td >= q.m ? '✓ ' : ''}${q.n}</b>${q.r}</span>`).join('')}</div>
-    ${S.eggs.length ? `<div class="row" style="margin-top:14px"><span class="egg"></span><div class="sp"><div class="row sm tn" style="justify-content:space-between"><span>Egg${S.eggs.length > 1 ? ' (' + S.eggs.length + ')' : ''}</span><span>${S.eggs[0].need - S.eggs[0].got} min left</span></div><div class="bar gold" style="margin-top:5px"><i style="width:${Math.round(S.eggs[0].got / S.eggs[0].need * 100)}%"></i></div></div></div>` : ''}
-    ${S.incOn ? '<p class="sm" style="margin-top:10px">Incense is lit for your next session.</p>' : ''}${S.lure > 0 ? `<p class="sm" style="margin-top:10px">Lure: one more encounter in your next ${S.lure} session${S.lure > 1 ? 's' : ''}.</p>` : ''}${S.slure > 0 ? `<p class="sm" style="margin-top:10px">Super Lure: rarer Pokémon in your next ${S.slure} session${S.slure > 1 ? 's' : ''}.</p>` : ''}${shinyBoost() > 1 ? `<p class="sm" style="margin-top:10px;color:var(--gold)">${SHOP[S.shb.k] ? SHOP[S.shb.k].n : 'Shiny incense'}: shiny odds ×${shinyBoost()} for ${hLeft(S.shb.until - Date.now())} more.</p>` : ''}${S.prism ? '<p class="sm" style="margin-top:10px;color:var(--gold)">Prism Lure: the next raid has a 1 in 5 chance of being shiny.</p>' : ''}${S.boost ? `<p class="sm" style="margin-top:10px;color:var(--gold)">Boss perk: ${S.boost.m}× coins for your next ${S.boost.n} session${S.boost.n > 1 ? 's' : ''}.</p>` : ''}</div>`;
+  const tys = F(fag).ty.map(t => `<span class="ty" style="background:var(--t${t})">${TYN[t]}</span>`).join('');
+  h += `<div class="card ses"><div class="chips">${(subj.length ? subj : oth).map(chip).join('')}${hasMore ? `<button type="button" class="chip morec" data-a="smore" aria-expanded="${more}" aria-label="${more ? 'Fewer options' : 'More options'}">${icn(more ? 'x' : 'plus')}</button>` : ''}</div>
+    ${more && subj.length ? `<div class="lab">Other things · half value for the battle bonus</div><div class="chips">${oth.map(chip).join('')}</div>` : ''}
+    ${more && S.regions.length > 1 ? `<div class="lab">Routes · tap to turn on or off</div><div class="chips">${S.regions.map(r => `<button type="button" class="chip" data-a="reg" data-k="${r}" aria-pressed="${S.routes.includes(r)}">${REG[r].n}</button>`).join('')}</div>` : ''}
+    <div class="chips len">${[25, 45, 60, 75, 90].map(m => `<button type="button" class="chip tn" data-a="min" data-k="${m}" aria-pressed="${min === m}" aria-label="${m} minutes">${m}</button>`).join('')}</div>
+    <button type="button" class="go" data-a="start">Start ${min} min</button>
+    <div class="meta tn">${left <= 0 ? `<span>${tl('Your team is tired today: half XP and no encounters.')}</span>` : `<span><b>${n}</b> ${n === 1 ? 'encounter' : 'encounters'}</span><span><b>${nb(xp)}</b> XP${rested ? ' <i class="au">rested</i>' : ''}</span>${tys}${w < 1 ? `<span class="half">${tl('counts half for the bonus')}</span>` : ''}`}</div>
+    ${left > 0 ? boostRow() : ''}</div>`;
+  h += `<div class="card today"><button type="button" class="tdb" data-a="today" aria-label="Today: ${hm(td)} of ${hm(S.cap)}. Battle bonus ×${mulAt(td + tdb).toFixed(1)}. Open the details">${bonusArc(td + tdb, td)}<span class="tr"><span class="t tn"><b>${hm(td)}</b> of ${hm(S.cap)}</span><span class="tgs"><span class="tg">${icn('gift')}<span class="tn">${QUESTS.filter(q => td >= q.m).length}/${QUESTS.length}</span></span>${fxTags()}</span></span></button>${examTag()}</div>`;
   /* En vanlig dag ligger kampene nederst. På en eventdag står eventet og kampene øverst, og det som har med studeringen å gjøre, under. */
   const CL = clockLock(); if (CL) top += clockCard(CL);
-  if (!dayOpenQ()) return top + (S.raid && S.raid.ev && S.party.length ? raidCard() : '') + (S.fpk && Object.keys(S.fpk).length ? '<button type="button" class="btn wide gold" data-a="fpk" style="margin-bottom:12px">Open your free packs</button>' : '') + h + studyFoot() + admRow();
+  if (!open) return top + (S.raid && S.raid.ev && S.party.length ? raidCard() : '') + (S.fpk && Object.keys(S.fpk).length ? `<button type="button" class="btn wide gold" data-a="fpk">${icn('gift')}Open your free packs</button>` : '') + h + studyFoot() + admRow();
   top += newsEl() + journeyCard();
   const battles = S.party.length ? (has('battles') ? raidCard() + ladderCard() : lockCard('battles')) : '', E = battles && has('battles') && typeof evNow === 'function' ? evNow() : null;
   return E ? `${top}${battles}<div class="evsep"><span>Study</span></div>${h}${admRow()}` : top + h + battles + admRow();
@@ -1103,6 +1175,8 @@ function evoShow(m, from) {
 const A = {
   tab: el => { if (!dayOpenQ()) return; U.tab = el.dataset.k; render(); $('#main').scrollTop = 0; enter(); },
   smore: () => { U.more = !U.more; render(); },
+  today: () => todaySheet(),
+  boinfo: el => { const k = el.dataset.k, it = SHOP[k], st = boostState(k); if (!it) return; toast(st === 'on' ? `${it.n} is already active.` : st === 'lk' ? `${it.n} opens at trainer level ${it.lv}.` : `${it.n} costs ${nb(it.p)} coins. You have ${nb(S.coins)}.`); },
   adm: () => { if (!isAdmin()) return; U.adm = !admOn(); try { localStorage.setItem(KEY + '.adm', U.adm ? '1' : '0'); } catch (_) {} render(); toast(U.adm ? 'Admin view is on: everything is open, and the Sandbox is here.' : 'Admin view is off: you see what everyone sees.'); },
   wnok: () => { closeSheet(); if (!giftSheet() && !jAfter() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
   fpk: () => { const k = Object.keys(S.fpk || {}).find(x => PACKS[x]); if (!k) return render(); const out = openPack(k); if (!out) return toast('Catch some of your waiting encounters first.'); sfx.coin(); render(); packShow(k, out); },
@@ -1174,7 +1248,7 @@ const A = {
   sell: el => { const m = monBy(+el.dataset.u); if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.innerHTML = 'Tap again to sell'; return; } const v = sell(m); save(); sfx.sell(); closeSheet(); render(); toast(`Sold for ${nb(v)} coins.`); },
   dsell: el => { const m = monBy(+el.dataset.u); if (!m) return render(); if (el.dataset.top === '1' && el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = 'Top IVs · tap again'; sfx.warn(); return; } const n = mName(m), v = sell(m); if (!v) return; save(); sfx.sell(); render(); toast(`${n} sold for ${nb(v)} coins.`); },
   selldupes: el => { const du = dupes(); if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = `Tap again to sell ${du.length}`; return; } let v = 0; du.forEach(m => { v += sell(m); }); save(); sfx.sell(); render(); toast(`${du.length} sold for ${nb(v)} coins.`); },
-  buy: el => { if (buy(el.dataset.k)) { (el.dataset.k === 'egg' ? sfx.egg : sfx.coin)(); render(); toast(`${SHOP[el.dataset.k].n} bought.`); } },
+  buy: el => { const k = el.dataset.k; if (buy(k)) { (k === 'egg' ? sfx.egg : sfx.coin)(); render(); toast(BOUGHT[k] || `${SHOP[k].n} bought.`); } },
   pack: el => { const k = el.dataset.k, out = openPack(k); if (!out) return toast(S.pend.length > PACKMAX ? 'Catch some of your waiting encounters first.' : 'Not enough coins.'); sfx.coin(); packShow(k, out); },
   pkopen: () => { const o = $('#pko'); if (!o || o.classList.contains('open')) return; o.classList.add('open'); sfx.appear(); buzz([30, 40, 30]); $('#pkt').textContent = 'Tap the cards to turn them'; },
   pkflip: el => {
