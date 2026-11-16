@@ -56,11 +56,11 @@ function labPick(k) {
 /* ---------- Sandkassa: pakker ---------- */
 const PKN = 1000;
 function packStats(k, n) {
-  const c = { k, n, cards: 0, t: [0, 0, 0, 0, 0], sh: 0, lg: 0, ps: 0, pLg: 0, pSh: 0, pEp: 0, best: [], val: 0 };
+  const c = { k, n, cards: 0, t: [0, 0, 0, 0, 0], sh: 0, lg: 0, ps: 0, pLg: 0, pSh: 0, pEp: 0, best: [], val: 0, s5: 0, gi: 0, evo: 0 };
   for (let i = 0; i < n; i++) {
     let l = 0, s = 0, ep = 0;
     for (const e of packDraw(k, true)) {
-      c.cards++; c.t[e.t]++; c.val += SELL[e.t] * (e.sh ? 5 : 1) * PKSELL;
+      c.cards++; c.t[e.t]++; c.val += encValue(e); if (!e.sh && e.iv && starsFor(e.iv.reduce((a, b) => a + b, 0)) >= 5) c.s5++; if (e.sz === 3) c.gi++; if (D(e.id)[4]) c.evo++;
       if (e.sh) { c.sh++; s = 1; } if (e.lg) { c.lg++; l = 1; } if (e.ps) c.ps++; if (e.t >= 3) ep = 1;
       if ((e.lg || e.sh) && c.best.length < 10) c.best.push({ id: e.id, sh: e.sh });
     }
@@ -76,10 +76,13 @@ function packLab(k) {
       <div class="pkbar" role="img" aria-label="Share of each rarity">${c.t.map((n, i) => n ? `<i class="r${i}" style="flex:${n}"></i>` : '').join('')}</div>
       ${c.t.map((n, i) => row(`<span class="tier r${i}">${TIERS[i]}</span>`, pct(n, c.cards), `${nb(n)} cards`)).join('')}
       ${row('A pack with an epic or better', pct(c.pEp, c.n))}
-      ${P.slots.some(s => s.ps) ? row('Pseudo-legendary', `${nb(c.ps)} · ${oneIn(c.ps, c.n)} packs`) : ''}
+      ${c.ps ? row('Pseudo-legendary line', `${nb(c.ps)} · ${oneIn(c.ps, c.n)} packs`) : ''}
       ${row('<b style="color:var(--gold)">Legendary</b>', `${nb(c.lg)} · ${oneIn(c.lg, c.n)} packs`, `the Shop says ${(Math.max(...P.slots.map(s => s.leg || 0)) * 100).toFixed(1).replace(/\.0$/, '')} % a pack`)}
       ${row('Shiny', `${nb(c.sh)} · ${oneIn(c.sh, c.cards)} cards`, `your shiny odds right now: 1 in ${nb(Math.round(1 / (shinyOdds() * P.shm)))}`)}
-      ${row('Sold as duplicates', `${nb(Math.round(c.val / c.n))} coins a pack`, `the pack costs ${nb(P.p)}`)}
+      ${row('Evolved', pct(c.evo, c.cards), 'as far as the level of your team allows')}
+      ${row('Giant', `${nb(c.gi)} · ${oneIn(c.gi, c.cards)} cards`)}
+      ${row('Five stars, not shiny', `${nb(c.s5)} · ${oneIn(c.s5, c.cards)} cards`)}
+      ${row('Let go for coins', `${nb(Math.round(c.val / c.n))} coins a pack`, `the pack costs ${nb(P.p)}`)}
       ${c.best.length ? `<div class="lab">The best of them</div><div class="pkbest">${c.best.map(x => `<span class="${x.sh ? 'shy' : ''}">${spr(x.id, { sh: x.sh, s: '52px', mega: defForm(x.id) })}</span>`).join('')}</div>` : ''}</div>`
     : `<p class="sm" style="text-align:center">Open ${nb(PKN)} at once to see the real numbers: how often each rarity, a legendary and a shiny come out.</p>`;
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="lab">Back</button><span class="pill tn">Sandbox · packs</span></div>
@@ -470,7 +473,7 @@ const XA = {
   rcdone: () => { if (BT.res) overview(); else { closeOv(); render(); } },
   labpick: el => { if (!isAdmin()) return; sfx.open(); labPick(el.dataset.k); },
   packlab: el => { if (!isAdmin()) return; BT.B = null; packLab(el && el.dataset.k); },
-  pkdemo: el => { const k = el.dataset.k; if (!isAdmin() || !PACKS[k]) return; if ($('#pkodds')) U.pkFrom = 'odds'; else if ($('#ov [data-sbt]')) U.pkFrom = ''; U.plk = k; sfx.coin(); packShow(k, packDraw(k, true), true); },
+  pkdemo: el => { const k = el.dataset.k; if (!isAdmin() || !PACKS[k]) return; if ($('#pkodds')) U.pkFrom = 'odds'; else if ($('#ov [data-sbt]')) U.pkFrom = ''; U.plk = k; sfx.coin(); packShow(k, Array.from({ length: Math.max(1, +el.dataset.n || 1) }, () => packDraw(k, true)), true); },
   pkrun: el => { const k = el.dataset.k; if (!isAdmin() || !PACKS[k]) return; U.pls = packStats(k, PKN); sfx.ok(); packLab(k); },
   show: () => { closeSheet(); if (SHW) SHW.on = 0; SHW = null; BT.B = null; BT.busy = false; stopMusic(); sfx.open(); showcase(); },
   showplay: () => { sfx.start(); showTrailer(); },

@@ -17,7 +17,7 @@ Teksten i appen er på engelsk. Kommentarene i koden er på norsk.
 4. Eierens lagring endres bare etter protokollen i `work/HANDOFF.md`.
 
 ## Filene, i rekkefølgen fra index.html
-`data`, `data2` (arter, angrep, typer) · `game` (lagringen `S`, `fresh`, `adopt`, `migrateNN`, XP, møter, butikken `SHOP`, pakkene `PACKS`,
+`look` (utseendet: lys eller mørk og fargesettet, lastes i `<head>` før alt annet) · `data`, `data2` (arter, angrep, typer) · `game` (lagringen `S`, `fresh`, `adopt`, `migrateNN`, XP, møter, butikken `SHOP`, pakkene `PACKS`,
 `FEATS`/`WN`, synken `GH`) · `battle` (kampmotoren) · `league` (ligaen `POOL`/`TCL`, Frontier, turneringen, raid: `LEG`, `RAIDX`, `raidRoll`,
 belønninger) · `bfx`, `ebx`, `ebxp` (effekter, EBDX-animasjoner) · `raid`, `raidf`, `raidx` (raidfilmer, entréer, stedene) · `bossf`, `darkf`
 (filmene til Ghetsis/Cynthia og Dark Mewtwo) · `pack` (henter ressurspakken) · `bui` (kampskjermen, resultatet, raidskjermene, regelkortet) ·
@@ -27,7 +27,8 @@ belønninger) · `bfx`, `ebx`, `ebxp` (effekter, EBDX-animasjoner) · `raid`, `r
 ## Arbeidsmåten
 - Verktøyene ligger i `/home/claude/work` (eierens private repo, `dev/`). Ny økt: se under.
 - Endringer gjøres som små Python-patcher i `work/patch/` med `lib.py` (`patch(fil, [(gammel, ny)])`, der teksten må finnes nøyaktig én gang).
-  Gi dem navn etter bestillingen (`m1.py`, `m2.py` …). Etter hver: `sh work/chk.sh` skal si `ok: 19 filer`.
+  Gi dem navn etter bestillingen (`m1.py`, `m2.py` …). Etter hver: `sh work/chk.sh` skal si `ok: 20 filer` og ikke noe mer
+  (den leser alle skriptene samlet og kjører en røyktest av reglene; en linje som starter med `RØYK:` betyr at et navn er forsvunnet).
 - Regeltester: `cd work/sim && node <navn>.js` (skal si `alt ok`). Nettlesertester med Playwright: `cd work/pw && ./srv.sh && node t_<navn>.js`.
   Serveren stopper mellom svarene, så start den på nytt. Full regresjon: `work/pw/regress10.sh`.
 - Balanse: `work/sim/boss.js` (finalene i ligaen), `perleg.js` (hvert raid for seg), `prog.js` (progresjonen). Med `DIR=/tmp/kopi` måles en endret kopi.

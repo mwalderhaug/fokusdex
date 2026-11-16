@@ -127,8 +127,11 @@ const LUREN = 3;
 const shopOwn = k => k === 'egg' ? S.eggs.length : k === 'incense' ? (S.incOn ? 1 : 0) : k === 'lure' ? S.lure || 0 : k === 'slure' ? S.slure || 0 : k === 'prism' ? (S.prism ? 1 : 0) : SHOP[k].sb ? (S.shb && S.shb.k === k && shinyBoost() > 1 ? 1 : 0) : S.items[k] || 0;
 const shopFull = k => k === 'egg' ? S.eggs.length >= 3 : k === 'incense' ? !!S.incOn : k === 'lure' ? S.lure > 0 : k === 'slure' ? S.slure > 0 : k === 'prism' ? !!S.prism : SHOP[k].sb ? shinyBoost() > 1 : SHOP[k].max ? (S.items[k] || 0) >= SHOP[k].max : false;
 /* Encounter-pakker: kjøpes for mynter og åpnes med en gang, som å åpne en kortpakke. Tre møter i hver, og den siste plassen er den gode:
-   jo dyrere pakke, jo bedre sjanser (min = laveste sjeldenhet, ps/leg = sjansen for en pseudo-legendarisk eller en legendarisk i den plassen,
-   shm = så mye likere er en shiny). lv = trenernivået pakken krever. Alle pakker har en liten sjanse for en legendarisk, som et lodd: hvem som helst
+   jo dyrere pakke, jo bedre sjanser (min = laveste sjeldenhet, ep/leg = sjansen for en epic eller en legendarisk i den plassen,
+   shm = så mye likere er en shiny, evo = sjansen for at et kort er utviklet så langt nivået ditt tillater).
+   Steg 1.7: plassene er satt etter den nye sjeldenheten, så pakkene gir det samme som før: like mange pseudo-legendariske (de er nå en del av
+   epic), like mange legendariske, og like ofte en utviklet Pokémon. Kortene har det den er født med (stjerner, natur, størrelse), og det
+   følger med når den fanges. Nye regler per plass (vern mot duplikater, flere stjerner) kan legges i slots uten å endre resten. lv = trenernivået pakken krever. Alle pakker har en liten sjanse for en legendarisk, som et lodd: hvem som helst
    av dem du ikke eier, i områdene dine. Vekten per art (PKLEGW, etter sjeldenhet): vanlige 1, mytiske 1,3, de største 0,25 (også Mewtwo og Deoxys), Arceus 0,1 –
    så de mytiske kommer litt oftere, og de aller største er sjeldne her og kommer heller i raid. Kortet viser ikke hvem det er (myst = 1):
    det får du vite i gresset, i introen. */
@@ -144,28 +147,55 @@ function legEnc(shm) {
   return Object.assign(genEnc({ ids: [id], shm }), { myst: 1 });
 }
 const PACKS = {
-  poke: { n: 'Poké Pack', p: 250, c: '#d98f7e', d: 'One of the three is uncommon or better. 0.2% legendary.', slots: [{ luck: 0 }, { luck: 0.5 }, { min: 1, luck: 0, leg: 0.002 }], shm: 1 },
-  great: { n: 'Great Pack', p: 700, c: '#7fa8e6', d: 'One is rare or better, one uncommon or better. 0.5% legendary.', slots: [{ luck: 0.5 }, { min: 1, luck: 0.5 }, { min: 2, luck: 0.6, leg: 0.005 }], shm: 1.2, lv: 3 },
-  ultra: { n: 'Ultra Pack', p: 1800, c: '#e3c577', d: 'One is epic. 12% pseudo-legendary, 1.2% legendary. Shiny odds ×1.5.', slots: [{ min: 1, luck: 1.5 }, { min: 2, luck: 1.5 }, { min: 3, luck: 2, ps: 0.12, leg: 0.012 }], shm: 1.5, lv: 5 },
-  master: { n: 'Master Pack', p: 6000, c: '#b295e6', d: 'Rare, epic and a top slot: 35% pseudo-legendary, 5% legendary. Shiny odds ×2.', slots: [{ min: 2, luck: 2 }, { min: 3, luck: 2 }, { min: 3, luck: 2, ps: 0.35, leg: 0.05 }], shm: 2, lv: 8 }
+  poke: { n: 'Poké Pack', p: 250, c: '#d98f7e', d: 'One of the three is uncommon or better.', slots: [{ luck: 0 }, { luck: 0.5 }, { min: 1, luck: 0, leg: 0.002 }], shm: 1, evo: 0.1 },
+  great: { n: 'Great Pack', p: 700, c: '#7fa8e6', d: 'One is rare or better, and one uncommon or better.', slots: [{ luck: 0.5 }, { min: 1, luck: 0.5 }, { min: 2, luck: 0.6, leg: 0.005 }], shm: 1.2, lv: 3, evo: 0.25 },
+  ultra: { n: 'Ultra Pack', p: 1800, c: '#e3c577', d: 'Two are rare or better, and the last one is sometimes epic. Shiny odds ×1.5.', slots: [{ min: 1, luck: 1.5 }, { min: 2, luck: 1.5 }, { min: 2, luck: 2, ep: 0.15, leg: 0.012 }], shm: 1.5, lv: 5, evo: 0.5 },
+  master: { n: 'Master Pack', p: 6000, c: '#b295e6', d: 'All three are rare or better. The last one is often epic, and now and then legendary. Shiny odds ×2.', slots: [{ min: 2, luck: 2 }, { min: 2, luck: 2 }, { min: 2, luck: 2, ep: 0.45, leg: 0.05 }], shm: 2, lv: 8, evo: 0.55 }
 };
 /* Pakker åpnes ikke når så mange møter venter (et vern mot en uendelig kø; gresset selv har ingen grense fra 16.11). */
 const PACKMAX = 99;
-/* Innholdet i en pakke (tre møter), uten å røre lagringen: brukes av butikken og av demoen. lg = plassen ga en legendarisk, ps = en pseudo-legendarisk.
-   demo = den legendariske vises med en gang (det finnes ikke noe gress å møte den i). */
+/* Innholdet i en pakke (tre møter), uten å røre lagringen: brukes av butikken og av demoen. lg = plassen ga en legendarisk, ps = en av de
+   pseudo-legendariske linjene. demo = den legendariske vises med en gang (det finnes ikke noe gress å møte den i).
+   packCard gir kortet det Pokémonen er født med: IV-ene (stjernene), naturen og størrelsen. Det følger med når den fanges (throwBall). */
 const PKPS = [147, 246, 371, 374, 443, 633];
+function packCard(e) { e.pk = 1; e.iv = e.sh ? [31, 31, 31, 31, 31, 31] : rollIv(); e.nat = rnd(25); const z = rollSz(e.id); if (z !== 1) e.sz = z; return e; }
 function packDraw(k, demo) {
   const P = PACKS[k];
-  return P.slots.map(sl => { const r = Math.random(), lg = r < (sl.leg || 0) ? legEnc(P.shm) : null, ps = !lg && r < (sl.leg || 0) + (sl.ps || 0), e = lg || (ps ? genEnc({ ids: PKPS, shm: P.shm }) : genEnc({ min: sl.min || 0, luck: sl.luck || 0, shm: P.shm })); e.pk = 1; if (demo) { delete e.myst; if (lg) e.lg = 1; if (ps) e.ps = 1; } return e; });
+  return P.slots.map(sl => { const r = Math.random(), lg = r < (sl.leg || 0) ? legEnc(P.shm) : null, ep = !lg && r < (sl.leg || 0) + (sl.ep || 0), e = packCard(lg || genEnc({ min: ep ? 3 : sl.min || 0, luck: sl.luck || 0, shm: P.shm, evo: P.evo || 0 })); if (demo) { delete e.myst; if (lg) e.lg = 1; if (PKPS.includes(lineRoot(e.id))) e.ps = 1; } return e; });
 }
-function openPack(k) {
-  const P = PACKS[k], free = !!(S.fpk && S.fpk[k] > 0); if (!P || S.pend.length > PACKMAX || (!free && (S.coins < P.p || (P.lv && tlv() < P.lv)))) return null;
-  const out = packDraw(k);
-  if (free) { if (--S.fpk[k] <= 0) delete S.fpk[k]; } else S.coins -= P.p; S.pend.push(...out); S.packs = (S.packs || 0) + 1; save();
+/* Kjøp og åpne n pakker på én gang (ønske 13). Gratispakker brukes først. Ti eller flere har alltid minst én rare eller bedre. Møtene legges i
+   gresset med en gang, så ingenting går tapt om appen lukkes midt i åpningen. Svaret er pakkene (en liste med tre møter per pakke), eller null. */
+function openPacks(k, n) {
+  const P = PACKS[k]; n = Math.max(1, Math.floor(n || 1)); if (!P) return null;
+  const free = Math.min(n, (S.fpk && S.fpk[k]) || 0), pay = n - free;
+  if (S.pend.length > PACKMAX || (pay > 0 && (S.coins < P.p * pay || (P.lv && tlv() < P.lv)))) return null;
+  const out = Array.from({ length: n }, () => packDraw(k));
+  if (n >= 10 && !out.some(p => p.some(e => e.t >= 2))) { const p = out[n - 1], sl = P.slots[P.slots.length - 1]; p[p.length - 1] = packCard(genEnc({ min: 2, luck: sl.luck || 0, shm: P.shm, evo: P.evo || 0 })); }
+  if (free) { S.fpk[k] -= free; if (S.fpk[k] <= 0) delete S.fpk[k]; }
+  S.coins -= P.p * pay; for (const p of out) S.pend.push(...p); S.packs = (S.packs || 0) + n; save();
   return out;
 }
-/* Salgsverdi: sjeldenhet teller mest, nivå løfter prisen (nivå 20 dobler den). */
-const SELL = [10, 30, 120, 450, 3000];
+function openPack(k) { const o = openPacks(k, 1); return o ? o[0] : null; }
+/* Sjansene i en pakke slik de er for deg akkurat nå (rutene og nivået ditt teller), regnet nøyaktig: hver plass har sin fordeling
+   (tierDist, pluss plassens egne sjanser for epic og legendarisk), og plassene er uavhengige. rare og epic = minst én i pakken,
+   t = andelen av kortene i hver klasse. */
+function packOdds(k) {
+  const P = PACKS[k], n = P.slots.length, t = [0, 0, 0, 0, 0]; let noRare = 1, noEpic = 1, noLeg = 1;
+  for (const sl of P.slots) {
+    const lg = sl.leg || 0, ep = sl.ep || 0, d = tierDist({ min: sl.min || 0, luck: sl.luck || 0 }), d3 = ep ? tierDist({ min: 3, luck: sl.luck || 0 }) : null;
+    const p = d.map((x, i) => (i === 4 ? lg : 0) + (d3 ? ep * d3[i] : 0) + (1 - lg - ep) * x);
+    p.forEach((x, i) => { t[i] += x / n; }); noRare *= p[0] + p[1]; noEpic *= 1 - p[3]; noLeg *= 1 - lg;
+  }
+  const sh1 = Math.min(SHINYCAP, shinyOdds() * P.shm * (typeof evShiny === 'function' ? evShiny() : 1));
+  return { rare: 1 - noRare, epic: 1 - noEpic, leg: 1 - noLeg, shiny: 1 - Math.pow(1 - sh1, n), t };
+}
+/* Salgsverdi: sjeldenheten teller mest. Steg 1.7: epic er sjeldnere og verdt mer (før 450), og det den er født med teller (salgsbonus):
+   STARSELL etter fødte stjerner (1–5), SZSELL etter størrelsen. En shiny har alltid fem stjerner, og det ligger alt i de fem gangene. */
+const SELL = [10, 30, 100, 1000, 3000], STARSELL = [1, 1, 1, 1.2, 2, 4], SZSELL = [1, 1, 1.2, 3];
+const qualM = m => (m.iv && !m.sh ? STARSELL[starsFor(m.iv.reduce((a, b) => a + b, 0))] : 1) * SZSELL[szOf(m)];
+/* Et møte fra en pakke kan slippes uten å fanges (sammendraget etter åpningen): det gir det den ville vært verdt solgt. Legendariske slippes ikke. */
+const encValue = e => Math.round(SELL[e.t] * (e.sh ? 5 : 1) * (e.pk ? PKSELL : 1) * qualM(e));
+function releaseEncs(list) { let v = 0, n = 0; for (const e of list) { const i = S.pend.indexOf(e); if (i < 0 || e.myst || e.t >= 4) continue; S.pend.splice(i, 1); v += encValue(e); n++; } if (n) { S.coins += v; save(); } return { v, n }; }
 const STMULT = [1, 0.22, 0.07];
 /* Dagens mål: tre små delmål som gir noe med en gang de nås. */
 const QUESTS = [
@@ -180,13 +210,25 @@ const _st = {};
 const stageOf = id => { if (_st[id] != null) return _st[id]; let s = 0, d = D(id); while (d[4] && s < 2) { s++; d = D(d[4]); } return (_st[id] = s); };
 const isLeg = id => !!(D(id)[6] & 3);
 const wOf = id => D(id)[3] * STMULT[stageOf(id)];
-/* Sjeldenhet: vanlige grunnformer nederst, ferdig utviklede og de vanskeligste øverst. */
+/* SJELDENHET (steg 1.7, ønske 4): hele utviklingslinja har samme klasse. Den følger hvor vanskelig førsteformen er å finne (fangstraten, som også
+   styrer hvor ofte arten dukker opp) og hvor sterk linja blir til slutt (samlet basisverdi for den sterkeste sisteformen):
+     Epic      vanskelig å finne (fangstrate ≤ 75) og svært sterk (≥ 540): de pseudo-legendariske, Snorlax, Volcarona, Haxorus, Archeops,
+               Electivire og Magmortar. 33 arter (før: 173, blant dem Pidgeot).
+     Rare      vanskelig å finne (≤ 75) og ikke svak (≥ 440), eller ganske vanlig (≤ 200) og sterk (≥ 500): starterne, Eevee, fossilene, Lapras,
+               Scyther, og linjene til Gengar, Alakazam, Machamp og Arcanine.
+     Uncommon  resten av dem som ikke er helt vanlige (≤ 130), og sterke linjer som er vanlige å møte (Gyarados, Crobat, Gardevoir, Slaking).
+     Common    alt annet.
+   Trekningen av møter er den samme som før (wOf): det er merkelappen, flaksen og plassene i pakkene som følger den nye klassen. */
+const _lr = {}, _lt = {};
+const lineRoot = id => { if (_lr[id]) return _lr[id]; let r = id; while (D(r)[4]) r = D(r)[4]; return (_lr[id] = r); };
+const lineTop = id => { const r = lineRoot(id); if (_lt[r] == null) for (let i = 1; i <= DEX.length; i++) { const q = lineRoot(i), t = BST[i - 1].reduce((a, b) => a + b, 0); if (!(_lt[q] >= t)) _lt[q] = t; } return _lt[r]; };
 const tierOf = id => {
   if (isLeg(id)) return 4;
-  const cr = D(id)[3], st = stageOf(id);
-  if (st === 2) return 3;
-  if (st === 1) return cr >= 120 ? 1 : cr >= 60 ? 2 : 3;
-  return cr >= 190 ? 0 : cr >= 100 ? 1 : cr >= 45 ? 2 : 3;
+  const cr = D(lineRoot(id))[3], t = lineTop(id);
+  if (cr <= 75 && t >= 540) return 3;
+  if (cr <= 75 ? t >= 440 : cr <= 200 && t >= 500) return 2;
+  if (cr <= 130 || (cr < 255 ? t >= 500 : t >= 530)) return 1;
+  return 0;
 };
 const regOf = id => id <= 151 ? 1 : id <= 251 ? 2 : id <= 386 ? 3 : id <= 493 ? 4 : 5;
 const EVO = {};
@@ -452,7 +494,7 @@ const LNO = {
   'Daily goal in the exam period': 'Dagsmålet i eksamensperioden',
   'The app is locked while you work, except in your breaks. Each hour of work adds {m} minutes to the battle bonus that day, and study after work counts ×{x} for it. Transport and breaks do not count.': 'Appen er låst mens du jobber, utenom pausene. Hver arbeidstime gir {m} minutter til kampbonusen den dagen, og studier etter jobb teller ×{x} for den. Transport og pauser teller ikke.',
   'Each hour of work adds {m} minutes to the battle bonus. Transport and breaks do not count.': 'Hver arbeidstime gir {m} minutter til kampbonusen. Transport og pauser teller ikke.',
-  'Each badge counts down to its exam. 25, 50 and 75% give an epic encounter and exam day a legendary one, once you have logged {a}, {b} and {c} hours in the subject in the period ({d} for the legendary). Outside an exam period the battle bonus and XP are a little lower.': 'Hvert merke teller ned til eksamen. 25, 50 og 75 % gir et episk møte og eksamensdagen et legendarisk, når du har logget {a}, {b} og {c} timer i faget i perioden ({d} for det legendariske). Utenfor en eksamensperiode er kampbonusen og XP litt lavere.',
+  'Each badge counts down to its exam. 25 and 50% give a rare encounter, 75% an epic one and exam day a legendary one, once you have logged {a}, {b} and {c} hours in the subject in the period ({d} for the legendary). Outside an exam period the battle bonus and XP are a little lower.': 'Hvert merke teller ned til eksamen. 25 og 50 % gir et rare-møte, 75 % et epic-møte og eksamensdagen et legendarisk, når du har logget {a}, {b} og {c} timer i faget i perioden ({d} for det legendariske). Utenfor en eksamensperiode er kampbonusen og XP litt lavere.',
   'Explanations in': 'Forklaringer på',
   // Innstillingen
   'Language for explanations': 'Språk for forklaringer',
@@ -542,6 +584,19 @@ const LNO = {
   'Not sure? This picks its strongest moves in its own type, one for cover and one tactical.': 'Usikker? Dette velger de sterkeste angrepene i dens egen type, ett for dekning og ett taktisk.',
   'It has learned every move it gets by level.': 'Den har lært alle angrepene den får med nivå.',
   'Its nature stays as a Mega: {a} up, {b} down.': 'Naturen gjelder også som Mega: {a} opp, {b} ned.',
+  // Steg 1.7: Box og Duplicates
+  'No shiny Pokémon yet. They are rare: one may turn up in any session, pack or egg.': 'Ingen shiny Pokémon ennå. De er sjeldne: en kan dukke opp i en hvilken som helst økt, pakke eller i et egg.',
+  'a glowing corner: gets today\'s bonus': 'et lysende hjørne: får dagens bonus',
+  'No duplicates right now. When you catch a species you already have, it shows up here.': 'Ingen duplikater akkurat nå. Når du fanger en art du alt har, dukker den opp her.',
+  'Of each species the biggest and the one born with the most stars stay. Level does not count: it can be trained. Tap Stays or Sells to change one.': 'Av hver art blir den største og den som er født med flest stjerner. Nivået teller ikke: det kan trenes. Trykk på Stays eller Sells for å endre en.',
+  'Nothing is marked to be sold.': 'Ingenting er merket for salg.',
+  'The team, shinies, favourites and trained ones are never sold from here. The ones that stay sell for more if you ever sell them from their own card.': 'Laget, shinies, favoritter og trente selges aldri herfra. De som blir, gir mer hvis du en gang selger dem fra sitt eget kort.',
+  // Steg 1.7: pakkene
+  'Three encounters in every pack. Tap a pack to see your odds, and open one or ten.': 'Tre møter i hver pakke. Trykk på en pakke for å se sjansene dine, og åpne én eller ti.',
+  'Your odds in one pack right now': 'Sjansene dine i én pakke akkurat nå',
+  'What is inside follows your routes and the level of your team. Ten at once always hold at least one rare or better. Pokémon from packs sell for less than wild ones, and the greatest legendaries are only met in raids.': 'Innholdet følger rutene dine og nivået på laget. Ti om gangen har alltid minst én rare eller bedre. Pokémon fra pakker selges for mindre enn ville, og de største legendariske møtes bare i raid.',
+  'The dimmed ones are duplicates no better than what you have. Tap a card to change it.': 'De dempede er duplikater som ikke er bedre enn det du har. Trykk på et kort for å endre det.',
+  'Tap a card to let it go for coins instead of catching it.': 'Trykk på et kort for å slippe det for mynter i stedet for å fange det.',
   // Steg 1 (Dusk): flere
 };
 const tl = (s, v) => { const x = typeof S !== 'undefined' && S && S.lang === 'no' && LNO[s] != null ? LNO[s] : s; return v ? x.replace(/\{(\w+)\}/g, (m, k) => v[k] != null ? v[k] : m) : x; };
@@ -625,6 +680,8 @@ function migrate17() {
     const r = (((m.u * 2246822519 + ((m.at || 0) % 1000003) * 3266489917) >>> 0) % 10000) / 10000, z = rollSz(m.id, r);
     if (z > 1) m.sz = z;
   }
+  /* Sjeldenheten følger nå utviklingslinja: møtene som alt venter i gresset, får klassen sin etter den nye regelen (sonene på måleren følger den). */
+  for (const e of S.pend || []) if (e && e.id && e.t != null) e.t = tierOf(e.id);
   S.mig = 17;
 }
 function adopt(o) {
@@ -950,9 +1007,30 @@ function addMon(id, lv, sh, egg, g) {
 
 /* ---------- Møter ---------- */
 /* o: fag (typebias), luck 0–2 (lengre økt og lokkeduft gir mer sjeldent), min (laveste sjeldenhet), leg (legendarisk), egg. */
-function genEnc(o = {}) {
+/* Hvem som kan dukke opp som et vanlig møte, og med hvilken vekt: alle artene på rutene som er slått på, etter hvor vanlige de er (wOf),
+   flaksen (o.luck løfter de sjeldne), fagets typer og dagens typefest. Brukes av trekningen (genEnc) og av sjansene i Shop (tierDist). */
+function wildPool(o) {
   const fest = typeof evNow === 'function' && evNow() && evNow().k === 'type' ? [evNow().ty] : [];
-  const bias = (o.ty || F(o.fag).ty || []).concat(fest), L = o.luck || 0, pool = [], P = refLv();
+  const bias = (o.ty || F(o.fag).ty || []).concat(fest), L = o.luck || 0, pool = [], P = refLv(); let tot = 0;
+  for (const r of S.routes && S.routes.length ? S.routes : [S.region]) for (let id = REG[r].a; id <= REG[r].b; id++) {
+    if (isLeg(id)) continue;
+    const d = D(id), t = tierOf(id);
+    if (t < (o.min || 0) || reqLv(id) > P) continue;
+    let w = wOf(id) * [1, 1 + 0.3 * L, 1 + 1.2 * L, 1 + 3 * L][t];
+    if (d[6] & 4) w *= 0.5;
+    if (bias.includes(d[1]) || bias.includes(d[2])) w *= 2.5;
+    pool.push([id, w]); tot += w;
+  }
+  return { pool, tot };
+}
+/* Sjansen for hver klasse i ett vanlig møte, regnet nøyaktig av vektene. Utviklingen etterpå endrer ikke klassen (linja har én), og finnes
+   det ingen med o.min, senkes kravet ett trinn, som i trekningen. */
+function tierDist(o) {
+  let q = wildPool(o), m = o.min || 0; while (!q.pool.length && m > 0) q = wildPool(Object.assign({}, o, { min: --m }));
+  const d = [0, 0, 0, 0, 0]; for (const [id, w] of q.pool) d[tierOf(id)] += w; return d.map(x => (q.tot ? x / q.tot : 0));
+}
+function genEnc(o = {}) {
+  const L = o.luck || 0, pool = [], P = refLv();
   let tot = 0;
   const push = (id, w) => { pool.push([id, w]); tot += w; };
   if (o.egg) {
@@ -964,19 +1042,15 @@ function genEnc(o = {}) {
     for (const r of S.regions) for (let id = REG[r].a; id <= REG[r].b; id++) if (isLeg(id)) push(id, D(id)[6] & 2 ? 0.5 : 1);
   } else {
     /* Alle rutene som er slått på, er med i trekningen. */
-    for (const r of S.routes && S.routes.length ? S.routes : [S.region]) for (let id = REG[r].a; id <= REG[r].b; id++) {
-      if (isLeg(id)) continue;
-      const d = D(id), t = tierOf(id);
-      if (t < (o.min || 0) || reqLv(id) > P) continue;
-      let w = wOf(id) * [1, 1 + 0.3 * L, 1 + 1.2 * L, 1 + 3 * L][t];
-      if (d[6] & 4) w *= 0.5;
-      if (bias.includes(d[1]) || bias.includes(d[2])) w *= 2.5;
-      push(id, w);
-    }
+    const q = wildPool(o); for (const x of q.pool) pool.push(x); tot = q.tot;
   }
   if (!pool.length) return genEnc(Object.assign({}, o, { min: Math.max(0, (o.min || 0) - 1) }));
   let x = Math.random() * tot, id = pool[pool.length - 1][0];
   for (const [i, w] of pool) { x -= w; if (x <= 0) { id = i; break; } }
+  /* Med flaks er den utviklet så langt nivået ditt tillater (o.evo = sjansen; i økter følger den flaksen, EVOLUCK per poeng). Før steg 1.7 kom de
+     utviklede av at de hadde høyere sjeldenhet enn grunnformen; nå har linja én klasse, og dette holder dem like vanlige som før. */
+  const evoP = o.egg || o.ids || o.leg ? 0 : o.evo != null ? o.evo : EVOLUCK * L;
+  if (evoP > 0 && Math.random() < evoP) for (let nx; (nx = (EVO[id] || []).filter(y => reqLv(y) <= P && !isLeg(y) && S.regions.includes(regOf(y)))).length;) id = nx[rnd(nx.length)];
   const lv = o.egg ? 1 : wildLv(id, tierOf(id));
   return { id, lv, sh: Math.random() < Math.min(SHINYCAP, shinyOdds() * (o.egg ? 4 : 1) * (o.shm || 1) * (typeof evShiny === 'function' ? evShiny() : 1)) ? 1 : 0, t: tierOf(id), tr: isLeg(id) ? 4 : 3, g: rollG(id) };
 }
@@ -987,7 +1061,7 @@ const zones = (e, ball) => ({ g: Math.max(14, 36 - e.t * 5 + (ball === 'great' ?
 /* Det en fangst gir utover Pokémonen: mynter for en ny art (NEWCOIN etter sjeldenhet), for et perfekt kast (PERFCOIN), og for flere fangster på rad uten
    at noen slipper unna (STREAKC per fangst fra den tredje, høyst STREAKMAX). S.cst = rekka akkurat nå.
    Kritisk fangst: en sjelden gang (critP, litt oftere jo flere arter du har) sitter ballen ekstra godt, og sjansen er CRITM ganger så stor. */
-const NEWCOIN = [15, 30, 60, 120, 300], PERFCOIN = 10, STREAKC = 5, STREAKMAX = 50, CRITM = 2.5;
+const NEWCOIN = [20, 40, 80, 250, 300], EVOLUCK = 0.07, PERFCOIN = 10, STREAKC = 5, STREAKMAX = 50, CRITM = 2.5;
 /* Legendariske møter i vanlige økter (se grant), og hvor mange minutter fokus en dag må ha før kampene kan åpnes og dagen teller som studiedag. */
 const LEGSES = 0.0012, LEGSTIR = [0.003, 0.01], OPENMIN = 25;
 const critP = () => Math.min(0.1, 0.03 + Object.keys(S.caught).length * 0.0002);
@@ -1001,7 +1075,9 @@ function throwBall(e, ball, zone) {
   S.seen[e.id] = 1;
   let mon = null, isNew = false; const bonus = { c: 0, why: [] };
   if (ok) {
-    isNew = !S.caught[e.id]; mon = addMon(e.id, e.lv, e.sh, 0, e.g); if (e.pk) mon.pk = 1; dropPend(e);
+    isNew = !S.caught[e.id]; mon = addMon(e.id, e.lv, e.sh, 0, e.g); if (e.pk) mon.pk = 1;
+    if (e.iv && e.iv.length === 6) { mon.iv = e.iv.slice(); if (e.nat != null) mon.nat = e.nat; if (e.sz != null && !isLeg(e.id)) mon.sz = e.sz; else delete mon.sz; }
+    dropPend(e);
     S.cst = (S.cst || 0) + 1;
     const add = (n, s) => { if (n > 0) { bonus.c += n; bonus.why.push(`${s} +${n}`); } };
     if (isNew) add(NEWCOIN[e.t] || 0, 'New species');
@@ -1125,7 +1201,8 @@ function grant(fag, real, full, plan, re) {
     const reach = Math.floor(exFrac(fg) * 4);
     while (fg.xm < reach && !exGate(fg)) {
       fg.xm++;
-      if (fg.xm < 4) { encs.push(genEnc({ fag, min: 3, luck: 1.5 })); R.gifts.push(`${F(fag).n}: ${fg.xm * 25}% of the way to the exam. An epic encounter is waiting.`); }
+      if (fg.xm < 3) { encs.push(genEnc({ fag, min: 2, luck: 2 })); R.gifts.push(`${F(fag).n}: ${fg.xm * 25}% of the way to the exam. A rare encounter is waiting.`); }
+      else if (fg.xm < 4) { encs.push(genEnc({ fag, min: 3, luck: 1.5 })); R.gifts.push(`${F(fag).n}: 75% of the way to the exam. An epic encounter is waiting.`); }
       else { encs.push(legEnc()); R.gifts.push(`Exam day: the ${F(fag).n} badge is yours. A legendary encounter is waiting.`); }
     }
   }
@@ -1229,7 +1306,7 @@ const IVTOP = 151, ivTop = m => m.iv.reduce((a, b) => a + b, 0) >= IVTOP;
 const PKSELL = 0.3;
 /* Salgsverdien følger sjeldenheten, ikke nivået: før vokste den med nivået (og ville Pokémon følger laget ditt), så salg av duplikater ble den
    største inntektskilden sent i spillet. */
-const sellValue = m => Math.round(SELL[tierOf(m.id)] * (m.sh ? 5 : 1) * (m.pk ? PKSELL : 1));
+const sellValue = m => Math.round(SELL[tierOf(m.id)] * (m.sh ? 5 : 1) * (m.pk ? PKSELL : 1) * qualM(m));
 function sell(m) {
   if (S.mons.length <= 1) return 0;
   const v = sellValue(m); unbond(m); dropHeld(m);
@@ -1237,20 +1314,40 @@ function sell(m) {
   if (!S.party.length && S.mons.length) S.party.push(S.mons[0].u);
   S.coins += v; return v;
 }
-/* Artene du har mer enn én av, de sjeldneste først. best = den som beholdes når alle selges samlet (shiny foran, så høyest nivå). */
+/* DUPLIKATENE (steg 1.7, ønske 6). Per art blir høyst to når resten selges samlet: den største (big) og den med flest fødte stjerner (star);
+   er det samme Pokémon, blir én. Nivå teller ikke (det kan trenes), bare som siste skille. Lista står med dem som blir, øverst.
+     dupWhy  = hvorfor en aldri selges herfra: laget, shiny, favoritt, Mega-stein eller trent. Den kan fortsatt selges fra sitt eget kort.
+     dupKeep = hvorfor en blir når resten selges: valgt av deg (m.kp = 1), fem fødte stjerner, Giant, størst eller flest stjerner.
+               m.kp = 2 betyr at du har valgt at den skal selges likevel. Trykket i lista bytter mellom de to (dupToggle).
+   Det som er igjen, er dupes(): det knappen «Sell» tar med ett trykk. */
+const ivSum = m => m.iv.reduce((a, b) => a + b, 0);
+const szCmp = (a, b) => szOf(b) - szOf(a) || ivSum(b) - ivSum(a) || b.lv - a.lv || a.u - b.u, ivCmp = (a, b) => ivSum(b) - ivSum(a) || szOf(b) - szOf(a) || b.lv - a.lv || a.u - b.u;
+const dupWhy = m => S.party.includes(m.u) ? 'Team' : m.sh ? 'Shiny' : m.fav ? 'Favourite' : m.ms ? 'Mega Stone' : evSum(m) || (m.ht && m.ht.some(Boolean)) ? 'Trained' : '';
+const dupKeep = (m, g) => m.kp === 1 ? 'Your pick' : m.kp === 2 ? '' : isLeg(m.id) ? 'Legendary' : bornStars(m) >= 5 ? '5 stars' : szOf(m) === 3 ? 'Giant' : m === g.big && m === g.star ? 'Best' : m === g.big ? 'Biggest' : m === g.star ? 'Most stars' : '';
 function dupGroups() {
   const by = {}; for (const m of S.mons) (by[m.id] = by[m.id] || []).push(m);
-  return Object.keys(by).map(Number).filter(id => by[id].length > 1).map(id => { const l = by[id].slice().sort((a, b) => b.sh - a.sh || b.lv - a.lv); return { id, best: l[0], list: l }; })
-    .sort((a, b) => tierOf(b.id) - tierOf(a.id) || a.id - b.id);
+  return Object.keys(by).map(Number).filter(id => by[id].length > 1).map(id => {
+    const l = by[id], g = { id, big: l.slice().sort(szCmp)[0], star: l.slice().sort(ivCmp)[0] }; g.best = g.star;
+    const rank = m => dupWhy(m) ? 0 : dupKeep(m, g) ? 1 : 2; g.list = l.slice().sort((a, b) => rank(a) - rank(b) || ivCmp(a, b)); return g;
+  }).sort((a, b) => tierOf(b.id) - tierOf(a.id) || a.id - b.id);
 }
-/* Hvorfor en av dem ikke selges fra Duplicates ('' = kan selges). Den kan fortsatt selges fra sitt eget ark. */
-const dupWhy = (m, best) => S.party.includes(m.u) ? 'Team' : m.sh ? 'Shiny' : m.fav ? 'Favourite' : m.ms ? 'Mega Stone' : evSum(m) ? 'Trained' : m === best ? 'Kept' : '';
-/* Duplikater som selges samlet: beholder den beste av hver art, og rører ikke laget, favoritter, shiny, trente eller dem med svært gode IV. */
-function dupes() {
-  const out = [];
-  for (const g of dupGroups()) for (const m of g.list) if (!dupWhy(m, g.best) && !ivTop(m)) out.push(m);
-  return out;
+function dupes() { const out = []; for (const g of dupGroups()) for (const m of g.list) if (!dupWhy(m) && !dupKeep(m, g)) out.push(m); return out; }
+/* SAMMENDRAGET ETTER EN PAKKEÅPNING (ønske 13): hvilke kort det er verdt å beholde, etter samme regler som duplikatene. Alt som er shiny, epic
+   eller legendarisk blir. Av hver art blant kortene blir den med flest fødte stjerner og den største, hvis du ikke har arten eller de er bedre
+   enn det du eier. Resten foreslås sluppet for mynter (releaseEncs). */
+function packKeepers(cards) {
+  const keep = new Set(), by = {};
+  for (const e of cards) { if (e.myst || e.t >= 3 || e.sh) keep.add(e); else (by[e.id] = by[e.id] || []).push(e); }
+  for (const id in by) {
+    const l = by[id], own = S.mons.filter(m => m.id === +id), big = l.slice().sort(szCmp)[0], star = l.slice().sort(ivCmp)[0];
+    if (!own.length) { keep.add(star); if (szOf(big) > szOf(star)) keep.add(big); continue; }
+    if (szOf(big) > Math.max(...own.map(szOf))) keep.add(big);
+    if (ivSum(star) > Math.max(...own.map(ivSum))) keep.add(star);
+  }
+  return keep;
 }
+/* Bytt mellom «blir» og «selges» for én (ett trykk i lista). */
+function dupToggle(m) { const g = dupGroups().find(x => x.id === m.id); if (!g || dupWhy(m)) return false; if (dupKeep(m, g)) m.kp = 2; else m.kp = 1; save(); return true; }
 function setPartner(m) { S.party = [m.u, ...S.party.filter(u => u !== m.u)].slice(0, 6); save(); }
 /* Bytt rett fra Team (ønske 1): inn på plassen til den som går ut (outU = 0: en ledig plass). Går partneren ut, blir den nye partner.
    Alt som endrer hvem som er på laget, går gjennom setPartner, swapParty og toggleParty: der skal låsen under et løp (steg 1b.7) stå. */

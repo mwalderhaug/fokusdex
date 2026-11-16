@@ -799,7 +799,8 @@ function finishFactory(B) {
   if (R.w === 3) give('candy', 1);
   if (R.w === 4) { give('great', 2); if (!S.incOn) { S.incOn = 1; res.items.push('Incense for your next session'); } if (roll(0.5)) pushEnc(res, genEnc({ min: 2, luck: 1.2 })); }
   if (R.w >= FACN) {
-    pushEnc(res, genEnc({ ty: [B.tr.ty], min: r >= 2 ? 3 : 2, luck: 1.5 })); pushEnc(res, genEnc({ min: 2, luck: 1.5 }));
+    /* Steg 1.7: epic er nå de aller sjeldneste linjene, så premien for en klar runde er en rare med mer flaks fra runde 2 (samme verdi som før). */
+    pushEnc(res, genEnc({ ty: [B.tr.ty], min: 2, luck: r >= 2 ? 2 : 1.5 })); pushEnc(res, genEnc({ min: 2, luck: 1.5 }));
     give('ultra', r >= 2 ? 2 : 1); give('candy', 1); if (Math.random() < 0.5) give('stone', 1);
     if (r >= 2 && S.eggs.length < 3 && roll(0.5)) { S.eggs.push({ need: 120, got: 0 }); res.items.push('1 × Egg'); }
     if (r >= 3 && roll(0.12)) pushEnc(res, legEnc());
@@ -899,7 +900,8 @@ function finishPwt(B) {
     res.done = true; raidUnhide(); P.won = (P.won || 0) + 1; P.cups[c.n] = (P.cups[c.n] || 0) + 1; P.run = null;
     { const n = Math.max(1, candyRoll(PWTCANDY)); S.items.candy = (S.items.candy || 0) + n; res.items.push(`${n} × Rare Candy`); }
     if (c.ms) { S.items.mstone = (S.items.mstone || 0) + c.ms; res.items.push(`${c.ms} × Mega Stone`); }
-    const PK = PACKS[c.pk]; PK.slots.forEach(sl => pushEnc(res, genEnc({ min: sl.min || 0, luck: sl.luck || 0, shm: PK.shm })));
+    /* Premien er tre møter trukket som plassene i pakken (uten den lille sjansen for epic og legendarisk i den siste plassen, som før). */
+    const PK = PACKS[c.pk]; PK.slots.forEach(sl => pushEnc(res, genEnc({ min: sl.min || 0, luck: sl.luck || 0, shm: PK.shm, evo: PK.evo || 0 })));
     res.perks.push(`Champion of the ${c.n}! That is trophy number ${P.won}.`); res.note = `The prize is ${aN(PK.n)}: three encounters are waiting in the grass.`;
   }
   save(); return res;

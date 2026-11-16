@@ -57,6 +57,7 @@ const HELP = [
     ${hH('Rarity')}
     <div class="hgrid tiers">${TIERS.map((t, i) => `<span><b class="tier r${i}">${t}</b><span class="sm tn">+${NEWCOIN[i]}</span></span>`).join('')}</div>
     ${hP('The number is the coins a <b>new species</b> gives the first time you catch it. Before you step in, the dots at the top show what is waiting, by colour.')}
+    ${hP('A whole evolution line shares one rarity. It follows how hard the first form is to find and how strong the line becomes in the end, so <b class="tier r3">Epic</b> is kept for the very strongest lines.')}
     ${hH('Throwing')}
     ${hMeter()}
     ${hP('A marker runs back and forth. Press <b>Throw</b> when it is in the <b style="color:var(--sage)">green</b> zone for a good throw, or in the <b style="color:var(--gold)">gold</b> for a perfect one. You get three throws, four for a legendary. Then it runs.')}
@@ -68,6 +69,7 @@ const HELP = [
     ${hRow(hSym('+', 'var(--gold)'), 'Golden Razz Berry', 'Feed it to the Pokémon in front of you: one more throw, and better odds on every throw.')}
     ${hH('After the catch')}
     ${hRow(hStars(4), 'Potential · IVs', `The stars show how good the Pokémon was born: one star is plain, five is flawless. From Lv ${HTLV} Hyper Training can make up for low ones.`)}
+    ${hRow('<span class="szt sz3">Giant</span>', 'Size', `Most Pokémon are Normal. A few are born Small, Large or Giant, which moves their HP a little: ${Math.round((SZHP[0] - 1) * 100)} % for a Small one, +${Math.round((SZHP[3] - 1) * 100)} % for a Giant. A Giant is rare.`)}
     ${hRow(coinEl(PERFCOIN), 'Small bonuses', `A perfect throw gives +${PERFCOIN} coins, and from the third catch in a row you get a little more for each one.`)}
     ${hRow(hSym('✦', 'var(--gold)'), 'Shiny Pokémon', `A rare other colour. It is born with perfect IVs and has ${Math.round((SHINYST - 1) * 100)} % higher stats, so a trained shiny is the best of its kind. Incense from the Shop raises the odds for a while.`)}
     <div class="hmore">${hLink('train', 'IVs, EVs and training')}${hLink('shop', 'Balls and packs')}</div>` },
@@ -77,7 +79,7 @@ const HELP = [
     ${hRow(hSym('Lv', 'var(--sage)'), 'Levels', 'Study and League battles give XP. A higher level means higher stats and new moves.')}
     ${hRow(hSym('⇪', 'var(--violet)'), 'Evolution', 'When a Pokémon is ready, its card says so. Open it under Team and press Evolve. Some need an Evolution Stone from the Shop.')}
     ${hRow(hSym('4', 'var(--red)'), 'Four moves', 'A Pokémon knows four moves in battle. You choose which four on its card, among everything it has learned.')}
-    ${hRow(hSym('▦', 'var(--ink2)'), 'The Box', 'Everything else you have caught. The Duplicates tab beside it lists every species you have more than one of, so the extra ones can be sold for coins. ★ Top IVs marks the ones worth keeping.')}
+    ${hRow(hSym('▦', 'var(--ink2)'), 'The Box', 'Everything else you have caught, region by region. Sort it by rarity, power, level, number or newest. The Duplicates tab beside it lists every species you have more than one of: the biggest and the one born with most stars stay, and one tap changes who stays and who is sold.')}
     ${hH('Types')}
     ${hP('Every move and every Pokémon has a type. A move that is <b>super effective</b> does double damage, and one that is not very effective does half. Water beats Fire, Fire beats Grass, Grass beats Water, and so on. In battle the move menu shows how each move will hit.')}
     <div class="hmore">${hLink('train', 'Training')}${hLink('held', 'Items to hold')}${hLink('mega', 'Mega Evolution')}</div>` },
@@ -167,7 +169,8 @@ const HELP = [
     ${hRow(hSym('+', 'var(--violet)'), 'Potions and Revives', 'Used from the Bag in League battles and raids.')}
     ${hRow(hSym('▲', 'var(--red)'), 'Training', 'The big one. It is what makes the hardest bosses possible.')}
     ${hH('Encounter packs')}
-    ${hP('A pack is three encounters, opened like a pack of cards. The dearer the pack, the better the last card.')}
+    ${hP('A pack is three encounters, opened like a pack of cards. The glow on the back of a card gives its rarity away before you turn it, and the dearer the pack, the better the last card. Your own odds stand on each pack in the Shop.')}
+    ${hP('Open ten at once and at least one is rare or better. Afterwards you see everything you got: keep what is worth catching, and let the rest go for coins with one tap.')}
     <div class="hgrid packs">${['poke', 'great', 'ultra', 'master'].map(k => `<span style="--pc:${PACKS[k].c}"><b>${PACKS[k].n.replace(' Pack', '')}</b><span class="sm tn">${nb(PACKS[k].p)}</span><span class="sm tn">${+(PACKS[k].slots[2].leg * 100).toFixed(1)} %</span></span>`).join('')}</div>
     ${hP('The percentage is the chance of a <b>legendary</b> in the last card. The card does not say who it is: you find out when you meet it in the grass.')}` },
 
