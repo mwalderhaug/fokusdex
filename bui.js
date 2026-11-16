@@ -164,8 +164,8 @@ function raidCard() {
   const R = S.raid; if (!R || R.hid || !LEG[R.id]) return '';
   const V = raidShow(R), L = V.L, open = raidOpen(), n = (R.tries || 0) + 1, last = n >= raidTries(R) && !R.ev;
   const btn = `<button type="button" class="btn gold wide" data-a="raid" style="margin-top:10px"${open ? '' : ' disabled'}>${open ? (last ? 'Challenge it · last attempt' : 'Challenge it') : 'Again tomorrow'}</button>`;
-  if (!R.seen) return `<div class="card k-ultra raidc myst"><div class="pre-foe"><span class="raid-sp qm" aria-hidden="true"><i>?</i></span><div class="sp"><div class="sm">Legendary raid · attempt 1 of ${raidTries(R)}</div><b class="bossn" style="font-size:19px">A legendary Pokémon</b><div class="sm tn" style="margin-top:4px">Who it is stays secret until you face it</div></div></div>${btn}</div>`;
-  return `<div class="card k-ultra raidc" style="--cc:${L.cc}"><div class="pre-foe"><span class="raid-sp">${spr(R.id, { ani: 1, sh: V.sh, mega: defForm(R.id) })}</span><div class="sp"><div class="sm">Legendary raid · attempt ${n} of ${raidTries(R)}</div><b class="bossn" style="font-size:19px">${esc(V.n)}</b><div class="sm tn" style="margin-top:4px">${TYN[D(R.id)[1]]}${D(R.id)[2] >= 0 ? ' / ' + TYN[D(R.id)[2]] : ''} · your own team of six</div></div></div>${btn}</div>`;
+  if (!R.seen) return `<div class="card k-ultra raidc myst"><div class="pre-foe"><span class="raid-sp qm" aria-hidden="true"><i>?</i></span><div class="sp"><div class="sm">Legendary raid · attempt 1 of ${raidTries(R)}</div><b class="bossn">A legendary Pokémon</b><div class="sm tn">Who it is stays secret until you face it</div></div></div>${btn}</div>`;
+  return `<div class="card k-ultra raidc" style="--cc:${L.cc}"><div class="pre-foe"><span class="raid-sp">${spr(R.id, { ani: 1, sh: V.sh, mega: defForm(R.id) })}</span><div class="sp"><div class="sm">Legendary raid · attempt ${n} of ${raidTries(R)}</div><b class="bossn">${esc(V.n)}</b><div class="sm tn">${TYN[D(R.id)[1]]}${D(R.id)[2] >= 0 ? ' / ' + TYN[D(R.id)[2]] : ''} · your own team of six</div></div></div>${btn}</div>`;
 }
 function raidScreen() {
   const R = S.raid; if (!R) return render();
@@ -461,7 +461,7 @@ function lapPips() {
 /* Hvem som venter, sies ikke: bare det reglene alltid lover (en trener først, en Champion eller noen større til slutt). */
 const nextHint = () => { const n = S.lad.n; return n <= 0 ? 'A trainer to start with' : n >= LAPN - 1 ? 'The final: a Champion, or someone greater' : 'Who is next? You find out in the intro'; };
 /* Det hver modus er, på valgskjermen og i teksten ellers. */
-const MODEIC = { league: 'L', factory: 'F', pwt: 'W' };
+const MODEIC = { get league() { return icn('flag'); }, get factory() { return icn('tower'); }, get pwt() { return icn('cup'); }, get ''() { return icn('sword'); } };
 const pipsEl = (n, used) => `<span class="pips" role="img" aria-label="${Math.max(0, n - used)} of ${n} attempts left today">${Array.from({ length: n }, (_, i) => `<i${i < n - used ? ' class="on"' : ''}></i>`).join('')}</span>`;
 /* Valget av dagens modus. Åpnes av «Done for today», og fra kortet på forsiden hvis valget ble utsatt. Først velges et kort, så bekreftes det:
    valget gjelder hele kampdagen og kan ikke gjøres om. */
@@ -497,46 +497,62 @@ function simCard() {
     <div class="row"><button type="button" class="btn sp gold" data-a="simok">Accept</button><button type="button" class="btn sp" data-a="simundo">Undo</button></div>
     <p class="sm tn">Undo, and nothing happened: the battles are yours to fight, but you cannot simulate again ${dayWord(Q.day)}.</p></div>`;
 }
+/* KAMPENE PÅ FORSIDEN (Dusk): ett kort per modus med navn, hvor du står, forsøkene og én knapp. Forklaringene (hva modusen er, hvordan myntene
+   regnes, vanskelighetsgraden) ligger bak «i» (modeInfo). Tilstandene er de samme som før: ikke åpnet, gårsdagens kamper, valget som venter,
+   stengt, og hver modus som åpen, tapt eller ferdig. */
+const modeHead = (k, sub, right) => `<div class="mode-h"><span class="ficon">${MODEIC[k]}</span><span class="sp"><b>${k ? MODEN[k] : 'Battles'}</b><span class="sm tn">${sub}</span></span><button type="button" class="hq" data-a="minfo" data-k="${k}" aria-label="About ${k ? 'the ' + MODEN[k] : 'the battles'}">i</button></div>${right ? `<div class="mode-t">${right}</div>` : ''}`;
+/* Arket bak «i»: det som før sto som avsnitt på forsiden. k = modusen, eller '' for kampene samlet. */
+function modeInfo(k) {
+  const L = S.lad, bo = dayBoost(), old = dayOld(), one = MODESN < MODES.length, on = MODES.filter(modeOn), R = S.fac.run, WR = pwtRun(), wc = WR ? CUPS[WR.wd] : cupNow();
+  const what = {
+    league: `${LAPN} battles a lap, and the class rises as you go: a trainer first, a Champion at the end. Your own team of six. XP for the whole team after each battle, and bosses give Rare Candy and items. ${ladLives() > 1 ? 'You can lose once and try again against the same trainer.' : 'One loss ends the lap, and the next one starts from battle 1.'}`,
+    factory: `Rent 4 of 7 random Pokémon, everything at Lv ${FACLV}. ${FACN - 1} trainers, then a boss. No Bag here. You win coins, items and encounters, and your own team gets XP for every win. A loss ends the run, and you have ${facLives()} runs a day.`,
+    pwt: `A knockout cup that changes with the day of the week: three rounds, three on three. You see the opponent's team before you pick your three. No Bag. Every round pays coins and XP for your own team, and the winner takes a trophy and ${aN(PACKS[wc.pk].n)}.`
+  };
+  const bonus = { league: '+30% XP and better odds for Rare Candy today.', factory: '1.5× luck on items, encounters and rare bosses today.', pwt: '' };
+  const day = L.day ? `<div><div class="lab">Coins ${hq('bonus', 'What is the battle bonus?')}</div><p class="sm tn">Coins ×${k ? smFor(k) : evSm()}${k ? ` in the ${MODEN[k]}` : ''}: ×${studyMult()} from ${hm(ladMin())} of focus${L.day !== dayKey() ? ' that day' : ' today'}${k && bo.mode === k ? `, ×${DAYCOIN} for ${old ? "that day's" : "today's"} bonus mode` : ''}${evIs('gold') ? `, ×${EVCOIN} for the Gold Rush` : ''}. Your goal of ${hm(goalMin())} gives ×${goalTop().toFixed(1)} from focus.${k === 'league' && firstWin() && modeOn('league') && !dayShut() ? ` Your first League win ${old ? 'of that day' : 'today'} pays double coins.` : ''}</p>
+      <p class="sm tn" style="margin-top:6px">Difficulty: ${diff().n} · coins ×${diff().coin}, XP ×${diff().xp}. Change it under Profile.</p></div>` : '';
+  const off = MODES.filter(m => !modeOn(m)).map(m => 'the ' + MODEN[m]);
+  openSheet(`<h2 class="h" style="margin:0">${k ? MODEN[k] : 'Battles'} ${hq('modes', 'What are the modes?')}</h2>
+    <p class="sm">${k ? what[k] : `League, Battle Frontier or World Tournament: ${one ? 'you choose one when the battles open' : 'all three are yours once the battles open'}. They open when today has ${OPENMIN} minutes of focus and you tap Done for today.`}</p>
+    ${k && bo.mode === k && bonus[k] ? `<p class="sm" style="color:var(--gold)">${bonus[k]}</p>` : ''}
+    ${k === 'league' && ladLost() ? '<p class="sm">Your team keeps the XP it earned in the lap.</p>' : ''}${k === 'league' && ladDone() ? '<p class="sm">The next lap has stronger trainers and better rewards.</p>' : ''}
+    ${day}
+    ${k && one && L.day && on.length === 1 && off.length ? `<p class="sm tn">${old ? 'That day\'s' : 'Today\'s'} mode is the ${MODEN[on[0]]}. ${off.join(' and ').replace(/^t/, 'T')} open again on your next battle day.</p>` : ''}
+    ${old && L.day ? `<p class="sm">These are the battles you opened ${dayWord(L.day)}. They pay by that day's focus and that day's bonus mode, and they close when you start a focus session.</p>` : ''}
+    <button type="button" class="btn wide" data-a="close">Close</button>`);
+}
 function ladderCard() {
   const L = S.lad, bo = dayBoost(), R = S.fac.run;
-  const prog = lapPips(), row = `<div class="lrow myst"><span class="tsb qmb" aria-hidden="true"><i>?</i></span><div class="sp"><div class="sm tn">${esc(leagueTag())}</div><b>${nextHint()}</b></div></div>`;
-  const fac = `<div class="modec"><span class="ficon">F</span><div class="sp"><b>Battle Frontier</b><div class="sm tn">${R ? `Round ${R.round} · ${R.w}/${FACN} wins · streak ${R.streak}` : `Rent 4 of 7 random Pokémon · everything is Lv ${FACLV}${S.fac.best ? ' · best streak ' + S.fac.best : ''}`}</div></div></div>`;
-  const tag = m => bo.mode === m ? `<span class="bonus">Bonus · coins ×${DAYCOIN}</span>` : '';
-  /* Sandbox og regelarket ligger i Profile, ikke på forsiden. */
-  const lab = '', rules = '';
+  const prog = lapPips(), row = `<div class="lrow myst"><span class="tsb qmb" aria-hidden="true"><i>?</i></span><div class="sp"><b>${nextHint()}</b></div></div>`;
+  const tag = m => bo.mode === m ? `<span class="bonus">Bonus ×${DAYCOIN}</span>` : '';
   /* World Tournament: dagens cup. */
   const W = pwt(), WR = pwtRun(), wc = WR ? CUPS[WR.wd] : cupNow();
-  const charm = S.charm > 0 ? `<p class="sm" style="color:var(--gold)">Shiny Charm: ${CHARM.m}× shiny odds for your next ${S.charm} focus session${S.charm > 1 ? 's' : ''}.</p>` : '';
-  const one = MODESN < MODES.length;
+  const charm = S.charm > 0 ? `<p class="sm au" style="text-align:center">Shiny Charm: ${CHARM.m}× shiny odds for your next ${S.charm} focus session${S.charm > 1 ? 's' : ''}.</p>` : '';
   /* Ingen kampdag er åpen – eller den som står åpen, er fra en tidligere dag og ferdig: da er forsiden tilbake til vanlig, og kampene åpnes med «Done for today». */
-  if (!L.day || (dayOld() && dayDone())) return `<div class="card stack"><div class="row" style="justify-content:space-between"><b>Battles</b><span class="pill tn">Lap ${L.lap + 1}</span></div>${row}${prog}
-    <p class="sm">League, Battle Frontier or World Tournament: ${one ? 'you choose when the battles open' : 'all three are yours once the battles open'}.</p>
-    ${openNeed() > 0 ? `<p class="sm tn" style="color:var(--gold)">${openNeed()} more ${openNeed() === 1 ? 'minute' : 'minutes'} of focus today opens them.</p>` : ''}<button type="button" class="btn wide" data-a="bdone"${openNeed() > 0 ? ' disabled' : ''}>Open the battles</button></div>${charm}`;
+  if (!L.day || (dayOld() && dayDone())) return `<div class="card mode">${modeHead('', `Lap ${L.lap + 1} · Battle ${L.n + 1}/${LAPN}`)}${row}${prog}
+    ${openNeed() > 0 ? `<p class="sm tn au" style="text-align:center">${openNeed()} more ${openNeed() === 1 ? 'minute' : 'minutes'} of focus today opens them.</p>` : ''}<button type="button" class="btn wide${openNeed() > 0 ? '' : ' pri'}" data-a="bdone"${openNeed() > 0 ? ' disabled' : ''}>Open the battles</button></div>${charm}`;
   /* Kamper fra en tidligere dag kan tas helt til en ny økt starter. Da gjelder den dagens fokus og den dagens bonus, og det skal være tydelig. */
-  const old = dayOld(), when = dayWord(L.day), oldc = old ? `<div class="card stack oldday"><div class="row" style="justify-content:space-between"><b>Battles from ${when.replace(/^on /, '')}</b><span class="pill tn">${dayDone() ? 'Done' : 'Not played yet'}</span></div><p class="sm">These are the battles you opened ${when}. They pay by that day's focus (coins ×${studyMult()} from ${hm(ladMin())}) and that day's bonus mode. They close when you start a focus session.</p></div>` : '';
+  const old = dayOld(), when = dayWord(L.day), oldc = old ? `<div class="card oldday"><div class="row" style="justify-content:space-between"><b>Battles from ${when.replace(/^on /, '')}</b><span class="pill tn">${dayDone() ? 'Done' : 'Not played yet'}</span></div><p class="sm" style="margin-top:4px">Coins ×${studyMult()} from ${hm(ladMin())} that day. They close when you start a session.</p></div>` : '';
   /* Kampene er åpnet, men dagens modus er ikke valgt ennå (valget ble utsatt). */
-  if (modePicks() > 0 && !dayShut()) return `${oldc}<div class="card stack modeask"><div class="row" style="justify-content:space-between"><b>Battles are open</b><span class="pill tn">Choose 1 of ${MODES.length}</span></div>
-    <p class="sm">Pick the mode you want to play today: the Trainer League, the Battle Frontier or the World Tournament. The other two stay closed until your next battle day.</p>
-    <button type="button" class="go" data-a="mopen">Choose ${old ? 'the' : "today's"} mode</button><button type="button" class="btn wide nf" data-a="skipday">Not today · no battles</button></div>${charm}${lab}${rules}`;
+  if (modePicks() > 0 && !dayShut()) return `${oldc}<div class="card mode modeask">${modeHead('', 'Pick one mode for the day', `<span class="pill tn">Choose 1 of ${MODES.length}</span>`)}
+    <button type="button" class="go" data-a="mopen">Choose ${old ? 'the' : "today's"} mode</button><button type="button" class="btn wide nf" data-a="skipday">Not today · no battles</button></div>${charm}`;
   /* Kampdagen er stengt uten at en modus er valgt («Not today» før valget). */
-  if (modePicks() > 0) return `${oldc}<div class="card stack"><div class="row" style="justify-content:space-between"><b>Battles</b><span class="pill tn">Closed</span></div><p class="sm">No battles ${when}. They open again after your next day of focus.</p></div>${charm}${lab}${rules}`;
-  const on = MODES.filter(modeOn), E = evNow(), k1 = on.length === 1 ? on[0] : '', sm = k1 ? smFor(k1) : evSm();
-  const mult = `<p class="sm tn">Coins ×${sm} ${k1 ? `in the ${MODEN[k1]}` : ''}: ×${studyMult()} from ${hm(ladMin())} of focus${L.day !== dayKey() ? ' that day' : ' today'}${k1 && bo.mode === k1 ? `, ×${DAYCOIN} for ${old ? "that day's" : "today's"} bonus mode` : ''}${evIs('gold') ? `, ×${EVCOIN} for the Gold Rush` : ''}. Your goal of ${hm(goalMin())} gives ×${goalTop().toFixed(1)} from focus.${firstWin() && modeOn('league') && !dayShut() ? ` Your first League win ${old ? 'of that day' : 'today'} pays double coins.` : ''}</p><p class="sm tn">Difficulty: ${diff().n} · coins ×${diff().coin}, XP ×${diff().xp}. Change it under Profile.</p>`;
+  if (modePicks() > 0) return `${oldc}<div class="card mode">${modeHead('', `No battles ${when}`, '<span class="pill tn">Closed</span>')}<p class="sm">They open again after your next day of focus.</p></div>${charm}`;
+  const on = MODES.filter(modeOn), E = evNow();
   /* Stengt («Not today» eller simulert), eller en simulering som venter: da står det i stedet for kampknappen. */
   const shut = dayShut() ? `<p class="sm">${L.simd === L.day ? 'The game played these battles for you' : 'No battles'} ${when}. They open again after your next day of focus.</p>` : simPending() ? '<p class="sm">A simulated result is waiting above. Accept it or undo it first.</p>' : '';
-  const keepb = S.fac.keep && S.fac.keep.length ? '<button type="button" class="btn wide gold" data-a="fkeeps">Your round reward · keep one of your rentals</button>' : '';
+  const keepb = S.fac.keep && S.fac.keep.length ? `<button type="button" class="btn wide gold" data-a="fkeeps">${icn('gift')}Keep one of your rentals</button>` : '';
+  const coins = k => `<span class="pill tn au">Coins ×${smFor(k)}</span>`;
   const cards = {
-    league: `<div class="card stack" id="mode-league"><div class="row" style="justify-content:space-between"><b>Trainer League</b><span class="row" style="gap:8px">${tag('league')}${pipsEl(ladLives(), ladFails())}</span></div>${row}${prog}
-      ${shut || (ladLost() ? `<p class="sm">The lap ended at battle ${(L.fell || 0) + 1} of ${LAPN}. A new lap starts from battle 1 on your next battle day. Your team keeps the XP it earned.</p>` : ladDone() ? '<p class="sm">You cleared the lap today. The next one opens on your next battle day, with stronger trainers and better rewards.</p>' : `<p class="sm">${bo.mode === 'league' ? '+30% XP and better odds for Rare Candy today. ' : ''}${LAPN} battles a lap, and the class rises as you go: a trainer first, a Champion at the end. XP for the whole team after each battle. ${ladLives() - ladFails() > 1 ? 'You can lose once and try again against the same trainer.' : 'One loss ends the lap, and the next one starts from battle 1.'}</p><button type="button" class="go${L.n >= LAPN - 1 ? ' gold' : ''}" data-a="bpre">${S.lad.next && S.lad.next.fail ? 'Rematch' : 'Battle'}</button>${simRow()}`)}</div>`,
-    factory: `<div class="card stack" id="mode-factory"><div class="row" style="justify-content:space-between"><b>Battle Frontier</b><span class="row" style="gap:8px">${tag('factory')}${pipsEl(facLives(), facFails())}</span></div>${fac}
-      ${keepb}${shut || (facLost() ? '<p class="sm">Your runs for today are used. The Frontier opens again after your next day of focus.</p>' : `<p class="sm">${bo.mode === 'factory' ? '1.5× luck on items, encounters and rare bosses today. ' : ''}${FACN - 1} trainers, then a boss. No Bag here. You win coins, items and encounters, and your own team gets XP for every win. A loss ends the run, and you have ${facLives() - facFails() === 1 ? 'one run left today' : (facLives() - facFails()) + ' runs left today'}.</p><button type="button" class="btn wide gold" data-a="fenter">${R ? 'Continue the run' : 'Enter the Frontier'}</button>${simRow()}`)}</div>`,
-    pwt: `<div class="card stack" id="mode-pwt"><div class="row" style="justify-content:space-between"><b>World Tournament</b><span class="row" style="gap:8px">${tag('pwt')}${pipsEl(1, pwtOpen() ? 0 : 1)}</span></div>
-      <div class="modec"><span class="ficon">W</span><div class="sp"><b>${esc(wc.n)}</b><div class="sm tn">${WR ? `${ROUNDN[WR.r]} · round ${WR.r + 1} of ${PWTN}` : 'Three rounds · three on three'} · Lv ${WR ? WR.lv : pwtLv()}${W.won ? ` · ${W.won} ${W.won === 1 ? 'trophy' : 'trophies'}` : ''}</div></div></div>
-      ${shut || (pwtOpen() ? `<p class="sm">A knockout cup that changes with the day of the week. You see the opponent's team before you pick your three. No Bag. Every round pays coins and XP for your own team, and the winner takes a trophy and ${aN(PACKS[wc.pk].n)}.</p><button type="button" class="btn wide gold" data-a="wenter">${WR ? 'Continue the cup' : 'Enter the cup'}</button>${simRow()}` : '<p class="sm">You have played today\'s cup. A new one opens after your next day of focus.</p>')}</div>`
+    league: `<div class="card mode" id="mode-league">${modeHead('league', leagueTag(), `${tag('league')}${coins('league')}${pipsEl(ladLives(), ladFails())}`)}${row}${prog}
+      ${shut || (ladLost() ? `<p class="sm">The lap ended at battle ${(L.fell || 0) + 1} of ${LAPN}. A new lap starts on your next battle day.</p>` : ladDone() ? '<p class="sm">You cleared the lap today. The next one opens on your next battle day.</p>' : `<button type="button" class="go${L.n >= LAPN - 1 ? ' gold' : ''}" data-a="bpre">${S.lad.next && S.lad.next.fail ? 'Rematch' : 'Battle'}</button>${simRow()}`)}</div>`,
+    factory: `<div class="card mode" id="mode-factory">${modeHead('factory', R ? `Round ${R.round} · ${R.w}/${FACN} wins · streak ${R.streak}` : `Rent 4 of 7 · Lv ${FACLV}${S.fac.best ? ' · best streak ' + S.fac.best : ''}`, `${tag('factory')}${coins('factory')}${pipsEl(facLives(), facFails())}`)}
+      ${keepb}${shut || (facLost() ? '<p class="sm">Your runs for today are used. The Frontier opens again after your next day of focus.</p>' : `<button type="button" class="go" data-a="fenter">${R ? 'Continue the run' : 'Enter the Frontier'}</button>${simRow()}`)}</div>`,
+    pwt: `<div class="card mode" id="mode-pwt">${modeHead('pwt', `${esc(wc.n)} · ${WR ? `${ROUNDN[WR.r]} · round ${WR.r + 1} of ${PWTN}` : 'three on three'} · Lv ${WR ? WR.lv : pwtLv()}${W.won ? ` · ${W.won} ${W.won === 1 ? 'trophy' : 'trophies'}` : ''}`, `${tag('pwt')}${coins('pwt')}${pipsEl(1, pwtOpen() ? 0 : 1)}`)}
+      ${shut || (pwtOpen() ? `<button type="button" class="go" data-a="wenter">${WR ? 'Continue the cup' : 'Enter the cup'}</button>${simRow()}` : '<p class="sm">You have played today\'s cup. A new one opens after your next day of focus.</p>')}</div>`
   };
-  const off = MODES.filter(k => !modeOn(k)).map(k => 'the ' + MODEN[k]);
-  const note = one && k1 ? `<p class="sm tn">Today's mode is the ${MODEN[k1]}. ${off.join(' and ').replace(/^t/, 'T')} open again on your next battle day.</p>` : '';
-  return `${oldc}${simCard()}${E ? evChip(E) : ''}${on.map(k => cards[k]).join('')}${note}${mult}${charm}${lab}${rules}`;
+  return `${oldc}${simCard()}${E ? evChip(E) : ''}${on.map(k => cards[k]).join('')}${charm}`;
 }
 /* Oppstilling før en ligakamp: hvem du møter, hva de gir, og hvem av dine som går ut først. */
 function preBattle() {

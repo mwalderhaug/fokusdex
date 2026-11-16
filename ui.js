@@ -197,7 +197,7 @@ const SND = {
   fag: 'chip', min: 'chip', reg: 'chip', sort: 'chip', filt: 'chip', sety: 'chip', extog: 'chip', sbxr: 'chip', sbxo: 'chip',
   sbxpick: 'open', sbxtools: 'open', sbxfac: 'open', sbxlgo: 'open', sbxcup: 'open', sbxfinal: 'open', sbxagain: 'open',
   ball: 'ball', spec: 'open', plan: 'open', sync: 'open', backup: 'open', snext: 'ok', seadd: 'open', avatar: 'open', avall: 'open', avpick: 'ok', ach: 'open', rkok: 'ok',
-  today: 'open', boinfo: 'warn', close: 'close', home: 'close', later: 'close', sback: 'close', sedel: 'close', skip: 'close', syncoff: 'close', toshop: 'open',
+  today: 'open', boinfo: 'warn', sopen: 'open', minfo: 'open', close: 'close', home: 'close', later: 'close', sback: 'close', sedel: 'close', skip: 'close', syncoff: 'close', toshop: 'open',
   train: 'open', trsel: 'chip', trback: 'close', trclr: 'warn',
   lead: 'ok', sesave: 'ok', syncsave: 'ok', bkcopy: 'ok', bkload: 'ok', party: 'ok', fav: 'fav',
   quit: 'warn', reset: 'warn', early: 'ok', pause: 'chip'
@@ -435,7 +435,9 @@ const ICN = {
   clock: ['', 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7.500V12l3 2'],
   up: ['f', 'M12 5l7 9H5z'], dn: ['f', 'M12 19l7-9H5z'],
   bolt: ['f', 'M13.500 2L5 13.500h5.500L9.500 22 19 10h-5.800z'], sword: ['', 'M14.500 4H20v5.500L9 20.500 3.500 15zM6 18l-2.500 2.500M5 13l6 6'],
-  shield: ['', 'M12 3l7.500 3v5.500c0 4.500-3 8-7.500 9.500-4.500-1.500-7.500-5-7.500-9.500V6z'], heart: ['', 'M12 20s-7.500-4.600-7.500-10A4.300 4.300 0 0 1 12 7.500 4.300 4.300 0 0 1 19.500 10c0 5.400-7.500 10-7.500 10z']
+  shield: ['', 'M12 3l7.500 3v5.500c0 4.500-3 8-7.500 9.500-4.500-1.500-7.500-5-7.500-9.500V6z'],
+  flag: ['', 'M6 21V4M6 5h11l-2.500 3.500L17 12H6'], tower: ['', 'M8 21V9l4-5 4 5v12M5 21h14M10.500 21v-4h3v4M10 12h4'],
+  cup: ['', 'M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.500 20h7M10 17h4'], heart: ['', 'M12 20s-7.500-4.600-7.500-10A4.300 4.300 0 0 1 12 7.500 4.300 4.300 0 0 1 19.500 10c0 5.400-7.500 10-7.500 10z']
 };
 const icn = (k, cls) => { const d = ICN[k]; return d ? `<svg class="icn${d[0] ? ' f' : ''}${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" aria-hidden="true"><path d="${d[1]}"/></svg>` : ''; };
 /* En ring som fylles (XP, egget): r = radius i en boks på size × size, f = 0–1. Fargen er aksentens overgang (#dg defineres én gang i siden). */
@@ -528,10 +530,10 @@ VIEW.fokus = () => {
   const rl = w === 1 ? left : Math.round(left / w), n = Math.floor(Math.min(min, rl) / 20) + (min >= 25 && rl >= min ? 1 : 0) + (S.incOn ? 1 : 0) + (S.lure > 0 ? 1 : 0);
   const rested = !(S.log[dayKey()] || {}).s, xp = Math.round(Math.min(min, rl) * 10 * (w === 1 ? 1 : OTHERXP) * exf() * (rested ? 1.5 : 1));
   const hasMore = (subj.length > 0 && oth.length > 0) || S.regions.length > 1, more = !!U.more || (subj.length > 0 && !isSubj(fag));
-  let top = topBar(), h = '';
+  let top = topBar(), h = '', hero = '';
   if (p) {
     const ev = evoOpts(p), nx = ev.find(x => !x.ok), rdy = ev.find(x => x.ok), a = xpAt(p.lv), b = xpAt(p.lv + 1), egg = S.eggs[0];
-    h += `<div class="hero" style="--tc:var(--t${mTypes(p)[0]})">
+    hero = `<div class="hero" style="--tc:var(--t${mTypes(p)[0]})">
       ${egg ? `<button type="button" class="hside l" data-a="today" aria-label="Egg: ${egg.need - egg.got} minutes of focus left">${ringEl(52, 23, egg.got / egg.need, 3)}<span class="egg"></span><small class="tn">${egg.need - egg.got} min</small></button>` : ''}
       <button type="button" class="orb" data-a="mon" data-u="${p.u}" aria-label="${esc(mName(p))}, your partner, level ${p.lv}">${ringEl(148, 66, (p.xp - a) / (b - a), 3)}${spr(p.id, { it: p.item, ani: 1, sh: p.sh, mega: p.mega })}</button>
       ${S.pend.length ? `<button type="button" class="hside r" data-a="hunt" aria-label="${S.pend.length} ${S.pend.length === 1 ? 'encounter' : 'encounters'} waiting in the grass"><span class="grass live"><i></i><i></i><i></i><i></i></span><b class="tn">${S.pend.length}</b><small>in the grass</small></button>` : ''}
@@ -539,20 +541,22 @@ VIEW.fokus = () => {
       ${S.party.length > 1 || S.mons.length > 1 ? `<div class="bub">${S.party.slice(1).map(u => { const m = monBy(u); return m ? `<button type="button" data-a="mon" data-u="${m.u}" aria-label="${esc(mName(m))}, level ${m.lv}">${spr(m.id, { it: m.item, sh: m.sh, mega: m.mega, s: '34px' })}</button>` : ''; }).join('')}${Array.from({ length: 6 - S.party.length }, () => '<i></i>').join('')}<${open ? 'button type="button" data-a="tab" data-k="lag"' : 'span'} class="n tn" aria-label="${S.mons.length} Pokémon in all${open ? '. Open Team' : ''}">${icn('box')}${S.mons.length}</${open ? 'button' : 'span'}></div>` : ''}</div>`;
   }
   const tys = F(fag).ty.map(t => `<span class="ty" style="background:var(--t${t})">${TYN[t]}</span>`).join('');
-  h += `<div class="card ses"><div class="chips">${(subj.length ? subj : oth).map(chip).join('')}${hasMore ? `<button type="button" class="chip morec" data-a="smore" aria-expanded="${more}" aria-label="${more ? 'Fewer options' : 'More options'}">${icn(more ? 'x' : 'plus')}</button>` : ''}</div>
+  const ses = `<div class="card ses"><div class="chips">${(subj.length ? subj : oth).map(chip).join('')}${hasMore ? `<button type="button" class="chip morec" data-a="smore" aria-expanded="${more}" aria-label="${more ? 'Fewer options' : 'More options'}">${icn(more ? 'x' : 'plus')}</button>` : ''}</div>
     ${more && subj.length ? `<div class="lab">Other things · half value for the battle bonus</div><div class="chips">${oth.map(chip).join('')}</div>` : ''}
     ${more && S.regions.length > 1 ? `<div class="lab">Routes · tap to turn on or off</div><div class="chips">${S.regions.map(r => `<button type="button" class="chip" data-a="reg" data-k="${r}" aria-pressed="${S.routes.includes(r)}">${REG[r].n}</button>`).join('')}</div>` : ''}
     <div class="chips len">${[25, 45, 60, 75, 90].map(m => `<button type="button" class="chip tn" data-a="min" data-k="${m}" aria-pressed="${min === m}" aria-label="${m} minutes">${m}</button>`).join('')}</div>
     <button type="button" class="go" data-a="start">Start ${min} min</button>
     <div class="meta tn">${left <= 0 ? `<span>${tl('Your team is tired today: half XP and no encounters.')}</span>` : `<span><b>${n}</b> ${n === 1 ? 'encounter' : 'encounters'}</span><span><b>${nb(xp)}</b> XP${rested ? ' <i class="au">rested</i>' : ''}</span>${tys}${w < 1 ? `<span class="half">${tl('counts half for the bonus')}</span>` : ''}`}</div>
     ${left > 0 ? boostRow() : ''}</div>`;
-  h += `<div class="card today"><button type="button" class="tdb" data-a="today" aria-label="Today: ${hm(td)} of ${hm(S.cap)}. Battle bonus ×${mulAt(td + tdb).toFixed(1)}. Open the details">${bonusArc(td + tdb, td)}<span class="tr"><span class="t tn"><b>${hm(td)}</b> of ${hm(S.cap)}</span><span class="tgs"><span class="tg">${icn('gift')}<span class="tn">${QUESTS.filter(q => td >= q.m).length}/${QUESTS.length}</span></span>${fxTags()}</span></span></button>${examTag()}</div>`;
+  const today = `<div class="card today"><button type="button" class="tdb" data-a="today" aria-label="Today: ${hm(td)} of ${hm(S.cap)}. Battle bonus ×${mulAt(td + tdb).toFixed(1)}. Open the details">${bonusArc(td + tdb, td)}<span class="tr"><span class="t tn"><b>${hm(td)}</b> of ${hm(S.cap)}</span><span class="tgs"><span class="tg">${icn('gift')}<span class="tn">${QUESTS.filter(q => td >= q.m).length}/${QUESTS.length}</span></span>${fxTags()}</span></span></button>${examTag()}</div>`;
   /* En vanlig dag ligger kampene nederst. På en eventdag står eventet og kampene øverst, og det som har med studeringen å gjøre, under. */
   const CL = clockLock(); if (CL) top += clockCard(CL);
-  if (!open) return top + (S.raid && S.raid.ev && S.party.length ? raidCard() : '') + (S.fpk && Object.keys(S.fpk).length ? `<button type="button" class="btn wide gold" data-a="fpk">${icn('gift')}Open your free packs</button>` : '') + h + studyFoot() + admRow();
-  top += newsEl() + journeyCard();
-  const battles = S.party.length ? (has('battles') ? raidCard() + ladderCard() : lockCard('battles')) : '', E = battles && has('battles') && typeof evNow === 'function' ? evNow() : null;
-  return E ? `${top}${battles}<div class="evsep"><span>Study</span></div>${h}${admRow()}` : top + h + battles + admRow();
+  const fpk = S.fpk && Object.keys(S.fpk).length ? `<button type="button" class="btn wide gold" data-a="fpk">${icn('gift')}Open your free packs</button>` : '';
+  if (!open) return top + hero + (S.raid && S.raid.ev && S.party.length ? raidCard() : '') + fpk + ses + today + studyFoot() + admRow();
+  /* Etter «Done for today»: økta er foldet sammen til én rad («Study more») til den åpnes. */
+  const sesRow = U.sopen ? ses : `<button type="button" class="card sesrow" data-a="sopen" aria-expanded="false">${icn('clock')}<span class="sp"><b>Study more</b><span class="sm tn">${esc(F(fag).n)}<i class="sep"></i>${min} min</span></span>${icn('chev')}</button>`;
+  const battles = S.party.length ? (has('battles') ? raidCard() + ladderCard() : lockCard('battles')) : '';
+  return top + hero + newsEl() + journeyCard() + fpk + battles + today + sesRow + admRow();
 };
 
 /* ---------- Laget ---------- */
@@ -1176,6 +1180,8 @@ const A = {
   tab: el => { if (!dayOpenQ()) return; U.tab = el.dataset.k; render(); $('#main').scrollTop = 0; enter(); },
   smore: () => { U.more = !U.more; render(); },
   today: () => todaySheet(),
+  sopen: () => { U.sopen = 1; render(); },
+  minfo: el => modeInfo(el.dataset.k || ''),
   boinfo: el => { const k = el.dataset.k, it = SHOP[k], st = boostState(k); if (!it) return; toast(st === 'on' ? `${it.n} is already active.` : st === 'lk' ? `${it.n} opens at trainer level ${it.lv}.` : `${it.n} costs ${nb(it.p)} coins. You have ${nb(S.coins)}.`); },
   adm: () => { if (!isAdmin()) return; U.adm = !admOn(); try { localStorage.setItem(KEY + '.adm', U.adm ? '1' : '0'); } catch (_) {} render(); toast(U.adm ? 'Admin view is on: everything is open, and the Sandbox is here.' : 'Admin view is off: you see what everyone sees.'); },
   wnok: () => { closeSheet(); if (!giftSheet() && !jAfter() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
