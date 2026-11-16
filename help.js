@@ -163,7 +163,7 @@ const HELP = [
     ${hRow(ballEl('poke', '30px'), 'Catching and selling', 'New species give coins, and duplicates can be sold from the Duplicates tab under Team.')}
     ${hH('What to buy')}
     ${hRow(ballEl('great', '30px'), 'Balls', 'You always need some. Better balls for rarer Pokémon, and a Dusk Ball for a legendary.')}
-    ${hRow(hSym('❋', 'var(--sage)'), 'For the hunt', 'Lures give more or rarer encounters for three sessions. Incense raises the shiny odds for one to three days.')}
+    ${hRow(hSym('❋', 'var(--sage)'), 'For the hunt', 'Lures give more or rarer encounters for three sessions. Incense raises the shiny odds for one to three days, for new encounters from sessions, packs and eggs while it burns. The ones already waiting in the grass keep their odds, and they wait as long as you like.')}
     ${hRow(hSym('+', 'var(--violet)'), 'Potions and Revives', 'Used from the Bag in League battles and raids.')}
     ${hRow(hSym('▲', 'var(--red)'), 'Training', 'The big one. It is what makes the hardest bosses possible.')}
     ${hH('Encounter packs')}

@@ -50,9 +50,9 @@ const SHOP = {
   lure: { n: 'Lure', p: 350, d: 'One more encounter in each of your next 3 sessions · trainer level 6', lv: 6, img: 'lure', bc: '#7fa8e6' },
   slure: { n: 'Super Lure', p: 1200, d: 'Rarer Pokémon in your next 3 sessions · trainer level 12', lv: 12, img: 'super-lure', bc: '#e3c577' },
   gberry: { n: 'Golden Razz Berry', p: 600, d: 'Feed it to a Pokémon you meet: one more throw and better odds · trainer level 14', lv: 14, img: 'golden-razz-berry', bc: '#e3c577' },
-  glint: { n: 'Glint Incense', p: 2000, d: 'Shiny odds ×2 for 24 hours: encounters, packs and eggs · trainer level 8', lv: 8, img: 'luck-incense', bc: '#e3c577', sb: [2, 24] },
-  gleam: { n: 'Gleam Incense', p: 6000, d: 'Shiny odds ×3 for 48 hours · trainer level 16', lv: 16, img: 'pure-incense', bc: '#e3c577', sb: [3, 48] },
-  radiant: { n: 'Radiant Incense', p: 18000, d: 'Shiny odds ×5 for 72 hours · trainer level 24', lv: 24, img: 'full-incense', bc: '#e3c577', sb: [5, 72] },
+  glint: { n: 'Glint Incense', p: 2000, d: 'Shiny odds ×2 for 24 hours on new encounters: sessions, packs and eggs while it burns · trainer level 8', lv: 8, img: 'luck-incense', bc: '#e3c577', sb: [2, 24] },
+  gleam: { n: 'Gleam Incense', p: 6000, d: 'Shiny odds ×3 for 48 hours on new encounters while it burns · trainer level 16', lv: 16, img: 'pure-incense', bc: '#e3c577', sb: [3, 48] },
+  radiant: { n: 'Radiant Incense', p: 18000, d: 'Shiny odds ×5 for 72 hours on new encounters while it burns · trainer level 24', lv: 24, img: 'full-incense', bc: '#e3c577', sb: [5, 72] },
   prism: { n: 'Prism Lure', p: 12000, d: 'The next legendary raid has a 1 in 5 chance of being shiny · trainer level 20', lv: 20, img: 'prism-scale', bc: '#b295e6' },
   candy: { n: 'Rare Candy', p: 150, d: 'One level up for one Pokémon', ic: 'candy' },
   mstone: { n: 'Mega Stone', p: 3000, d: 'Give it to one Pokémon that has a Mega form. It can then Mega Evolve once a battle', ic: 'gem', ring: 1 },
@@ -147,7 +147,8 @@ const PACKS = {
   ultra: { n: 'Ultra Pack', p: 1800, c: '#e3c577', d: 'One is epic. 12% pseudo-legendary, 1.2% legendary. Shiny odds ×1.5.', slots: [{ min: 1, luck: 1.5 }, { min: 2, luck: 1.5 }, { min: 3, luck: 2, ps: 0.12, leg: 0.012 }], shm: 1.5, lv: 5 },
   master: { n: 'Master Pack', p: 6000, c: '#b295e6', d: 'Rare, epic and a top slot: 35% pseudo-legendary, 5% legendary. Shiny odds ×2.', slots: [{ min: 2, luck: 2 }, { min: 3, luck: 2 }, { min: 3, luck: 2, ps: 0.35, leg: 0.05 }], shm: 2, lv: 8 }
 };
-const PACKMAX = 24;
+/* Pakker åpnes ikke når så mange møter venter (et vern mot en uendelig kø; gresset selv har ingen grense fra 16.11). */
+const PACKMAX = 99;
 /* Innholdet i en pakke (tre møter), uten å røre lagringen: brukes av butikken og av demoen. lg = plassen ga en legendarisk, ps = en pseudo-legendarisk.
    demo = den legendariske vises med en gang (det finnes ikke noe gress å møte den i). */
 const PKPS = [147, 246, 371, 374, 443, 633];
@@ -462,6 +463,8 @@ const LNO = {
   'Some adjustments to raids, bosses and rewards, and bug fixes.': 'Noen justeringer på raid, bosser og belønninger, og feilrettinger.',
   'Minor boss adjustments.': 'Små justeringer på bossene.',
   'Out of Incense or a Lure? You can now buy them on the Focus screen before your next session.': 'Tom for Incense eller Lure? Nå kan du kjøpe dem på Focus-skjermen før neste økt.',
+  'Encounters now wait in the grass as long as you like.': 'Møtene venter nå i gresset så lenge du vil.',
+  'Clearer text on how shiny incense works.': 'Tydeligere tekst om hvordan shiny-røkelsen virker.',
   'Exam period: Profile → Badges. Your badges count down to your exams, and subjects no longer need planned hours.': 'Eksamensperiode: Profile → Badges. Merkene teller ned til eksamen, og fagene trenger ikke lenger planlagte timer.',
   'Work days: Profile → Settings → Advanced options.': 'Arbeidsdager: Profile → Settings → Advanced options.',
   'Other activities now give encounters every 20 minutes, and the bell in a session mutes the encounter sound.': 'Andre aktiviteter gir nå møter hvert 20. minutt, og bjella i en økt slår av lyden for møter.',
@@ -506,7 +509,7 @@ function jFriend() {
 const has = k => !!(S.ulk && S.ulk[k]);
 /* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
    Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
-const WNV = 70, WN = ['Out of Incense or a Lure? You can now buy them on the Focus screen before your next session.'];
+const WNV = 71, WN = ['Encounters now wait in the grass as long as you like.', 'Clearer text on how shiny incense works.'];
 /* Første linje for dem som går reisen (whatsNew i ui.js). */
 const WNJ = 'Your journey: new things now open one study day at a time. See the card on the Focus page.';
 function featCheck() { S.ulk = S.ulk || {}; if (!jOn()) return 0; let ch = 0; for (const [k, d] of JOURNEY) if (!S.ulk[k] && (S.jd || 0) >= d) { S.ulk[k] = 1; ch = 1; } return ch; }
@@ -1045,7 +1048,7 @@ function grant(fag, real, full, plan, re) {
   R.enc = encs.length;
   if (S.charm > 0 && n > 0) { S.charm--; R.gifts.push(`Shiny Charm: ${CHARM.m}× shiny odds this session${S.charm ? ` · ${S.charm} more session${S.charm > 1 ? 's' : ''}` : ' · it has now faded'}`); }
   S.pend.push(...encs);
-  trimPend(15);
+  /* Jazz 16.11: ingen grense i gresset. Møtene venter til du har tid, også til etter studiedagen, og ingen går tapt (før: de 15 nyeste). */
   save();
   return R;
 }
