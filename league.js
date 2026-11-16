@@ -191,19 +191,20 @@ const ladLost = () => !!S.lad.lost && S.lad.lost === (S.lad.day || dayKey());
 const ladDone = () => !!S.lad.lapd && S.lad.lapd === (S.lad.day || dayKey());
 /* Kampene åpnes først når dagen har OPENMIN minutter fokus (før holdt det å starte og stoppe en økt). openNeed = minutter som mangler. */
 const openNeed = () => Math.max(0, OPENMIN - todayMin());
-/* Forsøk per dag: i ligaen avslutter et tap hele runden (LIVES; Easy tåler ett tap), Frontier tåler to løp (FACLIVES), turneringen er én cup og
+/* Forsøk per dag: i ligaen avslutter et tap hele runden (LIVES; Easy tåler ett tap), Frontier tåler tre løp (FACLIVES; to før 16.11, tre til Frontier er fikset i steg 1b og 1c), turneringen er én cup og
    raidet ett forsøk. Taper du i ligaen, starter du på kamp 1 neste ligadag: det er ingen omkamp mot den som slo deg. */
 /* Veska: så mange gjenstander kan brukes per kamp. Ellers kunne nok Revive vinne enhver kamp. */
 const BAGN = 3, bagN = () => diff().bag;
 const LIVES = 1, ladFails = () => { const t = S.lad.tries, d = S.lad.day || dayKey(); return t && t.d === d ? t.n : 0; };
-const FACLIVES = 2, facFails = () => { const t = S.fac.tries, d = S.lad.day || dayKey(); return t && t.d === d ? t.n : 0; };
+const FACLIVES = 3, facFails = () => { const t = S.fac.tries, d = S.lad.day || dayKey(); return t && t.d === d ? t.n : 0; };
 /* Kampdagen kan også stenges uten kamper: «Not today» (S.lad.skip) eller en godtatt simulering (S.lad.simd). Mens en simulering venter på svar
    (simPending), står kampene stille. dayDone = alt som kan spilles denne kampdagen, er spilt, simulert eller hoppet over. */
 const dayShut = () => !!S.lad.day && (S.lad.skip === S.lad.day || S.lad.simd === S.lad.day);
 const simPending = () => S.sim && S.lad.day && S.sim.day === S.lad.day ? S.sim : null;
 const dayStop = () => dayShut() || !!simPending();
 const ladderOpen = () => !!S.lad.day && !dayStop() && !ladLost() && !ladDone() && modeOn('league');
-const facLost = () => !!S.fac.lost && S.fac.lost === (S.lad.day || dayKey());
+/* Stengt når dagens tap har nådd taket. Tapene telles på nytt, så et høyere tak gir et nytt forsøk samme dag. */
+const facLost = () => !!S.fac.lost && S.fac.lost === (S.lad.day || dayKey()) && facFails() >= facLives();
 const facOpen = () => !!S.lad.day && !dayStop() && !facLost() && modeOn('factory');
 /* Dagens bonus: datoen avgjør hvilken av de tre modusene som gir ekstra, likt for alle som spiller. Bonusen er DAYCOIN ganger mynter
    (i tillegg litt mer XP i ligaen og litt mer flaks i Frontier, som før). */

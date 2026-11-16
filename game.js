@@ -463,6 +463,7 @@ const LNO = {
   'Some adjustments to raids, bosses and rewards, and bug fixes.': 'Noen justeringer på raid, bosser og belønninger, og feilrettinger.',
   'Minor boss adjustments.': 'Små justeringer på bossene.',
   'Out of Incense or a Lure? You can now buy them on the Focus screen before your next session.': 'Tom for Incense eller Lure? Nå kan du kjøpe dem på Focus-skjermen før neste økt.',
+  'An extra attempt in Battle Frontier every day.': 'Et ekstra forsøk i Battle Frontier hver dag.',
   'Encounters now wait in the grass as long as you like.': 'Møtene venter nå i gresset så lenge du vil.',
   'Clearer text on how shiny incense works.': 'Tydeligere tekst om hvordan shiny-røkelsen virker.',
   'Exam period: Profile → Badges. Your badges count down to your exams, and subjects no longer need planned hours.': 'Eksamensperiode: Profile → Badges. Merkene teller ned til eksamen, og fagene trenger ikke lenger planlagte timer.',
@@ -509,7 +510,7 @@ function jFriend() {
 const has = k => !!(S.ulk && S.ulk[k]);
 /* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
    Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
-const WNV = 71, WN = ['Encounters now wait in the grass as long as you like.', 'Clearer text on how shiny incense works.'];
+const WNV = 72, WN = ['An extra attempt in Battle Frontier every day.', 'Encounters now wait in the grass as long as you like.', 'Clearer text on how shiny incense works.'];
 /* Første linje for dem som går reisen (whatsNew i ui.js). */
 const WNJ = 'Your journey: new things now open one study day at a time. See the card on the Focus page.';
 function featCheck() { S.ulk = S.ulk || {}; if (!jOn()) return 0; let ch = 0; for (const [k, d] of JOURNEY) if (!S.ulk[k] && (S.jd || 0) >= d) { S.ulk[k] = 1; ch = 1; } return ch; }
