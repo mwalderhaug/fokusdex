@@ -1559,27 +1559,55 @@ function keepCard(sheet) {
 }
 /* Bildet til en gjenstand fra butikken (ball, stein, godteri), i samme form som i butikken. */
 const itPic = (k, s) => !SHOP[k] ? '' : SHOP[k].img ? ballEl(k, s || '30px') : SHOP[k].ic === 'egg' ? '<span class="egg" style="transform:scale(.7)"></span>' : `<span class="${SHOP[k].ic}${k === 'mstone' ? ' mg' : ''}"></span>`;
+/* RESULTATSKJERMEN (steg 1.9): ett sammendrag øverst (vant eller tapte, laget med XP-streker, myntene og det du fikk som ikoner), valgene som
+   krever et svar (nytt angrep, bytte, behold en leie-Pokémon), hva som kommer nå, og knappene. Tallene per Pokémon og hver linje i premien
+   ligger bak «Details» (BT.rdet). Belønningskortet for Cynthia og Ghetsis står som før. */
+/* En premie som et lite ikon med antall: «2 × Great Ball» → ballen og ×2. Navnet står når det er få, og alltid i Details. */
+function resItem(x, names) {
+  const m = /^(\d+) × (.+)$/.exec(x), n = m ? +m[1] : 1, nm = m ? m[2] : x;
+  const sk = Object.keys(SHOP).find(k => SHOP[k].n === nm), hk = sk ? '' : Object.keys(HELD).find(k => HELD[k].n === nm);
+  const pic = sk ? itPic(sk, '24px') : hk ? heldEl(hk, '24px') : nm === 'Egg' ? '<span class="egg" style="transform:scale(.62)"></span>' : icn('gift');
+  return `<span class="rs-it" title="${esc(x)}" aria-label="${esc(x)}"><span class="rs-ic">${pic}</span>${n > 1 ? `<b class="tn">×${n}</b>` : ''}${names ? `<span class="rs-nm">${esc(nm)}</span>` : ''}</span>`;
+}
+/* Premiene som er verdt en egen linje i sammendraget (resten av res.perks forklarer bare hvorfor tallet ble som det ble). */
+const resHi = res => (res.perks || []).filter(x => /^(A rare prize|You found|Champion of|You earned)/.test(x));
 function overview() {
   const B = BT.B, res = BT.res, tr = B.tr, fac = res.mode === 'fac', lab = res.mode === 'lab', raid = res.mode === 'raid', cup = res.mode === 'pwt', first = !res.shown, nm = esc(tr.wild ? tr.n : who(tr));
+  if (first) BT.rdet = 0;
   /* Laget: XP-linja fylles opp etter kampen, og nye nivåer og angrep vises her. */
   /* I ligaen og raidet er det de som kjempet. I Frontier og turneringen er det ditt eget lag som får XP for seieren (leie-Pokémonene er ikke dine). */
-  const rows = lab ? [] : fac || cup ? S.party.map(monBy).filter(m => m && res.ups.some(x => x.u === m.u)).map(m => ({ src: m, id: m.id, sh: m.sh, mega: m.mega, name: mName(m), hp: 1 })) : raid && !res.ups.length ? [] : B.me;
-  const team = !rows.length ? '' : `<div class="card stack">${fac || cup ? '<div class="lab">XP for your own team</div>' : ''}${rows.map(b => {
-    const m = b.src, u = res.ups.find(x => x.u === m.u), l = first && u ? u.l0 : m.lv, x = first && u ? u.x0 : m.xp, f = Math.max(0, Math.min(1, (x - xpAt(l)) / (xpAt(l + 1) - xpAt(l))));
-    return `<div class="hofr${u && u.l1 > u.l0 && !first ? ' lvup' : ''}" data-row="${m.u}">${spr(b.id, { sh: b.sh, mega: b.mega, s: '48px' })}<div class="sp"><div class="row" style="justify-content:space-between"><b>${esc(b.name)}</b><b class="sm tn lvt">${u && u.l1 > u.l0 && !first ? `Lv ${u.l0} → ${u.l1}` : 'Lv ' + l}</b></div>
-      <div class="xpbar" style="margin-top:6px;height:6px"><i style="width:${Math.round(f * 100)}%"></i></div>
-      <div class="sm tn" style="margin-top:4px">${u ? '+' + nb(u.xp) + ' XP' : 'No XP this time'}${b.hp <= 0 ? ' · fainted' : ''}${u && (u.learned || []).length ? ' · learned ' + esc(u.learned.join(', ')) : ''}</div>
-      ${(m.nm || []).length ? `<button type="button" class="newmv" data-a="blearn" data-u="${m.u}" style="margin-top:6px;width:100%;text-align:left"><span class="bang">!</span><span class="sm" style="color:var(--ink)">Wants to learn <b>${esc(MOVES[m.nm[0]][0])}</b>${m.nm.length > 1 ? ' +' + (m.nm.length - 1) : ''}</span></button>` : ''}</div></div>`; }).join('')}</div>`;
+  const own = fac || cup, rows = lab ? [] : own ? S.party.map(monBy).filter(m => m && res.ups.some(x => x.u === m.u)).map(m => ({ src: m, id: m.id, sh: m.sh, mega: m.mega, name: mName(m), hp: 1 })) : raid && !res.ups.length ? [] : B.me;
+  const st0 = b => { const m = b.src, u = res.ups.find(x => x.u === m.u), l = first && u ? u.l0 : m.lv, x = first && u ? u.x0 : m.xp; return { m, u, l, f: Math.max(0, Math.min(1, (x - xpAt(l)) / (xpAt(l + 1) - xpAt(l)))), up: !!(u && u.l1 > u.l0) }; };
+  const any = rows.some(b => res.ups.some(x => x.u === b.src.u));
+  /* XP-stripa i sammendraget: én strek per Pokémon, under bildet på scenen (eller med et lite bilde når det er ditt eget lag som får XP-en). */
+  const strip = !any ? '' : `<div class="hof-xp${own ? ' own' : ''}" style="--n:${rows.length}">${rows.map(b => { const q = st0(b); return `<span data-xs="${q.m.u}" class="${q.up && !first ? 'lvup' : ''}${q.u ? '' : ' no'}">${own ? spr(b.id, { sh: b.sh, mega: b.mega, s: '30px' }) : ''}<i class="xpbar"><i style="width:${Math.round(q.f * 100)}%"></i></i><em class="tn">${q.up && !first ? q.u.l1 : q.l}</em></span>`; }).join('')}</div>${own ? `<p class="hof-xl">${tl('XP for your own team')}</p>` : ''}`;
+  const team = !rows.length ? '' : `<div class="card stack">${own ? '<div class="lab">XP for your own team</div>' : ''}${rows.map(b => {
+    const q = st0(b), m = q.m, u = q.u;
+    return `<div class="hofr${q.up && !first ? ' lvup' : ''}" data-row="${m.u}">${spr(b.id, { sh: b.sh, mega: b.mega, s: '48px' })}<div class="sp"><div class="row" style="justify-content:space-between"><b>${esc(b.name)}</b><b class="sm tn lvt">${q.up && !first ? `Lv ${u.l0} → ${u.l1}` : 'Lv ' + q.l}</b></div>
+      <div class="xpbar" style="margin-top:6px;height:6px"><i style="width:${Math.round(q.f * 100)}%"></i></div>
+      <div class="sm tn" style="margin-top:4px">${u ? '+' + nb(u.xp) + ' XP' : 'No XP this time'}${b.hp <= 0 ? ' · fainted' : ''}${u && (u.learned || []).length ? ' · learned ' + esc(u.learned.join(', ')) : ''}</div></div></div>`; }).join('')}</div>`;
+  /* Nye angrep som venter på et svar: alltid synlige. */
+  const want = (lab ? [] : S.party.map(monBy).filter(m => m && (m.nm || []).length && (rows.some(b => b.src.u === m.u) || res.ups.some(x => x.u === m.u))));
+  const learn = want.length ? `<div class="card stack rs-learn">${want.map(m => `<button type="button" class="newmv" data-a="blearn" data-u="${m.u}">${spr(m.id, { sh: m.sh, mega: m.mega, s: '34px' })}<span class="sm sp" style="color:var(--ink)"><b>${esc(mName(m))}</b> wants to learn <b>${esc(MOVES[m.nm[0]][0])}</b>${m.nm.length > 1 ? ' +' + (m.nm.length - 1) : ''}</span><span class="bang">!</span></button>`).join('')}</div>` : '';
+  const learned = rows.map(b => { const u = res.ups.find(x => x.u === b.src.u); return u && (u.learned || []).length ? `${esc(b.name)} learned ${esc(u.learned.join(', '))}` : ''; }).filter(Boolean);
   /* Cynthia og Ghetsis: det de gir, i et eget kort over resten (res.sp, se finishLeague). */
   const P = res.sp, spRow = (pic, b, s) => `<div class="spw-r"><span class="spw-i">${pic}</span><span class="sp"><b>${b}</b>${s ? `<span class="sm tn">${s}</span>` : ''}</span></div>`;
   const spc = P ? `<div class="card spw" style="--cc:${P.cc || 'var(--gold)'}"><div class="sm">${esc(P.cn || 'The greatest')}</div><b class="spw-h">${esc(P.n)} is beaten</b>
       ${spRow('<span class="coin"><i></i></span>', 'Double coins', '+' + nb(P.extra) + ' on top of the win')}${P.sig ? spRow(spr(P.sig, { sh: 1, s: '40px' }), 'A shiny ' + esc(D(P.sig)[0]), 'waiting in your encounters · shinies are stronger') : ''}
       ${spRow('<span class="raid-sp qm"><i>?</i></span>', 'A legendary encounter', 'who it is shows when you meet it')}${spRow(itPic('candy'), P.candy + ' Rare Candy', '')}${spRow(itPic('mstone'), 'A Mega Stone', '')}
       ${P.first ? spRow(itPic('master'), 'A Master Ball', 'the first time you beat ' + esc(P.n)) : ''}</div>` : '';
-  const rew = res.win && !lab ? `<div class="card stack"><div class="row" style="justify-content:space-between"><b>Rewards${tr.boss ? ' · ' + esc(tr.cn) : ''}</b><span class="pill tn">×${B.sm} study bonus${B.boost.mode === (fac ? 'factory' : 'league') ? ' · today\'s bonus' : ''}</span></div>
+  const bonus = `×${B.sm} study bonus${B.boost.mode === (fac ? 'factory' : 'league') ? ' · today\'s bonus' : ''}`;
+  /* Sammendraget av premien: myntene store, så ikonene. */
+  const encW = res.encs.some(e => e.t >= 4) ? 'legendary' : res.encs.some(e => e.t >= 3) ? 'epic' : '', hi = resHi(res), caught = res.cau && monBy(res.cau.u);
+  const chips = (res.items.length > 5 ? res.items.slice(0, 4) : res.items).map(x => resItem(x, res.items.length <= 2)).join('') + (res.items.length > 5 ? `<span class="rs-it more"><b class="tn">+${res.items.length - 4}</b></span>` : '')
+    + (res.encs.length ? `<span class="rs-it enc${encW ? ' ' + encW : ''}" title="Encounters waiting in the grass" aria-label="${res.encs.length} encounters waiting in the grass${encW ? ', one ' + encW : ''}"><span class="rs-ic">${icn('grass')}</span><b class="tn">${res.encs.length}</b>${encW ? `<span class="rs-nm">${encW}</span>` : res.items.length <= 2 ? '<span class="rs-nm">in the grass</span>' : ''}</span>` : '');
+  const sum = res.win && !lab ? `<div class="rs"><div class="rs-c">${res.coins > 0 ? `<span class="coin rs-coin"><i></i><b class="tn" id="rs-coin" data-n="${res.coins}">${first && !calm() ? '0' : nb(res.coins)}</b></span><span class="pill tn">${bonus}</span>` : ''}</div>
+      ${chips ? `<div class="rs-l">${chips}</div>` : ''}${caught ? `<p class="rs-hi">Caught ${esc(mName(caught))}${res.cau.isNew ? ' · new species' : ''}</p>` : ''}${res.got ? `<p class="rs-hi">Traded for ${esc(res.got)}</p>` : ''}${hi.map(x => `<p class="rs-hi">${esc(x)}</p>`).join('')}${learned.map(x => `<p class="rs-hi lv">${x}</p>`).join('')}</div>` : '';
+  /* Alt i premien, linje for linje (bak «Details»). */
+  const rew = res.win && !lab ? `<div class="card stack"><div class="row" style="justify-content:space-between"><b>Rewards${tr.boss ? ' · ' + esc(tr.cn) : ''}</b><span class="pill tn">${bonus}</span></div>
       <div class="row" style="justify-content:space-between"><span>Coins</span>${coinEl(res.coins)}</div>
       ${res.items.map(x => `<div class="row" style="justify-content:space-between"><span>Item</span><b>${esc(x)}</b></div>`).join('')}${encLine(res)}
-      ${res.got ? `<div class="row" style="justify-content:space-between"><span>Traded for</span><b>${esc(res.got)}</b></div>` : ''}${res.cau && monBy(res.cau.u) ? `<div class="row" style="justify-content:space-between"><span>Caught</span><b>${esc(mName(monBy(res.cau.u)))}${res.cau.isNew ? ' · new species' : ''}</b></div>` : ''}${res.note ? `<p class="sm">${esc(res.note)}</p>` : ''}${(res.perks || []).map(x => `<p class="sm" style="color:var(--gold)">${esc(x)}</p>`).join('')}</div>` : '';
+      ${res.got ? `<div class="row" style="justify-content:space-between"><span>Traded for</span><b>${esc(res.got)}</b></div>` : ''}${caught ? `<div class="row" style="justify-content:space-between"><span>Caught</span><b>${esc(mName(caught))}${res.cau.isNew ? ' · new species' : ''}</b></div>` : ''}${res.note && !raid ? `<p class="sm">${esc(res.note)}</p>` : ''}${(res.perks || []).map(x => `<p class="sm" style="color:var(--gold)">${esc(x)}</p>`).join('')}</div>` : '';
   /* Byttetilbud (ligaen) og bytte av leie-Pokémon (Frontier). */
   let extra = '';
   if (res.trade) {
@@ -1592,37 +1620,41 @@ function overview() {
   } else if (res.kept && monBy(res.kept)) {
     const km = monBy(res.kept); extra = `<div class="card stack"><div class="row" style="gap:12px;align-items:center">${spr(km.id, { sh: km.sh, s: '56px' })}<div class="sp"><div class="sm">Round reward</div><b>${esc(mName(km))} joined you</b><div class="sm tn">Lv ${km.lv} · ${judge(km).t} · it is in your box</div></div></div></div>`;
   } else if (res.swap) {
-    const fs = BT.fs;
-    extra = `<div class="card stack"><div class="row" style="justify-content:space-between"><b>Swap one in?</b><span class="sm tn">optional</span></div><p class="sm">You may take one of ${esc(tr.n)}'s Pokémon in exchange for one of yours. You see both teams side by side, and nothing is final until you press Next.</p>
-      <div class="swprev">${res.swap.map(x => spr(x.id, { mega: x.mega, s: '46px' })).join('')}</div>
-      <button type="button" class="btn wide" data-a="swopen">Look at their team</button></div>`;
+    extra = `<div class="card rs-swap"><div class="sp"><b>Swap one in?</b><div class="swprev">${res.swap.map(x => spr(x.id, { mega: x.mega, s: '38px' })).join('')}</div></div><button type="button" class="btn" data-a="swopen">Their team</button></div>`;
   }
   const L = S.lad, R = S.fac.run;
   const next = raid ? esc(res.note) : cup ? (!res.win ? esc(res.note) : res.done ? `You won the ${esc(res.cup)}. A new cup opens after your next day of focus.` : `Next: the ${ROUNDN[res.r + 1].toLowerCase()} of the ${esc(res.cup)}. Your team is healed.`) : lab ? (B.exh ? 'Showcase battle: nothing was at stake, and your progress is untouched.' : 'Sandbox battle: no XP or rewards, and your League and Frontier progress are untouched.')
     : fac ? (res.win ? (res.roundDone ? `Round ${res.round} cleared. Round ${res.round + 1} has stronger rentals and opponents.` : `Next: battle ${R.w + 1} of ${FACN}${R.w === FACN - 1 ? ' · the boss' : ''}`) : `The run ends at a streak of ${res.streak}. ${res.left ? 'You have one more run today.' : 'The Frontier opens again after your next day of focus.'}`)
     : res.win ? (res.lapDone ? `Lap cleared: that was today's lap. Lap ${L.lap + 1} opens on your next battle day, with stronger trainers, bigger teams and better rewards.` : 'Next: ' + esc(leagueTag()) + (L.n >= LAPN - 1 ? ' · the final' : '')) : (res.left ? `You have one more attempt: ${esc(tr.n)} is still waiting.` : `The lap ends here, at battle ${(res.at || 0) + 1} of ${LAPN}. A new lap starts from battle 1 on your next battle day, and your team keeps the XP it earned.`);
   const open = lab ? true : raid ? false : cup ? !!pwtRun() : fac ? facOpen() && (!!R || !!res.left) : ladderOpen();
-  ov(`<div class="hof"><div class="hof-h"><span>${res.win ? 'VICTORY' : 'DEFEAT'}</span><span class="tn">${esc(battleTag(B))}</span></div>
+  /* Et tap uten XP har ingenting bak «Details»: da står det bare at ingen fikk XP. */
+  const det = (any || rew ? team : '') + rew, dopen = !!BT.rdet;
+  ov(`<div class="hof${res.win ? '' : ' lost'}"><div class="hof-h"><span>${res.win ? 'VICTORY' : 'DEFEAT'}</span><span class="tn">${esc(battleTag(B))}</span></div>
       <div class="hof-stage">${B.me.map((b, i) => `<span style="--i:${i};--n:${B.me.length}" class="${b.hp <= 0 ? 'ko' : ''}">${spr(b.id, { ani: 1, sh: b.sh, mega: b.mega })}</span>`).join('')}</div>
-      <p class="hof-t">${res.win ? (res.cau ? `You beat ${nm}, and it is yours.` : `You beat ${nm}.`) : lab ? `${nm} won this time.` : cup ? `${nm} knocked you out of the cup.` : fac ? `${nm} stopped your run.` : res.left ? `${nm} won this time. You have one more attempt.` : `${nm} won this time. The lap is over.`}</p></div>
-    ${team}${spc}${rew}${extra}${res.ring ? `<div class="card mgring"><div class="row" style="gap:12px;align-items:center"><span class="gem mg" style="width:34px;height:34px;flex:none"></span><div class="sp"><div class="sm">A Champion's gift</div><b style="font-size:19px">The Mega Ring</b><p class="sm" style="margin-top:4px">Give your Mega Stone to a Pokémon that has a Mega form, on its card. It can then Mega Evolve once a battle, from the move menu.</p></div></div></div>` : ''}
-    <div class="card"><span class="sm" style="color:var(--ink)">${next}</span></div>
+      ${strip}<p class="hof-t">${res.win ? (res.cau ? `You beat ${nm}, and it is yours.` : `You beat ${nm}.`) : lab ? `${nm} won this time.` : cup ? `${nm} knocked you out of the cup.` : fac ? `${nm} stopped your run.` : `${nm} won this time.`}</p>${sum}</div>
+    ${spc}${learn}${extra}${res.ring ? `<div class="card mgring"><div class="row" style="gap:12px;align-items:center"><span class="gem mg" style="width:34px;height:34px;flex:none"></span><div class="sp"><div class="sm">A Champion's gift</div><b style="font-size:19px">The Mega Ring</b><p class="sm" style="margin-top:4px">Give your Mega Stone to a Pokémon that has a Mega form, on its card. It can then Mega Evolve once a battle, from the move menu.</p></div></div></div>` : ''}
+    <p class="rs-next">${next}</p>
     <div class="acts">${lab ? (B.exh ? '<button type="button" class="btn gold" data-a="show">Back to the showcase</button>' : isAdmin() ? '<button type="button" class="btn gold" data-a="lab">Back to the Sandbox</button>' : '') + '<button type="button" class="btn nf" data-a="home">Done</button>' : (res.win || res.left) && open ? `<button type="button" class="btn gold" data-a="${cup ? 'wenter' : fac ? 'fenter' : 'bpre'}">${cup ? 'Next round' : !res.win ? (fac ? 'Start a new run' : 'Rematch') : fac && res.roundDone ? 'Pick new rentals' : fac && res.swap ? 'Next battle · keep my four' : 'Next battle'}</button><button type="button" class="btn nf" data-a="home">Done</button>` : '<button type="button" class="btn pri" data-a="home">Done</button>'}</div>
-    ${SBX && !SBX.jp && !lab ? `<div class="row sbxacts">${fac && !res.win && SBX.fr && !(res.left && open) ? `<button type="button" class="btn sp gold" data-a="sbxagain">Round ${SBX.fr.r} again</button>` : ''}<button type="button" class="btn sp nf" data-a="lab">Sandbox</button></div>` : ''}`, 'tint ovtop', res.win ? 'var(--gold)' : 'var(--red)');
-  if (first && team) setTimeout(animXp, 500);
+    ${SBX && !SBX.jp && !lab ? `<div class="row sbxacts">${fac && !res.win && SBX.fr && !(res.left && open) ? `<button type="button" class="btn sp gold" data-a="sbxagain">Round ${SBX.fr.r} again</button>` : ''}<button type="button" class="btn sp nf" data-a="lab">Sandbox</button></div>` : ''}
+    ${det ? `<button type="button" class="rs-more" data-a="rdet" aria-expanded="${dopen}" aria-controls="rs-det"><span>Details</span>${icn('down')}</button><div class="rs-det stack" id="rs-det"${dopen ? '' : ' hidden'}>${det}</div>` : ''}`, 'tint ovtop', res.win ? 'var(--gold)' : 'var(--red)');
+  if (first && (team || sum)) setTimeout(animXp, 500);
   res.shown = 1;
 }
-/* XP-linjene fylles, og de som går opp i nivå får ny linje og gullfarget nivå. */
+/* XP-linjene fylles (i stripa og i Details), de som går opp i nivå får ny linje og gullfarget nivå, og myntene telles opp. */
 function animXp() {
   const res = BT.res; if (!res) return;
   let up = false;
   for (const u of res.ups) {
-    const m = monBy(u.u), row = document.querySelector(`[data-row="${u.u}"]`); if (!m || !row) continue;
-    const bar = row.querySelector('.xpbar i'), lvt = row.querySelector('.lvt'), f1 = Math.round(Math.max(0, Math.min(1, (m.xp - xpAt(m.lv)) / (xpAt(m.lv + 1) - xpAt(m.lv)))) * 100);
-    if (u.l1 > u.l0) { up = true; bar.style.width = '100%'; setTimeout(() => { if (!bar.isConnected) return; bar.style.transition = 'none'; bar.style.width = '0%'; void bar.offsetWidth; bar.style.transition = ''; bar.style.width = f1 + '%'; row.classList.add('lvup'); lvt.textContent = `Lv ${u.l0} → ${u.l1}`; }, 900); }
-    else bar.style.width = f1 + '%';
+    const m = monBy(u.u); if (!m) continue;
+    const f1 = Math.round(Math.max(0, Math.min(1, (m.xp - xpAt(m.lv)) / (xpAt(m.lv + 1) - xpAt(m.lv)))) * 100);
+    for (const row of document.querySelectorAll(`[data-row="${u.u}"],[data-xs="${u.u}"]`)) {
+      const bar = row.querySelector('.xpbar i'), strip = row.hasAttribute('data-xs'), lvt = row.querySelector(strip ? 'em' : '.lvt'); if (!bar) continue;
+      if (u.l1 > u.l0) { up = true; bar.style.width = '100%'; setTimeout(() => { if (!bar.isConnected) return; bar.style.transition = 'none'; bar.style.width = '0%'; void bar.offsetWidth; bar.style.transition = ''; bar.style.width = f1 + '%'; row.classList.add('lvup'); lvt.textContent = strip ? String(u.l1) : `Lv ${u.l0} → ${u.l1}`; }, 900); }
+      else bar.style.width = f1 + '%';
+    }
   }
   if (up) setTimeout(() => { if (BT.res === res) sfx.lvl(); }, 900);
+  const c = $('#rs-coin'); if (c && +c.dataset.n > 0 && c.textContent === '0') { const n = +c.dataset.n, t0 = performance.now(), step = t => { if (!c.isConnected) return; const k = Math.min(1, (t - t0) / 800), e = 1 - Math.pow(1 - k, 3); c.textContent = nb(n * e); if (k < 1) requestAnimationFrame(step); }; requestAnimationFrame(step); }
 }
 /* «Vil lære»: som i spillene. Velg hvilket angrep som skal glemmes, eller la være. back = hvor vi kom fra. */
 function learnSheet(m, back) {
@@ -1866,6 +1898,8 @@ const BA = {
   wsel: el => { const R = pwtRun(); if (!R) return; const u = +el.dataset.u, s = BT.wsel || (BT.wsel = []), i = s.indexOf(u); if (i >= 0) s.splice(i, 1); else if (s.length < R.n) s.push(u); else return; sfx.tap(); pwtScreen(); },
   wgo: () => { const R = pwtRun(); if (!R || (BT.wsel || []).length !== R.n) return; PACK.unlock(); sfx.start(); BT.busy = false; BT.lead = BT.wsel[0]; startBattle(pwtBattle(BT.wsel.slice())); },
   rules: () => { sfx.open(); rulesSheet(); },
+  /* Resultatskjermen: «Details» folder ut tallene uten å tegne skjermen på nytt (XP-strekene skal ikke starte om igjen). */
+  rdet: el => { BT.rdet = BT.rdet ? 0 : 1; const d = $('#rs-det'); if (d) d.hidden = !BT.rdet; el.setAttribute('aria-expanded', String(!!BT.rdet)); if (BT.rdet && d && d.scrollIntoView) d.scrollIntoView({ block: 'nearest', behavior: calm() ? 'auto' : 'smooth' }); },
   fenter: () => { if (!facOpen()) { closeOv(); return render(); } if (!S.fac.run) { if (SBX && SBX.fr && typeof sbxFac === 'function') sbxFac(SBX.fr.r, SBX.fr); else facStart(); BT.fsel = []; } BT.B = null; BT.busy = false; sfx.open(); facScreen(); },
   fopen: () => { const R = S.fac.run; if (!R || !R.offer || !(R.open < 7)) return; const m = R.offer[R.open]; R.open++; save(); BT.fview = null; BT.fnew = true; if (m.mega) { sfx.evo(); buzz([60, 40, 60, 40, 260]); } else { sfx.found(); buzz(30); } cry(m.id, 250, 0.35); facScreen(); },
   fview: el => { BT.fview = +el.dataset.k; facScreen(); },

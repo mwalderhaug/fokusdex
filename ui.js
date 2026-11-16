@@ -198,7 +198,7 @@ const SND = {
   pknext: 'tab', pkskip: 'open', pktog: 'chip', pkkeep: 'ok', pkpick: 'open', pkdone: 'close',
   sbxpick: 'open', sbxtools: 'open', sbxq: 'ok', jprev: 'open', jday: 'ok', sbxfac: 'open', sbxlgo: 'open', sbxcup: 'open', sbxfinal: 'open', sbxagain: 'open',
   ball: 'ball', spec: 'open', plan: 'open', sync: 'open', backup: 'open', snext: 'ok', seadd: 'open', avatar: 'open', avall: 'open', avpick: 'ok', ach: 'open', rkok: 'ok',
-  today: 'open', boinfo: 'warn', sopen: 'open', minfo: 'open', pset: 'open', badge: 'open', look: 'chip', hfx: 'chip', hty: 'chip', binfo: 'open', btyback: 'close', close: 'close', home: 'close', later: 'close', sback: 'close', sedel: 'close', skip: 'close', syncoff: 'close', toshop: 'open',
+  today: 'open', boinfo: 'warn', sopen: 'open', minfo: 'open', pset: 'open', badge: 'open', look: 'chip', hfx: 'chip', hty: 'chip', binfo: 'open', btyback: 'close', rdet: 'chip', close: 'close', home: 'close', later: 'close', sback: 'close', sedel: 'close', skip: 'close', syncoff: 'close', toshop: 'open',
   train: 'open', trsel: 'chip', trback: 'close', trclr: 'warn',
   bxg: 'chip', bxf: 'chip', dupt: 'chip', tord: 'chip', tipok: 'ok', cmp: 'chip', cmpick: 'chip', cmpw: 'open', tsw: 'open', tswb: 'close', tsws: 'chip', tswc: 'open', tswr: 'ok', mstat: 'open', mback: 'close', mvinfo: 'chip', mvsug: 'ok', mvpick: 'open',
   lead: 'ok', sesave: 'ok', syncsave: 'ok', bkcopy: 'ok', bkload: 'ok', party: 'ok', fav: 'fav',

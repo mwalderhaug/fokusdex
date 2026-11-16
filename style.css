@@ -2291,3 +2291,49 @@ button.pkm{cursor:pointer}
 .tyh-r.s4>b{background:#fff;box-shadow:0 0 calc(var(--u)*3.5) #5dff7e}
 .bw-types.many .tyh{gap:calc(var(--u)*2.2)}.bw-types.many .tyh i{font-size:calc(var(--u)*8.6*var(--fz));padding:0 calc(var(--u)*2.2)}
 .bw-types .bw-tip{font-family:var(--font);font-size:calc(var(--u)*8.4);font-weight:550;color:#c9ccd6;image-rendering:auto;bottom:calc(var(--u)*17)}
+
+/* ===== RESULTATSKJERMEN (steg 1.9): ett sammendrag, resten bak «Details» ===== */
+/* Kortet øverst er alltid mørkt (strålene og scenen er tegnet for det), så teksten inni får de lyse fargene også i lys modus. */
+.hof{--ink:#f1ede6;--ink2:#b5afc0;--ink3:#7f7a8a;--soft:rgba(255,255,255,.09);--line:rgba(255,255,255,.1);--gold:#e3c577;color:var(--ink);color-scheme:dark}
+.hof .pill{color:var(--ink)}
+.hof.lost .hof-stage::after{opacity:.5}
+/* XP-stripa: én strek og nivået per Pokémon, rett under bildene på scenen. */
+.hof-xp{position:relative;display:flex;justify-content:center;gap:2px;margin-top:6px}
+.hof-xp>span{width:clamp(44px,calc(78vw/var(--n)),72px);display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.hof-xp .xpbar{display:block;flex:none;width:78%;height:5px;border-radius:3px;background:rgba(255,255,255,.16);box-shadow:none}
+.hof-xp .xpbar i{border-radius:3px}
+.hof-xp em{font-style:normal;font-size:11px;font-weight:600;color:var(--ink2);line-height:1;transition:color .3s}
+.hof-xp .lvup em{color:var(--gold);font-weight:800}
+.hof-xp .lvup em::before{content:"▲ ";font-size:8px;vertical-align:1px}
+.hof-xp .no{opacity:.4}
+.hof-xp.own{margin-top:10px;gap:6px}.hof-xp.own>span{width:44px}.hof-xp.own .xpbar{width:100%}
+.hof-xl{position:relative;margin:6px 0 0;text-align:center;font-size:11.5px;color:var(--ink2)}
+/* Sammendraget av premien */
+.rs{position:relative;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;align-items:center;gap:10px}
+.rs:empty{display:none}
+.rs-c{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}.rs-c:empty{display:none}
+.rs-coin{font-size:30px;font-weight:300;letter-spacing:-.01em;gap:9px;color:#f4efe6}
+.rs-coin i{width:19px;height:19px}
+.rs-coin b{font-weight:300}
+.rs-l{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.rs-it{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:4px 11px 4px 6px;border-radius:18px;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);font-size:13px;color:#f1ece4}
+.rs-it b{font-weight:650}
+.rs-ic{width:26px;height:26px;display:grid;place-items:center;flex:none}
+.rs-ic .icn{width:18px;height:18px}
+.rs-nm{font-size:12.5px;color:#cfc9bf}
+.rs-it.more{padding:4px 12px}
+.rs-it.enc .icn{color:#9fd6a0}
+.rs-it.enc.epic{box-shadow:inset 0 0 0 1.5px var(--r3,#b295e6)}.rs-it.enc.epic .rs-nm{color:#cdb8f2}
+.rs-it.enc.legendary{box-shadow:inset 0 0 0 1.5px var(--gold)}.rs-it.enc.legendary .rs-nm{color:var(--gold)}
+.rs-hi{margin:0;font-size:13px;font-weight:600;color:var(--gold);text-align:center}
+.rs-hi.lv{color:#9cd2ff}
+.rs-learn{gap:8px;padding:10px}
+.rs-learn .newmv{width:100%;text-align:left}
+.rs-swap{display:flex;align-items:center;gap:12px}
+.rs-swap .swprev{justify-content:flex-start;margin-top:4px}
+.rs-swap .btn{flex:none}
+.rs-next{margin:2px 6px;font-size:13.5px;line-height:1.4;color:var(--ink2);text-align:center}
+.rs-more{align-self:center;margin-top:2px;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 16px;border-radius:20px;font-size:13px;font-weight:600;color:var(--ink2);background:var(--soft)}
+.rs-more .icn{width:14px;height:14px;transition:transform .2s}
+.rs-more[aria-expanded="true"] .icn{transform:rotate(180deg)}
+.rs-det[hidden]{display:none}
