@@ -1,19 +1,75 @@
-/* Fokusdex. Mørk og rolig flate, og fargene kommer fra typene og sjeldenheten. Én kolonne, alt innen tommelrekkevidde. */
+/* Fokusdex. Stilen heter Dusk: en rolig flate med et svakt nordlys bak, kort av «glass», tynn skrift og én tydelig handling per skjerm.
+   Fargene kommer fra variablene under, og farge brukes bare når den betyr noe: aksenten er valg og framdrift, gull er belønning, rødt er fare,
+   og typene og sjeldenheten har sine egne. Én kolonne, alt innen tommelrekkevidde.
+
+   UTSEENDET VELGES PER ENHET (look.js setter attributtene på <html> før siden tegnes):
+     data-theme = dark | light   (Settings → Appearance; «Auto» følger telefonen)
+     data-color = dusk | sage    (fargesettet: Dusk er lavendel og fersken, Sage er salviegrønt og strå)
+   Kampene, raidene og filmene har sitt eget, mørke utseende uansett (se «Mørk sone» under). */
 :root{
-  --bg:#12100e;--card:#1c1916;--card2:#25211d;--ink:#f1ede6;--ink2:#a39b8f;--line:rgba(255,255,255,.07);--soft:rgba(255,255,255,.07);
-  --sage:#a6c59c;--sage-d:#1f2a1d;--gold:#e3c577;--red:#d98f7e;--blue:#7fa8e6;--violet:#b295e6;
+  /* Dusk · mørk (standard) */
+  --bg:#181430;--bg2:#0c1220;--panel:#1c1836;--panel2:#262144;
+  --card:rgba(255,255,255,.065);--card2:rgba(255,255,255,.06);--line:rgba(255,255,255,.11);--soft:rgba(255,255,255,.08);--hi:rgba(255,255,255,.14);
+  --ink:#f4f1fb;--ink2:#b3acca;--ink3:#77718f;
+  --acc:#b9a7f6;--acc2:#f3b6a0;--accink:#1b1432;--accsoft:rgba(185,167,246,.17);
+  --gold:#f0c987;--goldsoft:rgba(240,201,135,.14);--goldink:#2a2109;--red:#e79a8c;--blue:#8fb2f0;--violet:#c3a3f7;--good:#a9d6a5;
+  --shade:rgba(5,4,20,.5);--scrim:rgba(6,5,18,.55);--track:rgba(255,255,255,.1);
   --t0:#a8a48f;--t1:#c8705e;--t2:#9fb0e0;--t3:#a97bbd;--t4:#c9a86a;--t5:#b3a374;--t6:#a3b556;--t7:#8676b3;--t8:#a9b3c2;
-  --t9:#e28d5c;--t10:#6f9fe0;--t11:#7fbf7a;--t12:#e3c85a;--t13:#e2809f;--t14:#8fd0d0;--t15:#8473e6;--t16:#8a776b;--t17:#e3a8cb;
-  --r0:#a39b8f;--r1:#a6c59c;--r2:#7fa8e6;--r3:#b295e6;--r4:#e3c577;
-  --font:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  --t9:#e28d5c;--t10:#6f9fe0;--t11:#7fbf7a;--t12:#e3c85a;--t13:#e2809f;--t14:#8fd0d0;--t15:#8473e6;--t16:#8a776b;--t17:#e3a8cb;--tyink:#17130f;
+  --r0:#a39b8f;--r1:#a6c59c;--r2:#7fa8e6;--r3:#d48bf0;--r4:#f0c987;
+  /* Navn fra før Dusk: salviegrønt var aksenten. De peker nå på aksenten i fargesettet som er valgt. */
+  --sage:var(--acc);--sage-d:var(--accsoft);
+  --font:system-ui,-apple-system,"SF Pro Display","SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --r-card:26px;--r-in:18px;
+  --page:radial-gradient(120% 60% at 50% 10%,color-mix(in srgb,var(--acc) 24%,transparent),transparent 62%),radial-gradient(90% 45% at 96% 60%,color-mix(in srgb,var(--acc2) 17%,transparent),transparent 65%),linear-gradient(175deg,var(--bg),var(--bg2));
   color-scheme:dark;
 }
+:root[data-color="sage"]{
+  --bg:#1a1814;--bg2:#0f0d0b;--panel:#201d18;--panel2:#2a2620;
+  --ink:#f3efe8;--ink2:#b3ab9e;--ink3:#72695f;--line:rgba(255,255,255,.1);
+  --acc:#a6c59c;--acc2:#d9d29a;--accink:#152013;--accsoft:rgba(166,197,156,.16);
+  --gold:#e3c577;--goldsoft:rgba(227,197,119,.13);--shade:rgba(6,4,0,.5);--scrim:rgba(8,6,2,.55);
+}
+:root[data-theme="light"]{
+  --bg:#efecf9;--bg2:#fdf0ea;--panel:#f7f4fd;--panel2:#ffffff;
+  --card:rgba(255,255,255,.7);--card2:rgba(122,103,216,.075);--line:rgba(70,50,140,.14);--soft:rgba(70,50,140,.075);--hi:rgba(255,255,255,.9);
+  --ink:#2a2440;--ink2:#6d6690;--ink3:#a7a1c1;
+  --acc:#7765d6;--acc2:#e48d72;--accink:#ffffff;--accsoft:rgba(119,101,214,.13);
+  --gold:#a8741f;--goldsoft:rgba(200,150,60,.16);--goldink:#ffffff;--red:#c2533f;--blue:#3f6fbe;--violet:#7d55cc;--good:#4c8a4a;
+  --shade:rgba(80,60,150,.16);--scrim:rgba(40,30,80,.3);--track:rgba(70,50,140,.12);
+  --t0:#8a8672;--t1:#b5533f;--t2:#6f84c4;--t3:#8f5ba6;--t4:#a8833c;--t5:#8f8050;--t6:#7d9130;--t7:#6a58a0;--t8:#7c8799;
+  --t9:#cf6a35;--t10:#4279c8;--t11:#4f9a4a;--t12:#b8982a;--t13:#cc5580;--t14:#4fa9a9;--t15:#6453d6;--t16:#6b594e;--t17:#c873a6;--tyink:#ffffff;
+  --r0:#8d8798;--r1:#4c8a4a;--r2:#3f6fbe;--r3:#a84fd6;--r4:#a8741f;
+  color-scheme:light;
+}
+:root[data-theme="light"][data-color="sage"]{
+  --bg:#f1eee4;--bg2:#f8f3e1;--panel:#f7f4ea;--panel2:#ffffff;
+  --card:rgba(255,255,255,.74);--card2:rgba(95,133,88,.09);--line:rgba(60,45,20,.13);--soft:rgba(60,45,20,.07);
+  --ink:#26231f;--ink2:#6f685c;--ink3:#a69e8f;
+  --acc:#5a8254;--acc2:#93934a;--accink:#ffffff;--accsoft:rgba(90,130,84,.13);
+  --gold:#9d7419;--goldsoft:rgba(190,150,50,.17);--shade:rgba(80,60,20,.15);--scrim:rgba(50,40,10,.3);--track:rgba(60,45,20,.12);--r0:#8f887b;
+}
+/* MØRK SONE: kampene, raidene og filmene er tegnet for mørk bakgrunn og beholder den, også når resten av appen er lys. Alt inni får de mørke
+   fargene fra før Dusk (tette kort, salviegrønt), så ingenting der endrer seg med valget i Settings. Sett klassen dkz på flaten som skal være mørk. */
+.dkz,.ov.battle,.ov.vsov,.ov.dk150{
+  --bg:#12100e;--bg2:#12100e;--panel:#201d1a;--panel2:#2a2622;--page:#12100e;
+  --card:#1c1916;--card2:#25211d;--line:rgba(255,255,255,.07);--soft:rgba(255,255,255,.07);--hi:transparent;
+  --ink:#f1ede6;--ink2:#a39b8f;--ink3:#6f685f;
+  --acc:#a6c59c;--acc2:#a6c59c;--accink:#152013;--accsoft:#1f2a1d;
+  --gold:#e3c577;--goldsoft:#2b2513;--goldink:#2a2109;--red:#d98f7e;--blue:#7fa8e6;--violet:#b295e6;--good:#a6c59c;
+  --shade:rgba(0,0,0,.6);--scrim:rgba(0,0,0,.5);--track:rgba(255,255,255,.09);
+  --t0:#a8a48f;--t1:#c8705e;--t2:#9fb0e0;--t3:#a97bbd;--t4:#c9a86a;--t5:#b3a374;--t6:#a3b556;--t7:#8676b3;--t8:#a9b3c2;
+  --t9:#e28d5c;--t10:#6f9fe0;--t11:#7fbf7a;--t12:#e3c85a;--t13:#e2809f;--t14:#8fd0d0;--t15:#8473e6;--t16:#8a776b;--t17:#e3a8cb;--tyink:#17130f;
+  --r0:#a39b8f;--r1:#a6c59c;--r2:#7fa8e6;--r3:#b295e6;--r4:#e3c577;
+  --font:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  color:var(--ink);font-family:var(--font);color-scheme:dark;
+}
 *,*::before,*::after{box-sizing:border-box}
-html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 var(--font);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;overscroll-behavior:none}
+html,body{height:100%;margin:0;background:var(--bg2);color:var(--ink);font:15px/1.4 var(--font);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;overscroll-behavior:none}
 html{overflow:hidden}
 /* Rammen: body har full skjermhøyde (--appH settes av ui.js på iPhone som Hjem-skjerm-app, der iOS 26 regner vinduet for kort),
    og flatene under ligger absolutt i den. Fast plassering (fixed) tegnes ikke i den nederste stripa på iOS 26. */
-body{position:relative;overflow:hidden;height:100%;height:var(--appH,100dvh)}
+body{position:relative;overflow:hidden;height:100%;height:var(--appH,100dvh);background:var(--page)}
 h1,h2,h3,p,ul{margin:0;padding:0}
 li{list-style:none}
 button,input,select{font:inherit;color:inherit}
@@ -23,33 +79,41 @@ button:disabled{opacity:.4;cursor:default}
 [hidden]{display:none!important}
 .tn{font-variant-numeric:tabular-nums}
 .mut{color:var(--ink2)}
-.main{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(18px + env(safe-area-inset-top,0px)) 18px calc(96px + env(safe-area-inset-bottom,0px))}
-.wrap{max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
-.card{background:var(--card);border-radius:22px;padding:16px 18px;box-shadow:0 0 0 1px var(--line);min-width:0}
-.h{font-size:17px;font-weight:700;letter-spacing:-.015em}
+.main{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(14px + env(safe-area-inset-top,0px)) 16px calc(96px + env(safe-area-inset-bottom,0px))}
+.wrap{max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+/* BYGGEKLOSSENE: kort (glass), rad, pille, segmentvalg, knapp og strek. Samme avstander og samme skrift overalt. */
+.card{background:var(--card);border-radius:var(--r-card);padding:14px 16px;box-shadow:inset 0 0 0 1px var(--line),inset 0 1px 0 0 var(--hi),0 14px 30px -20px var(--shade);min-width:0}
+.h{font-size:16px;font-weight:600;letter-spacing:-.01em}
 .row{display:flex;align-items:center;gap:10px;min-width:0}
 .sp{flex:1;min-width:0}
 .sm{font-size:12.5px;color:var(--ink2)}
-.big{font-size:30px;font-weight:800;letter-spacing:-.035em;line-height:1.05}
-.btn{min-height:48px;border-radius:24px;padding:0 20px;font-weight:700;font-size:15px;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--soft);transition:transform .12s ease,background-color .15s ease}
+.big{font-size:30px;font-weight:300;letter-spacing:-.025em;line-height:1.05}
+.btn{min-height:46px;border-radius:23px;padding:0 20px;font-weight:600;font-size:15px;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--soft);transition:transform .12s ease,background-color .15s ease}
 .btn:active{transform:scale(.96)}
-.btn.pri{background:var(--ink);color:var(--bg)}
-.btn.sage{background:var(--sage);color:#152013}
-.btn.gold{background:var(--gold);color:#2a2109}
-.btn.sm2{min-height:38px;padding:0 14px;font-size:13.5px;border-radius:19px}
+.btn.pri,.btn.sage{background:var(--accsoft);box-shadow:inset 0 0 0 1.5px var(--acc)}
+.btn.gold{background:var(--goldsoft);box-shadow:inset 0 0 0 1.5px var(--gold);color:var(--gold)}
+.btn.sm2{min-height:36px;padding:0 14px;font-size:13.5px;border-radius:18px}
 .btn.wide{width:100%}
 .btn.danger{color:var(--red)}
-.chip{min-height:40px;padding:0 14px;border-radius:20px;background:var(--soft);font-weight:650;font-size:14px;white-space:nowrap;transition:transform .12s ease}
+.dkz .btn.pri,.ov.battle .btn.pri{background:var(--ink);color:var(--bg);box-shadow:none}
+.dkz .btn.sage,.ov.battle .btn.sage{background:var(--sage);color:#152013;box-shadow:none}
+.dkz .btn.gold,.ov.battle .btn.gold{background:var(--gold);color:#2a2109;box-shadow:none}
+.chip{min-height:38px;padding:0 14px;border-radius:19px;box-shadow:inset 0 0 0 1px var(--line);font-weight:500;font-size:14px;color:var(--ink2);white-space:nowrap;transition:transform .12s ease}
 .chip:active{transform:scale(.95)}
-.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.chip[aria-pressed="true"]{background:var(--accsoft);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--acc)}
+.dkz .chip,.ov.battle .chip{background:var(--soft);box-shadow:none;color:var(--ink);font-weight:650}
+.dkz .chip[aria-pressed="true"],.ov.battle .chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);box-shadow:none}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
-.bar{height:8px;border-radius:4px;background:rgba(255,255,255,.09);overflow:hidden}
-.bar>i{display:block;height:100%;border-radius:4px;background:var(--sage);transition:width .6s cubic-bezier(.2,.7,.2,1)}
+.bar{height:6px;border-radius:3px;background:var(--track);overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--acc),var(--acc2));transition:width .6s cubic-bezier(.2,.7,.2,1)}
 .bar.gold>i{background:var(--gold)}
-.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:750;border-radius:999px;padding:3px 9px;background:var(--soft);white-space:nowrap}
-.ty{color:#17130f;font-weight:750;font-size:11px;border-radius:999px;padding:2px 8px;white-space:nowrap}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;border-radius:999px;padding:3px 9px;background:var(--soft);white-space:nowrap}
+.ty{color:var(--tyink);font-weight:700;font-size:11px;border-radius:999px;padding:2px 8px;white-space:nowrap}
 .r0{--rc:var(--r0)}.r1{--rc:var(--r1)}.r2{--rc:var(--r2)}.r3{--rc:var(--r3)}.r4{--rc:var(--r4)}
-.tier{color:var(--rc);font-weight:750;font-size:12px}
+.tier{color:var(--rc);font-weight:700;font-size:12px}
+/* Egne strekikoner (ICN i ui.js): arver fargen, og følger skriftstørrelsen. */
+.icn{width:1em;height:1em;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.14em}
+.icn.f{fill:currentColor;stroke:none}
 
 /* Bilder: pikselgrafikk skal være skarp. Mangler bildet, vises nummeret i en typefarget sirkel. */
 .sprb{position:relative;display:flex;align-items:center;justify-content:center;flex:none;width:var(--s,64px);height:var(--s,64px)}
@@ -283,21 +347,22 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .hm i.l1{background:color-mix(in srgb,var(--sage) 30%,#2a2622)}.hm i.l2{background:color-mix(in srgb,var(--sage) 55%,#2a2622)}.hm i.l3{background:color-mix(in srgb,var(--sage) 78%,#2a2622)}.hm i.l4{background:var(--sage)}
 .hm i.td{box-shadow:0 0 0 1.5px var(--ink)}
 .field{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink2);font-weight:650}
-.field input,.field select{height:44px;border-radius:14px;border:1px solid rgba(255,255,255,.13);background:var(--bg);padding:0 12px;font-size:16px;color:var(--ink);width:100%;min-width:0}
-.seg{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px;background:var(--card);border-radius:999px;padding:4px;box-shadow:0 0 0 1px var(--line)}
-.seg button{min-height:38px;border-radius:999px;font-weight:700;font-size:13px;color:var(--ink2);white-space:nowrap;padding:0 4px}
-.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.field input,.field select{height:44px;border-radius:14px;border:1px solid var(--line);background:var(--card2);padding:0 12px;font-size:16px;color:var(--ink);width:100%;min-width:0}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px;background:var(--card);border-radius:999px;padding:4px;box-shadow:inset 0 0 0 1px var(--line)}
+.seg button{min-height:36px;border-radius:999px;font-weight:600;font-size:13px;color:var(--ink2);white-space:nowrap;padding:0 4px}
+.seg button[aria-pressed="true"]{background:var(--accsoft);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--acc)}
+.dkz .seg button[aria-pressed="true"],.ov.battle .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);box-shadow:none}
 
 /* Bunnmeny */
-.nav{position:absolute;left:12px;right:12px;bottom:max(10px,calc(env(safe-area-inset-bottom,0px) - 12px));z-index:20;max-width:460px;margin:0 auto;height:66px;border-radius:33px;background:rgba(30,27,24,.94);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);box-shadow:0 0 0 1px var(--line),0 18px 40px -12px rgba(0,0,0,.85);display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);align-items:center;padding:0 6px}
-.nav button{height:54px;border-radius:27px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10.5px;font-weight:700;color:var(--ink2);position:relative;transition:transform .12s ease}
+.nav{position:absolute;left:12px;right:12px;bottom:max(10px,calc(env(safe-area-inset-bottom,0px) - 12px));z-index:20;max-width:460px;margin:0 auto;height:64px;border-radius:32px;background:color-mix(in srgb,var(--panel) 80%,transparent);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);box-shadow:inset 0 0 0 1px var(--line),inset 0 1px 0 0 var(--hi),0 18px 40px -14px var(--shade);display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);align-items:center;padding:0 6px}
+.nav button{height:52px;border-radius:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10.5px;font-weight:600;color:var(--ink2);position:relative;transition:transform .12s ease}
 .nav button:active{transform:scale(.93)}
-.nav button[aria-current="page"]{color:var(--ink);background:var(--soft)}
-.nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.nav button[aria-current="page"]{color:var(--ink);background:var(--accsoft)}
+.nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .nav .dot{position:absolute;top:8px;right:calc(50% - 16px);width:8px;height:8px;border-radius:50%;background:var(--gold)}
 
 /* Fullskjerm: fokus, belønning, møte */
-.ov{position:absolute;inset:0;z-index:40;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(14px + env(safe-area-inset-top,0px)) 20px calc(22px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column}
+.ov{position:absolute;inset:0;z-index:40;background:var(--page);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(14px + env(safe-area-inset-top,0px)) 20px calc(22px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 .ov>*{animation:fade .25s ease}
 .ovin{position:relative;flex:1;width:100%;max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
@@ -368,10 +433,10 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .hearts i.off{background:rgba(255,255,255,.12)}
 
 /* Ark */
-.sheetwrap{position:absolute;inset:0;z-index:60;background:rgba(0,0,0,.5);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:flex;align-items:flex-end;justify-content:center;animation:fade .2s ease}
+.sheetwrap{position:absolute;inset:0;z-index:60;background:var(--scrim);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:flex;align-items:flex-end;justify-content:center;animation:fade .2s ease}
 @keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
-.sheet{width:100%;max-width:480px;max-height:88%;overflow-y:auto;background:#201d1a;border-radius:30px 30px 0 0;padding:12px 22px calc(24px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;animation:up .28s cubic-bezier(.2,.8,.2,1)}
-.grab{align-self:center;width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,.18);flex:none}
+.sheet{width:100%;max-width:480px;max-height:88%;overflow-y:auto;background:var(--panel);box-shadow:inset 0 1px 0 0 var(--hi),0 -20px 50px -20px var(--shade);border-radius:30px 30px 0 0;padding:12px 22px calc(24px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;animation:up .28s cubic-bezier(.2,.8,.2,1)}
+.grab{align-self:center;width:36px;height:4px;border-radius:2px;background:var(--ink3);opacity:.6;flex:none}
 .shead{display:flex;align-items:center;gap:14px}
 /* Trening: seks rader (stat, verdi, anlegg, trening) og kjøpene for den valgte under. */
 .trv{display:flex;flex-direction:column;gap:14px}
@@ -396,7 +461,7 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .trb .btn .coin,.trl .btn .coin{color:inherit;font-size:inherit;gap:5px}
 .shead .sprb{--s:104px}
 .stack{display:flex;flex-direction:column;gap:8px}
-.toast{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:80;max-width:calc(100% - 32px);width:max-content;background:#2a2622;border-radius:16px;padding:11px 16px;font-size:13.5px;font-weight:650;box-shadow:0 0 0 1px rgba(255,255,255,.1),0 12px 30px rgba(0,0,0,.5);animation:fade .18s ease;text-align:center}
+.toast{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:80;max-width:calc(100% - 32px);width:max-content;background:var(--panel2);border-radius:16px;padding:11px 16px;font-size:13.5px;font-weight:600;box-shadow:inset 0 0 0 1px var(--line),0 12px 30px -8px var(--shade);animation:fade .18s ease;text-align:center}
 .starters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-self:stretch}
 .starters button{border-radius:22px;background:var(--card);box-shadow:0 0 0 1px var(--line);padding:12px 6px 14px;display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:750;transition:transform .12s ease}
 .starters button:active{transform:scale(.95)}
@@ -408,7 +473,7 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .tcard .sp>.row:first-child{flex-wrap:wrap;row-gap:5px}
 .tcard.lead .tn-n{flex:0 0 100%}
 /* Innhold som blas opp, glir under en mørk kant i stedet for å kollidere med klokka og batteriet */
-.topfade{position:absolute;top:0;left:0;right:0;height:calc(env(safe-area-inset-top,0px) + 14px);background:linear-gradient(var(--bg) 62%,rgba(18,16,14,0));z-index:15;pointer-events:none}
+.topfade{position:absolute;top:0;left:0;right:0;height:calc(env(safe-area-inset-top,0px) + 14px);background:var(--page);background-size:100% var(--appH,100dvh);-webkit-mask-image:linear-gradient(#000 62%,transparent);mask-image:linear-gradient(#000 62%,transparent);z-index:15;pointer-events:none}
 
 /* ---------- Trenerkamper ---------- */
 /* Kortet på forsiden */
