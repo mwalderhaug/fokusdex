@@ -147,10 +147,10 @@ function legEnc(shm) {
   return Object.assign(genEnc({ ids: [id], shm }), { myst: 1 });
 }
 const PACKS = {
-  poke: { n: 'Poké Pack', p: 250, c: '#d98f7e', d: 'One of the three is uncommon or better.', slots: [{ luck: 0 }, { luck: 0.5 }, { min: 1, luck: 0, leg: 0.002 }], shm: 1, evo: 0.1 },
-  great: { n: 'Great Pack', p: 700, c: '#7fa8e6', d: 'One is rare or better, and one uncommon or better.', slots: [{ luck: 0.5 }, { min: 1, luck: 0.5 }, { min: 2, luck: 0.6, leg: 0.005 }], shm: 1.2, lv: 3, evo: 0.25 },
-  ultra: { n: 'Ultra Pack', p: 1800, c: '#e3c577', d: 'Two are rare or better, and the last one is sometimes epic. Shiny odds ×1.5.', slots: [{ min: 1, luck: 1.5 }, { min: 2, luck: 1.5 }, { min: 2, luck: 2, ep: 0.15, leg: 0.012 }], shm: 1.5, lv: 5, evo: 0.5 },
-  master: { n: 'Master Pack', p: 6000, c: '#b295e6', d: 'All three are rare or better. The last one is often epic, and now and then legendary. Shiny odds ×2.', slots: [{ min: 2, luck: 2 }, { min: 2, luck: 2 }, { min: 2, luck: 2, ep: 0.45, leg: 0.05 }], shm: 2, lv: 8, evo: 0.55 }
+  poke: { n: 'Poké Pack', p: 250, c: '#d98f7e', d: 'One of the three is uncommon or better.', slots: [{ luck: 0 }, { luck: 0.5 }, { min: 1, luck: 0.1, leg: 0.002 }], shm: 1, evo: 0.1 },
+  great: { n: 'Great Pack', p: 700, c: '#7fa8e6', d: 'One is rare or better, and one uncommon or better.', slots: [{ luck: 0.5 }, { min: 1, luck: 0.5 }, { min: 2, luck: 0.6, ep: 0.015, leg: 0.005 }], shm: 1.2, lv: 3, evo: 0.25 },
+  ultra: { n: 'Ultra Pack', p: 1800, c: '#e3c577', d: 'Two are rare or better, and the last one is sometimes epic. Shiny odds ×1.5.', slots: [{ min: 1, luck: 1.5 }, { min: 2, luck: 1.5 }, { min: 2, luck: 2, ep: 0.18, leg: 0.012 }], shm: 1.5, lv: 5, evo: 0.5 },
+  master: { n: 'Master Pack', p: 6000, c: '#b295e6', d: 'All three are rare or better. The last one is often epic, and now and then legendary. Shiny odds ×2.', slots: [{ min: 2, luck: 2 }, { min: 2, luck: 2 }, { min: 2, luck: 2, ep: 0.47, leg: 0.05 }], shm: 2, lv: 8, evo: 0.55 }
 };
 /* Pakker åpnes ikke når så mange møter venter (et vern mot en uendelig kø; gresset selv har ingen grense fra 16.11). */
 const PACKMAX = 99;
@@ -210,25 +210,30 @@ const _st = {};
 const stageOf = id => { if (_st[id] != null) return _st[id]; let s = 0, d = D(id); while (d[4] && s < 2) { s++; d = D(d[4]); } return (_st[id] = s); };
 const isLeg = id => !!(D(id)[6] & 3);
 const wOf = id => D(id)[3] * STMULT[stageOf(id)];
-/* SJELDENHET (steg 1.7, ønske 4): hele utviklingslinja har samme klasse. Den følger hvor vanskelig førsteformen er å finne (fangstraten, som også
-   styrer hvor ofte arten dukker opp) og hvor sterk linja blir til slutt (samlet basisverdi for den sterkeste sisteformen):
-     Epic      vanskelig å finne (fangstrate ≤ 75) og svært sterk (≥ 540): de pseudo-legendariske, Snorlax, Volcarona, Haxorus, Archeops,
-               Electivire og Magmortar. 33 arter (før: 173, blant dem Pidgeot).
-     Rare      vanskelig å finne (≤ 75) og ikke svak (≥ 440), eller ganske vanlig (≤ 200) og sterk (≥ 500): starterne, Eevee, fossilene, Lapras,
-               Scyther, og linjene til Gengar, Alakazam, Machamp og Arcanine.
-     Uncommon  resten av dem som ikke er helt vanlige (≤ 130), og sterke linjer som er vanlige å møte (Gyarados, Crobat, Gardevoir, Slaking).
+/* SJELDENHET (steg 1, ønske 4): hele utviklingslinja har samme klasse, og klassen er summen av to ting (Jazz 16.11: «kombiner hvor vanskelig de
+   er å finne med potensial i base power de har også»):
+     funn    RTYF: fangstraten til førsteformen (den styrer også hvor ofte linja dukker opp):  ≤ 75 = 3 · ≤ 130 = 2 · ≤ 200 = 1 · ellers 0
+     styrke  RTYP: samlet basisverdi for den sterkeste sisteformen:  600 = 5 · 540 = 4 · 500 = 3 · 440 = 1 · ellers 0
+   RTYCUT: 7 poeng = Epic, 4 = Rare, 3 = Uncommon, ellers Common.
+     Epic      vanskelig å finne og svært sterk: de pseudo-legendariske, Snorlax, Volcarona, Haxorus, Archeops, Electivire og Magmortar
+               (12 linjer, 33 arter; før steg 1: 173, blant dem Pidgeot).
+     Rare      sterk nok til at det teller (Gyarados, Milotic, Kingdra, Slaking, Arcanine, Gengar), eller vanskelig å finne og ikke svak
+               (starterne med 6 poeng, Eevee, Lapras, fossilene, Scyther).
+     Uncommon  vanlige linjer som blir sterke (Crobat, Flygon, Gardevoir), og sjeldne som ikke blir det (Sableye, Ditto, Drifblim).
      Common    alt annet.
-   Trekningen av møter er den samme som før (wOf): det er merkelappen, flaksen og plassene i pakkene som følger den nye klassen. */
+   Trekningen av møter er den samme som før (wOf): det er merkelappen, flaksen og plassene i pakkene som følger klassen. */
+const RTYF = [[75, 3], [130, 2], [200, 1]], RTYP = [[600, 5], [540, 4], [500, 3], [440, 1]], RTYCUT = [3, 4, 7];
 const _lr = {}, _lt = {};
 const lineRoot = id => { if (_lr[id]) return _lr[id]; let r = id; while (D(r)[4]) r = D(r)[4]; return (_lr[id] = r); };
 const lineTop = id => { const r = lineRoot(id); if (_lt[r] == null) for (let i = 1; i <= DEX.length; i++) { const q = lineRoot(i), t = BST[i - 1].reduce((a, b) => a + b, 0); if (!(_lt[q] >= t)) _lt[q] = t; } return _lt[r]; };
+/* Poengene bak klassen: f = funn, p = styrke, s = summen (regelkortet og hjelpen viser dem). */
+const rarePts = id => { const cr = D(lineRoot(id))[3], t = lineTop(id), f = (RTYF.find(x => cr <= x[0]) || [0, 0])[1], p = (RTYP.find(x => t >= x[0]) || [0, 0])[1]; return { f, p, s: f + p, cr, top: t }; };
+const _tr = {};
 const tierOf = id => {
-  if (isLeg(id)) return 4;
-  const cr = D(lineRoot(id))[3], t = lineTop(id);
-  if (cr <= 75 && t >= 540) return 3;
-  if (cr <= 75 ? t >= 440 : cr <= 200 && t >= 500) return 2;
-  if (cr <= 130 || (cr < 255 ? t >= 500 : t >= 530)) return 1;
-  return 0;
+  if (_tr[id] != null) return _tr[id];
+  if (isLeg(id)) return (_tr[id] = 4);
+  const s = rarePts(id).s;
+  return (_tr[id] = s >= RTYCUT[2] ? 3 : s >= RTYCUT[1] ? 2 : s >= RTYCUT[0] ? 1 : 0);
 };
 const regOf = id => id <= 151 ? 1 : id <= 251 ? 2 : id <= 386 ? 3 : id <= 493 ? 4 : 5;
 const EVO = {};

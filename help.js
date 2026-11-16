@@ -57,7 +57,7 @@ const HELP = [
     ${hH('Rarity')}
     <div class="hgrid tiers">${TIERS.map((t, i) => `<span><b class="tier r${i}">${t}</b><span class="sm tn">+${NEWCOIN[i]}</span></span>`).join('')}</div>
     ${hP('The number is the coins a <b>new species</b> gives the first time you catch it. Before you step in, the dots at the top show what is waiting, by colour.')}
-    ${hP('A whole evolution line shares one rarity. It follows how hard the first form is to find and how strong the line becomes in the end, so <b class="tier r3">Epic</b> is kept for the very strongest lines.')}
+    ${hP('A whole evolution line shares one rarity: how hard the first form is to find, plus how strong the line becomes in the end. A common Magikarp is <b class="tier r2">Rare</b> because of Gyarados, and <b class="tier r3">Epic</b> is kept for lines that are both hard to find and among the very strongest.')}
     ${hH('Throwing')}
     ${hMeter()}
     ${hP('A marker runs back and forth. Press <b>Throw</b> when it is in the <b style="color:var(--sage)">green</b> zone for a good throw, or in the <b style="color:var(--gold)">gold</b> for a perfect one. You get three throws, four for a legendary. Then it runs.')}
