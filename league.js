@@ -421,6 +421,44 @@ function foeMoves(id, lv, q) {
   for (const x of stat) { if (pick.length >= 4) break; if (!pick.includes(x)) pick.push(x); }
   return pick.slice(0, 4);
 }
+/* «SUGGEST FOUR» i angrepsvalget (ønske 22): det sterkeste angrepet i hver av dens egne typer, ett som dekker det de ikke biter på, og ett taktisk.
+   Regnes på det den faktisk er (verdiene nå, formen), blant angrepene den kan velge (pool, ellers alt den har lært). Angrep uten virkning er aldri med. */
+function suggestMoves(m, pool) {
+  const all = (pool || movesAt(m.id, m.lv).concat(m.mv)).filter((x, i, a) => a.indexOf(x) === i && !DEADMV.has(x));
+  if (all.length <= 4) return all.slice();
+  const st = statsOf(m), own = mTypes(m).filter(t => t >= 0), top = Math.max(st[1], st[3], 1), mvOf = x => MOVES[x][0] === 'Hidden Power' ? mvEff(null, { src: m }, MOVES[x]) : MOVES[x];
+  const val = x => {
+    const mv = mvOf(x), n = mv[0]; let p = (mv[2] || (FIXED[n] ? 45 : 60)) * (mv[3] ? mv[3] / 100 : 1) * (mv[13] ? (mv[13] + mv[14]) / 2 : 1);
+    if (CHARGE[n] || RECHARGE.has(n)) p *= 0.55;
+    if (BOOM.has(n) || ['Dream Eater', 'Focus Punch', 'Last Resort', 'Fake Out', 'Snore', 'Synchronoise', 'Final Gambit', 'Counter', 'Mirror Coat', 'Metal Burst', 'Endeavor', 'Bide', 'Spit Up', 'Natural Gift', 'Fling'].includes(n)) p *= 0.3;
+    if (mv[9] < 0) p *= 0.9; if (mv[6] === 9) p = 30; if (n === 'Future Sight' || n === 'Doom Desire') p *= 0.6;
+    return p * Math.max(0.45, st[mv[4] === 1 ? 1 : 3] / top) * (own.includes(mv[1]) ? 1.5 : 1);
+  };
+  const tact = x => {
+    const mv = MOVES[x], n = mv[0];
+    if (mv[6] === 1) return mv[7] === 2 ? 9 : mv[7] === 1 || mv[7] === 4 || n === 'Toxic' || mv[7] === 18 ? 7 : mv[7] === 5 || mv[7] === 6 || mv[7] === 14 ? 5 : 2;
+    if (mv[6] === 3 || n === 'Rest') return 6;
+    if (mv[12].length && mv[17] === 1) return mv[12].reduce((a, s) => a + Math.max(0, s[1]), 0) >= 2 ? 8 : 4;
+    if (['Reflect', 'Light Screen', 'Stealth Rock', 'Substitute', 'Protect', 'Rain Dance', 'Sunny Day', 'Sandstorm', 'Hail', 'Taunt', 'Roar', 'Whirlwind', 'Spikes', 'Toxic Spikes', 'Wish', 'Belly Drum'].includes(n)) return 5;
+    return mv[12].length ? 2 : UM[n] ? 2 : 0;
+  };
+  const dmg = all.filter(x => MOVES[x][4] > 0).sort((a, b) => val(b) - val(a)), stat = all.filter(x => MOVES[x][4] === 0).sort((a, b) => tact(b) - tact(a)), pick = [], tys = new Set();
+  const add = x => { if (x != null && !pick.includes(x) && pick.length < 4) { pick.push(x); if (MOVES[x][4] > 0) tys.add(mvOf(x)[1]); } };
+  /* 1. egne typer */
+  for (const t of own) add(dmg.find(x => mvOf(x)[1] === t && val(x) >= 45));
+  /* 2. dekning: en annen type, helst en som er supereffektiv der de egne ikke er det */
+  const cover = x => { const t = mvOf(x)[1]; let n = 0; for (let d = 0; d < TYN.length; d++) { const best = Math.max(0, ...[...tys].map(a => CH[a][d])); if (CH[t][d] > 1 && best <= 1) n += 1; else if (CH[t][d] >= 1 && best < 1) n += 0.5; } return n; };
+  const cov = dmg.filter(x => !tys.has(mvOf(x)[1]) && !pick.includes(x)).sort((a, b) => val(b) * (1 + 0.12 * cover(b)) - val(a) * (1 + 0.12 * cover(a)));
+  add(cov[0]);
+  /* 3. ett taktisk */
+  if (stat.length && tact(stat[0]) >= 4) add(stat[0]);
+  /* 4. fyll opp: nye typer først, så et taktisk til hvis det er godt, så det sterkeste som er igjen, så statusangrep */
+  for (const x of dmg) { if (pick.length >= 4) break; if (!tys.has(mvOf(x)[1]) && val(x) >= 40) add(x); }
+  for (const x of stat) { if (pick.length >= 4) break; if (tact(x) >= 6) add(x); }
+  for (const x of dmg) add(x);
+  for (const x of stat) add(x);
+  return pick;
+}
 function foeMon(id, lv, st) {
   return { id, lv, sh: 0, g: rollG(id), iv: Array.from({ length: 6 }, () => Math.min(31, st.iv + rnd(32 - st.iv))), ev: Array.from({ length: 6 }, () => Math.min(85, st.ev)), nat: rnd(25), mv: foeMoves(id, lv, st.q) };
 }

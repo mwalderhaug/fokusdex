@@ -645,6 +645,114 @@ function hudDraw(side) {
 }
 /* Hvor godt et angrep virker mot den som står ute hos motstanderen, etter typene (som i de nyere spillene). Vanlig effekt gir ingen merkelapp.
    Angrep med fast skade og statusangrep merkes bare når typen gjør dem virkningsløse. Kan slås av i innstillingene. */
+/* ---------- HVA ET ANGREP GJØR (ønske 9) ----------
+   Én forklaring, den samme overalt: kortet, angrepsvalget, «vil lære» og kampen. Linja lages av dataene (styrke, treff, tilstand, verdier,
+   drenering, antall slag …). MVX har en egen setning for angrepene med egne regler, skrevet etter det kampmotoren faktisk gjør.
+   Tegnet + først i MVX betyr «i tillegg til det dataene sier»; uten + erstatter setningen det. MVPW = styrken der motoren bruker et fast tall. */
+const MVPW = { 'Return': 102, 'Frustration': 60, 'Natural Gift': 70, 'Fling': 50, 'Bide': 60 };
+const MVX = {
+  'Pay Day': '+Scatters coins that you pick up after the battle.', 'Gust': '+Also hits a foe that is up in the air, twice as hard.', 'Twister': '+Also hits a foe that is up in the air, twice as hard.',
+  'Jump Kick': '+If it misses, the user crashes and loses half its HP.', 'High Jump Kick': '+If it misses, the user crashes and loses half its HP.',
+  'Thrash': 'Attacks for two or three turns in a row, then the user is confused.', 'Outrage': 'Attacks for two or three turns in a row, then the user is confused.', 'Petal Dance': 'Attacks for two or three turns in a row, then the user is confused.',
+  'Sonic Boom': 'Always does 20 damage.', 'Dragon Rage': 'Always does 40 damage.', 'Seismic Toss': 'Does damage equal to the user\'s level.', 'Night Shade': 'Does damage equal to the user\'s level.',
+  'Psywave': 'Does damage between half and one and a half times the user\'s level.', 'Super Fang': 'Halves the HP the foe has left.',
+  'Low Kick': 'The heavier the foe, the harder it hits (power 20 to 120).', 'Grass Knot': 'The heavier the foe, the harder it hits (power 20 to 120).',
+  'Heavy Slam': 'The heavier the user is compared with the foe, the harder it hits (power 40 to 120).', 'Heat Crash': 'The heavier the user is compared with the foe, the harder it hits (power 40 to 120).',
+  'Counter': 'Returns double the damage of a physical hit taken this turn. Strikes last.', 'Mirror Coat': 'Returns double the damage of a special hit taken this turn. Strikes last.', 'Metal Burst': 'Returns one and a half times the damage of the hit taken this turn.',
+  'Rage': '+Its Attack rises each time it is hit while it keeps using this.', 'Self-Destruct': 'The user faints after the blast.', 'Explosion': 'The user faints after the blast.',
+  'Dream Eater': '+Only works on a sleeping foe.', 'Snore': '+Only works while the user is asleep.', 'Sleep Talk': 'Uses one of its other moves at random while asleep.',
+  'Flail': 'The less HP the user has left, the harder it hits (power 20 to 200).', 'Reversal': 'The less HP the user has left, the harder it hits (power 20 to 200).',
+  'Rollout': 'Keeps rolling for up to five turns, twice as strong with every hit.', 'Ice Ball': 'Keeps rolling for up to five turns, twice as strong with every hit.',
+  'Fury Cutter': 'Twice as strong each time it is used in a row (up to 160).', 'Echoed Voice': 'Stronger each time it is used in a row (up to 200).',
+  'False Swipe': '+Always leaves the foe with at least 1 HP.', 'Present': 'Power 40, 80 or 120, at random.', 'Magnitude': 'Power between 10 and 150, at random.',
+  'Pursuit': '+Twice as strong against a foe that is switching out.', 'Rapid Spin': '+Clears spikes, rocks, Leech Seed and traps from its own side.',
+  'Hidden Power': 'Its type follows the IVs of the Pokémon that uses it.', 'Future Sight': 'Strikes two turns later.', 'Doom Desire': 'Strikes two turns later.',
+  'Beat Up': 'One hit from every healthy Pokémon on the team.', 'Fake Out': 'Strikes first and makes the foe flinch. Only works on the first turn out.', 'Uproar': 'Attacks for three turns in a row.',
+  'Spit Up': 'Power 100 for each Stockpile. Fails without one.', 'Facade': '+Twice as strong when the user is burned, poisoned or paralyzed.', 'Focus Punch': 'Fails if the user is hit first. Strikes last.',
+  'Smelling Salts': '+Twice as strong against a paralyzed foe, and cures it.', 'Wake-Up Slap': '+Twice as strong against a sleeping foe, and wakes it.',
+  'Revenge': '+Twice as strong if the user was hit first this turn.', 'Avalanche': '+Twice as strong if the user was hit first this turn.', 'Brick Break': '+Breaks Reflect and Light Screen.',
+  'Knock Off': "+Knocks off the foe's held item, and hits harder when it holds one.", 'Endeavor': "Cuts the foe's HP down to the user's own.",
+  'Eruption': 'The more HP the user has left, the harder it hits.', 'Water Spout': 'The more HP the user has left, the harder it hits.', 'Secret Power': 'May paralyze the foe (30 %).',
+  'Weather Ball': 'Twice as strong in any weather, and takes the type of the weather.', 'Brine': '+Twice as strong when the foe is at half HP or less.', 'Feint': '+Hits through Protect.',
+  'Pluck': "+Eats the foe's berry and gets its effect.", 'Bug Bite': "+Eats the foe's berry and gets its effect.", 'U-turn': '+The user switches out after the hit.', 'Volt Switch': '+The user switches out after the hit.',
+  'Payback': '+Twice as strong if the user moves after the foe.', 'Assurance': '+Twice as strong if the foe has already been hurt this turn.',
+  'Trump Card': 'The less PP it has left, the harder it hits (power 40 to 200).', 'Wring Out': 'The more HP the foe has left, the harder it hits (up to 120).', 'Crush Grip': 'The more HP the foe has left, the harder it hits (up to 120).',
+  'Punishment': 'Stronger for each stat boost the foe has (power 60 to 200).', 'Last Resort': 'Only works after every other move it knows has been used.', 'Sucker Punch': 'Strikes first, but fails unless the foe is about to attack.',
+  'Gyro Ball': 'The slower the user is than the foe, the harder it hits (up to 150).', 'Electro Ball': 'The faster the user is than the foe, the harder it hits (power 40 to 150).', 'Judgment': 'Takes the type of the plate the user holds.',
+  'Psyshock': "+Hits the foe's Defense, not its Sp. Def.", 'Psystrike': "+Hits the foe's Defense, not its Sp. Def.", 'Secret Sword': "+Hits the foe's Defense, not its Sp. Def.",
+  'Venoshock': '+Twice as strong against a poisoned foe.', 'Hex': '+Twice as strong against a foe with a status condition.', 'Smack Down': '+Brings a flying or floating foe to the ground, so Ground moves hit it.',
+  'Synchronoise': 'Only hits a foe that shares a type with the user.', 'Foul Play': "Uses the foe's Attack instead of the user's own.", 'Chip Away': "+Ignores the foe's stat changes.", 'Sacred Sword': "+Ignores the foe's stat changes.",
+  'Clear Smog': "+Removes the foe's stat changes.", 'Stored Power': 'Stronger for each stat boost the user has (power 20 and up).', 'Circle Throw': '+Forces the foe to switch out. Strikes last.', 'Dragon Tail': '+Forces the foe to switch out. Strikes last.',
+  'Incinerate': "+Burns up the foe's berry.", 'Acrobatics': '+Twice as strong when the user holds no item.', 'Retaliate': '+Twice as strong if a teammate fainted on the turn before.',
+  'Final Gambit': 'The user faints, and the foe loses as much HP as the user had left.', 'Thunder': '+Never misses in rain, and is half as accurate in harsh sunlight.', 'Hurricane': '+Never misses in rain, and is half as accurate in harsh sunlight.',
+  'Blizzard': '+Never misses in hail.', 'Triple Kick': 'Hits up to three times, harder each time.', 'Tri Attack': 'May paralyze, burn or freeze the foe (20 %).', 'Solar Beam': '+Fires at once in harsh sunlight, and is weaker in other weather.',
+  'Shadow Force': '+Hits through Protect.', 'Sky Drop': 'Carries the foe into the sky on the first turn and drops it on the second.',
+  /* statusangrep */
+  'Whirlwind': 'Forces the foe to switch out. Strikes last.', 'Roar': 'Forces the foe to switch out. Strikes last.', 'Disable': 'Stops the foe from using its last move for four turns.', 'Mist': "The team's stats cannot be lowered for five turns.",
+  'Growth': '+Twice the effect in harsh sunlight.', 'Toxic': 'Badly poisons the foe: the damage grows every turn.', 'Teleport': 'The user switches out.', 'Mimic': 'Copies the last move the foe used, for the rest of the battle.', 'Sketch': 'Copies the last move the foe used, for the rest of the battle.',
+  'Defense Curl': '+Rollout hits twice as hard afterwards.', 'Light Screen': 'Halves the damage from special moves for five turns.', 'Reflect': 'Halves the damage from physical moves for five turns.', 'Haze': 'Removes all stat changes on both sides.',
+  'Focus Energy': 'Raises its critical-hit rate.', 'Metronome': 'Uses a random attacking move.', 'Mirror Move': 'Uses the attack the foe used last.', 'Copycat': 'Uses the attack the foe used last.', 'Transform': 'Turns into the foe: its types, stats and moves.',
+  'Rest': 'Heals all its HP, then sleeps for two turns.', 'Conversion': 'Changes its type to that of its first move.', 'Conversion 2': "Changes its type to one that resists the foe's last move.", 'Substitute': 'Spends a quarter of its HP on a decoy that takes the hits.',
+  'Spider Web': 'The foe cannot switch out.', 'Mean Look': 'The foe cannot switch out.', 'Block': 'The foe cannot switch out.', 'Mind Reader': 'Its next move is sure to hit.', 'Lock-On': 'Its next move is sure to hit.',
+  'Curse': 'Ghost types cut half their HP to curse the foe, which then loses a quarter of its HP every turn. Others get Attack and Defense up and Speed down.', 'Spite': "Takes 4 PP from the foe's last move.",
+  'Protect': 'Blocks every move this turn. Less likely to work twice in a row.', 'Detect': 'Blocks every move this turn. Less likely to work twice in a row.', 'Endure': 'Survives any hit this turn with at least 1 HP. Less likely to work twice in a row.',
+  'Belly Drum': 'Cuts half its HP to raise Attack to the maximum.', 'Spikes': 'Foes lose HP when they switch in. Can be laid three times.', 'Toxic Spikes': 'Foes are poisoned when they switch in. Two layers poison badly.', 'Stealth Rock': 'Foes lose HP when they switch in, more if they are weak to Rock.',
+  'Destiny Bond': 'If the user faints from the next hit, the foe faints too.', 'Sandstorm': 'Five turns of sandstorm: it hurts all but Rock, Ground and Steel types.', 'Rain Dance': 'Five turns of rain: Water moves are stronger, Fire moves weaker.',
+  'Sunny Day': 'Five turns of harsh sunlight: Fire moves are stronger, Water moves weaker.', 'Hail': 'Five turns of hail: it hurts all but Ice types.', 'Heal Bell': 'Cures the status conditions of the whole team.', 'Aromatherapy': 'Cures the status conditions of the whole team.',
+  'Safeguard': 'Protects the team from status conditions for five turns.', 'Pain Split': 'Shares the HP of the user and the foe equally.', 'Baton Pass': 'Switches out and passes its stat changes to the next Pokémon.', 'Encore': 'Makes the foe repeat its last move for three turns.',
+  'Morning Sun': 'Heals half its HP: two thirds in harsh sunlight, a quarter in other weather.', 'Synthesis': 'Heals half its HP: two thirds in harsh sunlight, a quarter in other weather.', 'Moonlight': 'Heals half its HP: two thirds in harsh sunlight, a quarter in other weather.',
+  'Psych Up': "Copies the foe's stat changes.", 'Stockpile': 'Raises Defense and Sp. Def, up to three times. It powers Spit Up and Swallow.', 'Swallow': 'Heals a quarter, half or all of its HP, by the number of Stockpiles.',
+  'Memento': "The user faints, and the foe's Attack and Sp. Atk drop harshly.", 'Nature Power': 'Turns into Tri Attack.', 'Charge': 'Raises Sp. Def and doubles the power of its next Electric move.', 'Taunt': 'The foe can only use attacking moves for three turns.',
+  'Wish': 'Heals half its HP at the end of the next turn, also after a switch.', 'Assist': 'Uses a random move from a teammate.', 'Ingrain': 'Heals a little every turn, but the user cannot switch out.', 'Magic Coat': 'Sends status moves back at the foe this turn.',
+  'Imprison': 'The foe cannot use any move the user also knows.', 'Refresh': 'Cures its own burn, poison or paralysis.', 'Grudge': 'If the user faints from a move, that move loses all its PP.', 'Snatch': 'Steals a helpful move the foe uses this turn.',
+  'Camouflage': 'Becomes a Normal type.', 'Mud Sport': 'Electric moves are weaker for five turns.', 'Water Sport': 'Fire moves are weaker for five turns.', 'Roost': '+It is not a Flying type for the rest of the turn.',
+  'Gravity': 'For five turns nothing can fly or float, and moves hit more easily.', 'Miracle Eye': "Ignores the foe's evasiveness, and Psychic moves can hit Dark types.", 'Foresight': "Ignores the foe's evasiveness, and Normal and Fighting moves can hit Ghost types.",
+  'Odor Sleuth': "Ignores the foe's evasiveness, and Normal and Fighting moves can hit Ghost types.", 'Healing Wish': 'The user faints, and the next Pokémon in is fully healed.', 'Lunar Dance': 'The user faints, and the next Pokémon in is fully healed.',
+  'Tailwind': "Doubles the team's Speed for four turns.", 'Acupressure': 'Sharply raises one random stat.', 'Psycho Shift': 'Passes its own status condition on to the foe.', 'Power Trick': 'Swaps its Attack and Defense.',
+  'Lucky Chant': 'The team cannot be struck by critical hits for five turns.', 'Me First': "Uses the foe's attack first, with more power. Fails if the foe moves first.", 'Power Swap': 'Swaps Attack and Sp. Atk changes with the foe.',
+  'Guard Swap': 'Swaps Defense and Sp. Def changes with the foe.', 'Heart Swap': 'Swaps all stat changes with the foe.', 'Aqua Ring': 'Heals a little every turn.', 'Magnet Rise': 'Floats for five turns: Ground moves miss it.',
+  'Defog': "Lowers the foe's evasiveness and clears screens, spikes and rocks.", 'Trick Room': 'For five turns the slower Pokémon moves first.', 'Guard Split': 'Evens out Defense and Sp. Def with the foe.', 'Power Split': 'Evens out Attack and Sp. Atk with the foe.',
+  'Wonder Room': 'For five turns everyone has Defense and Sp. Def swapped.', 'Magic Room': 'For five turns held items have no effect.', 'Telekinesis': 'Lifts the foe for three turns: moves hit it easily, but Ground moves miss.',
+  'Soak': 'Turns the foe into a Water type.', 'Reflect Type': "Takes the foe's types.", 'Shell Smash': 'Sharply raises Attack, Sp. Atk and Speed, but lowers Defense and Sp. Def.', 'Leech Seed': 'Plants a seed that drains the foe a little every turn and heals the user. No effect on Grass types.',
+  'Nightmare': 'A sleeping foe loses a quarter of its HP every turn.', 'Yawn': 'The foe falls asleep at the end of the next turn.', 'Torment': 'The foe cannot use the same move twice in a row.', 'Heal Block': 'The foe cannot heal for five turns.',
+  'Embargo': 'The foe cannot use its held item for five turns.', 'Perish Song': 'Every Pokémon that hears it faints in three turns, unless it switches out.', 'Attract': 'A foe of the opposite gender falls in love and often cannot attack.',
+  'Swagger': 'Confuses the foe, but sharply raises its Attack.', 'Flatter': 'Confuses the foe, but raises its Sp. Atk.'
+};
+const MVAIL = { 1: ['paralyze', 'Paralyzes the foe.'], 2: ['put the foe to sleep', 'Puts the foe to sleep.'], 3: ['freeze', 'Freezes the foe.'], 4: ['burn', 'Burns the foe.'], 5: ['poison', 'Poisons the foe.'], 6: ['confuse', 'Confuses the foe.'] };
+const MVHOW = ['', '', 'sharply ', 'drastically '], MVLOW = ['', '', 'harshly ', 'severely '];
+const mvAnd = l => l.length < 2 ? l.join('') : l.slice(0, -1).join(', ') + ' and ' + l[l.length - 1];
+/* Det dataene sier om virkningen, som korte setninger. */
+function mvAuto(mv) {
+  const n = mv[0], cat = mv[6], out = [], pc = c => c && c < 100 ? ` (${c} %)` : '', a = mv[7], ac = mv[8];
+  if (cat === 9) out.push('Knocks the foe out in one hit if it lands. Fails against a higher level.');
+  if (CHARGE[n]) out.push(CHARGE[n][1] ? 'Out of reach on the first turn, strikes on the second.' : 'Charges on the first turn, strikes on the second.');
+  if (mv[13]) out.push(mv[13] === mv[14] ? (mv[13] === 2 ? 'Hits twice.' : `Hits ${mv[13]} times.`) : `Hits ${mv[13]} to ${mv[14]} times.`);
+  if (MVAIL[a]) out.push(mv[4] === 0 || !ac || ac >= 100 ? MVAIL[a][1] : `May ${a === 2 ? MVAIL[a][0] : MVAIL[a][0] + ' the foe'}${pc(ac)}.`);
+  else if (a === 8) out.push('Traps the foe and hurts it for four or five turns.');
+  if (mv[12].length) {
+    const self = cat === 7 || (cat !== 6 && mv[17] === 1), c = mv[11], may = mv[4] > 0 && c && c < 100, who = self ? 'its' : "the foe's";
+    const grp = sign => { const l = mv[12].filter(s => (s[1] > 0) === (sign > 0)); if (!l.length) return ''; const mag = Math.min(3, Math.abs(l[0][1])), names = mvAnd(l.map(s => STN[s[0] - 1]));
+      return may ? `May ${sign > 0 ? 'raise' : 'lower'} ${who} ${names}${pc(c)}.` : `${sign > 0 ? MVHOW[mag] : MVLOW[mag]}${sign > 0 ? 'raises' : 'lowers'} ${who} ${names}.`.replace(/^./, x => x.toUpperCase()); };
+    [grp(1), grp(-1)].filter(Boolean).forEach(x => out.push(x));
+  }
+  if (mv[9] > 0) out.push(`The user heals by ${mv[9] === 50 ? 'half' : mv[9] === 75 ? 'three quarters of' : mv[9] + ' % of'} the damage dealt.`);
+  if (mv[9] < 0) out.push(`The user takes ${mv[9] === -25 ? 'a quarter' : mv[9] === -33 ? 'a third' : mv[9] === -50 ? 'half' : -mv[9] + ' %'} of the damage in recoil.`);
+  if (mv[10] > 0 && mv[4] === 0) out.push(`Heals ${mv[10] === 50 ? 'half' : mv[10] + ' %'} of its HP.`);
+  if (mv[15]) out.push(mv[15] >= 100 ? 'Makes the foe flinch.' : `May make the foe flinch${pc(mv[15])}.`);
+  if (mv[16] > 0) out.push('High critical-hit rate.');
+  if (RECHARGE.has(n)) out.push('The user must rest on the next turn.');
+  if (BOOM.has(n)) out.push('The user faints after the blast.');
+  if (mv[5] > 0 && mv[4] > 0) out.push('Strikes first.'); else if (mv[5] < 0 && mv[4] > 0) out.push('Strikes last.');
+  return out;
+}
+/* Alt om ett angrep: { n, ty, cls, pw, acc, pp, txt, dead }. m = Pokémonen (for Hidden Power, som følger IV-ene). */
+function mvInfo(x, m) {
+  const mv = m && MOVES[x][0] === 'Hidden Power' && m.iv ? mvEff(null, { src: m }, MOVES[x]) : MOVES[x], n = mv[0], dead = !!(window.DEADMV && DEADMV.has(x)), cx = MVX[n] || '';
+  const auto = cx && cx[0] !== '+' ? [] : mvAuto(mv), txt = dead ? ['Has no effect in these battles yet.'] : auto.concat(cx ? [cx.replace(/^\+/, '')] : []);
+  const pw = mv[4] ? (MVPW[n] != null ? String(MVPW[n]) : mv[2] ? String(mv[2]) : mv[6] === 9 ? 'KO' : FIXED[n] ? 'set' : 'varies') : '';
+  const acc = mv[3] ? mv[3] + ' %' : mv[4] > 0 || (mv[17] !== 1 && (mv[6] === 1 || mv[6] === 5 || mv[7] > 0)) ? 'never misses' : '';
+  return { n, ty: mv[1], cls: mv[4], pw, acc, pp: mv[18], txt: txt.length ? txt.join(' ') : mv[4] > 0 ? 'A plain attack with no extra effect.' : '', dead };
+}
 function fxTag(B, m) {
   const foe = B.foe[B.b]; if (S.hfx === 0 || !foe || foe.hp <= 0 || !m || m[4] == null) return '';
   const e = typeEff(m[1], foe), tag = (c, t) => `<span class="mfx ${c}">${t}</span>`;
@@ -1467,10 +1575,11 @@ function learnSheet(m, back) {
   if (x == null) { closeSheet(); if (back === 'ov') overview(); else { render(); monSheet(m); } return; }
   U.learn = { u: m.u, back };
   const mv = MOVES[x];
-  openSheet(`<h2 class="h">${esc(D(m.id)[0])} wants to learn ${esc(mv[0])}</h2>
-    <div class="newmv">${moveEl(x)}<span class="sm tn">${mv[2] ? 'Power ' + mv[2] : 'No damage'} · ${mv[3] ? mv[3] + '% accuracy' : 'never misses'} · PP ${mv[18]}${window.DEADMV && DEADMV.has(x) ? ' · has no effect in battles yet' : ''}</span></div>
+  /* Det nye angrepet med hele forklaringen, og de fire den kan, med sine, så det er lett å se hva som er verdt å bytte ut. */
+  openSheet(`<h2 class="h">${esc(mName(m))} wants to learn ${esc(mv[0])}</h2>
+    <div class="lrn">${mvxEl(x, m)}</div>
     <p class="sm">It already knows four moves. Tap the one to forget, or keep them as they are.</p>
-    <div class="mvg">${m.mv.map(k => moveEl(k, { btn: 1, act: 'lforget', m })).join('')}</div>
+    <div class="mvls">${m.mv.map(k => mvRow(k, m, { act: 'lforget', x: '<span class="pill tn">forget</span>' })).join('')}</div>
     <button type="button" class="btn wide" data-a="lskip">Don't learn ${esc(mv[0])}</button>`);
 }
 

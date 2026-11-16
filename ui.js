@@ -191,7 +191,7 @@ function cry(id, delay = 0, vol = 0.45) {
   }).catch(() => {});
 }
 /* Lyd per type trykk. Handlinger med egen lyd (kast, kjøp, utvikling osv.) får ikke en ekstra. */
-const OWN = new Set(['evpick', 'dsell', 'mgive', 'triv', 'trev', 'mvtog', 'start', 'throw', 'buy', 'buy10', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'honyes', 'clkagain', 'help', 'tour', 'tourgo', 'tourend', 'tourhub', 'trtipok', 'trtip', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats', 'achget', 'achall', 'sbxsnd', 'held', 'heldgive', 'heldoff', 'heldshop', 'heldbuy']);
+const OWN = new Set(['evpick', 'dsell', 'mgive', 'triv', 'trev', 'mvtog', 'start', 'throw', 'buy', 'buy10', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'honyes', 'clkagain', 'help', 'tour', 'tourgo', 'tourend', 'tourhub', 'trtipok', 'trtip', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats', 'achget', 'achall', 'sbxsnd', 'held', 'heldgive', 'heldoff', 'heldshop', 'heldbuy', 'form', 'tswp', 'tswgo']);
 const SND = {
   tab: 'tab', lagv: 'tab', dexr: 'tab', sbxtab: 'tab', shopt: 'tab', sinfo: 'open', pinfo: 'open',
   fag: 'chip', min: 'chip', reg: 'chip', sort: 'chip', filt: 'chip', sety: 'chip', extog: 'chip', sbxr: 'chip', sbxo: 'chip',
@@ -199,6 +199,7 @@ const SND = {
   ball: 'ball', spec: 'open', plan: 'open', sync: 'open', backup: 'open', snext: 'ok', seadd: 'open', avatar: 'open', avall: 'open', avpick: 'ok', ach: 'open', rkok: 'ok',
   today: 'open', boinfo: 'warn', sopen: 'open', minfo: 'open', pset: 'open', badge: 'open', look: 'chip', hfx: 'chip', hty: 'chip', close: 'close', home: 'close', later: 'close', sback: 'close', sedel: 'close', skip: 'close', syncoff: 'close', toshop: 'open',
   train: 'open', trsel: 'chip', trback: 'close', trclr: 'warn',
+  tord: 'chip', tipok: 'ok', cmp: 'chip', cmpick: 'chip', cmpw: 'open', tsw: 'open', tswb: 'close', tsws: 'chip', tswc: 'open', tswr: 'ok', mstat: 'open', mback: 'close', mvinfo: 'chip', mvsug: 'ok', mvpick: 'open',
   lead: 'ok', sesave: 'ok', syncsave: 'ok', bkcopy: 'ok', bkload: 'ok', party: 'ok', fav: 'fav',
   quit: 'warn', reset: 'warn', early: 'ok', pause: 'chip'
 };
@@ -433,7 +434,7 @@ const ICN = {
   moon: ['', 'M20 14.500A8.500 8.500 0 0 1 9.500 4a8.500 8.500 0 1 0 10.500 10.500z'],
   bag: ['', 'M5 8h14l-1.200 11.200H6.200zM9 8V6.500a3 3 0 0 1 6 0V8'],
   clock: ['', 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7.500V12l3 2'],
-  up: ['f', 'M12 5l7 9H5z'], dn: ['f', 'M12 19l7-9H5z'],
+  up: ['f', 'M12 5l7 9H5z'], dn: ['f', 'M12 19l7-9H5z'], gym: ['', 'M7 7.500v9M4 10v4M17 7.500v9M20 10v4M7 12h10'],
   bolt: ['f', 'M13.500 2L5 13.500h5.500L9.500 22 19 10h-5.800z'], sword: ['', 'M14.500 4H20v5.500L9 20.500 3.500 15zM6 18l-2.500 2.500M5 13l6 6'],
   shield: ['', 'M12 3l7.500 3v5.500c0 4.500-3 8-7.500 9.500-4.500-1.500-7.500-5-7.500-9.500V6z'],
   bell: ['', 'M6 16V11a6 6 0 0 1 12 0v5l1.500 2h-15zM10 20a2 2 0 0 0 4 0'], globe: ['', 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3 12h18M12 3c2.500 2.500 3.800 5.500 3.800 9s-1.300 6.500-3.800 9c-2.500-2.500-3.800-5.500-3.800-9S9.500 5.500 12 3z'],
@@ -579,17 +580,7 @@ VIEW.lag = () => {
       ${du.length ? `<button type="button" class="btn wide" data-a="selldupes">Sell ${du.length} ${du.length === 1 ? 'duplicate' : 'duplicates'} for ${coinEl(val)}</button><p class="sm" style="margin-top:-2px">Selling them all keeps the highest level of each species (marked Kept) and every one with top IVs. The team, favourites, shinies and trained ones are never sold from here.</p>` : ''}
       <div class="stack">${G.map(g => `<div class="card dgrp"><div class="row" style="justify-content:space-between"><b>${esc(D(g.id)[0])} <span class="sm tn">× ${g.list.length}</span></b>${tierEl(g.id)}</div>${g.list.map(m => row(m, g)).join('')}</div>`).join('')}</div>` : '<div class="card"><p class="sm" style="text-align:center">No duplicates right now. When you catch a species you already have, it shows up here.</p></div>'}`;
   }
-  if (U.lag !== 'boks') {
-    const rows = Array.from({ length: 6 }, (_, i) => monBy(S.party[i])).map((m, i) => {
-      if (!m) return `<button type="button" class="tcard empty" data-a="lagv" data-k="boks"><span class="plus">+</span><span class="sm">Empty slot. Pick one from the box.</span></button>`;
-      const a = xpAt(m.lv), b = xpAt(m.lv + 1), rdy = evoOpts(m).some(x => x.ok);
-      return `<button type="button" class="tcard${i ? '' : ' lead'}" data-a="mon" data-u="${m.u}" style="--tc:var(--t${D(m.id)[1]})">${hasNews(m) ? '<span class="bang abs" title="New move">!</span>' : ''}${spr(m.id, { it: m.item, ani: !i, sh: m.sh, mega: m.mega, s: i ? '60px' : '84px' })}
-        <span class="sp"><span class="row" style="gap:6px"><b class="tn-n">${esc(mName(m))}${gs(m)}</b>${i ? '' : '<span class="pill" style="background:var(--sage);color:#152013">Partner</span>'}${typeof evTag === 'function' ? evTag(m) : ''}${rdy ? '<span class="pill" style="color:var(--gold)">Can evolve</span>' : ''}</span>
-        <span class="row sm tn" style="justify-content:space-between;margin-top:5px"><span>Level ${m.lv} · ${i ? '30% XP' : 'all XP'}</span><span>${rdy ? '' : (evoOpts(m)[0] || {}).s ? 'evolves ' + evoOpts(m).map(x => x.s).filter((x, k, a) => a.indexOf(x) === k).join(' / ') : 'fully evolved'}</span></span>
-        <span class="bar" style="margin-top:5px"><i style="width:${Math.round((m.xp - a) / (b - a) * 100)}%;background:var(--tc)"></i></span></span></button>`;
-    }).join('');
-    return `${head}<div class="stack">${rows}</div><p class="sm">Your partner sits in the timer and gets all XP from sessions. In battles the whole team gets XP afterwards. Tap a Pokémon to switch partner, change moves, rename it, evolve it or remove it. ! means a new move you have not looked at yet.</p>`;
-  }
+  if (U.lag !== 'boks') return teamView(head);
   const sorts = { ny: (a, b) => b.at - a.at, niva: (a, b) => b.lv - a.lv, sjelden: (a, b) => tierOf(b.id) - tierOf(a.id) || b.sh - a.sh || a.id - b.id, nr: (a, b) => a.id - b.id || b.lv - a.lv };
   const list = S.mons.slice().sort(sorts[U.sort]), du = dupes(), val = du.reduce((s, m) => s + sellValue(m), 0), evb = typeof evNow === 'function' ? evNow() : null;
   return `${head}
@@ -612,9 +603,9 @@ function hexEl(m) {
   const pt = (i, f) => { const a = (-90 + i * 60) * Math.PI / 180; return [Math.round((cx + Math.cos(a) * R * f) * 10) / 10, Math.round((cy + Math.sin(a) * R * f) * 10) / 10]; };
   const order = [0, 1, 2, 5, 4, 3], ring = f => order.map((_, k) => pt(k, f).join(',')).join(' ');
   const shape = order.map((s, k) => pt(k, Math.max(0.14, Math.min(1, st[s] / ref(s)))).join(',')).join(' ');
-  const lab = order.map((s, k) => { const [x, y] = pt(k, 1.36), col = up !== dn && s === up ? 'var(--sage)' : up !== dn && s === dn ? 'var(--red)' : 'var(--ink2)';
+  const lab = order.map((s, k) => { const [x, y] = pt(k, 1.36), col = up !== dn && s === up ? 'var(--good)' : up !== dn && s === dn ? 'var(--red)' : 'var(--ink2)';
     return `<text x="${x}" y="${y - 3}" text-anchor="middle" font-size="10.5" font-weight="650" fill="${col}">${SN[s]}</text><text x="${x}" y="${y + 11}" text-anchor="middle" font-size="13" font-weight="800" fill="var(--ink)">${st[s]}</text>`; }).join('');
-  return `<svg class="hex" viewBox="0 0 260 208" role="img" aria-label="${order.map(s => SN[s] + ' ' + st[s]).join(', ')}"><polygon points="${ring(1)}" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.14)"/><polygon points="${ring(0.5)}" fill="none" stroke="rgba(255,255,255,.08)"/>${order.map((_, k) => `<line x1="${cx}" y1="${cy}" x2="${pt(k, 1)[0]}" y2="${pt(k, 1)[1]}" stroke="rgba(255,255,255,.06)"/>`).join('')}<polygon points="${shape}" fill="var(--tc)" fill-opacity=".38" stroke="var(--tc)" stroke-width="2" stroke-linejoin="round"/>${lab}</svg>`;
+  return `<svg class="hex" viewBox="0 0 260 208" role="img" aria-label="${order.map(s => SN[s] + ' ' + st[s]).join(', ')}"><polygon points="${ring(1)}" fill="var(--soft)" stroke="var(--line)"/><polygon points="${ring(0.5)}" fill="none" stroke="var(--line)" stroke-opacity=".7"/>${order.map((_, k) => `<line x1="${cx}" y1="${cy}" x2="${pt(k, 1)[0]}" y2="${pt(k, 1)[1]}" stroke="var(--line)" stroke-opacity=".6"/>`).join('')}<polygon points="${shape}" fill="var(--tc)" fill-opacity=".38" stroke="var(--tc)" stroke-width="2" stroke-linejoin="round"/>${lab}</svg>`;
 }
 const CLS = ['Status', 'Physical', 'Special'];
 const moveEl = (x, o = {}) => { const mv = o.m && MOVES[x][0] === 'Hidden Power' && o.m.iv ? mvEff(null, { src: o.m }, MOVES[x]) : MOVES[x]; return `<${o.btn ? `button type="button" data-a="${o.act || 'mvtog'}" data-k="${x}" aria-pressed="${o.on ? 'true' : 'false'}"` : 'div'} class="mvc" style="--c:var(--t${mv[1]})"><b>${esc(mv[0])}</b><span><i></i>${TYN[mv[1]]} · ${CLS[mv[4]]}${mv[2] ? ' · ' + mv[2] : ''}</span></${o.btn ? 'button' : 'div'}>`; };
@@ -629,35 +620,184 @@ function evoLine(id, cur) {
 }
 /* Egenskapen (Ability) til arten, hvis den har en av dem kampene bruker. */
 const abLine = (id, mega) => { const a = typeof abilityOf === 'function' ? abilityOf(id, mega) : ''; return a ? `<p class="sm" style="margin-top:8px;text-align:center"><b>Ability · ${ABN[a]}</b><br><span class="mut">${ABTXT[a]}</span></p>` : ''; };
-function monSheet(m) {
+/* ---------- Byggeklosser til Team, Box og kortet (steg 1.6) ---------- */
+/* TYPEIKONENE (ønske 2): egne, enkle tegn, ett per type, i en liten sirkel i typens farge. */
+const TYG = ['M12 6.500a5.500 5.500 0 1 0 0 11a5.500 5.500 0 0 0 0-11z',
+  'M7 11.500h10v2.500a5 5 0 0 1-10 0zM7 11.500V9a1.700 1.700 0 0 1 3.400 0v2.500M10.400 11.500V7.800a1.700 1.700 0 0 1 3.400 0v3.700M13.800 11.500V9a1.600 1.600 0 0 1 3.200 0v2.500',
+  'M2.500 9.500c4-.8 7.200 1.500 9.500 6.500c2.300-5 5.500-7.300 9.500-6.500M12 16v2.500',
+  'M9 14.500a3.500 3.500 0 1 0 0-7a3.500 3.500 0 0 0 0 7zM16.200 11.500a2 2 0 1 0 0-4a2 2 0 0 0 0 4zM14.500 19a2.500 2.500 0 1 0 0-5a2.500 2.500 0 0 0 0 5z',
+  'M4 8.500h16M6.500 13h11M9.500 17.500h5',
+  'M9 5l7 1.500l3 6l-3.500 6.500h-7L5 13zM9 5l2.500 7.500l-3 6.500M11.500 12.500H19',
+  'M12 8.500a4.500 5.500 0 1 0 0 11a4.500 5.500 0 0 0 0-11zM9.800 8.300L8 4.500M14.200 8.300L16 4.500M7.500 14h9',
+  'M6.500 19.500v-8.500a5.500 5.500 0 0 1 11 0v8.500l-2.750-2l-2.750 2l-2.750-2zM10 11.300v.4M14 11.300v.4',
+  'M12 4l7 4v8l-7 4l-7-4V8zM12 9.500a2.500 2.500 0 1 0 0 5a2.500 2.500 0 0 0 0-5z',
+  'M12.500 3.500c.6 3.600 5 5.600 5 10.200a5.500 5.500 0 0 1-11 0c0-2.200 1-3.800 2.200-4.900c.4 1.500 1 2.300 2 2.900c.2-3-.3-5.700 1.800-8.200z',
+  'M12 4c3 4 5.500 6.800 5.500 10a5.500 5.500 0 0 1-11 0c0-3.200 2.500-6 5.500-10z',
+  'M5.500 18.500c0-7.500 4.500-12.500 13-13c0 8.500-5 13-13 13zM5.500 18.500l8-8',
+  'M13.200 3.500L6 13.500h5l-1.200 7L17 10h-5z',
+  'M3 12c2.500-4 5.500-6 9-6s6.500 2 9 6c-2.500 4-5.500 6-9 6s-6.500-2-9-6zM12 9.500a2.500 2.500 0 1 0 0 5a2.500 2.500 0 0 0 0-5z',
+  'M12 4v16M5 8l14 8M19 8L5 16M12 4l-2 2M12 4l2 2M12 20l-2-2M12 20l2-2',
+  'M8 4.500c0 6 1.500 10.500 4 15.500c2.500-5 4-9.500 4-15.500c-2.500 1.500-5.500 1.500-8 0z',
+  'M19 14.500A7.500 7.500 0 0 1 9.500 5a7.500 7.500 0 1 0 9.500 9.500z',
+  'M12 4c.8 4.500 2.700 6.400 8 8c-5.300 1.600-7.200 3.500-8 8c-.8-4.500-2.700-6.400-8-8c5.300-1.600 7.200-3.500 8-8z'];
+const tyIc = (t, cls) => t >= 0 && TYG[t] ? `<span class="tyi${cls ? ' ' + cls : ''}" style="--c:var(--t${t})" title="${TYN[t]}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${TYG[t]}"/></svg></span>` : '';
+const tyChip = t => `<span class="ty tyk" style="background:var(--t${t})"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${TYG[t]}"/></svg>${TYN[t]}</span>`;
+const mTyIcs = m => mTypes(m).filter(t => t >= 0).map(t => tyIc(t)).join(''), mTyChips = m => mTypes(m).filter(t => t >= 0).map(tyChip).join('');
+/* Stjerneraden (ønske 18): de fødte stjernene fylt, de fra hypertrening dempet, resten tomme. Størrelsen står bare når den ikke er Normal. */
+const JT = ['Decent', 'Above average', 'Great', 'Outstanding', 'Flawless'];
+const starRow = (m, cls) => { const b = bornStars(m), n = nowStars(m); return `<span class="strs${cls ? ' ' + cls : ''}" role="img" aria-label="Born with ${b} of 5 stars${n > b ? ', ' + n + ' with training' : ''}">${Array.from({ length: 5 }, (_, i) => `<i class="${i < b ? 'on' : i < n ? 'tr' : ''}"></i>`).join('')}</span>`; };
+const szTag = m => szOn() && szOf(m) !== 1 ? `<span class="szt sz${szOf(m)}">${SZN[szOf(m)]}</span>` : '';
+/* Potensialet (stjernene og naturen) vises på reisen først når det er forklart (studiedag 4). */
+const potOn = () => !jOn() || has('nature');
+const mcat = c => `<span class="mcat s ${['stt', 'ph', 'spc'][c]}" title="${CLS[c]}"></span>`;
+/* Tegner innholdet i arket som står åpent på nytt, uten at det glir inn igjen og uten å miste plassen i rullingen. */
+function reSheet(html) { const w = $('#sheet'), s = w.querySelector('.sheet'); if (w.hidden || !s) return openSheet(html); const y = s.scrollTop; s.innerHTML = `<span class="grab"></span>${html}`; s.scrollTop = y; }
+/* Forklaringen som vises én gang (S.tip[k]) og kvitteres med OK. */
+const tipEl = (k, txt) => S.tip && S.tip[k] ? '' : `<div class="tipc">${icn('info')}<p class="sm">${txt}</p><button type="button" class="btn sm2" data-a="tipok" data-k="${k}">OK</button></div>`;
+
+/* ---------- Team ---------- */
+/* Lagkortene (ønske 1, 2 og 20): typen som et preg i kortet og som ikon, styrken slik den faktisk er, stjernene, og bytt rett fra kortet.
+   U.tord = 'pw' viser laget med den sterkeste øverst (rekkefølgen på laget endres ikke). U.cmp = [] når to skal velges til sammenligning. */
+function teamView(head) {
+  const cmp = U.cmp, mons = S.party.map(monBy).filter(Boolean), list = U.tord === 'pw' ? mons.slice().sort((a, b) => pwOf(b) - pwOf(a)) : mons, best = Math.max(1, ...mons.map(pwOf));
+  const card = m => {
+    const i = S.party.indexOf(m.u), a = xpAt(m.lv), b = xpAt(m.lv + 1), rdy = evoOpts(m).some(x => x.ok), ty = mTypes(m), sel = cmp && cmp.includes(m.u), pw = pwOf(m);
+    return `<div class="tc${i ? '' : ' lead'}${sel ? ' sel' : ''}" style="--tc:var(--t${ty[0]});--tc2:var(--t${ty[1] >= 0 ? ty[1] : ty[0]})">
+      <button type="button" class="tc-m" data-a="${cmp ? 'cmpick' : 'mon'}" data-u="${m.u}" aria-label="${esc(mName(m))}, level ${m.lv}, power ${pw}${i ? '' : ', your partner'}${cmp ? '. Pick to compare' : ''}">${hasNews(m) ? '<span class="bang abs" title="New move">!</span>' : ''}
+        <span class="tc-o">${spr(m.id, { it: m.item, ani: !i, sh: m.sh, mega: m.mega, s: i ? '58px' : '72px' })}</span>
+        <span class="sp"><span class="tc-n"><b>${esc(mName(m))}${gs(m)}</b>${i ? '' : '<span class="pill ptn">Partner</span>'}${szTag(m)}${typeof evTag === 'function' ? evTag(m) : ''}${rdy ? '<span class="pill au">Can evolve</span>' : ''}</span>
+          <span class="tc-s tn">${mTyIcs(m)}<span>Lv ${m.lv}</span>${potOn() ? starRow(m) : ''}</span>
+          <span class="tc-b"><i style="width:${Math.round(pw / best * 100)}%"></i></span></span>
+        <span class="tc-p tn"><b>${nb(pw)}</b><small>power</small></span></button>
+      ${cmp ? '' : `<button type="button" class="tc-x" data-a="tsw" data-u="${m.u}" aria-label="Swap ${esc(mName(m))} for another Pokémon">${icn('swap')}</button>`}</div>`; };
+  const empty = S.party.length < 6 && !cmp ? `<button type="button" class="tc empty" data-a="tsw" data-u="0">${icn('plus')}<span>${S.mons.length > S.party.length ? 'Add a Pokémon' : 'An empty place'}</span><small class="tn">${S.party.length}/6</small></button>` : '';
+  return `${head}
+    <div class="tctl"><div class="seg sm2" role="group" aria-label="Order"><button type="button" data-a="tord" data-k="" aria-pressed="${U.tord !== 'pw'}">Team order</button><button type="button" data-a="tord" data-k="pw" aria-pressed="${U.tord === 'pw'}">Strongest</button></div>
+      ${mons.length > 1 ? `<button type="button" class="chip cmpb" data-a="cmp" aria-pressed="${!!cmp}">${icn('scale')}Compare</button>` : ''}</div>
+    ${cmp ? `<p class="sm tcmp">${tl('Tap two to see them side by side.')}</p>` : tipEl('pw', tl('Power is what a Pokémon really brings right now: level, training, nature, shiny and size all count, not only the species.'))}
+    <div class="stack tcs">${list.map(card).join('')}${empty}</div>`;
+}
+/* En rad i velgerne: bildet, navnet, nivået, typen, stjernene og styrken. o.ref = styrken den måles mot (forskjellen vises), o.act = handlingen,
+   o.x = knapp til høyre, o.tag = merke etter navnet. */
+function monRow(m, o) {
+  o = o || {}; const pw = pwOf(m), d = o.ref ? pw - o.ref : 0, ty = mTypes(m);
+  return `<div class="mr" style="--tc:var(--t${ty[0]})"><button type="button" class="mr-m" data-a="${o.act || 'mon'}" data-u="${m.u}" aria-label="${esc(mName(m))}, level ${m.lv}, power ${pw}${o.ref ? (d >= 0 ? ', ' + d + ' stronger' : ', ' + -d + ' weaker') : ''}">${spr(m.id, { it: m.item, sh: m.sh, mega: m.mega, s: '46px', lazy: 1 })}
+      <span class="sp"><span class="mr-n"><b>${esc(mName(m))}${gs(m)}</b>${szTag(m)}${o.tag || ''}${m.fav ? '<i class="fv">♥</i>' : ''}</span><span class="tc-s tn">${mTyIcs(m)}<span>Lv ${m.lv}</span>${potOn() ? starRow(m) : ''}</span></span>
+      <span class="mr-p tn"><b>${nb(pw)}</b>${o.ref ? `<small class="${d > 0 ? 'up' : d < 0 ? 'dn' : ''}">${d > 0 ? '▲ ' + nb(d) : d < 0 ? '▼ ' + nb(-d) : '='}</small>` : '<small>power</small>'}</span></button>${o.x || ''}</div>`;
+}
+/* BYTT RETT FRA TEAM (ønske 1 og 20). U.sw = { mode, u }:
+     swap = plassen til u på laget (0 = en ledig plass): de som ikke er på laget, sterkest først. Trykk = bytt inn. Vekta = sammenlign først.
+     cmp  = velg hvem u skal sammenlignes med (alle andre, laget først).
+     slot = u skal inn på et fullt lag: velg hvem som går ut.
+   Søket (U.swq) og sorteringen (U.sws) tegner bare lista på nytt (swapList). */
+const SWSO = { pw: ['Power', (a, b) => pwOf(b) - pwOf(a)], lv: ['Level', (a, b) => b.lv - a.lv || pwOf(b) - pwOf(a)], rare: ['Rarity', (a, b) => tierOf(b.id) - tierOf(a.id) || b.sh - a.sh || pwOf(b) - pwOf(a)], ny: ['Newest', (a, b) => b.at - a.at] };
+function swapList() {
+  const w = U.sw || {}, cur = monBy(w.u), q = (U.swq || '').trim().toLowerCase(), so = SWSO[U.sws] ? U.sws : 'pw', ref = cur ? pwOf(cur) : 0;
+  let pool = w.mode === 'slot' ? S.party.map(monBy).filter(Boolean) : w.mode === 'cmp' ? S.mons.filter(m => m.u !== w.u) : S.mons.filter(m => !S.party.includes(m.u));
+  if (q) pool = pool.filter(m => (mName(m) + ' ' + D(m.id)[0] + ' ' + mTypes(m).filter(t => t >= 0).map(t => TYN[t]).join(' ')).toLowerCase().includes(q));
+  const list = w.mode === 'slot' ? pool : pool.slice().sort(SWSO[so][1]);
+  if (w.mode === 'cmp' && !q) list.sort((a, b) => S.party.includes(b.u) - S.party.includes(a.u));
+  if (!list.length) return `<p class="sm" style="text-align:center;padding:14px 0">${q ? 'Nothing matches.' : w.mode === 'swap' ? tl('Everyone you have is on the team. Catch more in the grass or open a pack.') : 'Nobody else yet.'}</p>`;
+  return list.slice(0, 80).map(m => monRow(m, { act: 'tswp', ref: w.mode === 'cmp' ? 0 : ref, tag: S.party.includes(m.u) && w.mode !== 'slot' ? '<span class="pill ptn">Team</span>' : '',
+    x: w.mode === 'swap' && cur ? `<button type="button" class="mr-x" data-a="tswc" data-u="${m.u}" aria-label="Compare ${esc(mName(m))} with ${esc(mName(cur))}">${icn('scale')}</button>` : '' })).join('') + (list.length > 80 ? `<p class="sm" style="text-align:center">${list.length - 80} more: search to find them.</p>` : '');
+}
+function swapSheet(re) {
+  const w = U.sw || {}, cur = monBy(w.u), inP = cur && S.party.includes(cur.u), lead = cur && S.party[0] === cur.u, so = SWSO[U.sws] ? U.sws : 'pw';
+  const title = w.mode === 'cmp' ? `Compare ${esc(mName(cur))} with` : w.mode === 'slot' ? 'Who steps out?' : cur ? `Swap ${esc(mName(cur))}` : 'Add to the team';
+  const top = cur ? `<div class="swcur">${monRow(cur, { act: 'mon', tag: w.mode === 'slot' ? '<span class="pill au">coming in</span>' : lead ? '<span class="pill ptn">Partner</span>' : '' })}${w.mode === 'swap' && inP ? `<div class="row">${lead ? '' : `<button type="button" class="btn sm2 sp" data-a="lead" data-u="${cur.u}">Make partner</button>`}<button type="button" class="btn sm2 sp" data-a="tswr" data-u="${cur.u}"${S.party.length < 2 ? ' disabled' : ''}>Take off the team</button></div>` : ''}</div>` : '';
+  const html = `<div class="row" style="justify-content:space-between"><h2 class="h" style="margin:0">${title}</h2><button type="button" class="xb" data-a="close" aria-label="Close">${icn('x')}</button></div>
+    ${top}
+    ${w.mode === 'slot' ? `<p class="sm">${tl('The team is full. Tap the one that should make room.')}</p>` : `<div class="swf"><input class="swq" type="search" data-q="sw" value="${esc(U.swq || '')}" placeholder="Search name or type" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Search">
+      <div class="chips swso">${Object.keys(SWSO).map(k => `<button type="button" class="chip" data-a="tsws" data-k="${k}" aria-pressed="${so === k}">${SWSO[k][0]}</button>`).join('')}</div></div>`}
+    <div class="mrl" id="swl">${swapList()}</div>`;
+  re ? reSheet(html) : openSheet(html);
+}
+/* SAMMENLIGN TO (ønske 20): styrken fremst, så hver verdi side om side med den høyeste uthevet. Er den ene på laget og den andre ikke, kan de byttes her. */
+function cmpSheet(a, b) {
+  if (!a || !b) return;
+  const sa = statsOf(a), sb = statsOf(b), pa = pwOf(a), pb = pwOf(b), mx = Math.max(...sa, ...sb, 1), inA = S.party.includes(a.u), inB = S.party.includes(b.u);
+  const col = (m, pw, win) => `<button type="button" class="cm-c${win ? ' win' : ''}" data-a="mon" data-u="${m.u}" style="--tc:var(--t${mTypes(m)[0]})">${spr(m.id, { it: m.item, sh: m.sh, mega: m.mega, s: '76px' })}<b>${esc(mName(m))}${gs(m)}</b><span class="tc-s tn">${mTyIcs(m)}<span>Lv ${m.lv}</span></span>${potOn() ? starRow(m) : ''}<span class="cm-t">${szTag(m)}${S.party.includes(m.u) ? '<span class="pill ptn">Team</span>' : ''}</span><span class="cm-p tn"><b>${nb(pw)}</b><small>power</small></span></button>`;
+  const row = (n, x, y) => `<div class="cm-r"><b class="tn${x > y ? ' w' : ''}">${x}</b><span class="cm-b l"><i style="width:${Math.round(x / mx * 100)}%"></i></span><span class="cm-n">${n}</span><span class="cm-b"><i style="width:${Math.round(y / mx * 100)}%"></i></span><b class="tn${y > x ? ' w' : ''}">${y}</b></div>`;
+  const nat = m => { const up = natUp(m.nat), dn = natDn(m.nat); return `${NAT[m.nat]}${up !== dn ? ` · +${SN[up]} −${SN[dn]}` : ''}`; };
+  const swap = inA !== inB ? `<button type="button" class="btn pri wide" data-a="tswgo" data-u="${inA ? b.u : a.u}" data-o="${inA ? a.u : b.u}">Put ${esc(mName(inA ? b : a))} in for ${esc(mName(inA ? a : b))}</button>` : '';
+  openSheet(`<div class="row" style="justify-content:space-between"><h2 class="h" style="margin:0">Compare</h2><button type="button" class="xb" data-a="close" aria-label="Close">${icn('x')}</button></div>
+    <div class="cm-h">${col(a, pa, pa > pb)}<span class="cm-d tn">${pa === pb ? '=' : `${pa > pb ? '◀' : '▶'} ${nb(Math.abs(pa - pb))}`}</span>${col(b, pb, pb > pa)}</div>
+    <div class="cm">${SN.map((n, i) => row(n, sa[i], sb[i])).join('')}</div>
+    ${potOn() ? `<div class="cm-x sm"><span>${nat(a)}</span><span>Nature</span><span>${nat(b)}</span></div>` : ''}
+    <p class="sm">${tl('The numbers are what each one has right now. A lower level catches up as it grows; stars and size do not change.')}</p>
+    ${swap}${U.sw ? '<button type="button" class="btn wide nf" data-a="tswb">Back</button>' : ''}`);
+}
+
+/* ---------- Kortet til en Pokémon ---------- */
+const mvTile = (x, m, on) => { const i = mvInfo(x, m); return `<button type="button" class="mvt${i.dead ? ' dead' : ''}" data-a="mvinfo" data-k="${x}" data-u="${m.u}" aria-pressed="${on ? 'true' : 'false'}" style="--c:var(--t${i.ty})">${tyIc(i.ty)}<span class="sp"><b>${esc(i.n)}</b><small class="tn">${mcat(i.cls)}${i.cls ? i.pw : 'Status'}</small></span></button>`; };
+/* Forklaringen til ett angrep: den samme overalt (kortet, angrepsvalget, kampen). */
+const mvxEl = (x, m) => { const i = mvInfo(x, m); return `<div class="mvx" style="--c:var(--t${i.ty})"><div class="mvx-h"><b>${esc(i.n)}</b>${tyChip(i.ty)}<span class="mvx-c">${mcat(i.cls)}${CLS[i.cls]}</span></div><div class="mvx-n tn">${i.cls ? `<span>Power <b>${i.pw}</b></span>` : ''}${i.acc ? `<span>${i.acc === 'never misses' ? 'Never misses' : 'Accuracy <b>' + i.acc + '</b>'}</span>` : ''}<span>PP <b>${i.pp}</b></span></div>${i.txt ? `<p class="sm">${esc(i.txt)}</p>` : ''}</div>`; };
+/* En rad med et angrep og forklaringen: i angrepsvalget (o.act = 'mvtog', o.on), i «wants to learn» (o.act = 'lforget') og i «Learns later» (o.lv). */
+function mvRow(x, m, o) {
+  o = o || {}; const i = mvInfo(x, m), tag = o.act ? `button type="button" data-a="${o.act}" data-k="${x}"${o.on != null ? ` aria-pressed="${!!o.on}"` : ''}` : 'div';
+  return `<${tag} class="mvr${o.lv ? ' lt' : ''}${i.dead ? ' dead' : ''}" style="--c:var(--t${i.ty})">${tyIc(i.ty)}<span class="sp"><span class="mvr-n"><b>${esc(i.n)}</b><small class="tn">${mcat(i.cls)}${i.cls ? i.pw : 'Status'}${i.acc && i.acc !== 'never misses' && i.acc !== '100 %' ? ' · ' + i.acc : ''}</small></span><small class="mvr-t">${esc(i.txt)}</small></span>${o.lv ? `<span class="pill tn">Lv ${o.lv}</span>` : o.on != null ? `<span class="mvr-c">${o.on ? icn('check') : ''}</span>` : o.x || ''}</${o.act ? 'button' : 'div'}>`;
+}
+/* Formene (ønske 19): en rad med formene arten har. Den som krever noe, sier hva. */
+function formCard(m) {
+  const o = formOpts(m); if (o.length < 2) return '';
+  return `<div class="card2 fmc"><div class="lab" style="margin:0">Forme</div><div class="fms">${o.map(([k, n, need]) => `<button type="button" class="fm" data-a="form" data-u="${m.u}" data-k="${k}" aria-pressed="${(m.mega || 0) === k}"${need ? ' disabled' : ''}>${spr(m.id, { sh: m.sh, mega: k, s: '52px' })}<b>${n}</b>${need ? `<small>${need}</small>` : ''}</button>`).join('')}</div></div>`;
+}
+function monSheet(m, re) {
   /* Utropstegnet forsvinner når kortet åpnes, også om angrepet som venter ikke er besvart ennå. */
   const fresh = m.nw; if (seeNews(m)) { renderNav(); document.querySelectorAll(`[data-u="${m.u}"] .bang`).forEach(x => x.remove()); }
-  const ed = U.nick === m.u, fm = megaOf(m), canForm = m.id === 487;
-  const d = D(m.id), ev = evoOpts(m), inP = S.party.includes(m.u), lead = S.party[0] === m.u, a = xpAt(m.lv), b = xpAt(m.lv + 1), n = countOf(m.id);
-  const j = judge(m), up = natUp(m.nat), dn = natDn(m.nat), nx = nextMove(m), evt = m.ev.reduce((x, y) => x + y, 0), more = movesAt(m.id, m.lv).length > m.mv.length;
-  openSheet(`<div class="shead">${spr(m.id, { it: m.item, ani: 1, sh: m.sh, mega: m.mega })}<div class="sp"><div class="sm tn">No. ${m.id} · ${REG[regOf(m.id)].n}${m.sh === 2 ? ' · <b style="color:#ff8a2a">Dark</b>' : m.sh ? ' · <b style="color:var(--gold)">Shiny</b>' : ''}</div>${ed ? `<div class="nkrow"><input class="nkin" id="nkin" maxlength="12" value="${esc(m.nn || '')}" placeholder="${esc(d[0])}" autocomplete="off" autocapitalize="words" aria-label="Nickname"><button type="button" class="btn sm2 pri" data-a="nicksave" data-u="${m.u}">Save</button></div>` : `<div class="pn">${esc(mName(m))}${gs(m)}<button type="button" class="nkb" data-a="nick" data-u="${m.u}" aria-label="Give a nickname">✎</button></div>`}${m.nn && !ed ? `<div class="sm">${esc(spName(m))}</div>` : ''}<div class="row" style="margin-top:6px;flex-wrap:wrap;gap:6px">${types(m.id)} ${tierEl(m.id)}${fm && fm[1] === 'Origin' ? ' <span class="pill">Origin Forme</span>' : canForm ? ' <span class="pill">Altered Forme</span>' : ''}</div></div></div>
-    <div><div class="row sm tn" style="justify-content:space-between"><span>Level ${m.lv}</span><span>${n > 1 ? 'You have ' + n + ' of these' : 'Your only one'}</span></div><div class="bar" style="margin-top:6px"><i style="width:${Math.round((m.xp - a) / (b - a) * 100)}%"></i></div></div>
-    <div class="card2" style="--tc:var(--t${d[1]})">${hexEl(m)}
-      <div class="row" style="flex-wrap:wrap;gap:6px;justify-content:center"><span class="pill">${NAT[m.nat]}${up !== dn ? ` · +${SN[up]} −${SN[dn]}` : ' · neutral'}</span><span class="pill" style="color:${j.sum >= 121 ? 'var(--gold)' : j.sum >= 91 ? 'var(--sage)' : 'var(--ink2)'}">Judge: ${j.t}${j.sum >= 186 ? '' : ' · best ' + SN[j.best]}</span>${has('train') ? `<span class="pill tn">EVs ${evt} of 510</span>` : ''}</div>${abLine(m.id, m.mega)}${has('train') ? `<button type="button" class="btn sm2 wide" data-a="train" data-u="${m.u}" style="margin-top:6px">Train · raise its stats for coins</button>` : ''}<button type="button" class="btn sm2 wide" data-a="candy" data-u="${m.u}"${S.items.candy > 0 && m.lv < 100 ? '' : ' disabled'}>Rare Candy · one level up (${S.items.candy})</button></div>
-    ${heldCard(m)}
-    <div><div class="lab">Base stats${isMega(m) ? ' · Mega form' : ''}</div>${bstEl(m.id, m.mega, m.sh)}</div>
-    <div><div class="row" style="justify-content:space-between;margin-bottom:7px"><div class="lab" style="margin:0">Moves${fresh ? ' · <b style="color:var(--gold)">new move learned</b>' : ''}</div>${more ? `<button type="button" class="btn sm2" data-a="mvpick" data-u="${m.u}">Change moves</button>` : ''}</div>
-      ${(m.nm || []).length ? `<button type="button" class="newmv" data-a="mlearn" data-u="${m.u}" style="width:100%;text-align:left;margin-bottom:8px"><span class="bang">!</span><span class="sm" style="color:var(--ink)">Wants to learn <b>${esc(MOVES[m.nm[0]][0])}</b>${m.nm.length > 1 ? ' and ' + (m.nm.length - 1) + ' more' : ''}. Tap to decide.</span></button>` : ''}<div class="mvg">${m.mv.map(x => moveEl(x)).join('')}</div>
-      ${nx ? `<p class="sm tn" style="margin-top:7px">Next move: ${esc(MOVES[nx.mv][0])} at level ${nx.lv}</p>` : ''}</div>
+  const ed = U.nick === m.u, d = D(m.id), ty = mTypes(m), ev = evoOpts(m), inP = S.party.includes(m.u), lead = S.party[0] === m.u, a = xpAt(m.lv), b = xpAt(m.lv + 1), n = countOf(m.id);
+  const up = natUp(m.nat), dn = natDn(m.nat), nx = nextMove(m), sg = shinyGain(m), fn = formName(m), ab = typeof abShow === 'function' ? abShow(m.id, m.mega) : null, born = bornStars(m), now = nowStars(m), cd = S.items.candy || 0;
+  const html = `<div class="mc-h" style="--tc:var(--t${ty[0]})"><span class="mc-o">${ringEl(116, 54, (m.xp - a) / (b - a), 3)}${spr(m.id, { it: m.item, ani: 1, sh: m.sh, mega: m.mega, s: '88px' })}</span>
+      <div class="sp"><div class="sm tn">No. ${m.id} · ${REG[regOf(m.id)].n} · Level ${m.lv}</div>
+        ${ed ? `<div class="nkrow"><input class="nkin" id="nkin" maxlength="12" value="${esc(m.nn || '')}" placeholder="${esc(d[0])}" autocomplete="off" autocapitalize="words" aria-label="Nickname"><button type="button" class="btn sm2 pri" data-a="nicksave" data-u="${m.u}">Save</button></div>` : `<div class="pn">${esc(mName(m))}${gs(m)}<button type="button" class="nkb" data-a="nick" data-u="${m.u}" aria-label="Give a nickname">✎</button></div>`}
+        ${m.nn && !ed ? `<div class="sm">${esc(spName(m))}</div>` : ''}
+        <div class="mc-t">${mTyChips(m)}${tierEl(m.id)}${m.sh === 2 ? '<span class="pill dkp">Dark</span>' : m.sh ? '<span class="pill au">Shiny</span>' : ''}${fn ? `<span class="pill">${fn} Forme</span>` : ''}${szTag(m)}</div></div>
+      <button type="button" class="mc-f${m.fav ? ' on' : ''}" data-a="fav" data-u="${m.u}" aria-pressed="${!!m.fav}" aria-label="${m.fav ? 'Favourite: on' : 'Mark as favourite'}">${icn('heart')}</button></div>
+    <div class="card2 mc-s" style="--tc:var(--t${ty[0]})">
+      <button type="button" class="mc-pw" data-a="mstat" data-u="${m.u}" aria-label="Power ${pwOf(m)}. See the numbers"><span class="pw tn"><b>${nb(pwOf(m))}</b><small>power</small></span><span class="sp">${potOn() ? `${starRow(m, 'lg')}<small>${now > born ? `Born ${JT[born - 1].toLowerCase()} · trained to ${now} stars` : `Born ${JT[born - 1].toLowerCase()}`}</small>` : ''}
+        <span class="mtrs"><span class="mtr" role="img" aria-label="Level ${m.lv} of 100"><small>Level</small><i><b style="width:${m.lv}%"></b></i></span>${has('train') ? `<span class="mtr" role="img" aria-label="Training: ${evSum(m)} of ${EVTOT} EVs"><small>Training</small><i><b style="width:${Math.round(evSum(m) / EVTOT * 100)}%"></b></i></span>` : ''}</span></span>${icn('chev')}</button>
+      ${hexEl(m)}
+      ${potOn() ? `<div class="mc-n"><b>${NAT[m.nat]}</b>${up !== dn ? `<span class="up">${icn('up')}${SN[up]}</span><span class="dn">${icn('dn')}${SN[dn]}</span>` : '<span>no stat up or down</span>'}</div>` : ''}
+      ${sg ? `<div class="mc-x au">${icn('spark')}<span><b>Shiny</b> · ${nb(sg.sum)} more power than a regular ${esc(d[0])}</span></div>` : ''}
+      ${ab ? `<div class="mc-x"><span><b>${ab.n}</b> · ${ab.d}${ab.live ? '' : ' <i class="nyet">Not in battles yet.</i>'}</span></div>` : ''}
+      ${S.mons.length > 1 ? `<button type="button" class="btn sm2 wide mc-c" data-a="cmpw" data-u="${m.u}">${icn('scale')}Compare with another</button>` : ''}</div>
+    <div><div class="row" style="justify-content:space-between;margin-bottom:7px"><div class="lab" style="margin:0">Moves${fresh ? ' · <b class="au">new move learned</b>' : ''}</div><button type="button" class="btn sm2" data-a="mvpick" data-u="${m.u}">Change</button></div>
+      ${(m.nm || []).length ? `<button type="button" class="newmv" data-a="mlearn" data-u="${m.u}" style="width:100%;text-align:left;margin-bottom:8px"><span class="bang">!</span><span class="sm" style="color:var(--ink)">Wants to learn <b>${esc(MOVES[m.nm[0]][0])}</b>${m.nm.length > 1 ? ' and ' + (m.nm.length - 1) + ' more' : ''}. Tap to decide.</span></button>` : ''}
+      <div class="mvg">${m.mv.map(x => mvTile(x, m, U.mvx === x)).join('')}</div><div id="mvx">${U.mvx != null && m.mv.includes(U.mvx) ? mvxEl(U.mvx, m) : `<p class="sm mvx0">${tl('Tap a move to see what it does.')}</p>`}</div>
+      ${nx ? `<p class="sm tn" style="margin-top:7px">Next: ${esc(MOVES[nx.mv][0])} at level ${nx.lv}</p>` : ''}</div>
+    <div class="mc-l">
+      ${has('train') ? `<button type="button" class="crow" data-a="train" data-u="${m.u}"><span class="ic">${icn('gym')}</span><span class="sp"><b>Train</b><small>${evSum(m)} of ${EVTOT} EVs placed</small></span>${icn('chev')}</button>` : ''}
+      <div class="crow cnd"><span class="ic">${ballEl('candy', '26px')}</span><span class="sp"><b>Rare Candy</b><small class="tn">${cd ? cd + ' in the bag · one level each' : 'None in the bag'}</small></span><button type="button" class="btn sm2" data-a="candy" data-u="${m.u}" data-n="1"${cd > 0 && m.lv < 100 ? '' : ' disabled'}>+1</button><button type="button" class="btn sm2" data-a="candy" data-u="${m.u}" data-n="10"${cd > 1 && m.lv < 99 ? '' : ' disabled'}>+${Math.min(10, Math.max(2, cd), 100 - m.lv)}</button></div>
+      ${has('held') ? heldRow(m) : ''}</div>
     ${evoLine(m.id, m.id)}
-    <div class="stack">
-    ${ev.map(o => `<button type="button" class="btn ${o.ok ? 'gold' : ''} wide" data-a="evolve" data-u="${m.u}" data-k="${o.to}"${o.ok ? '' : ' disabled'}>${o.ok ? 'Evolve into ' + esc(D(o.to)[0]) : 'Evolves ' + o.why}</button>`).join('')}
-    ${canForm ? `<button type="button" class="btn wide" data-a="form" data-u="${m.u}">Change to ${m.mega === ORIGIN ? 'Altered' : 'Origin'} Forme</button>` : ''}
-    ${megaCard(m)}
-    ${lead ? '' : `<button type="button" class="btn sage wide" data-a="lead" data-u="${m.u}">Make partner</button>`}
-    <div class="row"><button type="button" class="btn sp" data-a="party" data-u="${m.u}"${(inP && S.party.length < 2) || (!inP && S.party.length >= 6) ? ' disabled' : ''}>${inP ? 'Remove from team' : 'Add to team'}</button><button type="button" class="btn sp" data-a="fav" data-u="${m.u}">${m.fav ? 'Unfavorite' : 'Favorite'}</button></div>
-    <button type="button" class="btn wide danger" data-a="sell" data-u="${m.u}"${S.mons.length > 1 ? '' : ' disabled'}>Sell for ${coinEl(sellValue(m))}</button></div>`);
+    ${ev.length ? `<div class="stack">${ev.map(o => `<button type="button" class="btn ${o.ok ? 'gold' : ''} wide" data-a="evolve" data-u="${m.u}" data-k="${o.to}"${o.ok ? '' : ' disabled'}>${o.ok ? 'Evolve into ' + esc(D(o.to)[0]) : 'Evolves ' + o.why}</button>`).join('')}</div>` : ''}
+    ${formCard(m)}${megaCard(m)}
+    <div class="mc-a">${lead ? '<span class="pill ptn">Your partner</span>' : inP ? `<button type="button" class="btn sp" data-a="lead" data-u="${m.u}">Make partner</button>` : ''}
+      <button type="button" class="btn sp" data-a="party" data-u="${m.u}"${inP && S.party.length < 2 ? ' disabled' : ''}>${inP ? 'Take off the team' : 'Add to the team'}</button></div>
+    <div class="row mc-e"><span class="sm tn">${n > 1 ? 'You have ' + n + ' of these' : 'Your only one'}</span><button type="button" class="btn sm2 danger" data-a="sell" data-u="${m.u}"${S.mons.length > 1 ? '' : ' disabled'}>Sell for ${coinEl(sellValue(m))}</button></div>`;
+  re ? reSheet(html) : openSheet(html);
 }
-/* Det den holder, på kortet. Arceus med en plate: typen står der. */
-function heldCard(m) {
-  if (!has('held')) return '';
+/* TALLENE BAK STYRKEN (ønske 15 og 18): hver verdi med det den er bygget av. Født og nå, størrelsen og det en shiny har over en vanlig. */
+function statSheet(m) {
+  const st = statsOf(m), bs = m.mega ? MEGA[m.mega - 1][4] : BST[m.id - 1], up = natUp(m.nat), dn = natDn(m.nat), sg = shinyGain(m), born = bornStars(m), now = nowStars(m), sz = szOf(m), mx = Math.max(...st, 1);
+  const row = i => { const ht = m.ht && m.ht[i], nat = up !== dn && i === up ? ' up' : up !== dn && i === dn ? ' dn' : '';
+    return `<div class="st-r"><span class="st-n${nat}">${SN[i]}${nat ? (i === up ? ' +' : ' −') : ''}</span><b class="tn">${st[i]}</b><span class="st-b"><i style="width:${Math.round(st[i] / mx * 100)}%"></i></span>
+      <small class="tn">base ${bs[i]} · IV ${m.iv[i]}${ht ? ' → 31' : ''} · EV ${m.ev[i]}${sg && sg.d[i] ? ` · <b class="au">+${sg.d[i]} shiny</b>` : ''}${i === 0 && sz !== 1 && szOn() && m.id !== 292 ? ` · ${SZN[sz]} ${sz > 1 ? '+' : '−'}${Math.round(Math.abs(SZHP[sz] - 1) * 100)} %` : ''}</small></div>`; };
+  openSheet(`<div class="row" style="justify-content:space-between"><h2 class="h" style="margin:0">${esc(mName(m))} in numbers</h2><button type="button" class="xb" data-a="mback" data-u="${m.u}" aria-label="Back">${icn('x')}</button></div>
+    <div class="st-top"><span class="pw tn"><b>${nb(pwOf(m))}</b><small>power · the six added up</small></span>${potOn() ? `<span class="sp">${starRow(m, 'lg')}<small>${JT[born - 1]} at birth${now > born ? ` · ${now} stars with training` : ''}</small></span>` : ''}</div>
+    <div class="stl" style="--tc:var(--t${mTypes(m)[0]})">${SN.map((_, i) => row(i)).join('')}</div>
+    <div class="st-x">
+      ${potOn() ? `<p class="sm"><b>${tl('Stars')}</b> · ${tl('The filled ones are what it was born with (its IVs) and never change. The pale ones come from Hyper Training.')}</p>` : ''}
+      ${potOn() ? `<p class="sm"><b>${NAT[m.nat]}</b> · ${up !== dn ? tl('Its nature gives {a} 10 % more and {b} 10 % less.', { a: SN[up], b: SN[dn] }) : tl('Its nature changes no stat.')}</p>` : ''}
+      ${sz !== 1 && szOn() ? `<p class="sm"><b>${SZN[sz]}</b> · ${tl('Size is something it is born with and can never be trained. It only changes HP: {p} %.', { p: (sz > 1 ? '+' : '−') + Math.round(Math.abs(SZHP[sz] - 1) * 100) })}</p>` : ''}
+      ${sg ? `<p class="sm"><b class="au">Shiny</b> · ${tl('A shiny is born with perfect IVs, and every stat is {p} % higher on top. Next to a regular {n} at the same level and training that is {x} more in all: {iv} from the IVs and {r} from the {p} %.', { p: m.id === ARCEUS ? Math.round((SHINYARC - 1) * 100) : Math.round((SHINYST - 1) * 100), n: esc(D(m.id)[0]), x: sg.sum, iv: sg.iv.reduce((x, y) => x + y, 0), r: sg.sum - sg.iv.reduce((x, y) => x + y, 0) })}</p>` : ''}</div>
+    <div><div class="lab">Base stats of the species${isMega(m) ? ' · Mega form' : formName(m) ? ' · ' + formName(m) + ' Forme' : ''}</div>${bstEl(m.id, m.mega, 0)}</div>
+    <button type="button" class="btn wide" data-a="mback" data-u="${m.u}">Back</button>`);
+}
+/* Det den holder, som en rad på kortet. Arceus med en plate: typen står der. */
+function heldRow(m) {
   const h = heldOf(m), own = Object.keys(HELD).some(k => S.items[k] > 0);
-  return `<div class="card heldc"><div class="item" style="padding:0"><span class="ic">${h ? heldEl(m.item, '30px') : '<span class="hnone"></span>'}</span><div class="sp"><div class="lab" style="margin:0 0 2px">Holding</div><b>${h ? h.n : 'Nothing'}</b><div class="sm">${h ? h.d + (h.g === 'once' ? ' · used up when it works' : '') + (plateTy(m) >= 0 ? ` · ${D(m.id)[0]} is ${TYN[h.ty]} type` : '') : own ? 'Give it a berry, a plate or a piece of gear.' : 'Berries, plates and gear are sold in the Shop.'}</div></div><button type="button" class="btn sm2" data-a="held" data-u="${m.u}">${h ? 'Change' : 'Give'}</button></div></div>`;
+  return `<button type="button" class="crow" data-a="held" data-u="${m.u}"><span class="ic">${h ? heldEl(m.item, '26px') : '<span class="hnone"></span>'}</span><span class="sp"><b>${h ? h.n : 'Holds nothing'}</b><small>${h ? esc(h.d) + (plateTy(m) >= 0 ? ` · ${D(m.id)[0]} is ${TYN[h.ty]} type` : '') : own ? 'Give it a berry, a plate or gear' : 'Berries, plates and gear are in the Shop'}</small></span>${icn('chev')}</button>`;
 }
 /* Velgeren: det som ligger i sekken, det som passer angrepene dens først. */
 function heldSheet(m) {
@@ -684,17 +824,19 @@ function heldShop(u) {
     <button type="button" class="btn wide" data-a="${u ? 'held' : 'close'}"${u ? ` data-u="${u}"` : ''}>${u ? 'Back' : 'Close'}</button>`);
   document.querySelectorAll('#sheet details.hfold').forEach((d, i) => d.addEventListener('toggle', () => { U.hfo[['pin', 'res', 'pl'][i]] = d.open; }));
 }
-/* Mega på kortet: hva arten kan bli, og det som mangler (ring, stein). Med ringen gis steinen her, og de med to former bytter fritt mellom dem. */
+/* Mega på kortet: hva arten kan bli, og det som mangler (ring, stein). Med ringen gis steinen her, og de med to former bytter fritt mellom dem.
+   Kortet viser egenskapen formen har i spillene (abShow), hva styrken blir, og at naturen følger med (ønske 3). */
 function megaCard(m) {
   const o = megaOpts(m.id); if (!o.length) return '';
   const leg = isLeg(m.id), has = leg ? hasStone(m.id) : o.includes(m.ms), cur = o.includes(m.ms) ? m.ms : o[0], pri = MEGA[cur - 1][1] === 'Primal', word = pri ? 'revert to its primal form' : 'Mega Evolve';
-  const a0 = abilityOf(m.id, 0), a1 = abilityOf(m.id, cur), abx = a1 === a0 ? '' : a1 ? ` · ${ABN[a1]}` : ` · loses ${ABN[a0]}`;
-  const g = MEGA[cur - 1], info = `${[g[2], g[3]].filter(t => t >= 0).map(t => TYN[t]).join(' / ')} · base stats +${megaBst(cur - 1) - BST[m.id - 1].reduce((a, b) => a + b, 0)}${abx}`;
+  const g = MEGA[cur - 1], ab = typeof abShow === 'function' ? abShow(m.id, cur) : null, up = natUp(m.nat), dn = natDn(m.nat), p0 = pwOf(Object.assign({}, m, { mega: 0 })), p1 = pwOf(Object.assign({}, m, { mega: cur }));
   const txt = !S.ring ? (leg ? (has ? 'You have its stone. You also need the Mega Ring: beat a Champion.' : `Its stone is won by beating ${D(m.id)[0]} in a raid, and you need the Mega Ring: beat a Champion.`) : 'You need the Mega Ring first: beat a Champion.')
     : has ? `It can ${word} once a battle, from the move menu.` : leg ? `Its stone is won by beating ${D(m.id)[0]} in a raid.` : `Give it a Mega Stone and it can ${word} in battle. You have ${S.items.mstone || 0}.`;
   const btn = !S.ring ? '' : has ? o.filter(k => k !== cur).map(k => `<button type="button" class="btn sm2 wide" data-a="mgive" data-u="${m.u}" data-k="${k}">Switch to ${esc(megaName(k))}</button>`).join('')
     : leg ? '' : o.map(k => `<button type="button" class="btn sm2 wide gold" data-a="mgive" data-u="${m.u}" data-k="${k}"${S.items.mstone > 0 ? '' : ' disabled'}>Give a Mega Stone · ${esc(megaName(k))}</button>`).join('');
-  return `<div class="card2 mgc${has && S.ring ? ' on' : ''}"><div class="row" style="gap:12px;align-items:center">${spr(m.id, { it: m.item, sh: m.sh, mega: cur, s: '64px' })}<div class="sp"><b>${esc(megaName(cur))}</b><div class="sm tn">${info}</div><div class="sm" style="margin-top:4px">${txt}</div></div></div>${btn}</div>`;
+  return `<div class="card2 mgc${has && S.ring ? ' on' : ''}"><div class="row" style="gap:12px;align-items:center">${spr(m.id, { it: m.item, sh: m.sh, mega: cur, s: '64px' })}<div class="sp"><b>${esc(megaName(cur))}</b><div class="mc-t" style="margin-top:5px">${[g[2], g[3]].filter(t => t >= 0).map(tyChip).join('')}</div></div><span class="mr-p tn"><b>${nb(p1)}</b><small class="up">▲ ${nb(p1 - p0)}</small></span></div>
+    ${ab ? `<p class="sm"><b>${ab.n}</b> · ${ab.d}${ab.live ? '' : ' <i class="nyet">Not in battles yet.</i>'}</p>` : ''}${potOn() && up !== dn ? `<p class="sm">${tl('Its nature stays as a Mega: {a} up, {b} down.', { a: SN[up], b: SN[dn] })}</p>` : ''}
+    <p class="sm">${txt}</p>${btn}</div>`;
 }
 /* Trening: seks rader med verdi, IV og EV. IV-feltet er halvparten så bredt som EV-feltet, fordi full IV er verdt 31 poeng på nivå 100 og full EV 63:
    da ser man at de to har ulike tak. Den valgte verdien får kjøpene under. Etter et kjøp tegnes innholdet om på stedet, så arket ikke glir inn på nytt. */
@@ -722,13 +864,21 @@ function trainSheet(m) {
   if (host && +host.dataset.u === m.u) { host.innerHTML = html; $('#trc').innerHTML = coinEl(S.coins); }
   else openSheet(`<div class="trv" style="--tc:var(--t${d[1]})"><div class="shead">${spr(m.id, { it: m.item, ani: 1, sh: m.sh, mega: m.mega, s: '72px' })}<div class="sp"><div class="sm tn">Training <button type="button" class="hq" data-a="trtip" aria-label="How training works">?</button></div><div class="pn" style="font-size:20px">${esc(mName(m))}</div><div class="sm tn">Lv ${m.lv} · ${NAT[m.nat]}</div></div><span id="trc">${coinEl(S.coins)}</span></div><div id="trd" class="trv" data-u="${m.u}">${html}</div></div>`);
 }
-/* Velg hvilke fire angrep den skal ha, blant alle den har lært til nå. */
-function movePick(m) {
-  const sel = U.mvsel;
-  openSheet(`<h2 class="h">Moves for ${esc(D(m.id)[0])}</h2><p class="sm tn">Pick up to four. ${sel.length} of 4 chosen.</p>
-    <div class="mvg">${movesAt(m.id, m.lv).concat(m.mv.filter(x => !movesAt(m.id, m.lv).includes(x))).map(x => moveEl(x, { btn: 1, on: sel.includes(x), m })).join('')}</div>
+/* ANGREPSVALGET (ønske 9 og 22): alt den kan nå, med forklaringen på hver rad, «Suggest four», og under det hva som kommer med nivå.
+   Angrep uten virkning i disse kampene (DEADMV) vises bare hvis den har dem på seg, så de kan byttes ut. Lærerne og egg-angrepene (steg 1b.8)
+   får sin egen del her, under «Learns later». */
+function movePick(m, re) {
+  const sel = U.mvsel, at = movesAt(m.id, m.lv), known = m.mv.concat(at.filter(x => !m.mv.includes(x)).reverse()).filter(x => !DEADMV.has(x) || m.mv.includes(x)), l = LEARN[m.id - 1], later = [];
+  for (let i = 0; i < l.length; i += 2) if (l[i] > m.lv && !known.includes(l[i + 1]) && !DEADMV.has(l[i + 1]) && !later.some(x => x[1] === l[i + 1])) later.push([l[i], l[i + 1]]);
+  const row = (x, lv) => mvRow(x, m, lv ? { lv } : { act: 'mvtog', on: sel.includes(x) });
+  const html = `<div class="row" style="justify-content:space-between"><h2 class="h" style="margin:0">Moves for ${esc(mName(m))}</h2><span class="pill tn" id="mvn">${sel.length} of 4</span></div>
+    ${known.filter(x => !DEADMV.has(x)).length > 4 ? `<button type="button" class="btn ${jOn() ? 'pri' : ''} wide sug" data-a="mvsug" data-u="${m.u}">${icn('spark')}Suggest four</button>${jOn() ? `<p class="sm" style="margin-top:-6px">${tl('Not sure? This picks its strongest moves in its own type, one for cover and one tactical.')}</p>` : ''}` : ''}
+    <div class="mvls">${known.map(x => row(x, 0)).join('')}</div>
     <p class="err" id="mv-err" role="alert"></p>
-    <button type="button" class="btn pri wide" data-a="mvsave" data-u="${m.u}">Save moves</button>`);
+    ${later.length ? `<details class="hfold mvlt"${U.mvlt ? ' open' : ''}><summary><b>Learns later</b><span class="sm tn">${later.length} · next at level ${later[0][0]}</span></summary><div class="mvls">${later.map(([lv, x]) => row(x, lv)).join('')}</div></details>` : `<p class="sm">${tl('It has learned every move it gets by level.')}</p>`}
+    <div class="row mv-f"><button type="button" class="btn sp nf" data-a="mback" data-u="${m.u}">Cancel</button><button type="button" class="btn pri sp" data-a="mvsave" data-u="${m.u}">Save moves</button></div>`;
+  re ? reSheet(html) : openSheet(html);
+  const dt = $('#sheet .mvlt'); if (dt) dt.addEventListener('toggle', () => { U.mvlt = dt.open; });
 }
 
 /* ---------- Dex ---------- */
@@ -1010,8 +1160,14 @@ function backupSheet() {
 }
 
 /* ---------- Ark ---------- */
-function openSheet(html) { const w = $('#sheet'); w.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><span class="grab"></span>${html}</div>`; w.hidden = false; }
+function openSheet(html) {
+  const w = $('#sheet'), s = w.querySelector('.sheet');
+  if (!w.hidden && s) { s.className = 'sheet'; s.innerHTML = `<span class="grab"></span>${html}`; s.scrollTop = 0; void s.offsetWidth; s.classList.add('swp'); return; }
+  w.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><span class="grab"></span>${html}</div>`; w.hidden = false;
+}
 function closeSheet() { const w = $('#sheet'); w.hidden = true; w.innerHTML = ''; U.pset = null; }
+/* Byttet på laget: inn på plassen til den som går ut (out = null: en ledig plass). Arket lukkes, og laget tegnes på nytt. */
+function teamSwap(out, inn) { if (!inn || !swapParty(out ? out.u : 0, inn.u)) return; U.sw = null; closeSheet(); render(); sfx.ok(); toast(out ? `${mName(inn)} is in for ${mName(out)}.` : `${mName(inn)} joined the team.`); }
 /* Åpner en encounter-pakke: pakken ristes opp, tre kort kommer ut med baksiden opp, og hvert snus med et trykk. Fargen på kortet røper sjeldenheten først når det snus. */
 function packShow(k, encs, demo) {
   const P = PACKS[k]; U.pk = encs; U.pkDemo = demo ? k : '';
@@ -1259,7 +1415,7 @@ const A = {
   dn: () => { if (typeof fairGate === 'function' && fairGate()) return; S.dn = dayKey(); stamp(); save(); sfx.open(); render(); $('#main').scrollTop = 0; enter();
     if (jReveal()) { U.jfrom = 'dn'; return; }
     if (has('battles') && S.party.length && openNeed() <= 0 && (!S.lad.day || (dayOld() && dayDone()))) BA.bdone(); else if (typeof raidArrive === 'function') raidArrive(); },
-  lagv: el => { U.lag = el.dataset.k; render(); enter(); },
+  lagv: el => { U.lag = el.dataset.k; U.cmp = null; render(); enter(); },
   fag: el => { U.fag = el.dataset.k; render(); },
   min: el => { U.min = +el.dataset.k; render(); },
   reg: el => { const r = +el.dataset.k, was = S.routes.includes(r); toggleRoute(r); if (was && S.routes.includes(r)) toast('At least one route has to stay on.'); render(); },
@@ -1278,7 +1434,24 @@ const A = {
   ball: el => { if (E.busy) return; E.ball = el.dataset.k; drawEnc(false); aim(); },
   berry: () => { if (E.busy || !E.e || E.done) return; if (feedBerry(E.e)) { sfx.coin(); buzz(25); drawEnc(false); aim(); } },
   throw: () => doThrow(),
-  mon: el => { const m = monBy(+el.dataset.u); if (m) { U.nick = 0; cry(m.id, 0, 0.35); monSheet(m); } },
+  mon: el => { const m = monBy(+el.dataset.u); if (m) { U.nick = 0; U.mvx = null; cry(m.id, 0, 0.35); monSheet(m); } },
+  /* Team (steg 1.6): rekkefølgen som vises, forklaringen som kvitteres, sammenligning og bytte rett fra kortet. */
+  tord: el => { U.tord = el.dataset.k; render(); },
+  tipok: el => { (S.tip || (S.tip = {}))[el.dataset.k] = 1; save(true); render(); },
+  cmp: () => { U.cmp = U.cmp ? null : []; render(); },
+  cmpick: el => { const u = +el.dataset.u, c = U.cmp || (U.cmp = []), i = c.indexOf(u); if (i >= 0) c.splice(i, 1); else c.push(u); if (c.length < 2) return render(); const a = monBy(c[0]), b = monBy(c[1]); U.cmp = null; U.sw = null; render(); cmpSheet(a, b); },
+  cmpw: el => { U.sw = { mode: 'cmp', u: +el.dataset.u }; U.swq = ''; swapSheet(); },
+  tsw: el => { U.sw = { mode: 'swap', u: +el.dataset.u }; U.swq = ''; swapSheet(); },
+  tswb: () => { if (U.sw) swapSheet(); else closeSheet(); },
+  tsws: el => { U.sws = el.dataset.k; swapSheet(1); },
+  tswc: el => { const w = U.sw || {}; cmpSheet(monBy(w.u), monBy(+el.dataset.u)); },
+  tswp: el => { const w = U.sw || {}, m = monBy(+el.dataset.u), cur = monBy(w.u); if (!m) return; if (w.mode === 'cmp') { sfx.open(); return cmpSheet(cur, m); } teamSwap(w.mode === 'slot' ? m : cur, w.mode === 'slot' ? cur : m); },
+  tswgo: el => teamSwap(monBy(+el.dataset.o), monBy(+el.dataset.u)),
+  tswr: el => { const m = monBy(+el.dataset.u); if (!m || S.party.length < 2) return; toggleParty(m); U.sw = null; closeSheet(); render(); toast(`${mName(m)} is off the team.`); },
+  mstat: el => { const m = monBy(+el.dataset.u); if (m) statSheet(m); },
+  mback: el => { const m = monBy(+el.dataset.u); if (m) monSheet(m); else closeSheet(); },
+  mvinfo: el => { const m = monBy(+el.dataset.u), x = +el.dataset.k; if (!m) return; U.mvx = U.mvx === x ? null : x; monSheet(m, 1); },
+  mvsug: el => { const m = monBy(+el.dataset.u); if (!m) return; U.mvsel = suggestMoves(m); movePick(m, 1); toast('Four picked. Change any you like, then save.'); },
   spec: el => specSheet(+el.dataset.k),
   close: () => closeSheet(),
   avatar: () => avSheet(false),
@@ -1299,19 +1472,19 @@ const A = {
   sort: el => { U.sort = el.dataset.k; render(); },
   dexr: el => { U.dex = +el.dataset.k; render(); },
   lead: el => { const m = monBy(+el.dataset.u); setPartner(m); closeSheet(); render(); toast(`${D(m.id)[0]} is now your partner.`); },
-  party: el => { const m = monBy(+el.dataset.u); toggleParty(m); render(); monSheet(m); },
-  fav: el => { const m = monBy(+el.dataset.u); m.fav = m.fav ? 0 : 1; save(); render(); monSheet(m); },
+  party: el => { const m = monBy(+el.dataset.u); if (!m) return; if (!S.party.includes(m.u) && S.party.length >= 6) { U.sw = { mode: 'slot', u: m.u }; return swapSheet(); } toggleParty(m); render(); monSheet(m, 1); },
+  fav: el => { const m = monBy(+el.dataset.u); m.fav = m.fav ? 0 : 1; save(); render(); monSheet(m, 1); },
   mvpick: el => { const m = monBy(+el.dataset.u); U.mvsel = m.mv.slice(); U.mvu = m.u; movePick(m); },
   mlearn: el => { const m = monBy(+el.dataset.u); if (m) learnSheet(m, 'sheet'); },
-  mvtog: el => { const x = +el.dataset.k, s = U.mvsel, i = s.indexOf(x); if (i >= 0) s.splice(i, 1); else if (s.length < 4) s.push(x); else { $('#mv-err').textContent = 'Four is the limit. Tap one to remove it first.'; return; } movePick(monBy(U.mvu)); },
+  mvtog: el => { const x = +el.dataset.k, s = U.mvsel, i = s.indexOf(x); if (i >= 0) s.splice(i, 1); else if (s.length < 4) s.push(x); else { $('#mv-err').textContent = 'Four is the limit. Tap one to remove it first.'; return; } movePick(monBy(U.mvu), 1); },
   mvsave: el => { const m = monBy(+el.dataset.u); if (!U.mvsel.length) { $('#mv-err').textContent = 'Keep at least one move.'; return; } m.mv = U.mvsel.slice(); save(); monSheet(m); toast('Moves saved.'); },
-  candy: el => { const m = monBy(+el.dataset.u); if (useCandy(m)) { sfx.coin(); render(); monSheet(m); } },
+  candy: el => { const m = monBy(+el.dataset.u), k = m ? useCandyN(m, Math.max(1, +el.dataset.n || 1)) : 0; if (k) { sfx.coin(); render(); monSheet(m, 1); if (k > 1) toast(`${mName(m)} grew ${k} levels.`); } },
   held: el => { const m = monBy(+el.dataset.u); if (m) { sfx.open(); heldSheet(m); } },
   heldgive: el => { const m = monBy(+el.dataset.u), k = el.dataset.k; if (m && giveHeld(m, k)) { (HELD[k].g === 'once' ? sfx.berry : sfx.keyitem)(); render(); monSheet(m); toast(`${mName(m)} now holds the ${HELD[k].n}.`); } },
   heldoff: el => { const m = monBy(+el.dataset.u), n = heldOf(m) ? heldOf(m).n : ''; if (m && giveHeld(m, '')) { sfx.close(); render(); monSheet(m); toast(`The ${n} is back in the bag.`); } },
   heldshop: el => { sfx.open(); heldShop(el && el.dataset.u ? +el.dataset.u : 0); },
   heldbuy: el => { const k = el.dataset.k, u = el.dataset.u ? +el.dataset.u : 0; if (buyHeld(k)) { (HELD[k].g === 'once' ? sfx.berry : sfx.keyitem)(); render(); heldShop(u); toast(`${HELD[k].n} bought.`); } },
-  mgive: el => { const m = monBy(+el.dataset.u), k = +el.dataset.k; if (!m) return; const had = megaOpts(m.id).includes(m.ms) || isLeg(m.id); if (bondMega(m, k)) { sfx.evo(); render(); monSheet(m); toast(had ? `${megaName(k)} it is.` : `${mName(m)} now holds a Mega Stone.`); } },
+  mgive: el => { const m = monBy(+el.dataset.u), k = +el.dataset.k; if (!m) return; const had = megaOpts(m.id).includes(m.ms) || isLeg(m.id); if (bondMega(m, k)) { sfx.evo(); render(); monSheet(m, 1); toast(had ? `${megaName(k)} it is.` : `${mName(m)} now holds a Mega Stone.`); } },
   train: el => { const m = monBy(+el.dataset.u); if (!m) return; U.tru = m.u; U.tri = null; trainSheet(m); },
   trsel: el => { const m = monBy(U.tru); if (!m) return; U.tri = +el.dataset.k; trainSheet(m); },
   trback: () => { const m = monBy(U.tru); if (m) monSheet(m); else closeSheet(); },
@@ -1346,9 +1519,9 @@ const A = {
   diff: el => { S.diff = +el.dataset.k; save(); render(); setRe(); toast(`Difficulty: ${diff().n}. It applies from your next battle.`); },
   hfx: () => { S.hfx = S.hfx === 0 ? 1 : 0; save(); render(); setRe(); },
   hty: () => { S.hty = S.hty === 0 ? 1 : 0; save(); render(); setRe(); },
-  nick: el => { const m = monBy(+el.dataset.u); if (!m) return; U.nick = m.u; monSheet(m); const i = $('#nkin'); if (i) { i.focus(); i.select(); } },
-  nicksave: el => { const m = monBy(+el.dataset.u), i = $('#nkin'); if (!m) return; const n = setNick(m, i ? i.value : ''); U.nick = 0; render(); monSheet(m); toast(n ? `${D(m.id)[0]} is now called ${n}.` : `${D(m.id)[0]} goes by its own name again.`); },
-  form: el => { const m = monBy(+el.dataset.u); if (!m || m.id !== 487) return; m.mega = m.mega === ORIGIN ? 0 : ORIGIN; save(); sfx.evo(); render(); monSheet(m); },
+  nick: el => { const m = monBy(+el.dataset.u); if (!m) return; U.nick = m.u; monSheet(m, 1); const i = $('#nkin'); if (i) { i.focus(); i.select(); } },
+  nicksave: el => { const m = monBy(+el.dataset.u), i = $('#nkin'); if (!m) return; const n = setNick(m, i ? i.value : ''); U.nick = 0; render(); monSheet(m, 1); toast(n ? `${D(m.id)[0]} is now called ${n}.` : `${D(m.id)[0]} goes by its own name again.`); },
+  form: el => { const m = monBy(+el.dataset.u); if (!m || !setForm(m, +el.dataset.k || 0)) return; sfx.evo(); render(); monSheet(m, 1); toast(`${mName(m)} is now in its ${formName(m)} Forme.`); },
   music: () => { S.music = S.music === 0 ? 1 : 0; save(); sfx.tap(); render(); setRe(); },
   cries: () => { S.cries = S.cries ? 0 : 1; save(); if (S.cries) { const p = partner(); if (p) cry(p.id); } render(); setRe(); },
   plan: () => subjSheet(),
@@ -1423,6 +1596,7 @@ document.addEventListener('input', ev => {
 });
 document.addEventListener('change', ev => { if (ev.target.dataset && ev.target.dataset.v) save(); });
 document.addEventListener('input', ev => { const t = ev.target; if (t.dataset && t.dataset.f && U.sd && U.sd[+t.dataset.i]) { U.sd[+t.dataset.i][t.dataset.f] = t.value; const e = $('#se-err'); if (e) e.textContent = ''; } });
+document.addEventListener('input', ev => { const t = ev.target; if (t.dataset && t.dataset.q === 'sw') { U.swq = t.value; const l = $('#swl'); if (l) l.innerHTML = swapList(); } });
 document.addEventListener('change', ev => { if (ev.target.dataset && ev.target.dataset.c === 'cap') { S.cap = +ev.target.value; save(); render(); setRe(); } });
 document.addEventListener('keydown', ev => {
   if (ev.key === 'Escape' && !$('#sheet').hidden) return closeSheet();

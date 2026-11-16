@@ -217,11 +217,33 @@ MEGA.push([DEOXYS, 'Defense', 13, -1, [50, 70, 160, 70, 160, 90], 10002, 1, 17])
 const DEOXD = MEGA.length;
 MEGA.push([DEOXYS, 'Attack', 13, -1, [50, 180, 20, 180, 20, 150], 10001, 1, 17]);
 const DEOXA = MEGA.length;
+/* FORMENE TIL DE LEGENDARISKE (steg 1.6, ønske 19): verdier og typer fra spillene, og de byttes på kortet (formOpts, setForm). De står sist i lista,
+   for plassen i MEGA er det lagringen husker (m.mega). Meloetta og Genesect bytter i kampen, ikke her. */
+MEGA.push([DEOXYS, 'Speed', 13, -1, [50, 95, 90, 95, 90, 180], 10003, 1, 17]);
+MEGA.push([492, 'Sky', 11, 2, [100, 103, 75, 120, 75, 127], 10006, 1, 4]);
+MEGA.push([641, 'Therian', 2, -1, [79, 100, 80, 110, 90, 121], 10019, 1, 14]);
+MEGA.push([642, 'Therian', 12, 2, [79, 105, 70, 145, 80, 101], 10020, 1, 30]);
+MEGA.push([645, 'Therian', 4, 2, [89, 145, 90, 105, 80, 91], 10021, 1, 13]);
+MEGA.push([646, 'Black', 15, 14, [125, 170, 100, 120, 90, 95], 10022, 1, 33]);
+MEGA.push([646, 'White', 15, 14, [125, 120, 90, 170, 100, 95], 10023, 1, 36]);
+MEGA.push([647, 'Resolute', 10, 1, [91, 72, 90, 129, 90, 108], 10024, 1, 14]);
 /* Former som ikke er Mega: de teller ikke som Mega Evolution, og navnet står som det er. */
-const FORMS = new Set(['Origin', 'Defense', 'Attack']);
+const FORMS = new Set(['Origin', 'Defense', 'Attack', 'Speed', 'Sky', 'Therian', 'Black', 'White', 'Resolute']);
+/* Navnet på grunnformen til artene som har former, og det en form krever (som i spillene: Kyurem smelter sammen med Zekrom eller Reshiram). */
+const FORM0 = { 386: 'Normal', 487: 'Altered', 492: 'Land', 641: 'Incarnate', 642: 'Incarnate', 645: 'Incarnate', 646: 'Kyurem', 647: 'Ordinary' };
+const FORMNEED = { Black: 644, White: 643 };
 /* Formen en art har når den dukker opp (Giratina kommer i Origin Forme og kan byttes på kortet). */
 const defForm = id => id === 487 ? ORIGIN : 0;
 const megaOf = m => m && m.mega ? MEGA[m.mega - 1] : null;
+/* Formene en Pokémon kan byttes mellom på kortet: [plass i MEGA + 1 (0 = grunnformen), navnet, hva som mangler ('' = kan velges)]. */
+function formOpts(m) {
+  if (!m || !FORM0[m.id]) return [];
+  const out = [];
+  MEGA.forEach((g, k) => { if (g[0] === m.id && FORMS.has(g[1])) { const need = FORMNEED[g[1]]; out.push([k + 1, g[1], need && !S.mons.some(x => x.id === need) ? `Needs ${D(need)[0]}` : '']); } });
+  return [[0, FORM0[m.id], '']].concat(out.sort((a, b) => a[1] < b[1] ? -1 : 1));
+}
+const formName = m => { const g = megaOf(m); return g && FORMS.has(g[1]) ? g[1] : FORM0[m.id] && !m.mega ? FORM0[m.id] : ''; };
+function setForm(m, k) { const o = formOpts(m).find(x => x[0] === k); if (!o || o[2] || (m.mega || 0) === k) return false; m.mega = k; save(); return true; }
 const isMega = m => { const g = megaOf(m); return !!g && !FORMS.has(g[1]); };
 /* Mega Evolution i kamp. megaOpts = formene en art har (plass i MEGA + 1; Charizard og Mewtwo har to). En egen Pokémon kan mega-utvikle seg når
    du har Mega Ring (S.ring, fra den første Champion du slår) og den har fått en Mega Stone (m.ms = formen; S.items.mstone er steinene du har).
@@ -264,11 +286,18 @@ function setNick(m, s) { const n = cleanNick(s); if (n && n !== D(m.id)[0]) m.nn
 /* Arceus med en plate er den typen (Multitype). */
 const ARCEUS = 493, plateTy = m => { const h = m && m.id === ARCEUS && m.item ? HELD[m.item] : null; return h && h.ty != null ? h.ty : -1; };
 const mTypes = m => { const g = megaOf(m), p = plateTy(m); return p >= 0 ? [p, -1] : g ? [g[2], g[3]] : [D(m.id)[1], D(m.id)[2]]; };
+/* STØRRELSEN (steg 1.6–1.7, ønske 6 og 18): det en Pokémon er født med og som aldri kan trenes. Bare HP endres, så moderat at en favoritt aldri
+   blir ubrukelig. m.sz: 0 Small, 1 Normal (feltet mangler), 2 Large, 3 Giant. Giant 2 %, Large 15 %, Small 15 %; de legendariske er alltid Normal.
+   r = et tall i [0, 1) når størrelsen skal følge noe fast (migrate17). Vises bare når den ikke er Normal, og på reisen først når den er forklart. */
+const SZN = ['Small', 'Normal', 'Large', 'Giant'], SZHP = [0.97, 1, 1.03, 1.06];
+const szOf = m => m && m.sz != null ? m.sz : 1;
+const rollSz = (id, r) => { if (isLeg(id)) return 1; r = r == null ? Math.random() : r; return r < 0.02 ? 3 : r < 0.17 ? 2 : r < 0.32 ? 0 : 1; };
+const szOn = () => !jOn() || has('size');
 function statsOf(m) {
   const b = m.mega ? MEGA[m.mega - 1][4] : BST[m.id - 1], up = natUp(m.nat), dn = natDn(m.nat), sx = m.sh ? (m.sh === 1 && m.id === ARCEUS ? SHINYARC : SHINYST) : 1;
   return b.map((B, i) => {
     const core = Math.floor((2 * B + ivOf(m, i) + Math.floor(m.ev[i] / 4)) * m.lv / 100);
-    if (i === 0) return m.id === 292 ? 1 : Math.floor((core + m.lv + 10) * sx);
+    if (i === 0) return m.id === 292 ? 1 : Math.floor(Math.floor((core + m.lv + 10) * sx) * SZHP[szOf(m)]);
     const v = core + 5;
     return Math.floor((up === dn ? v : i === up ? Math.floor(v * 1.1) : i === dn ? Math.floor(v * 0.9) : v) * sx);
   });
@@ -285,6 +314,17 @@ function nextMove(m) { const l = LEARN[m.id - 1]; for (let i = 0; i < l.length; 
 function judge(m) {
   const s = m.iv.reduce((a, b) => a + b, 0), best = m.iv.indexOf(Math.max(...m.iv));
   return { t: s >= 186 ? 'Flawless' : s >= 151 ? 'Outstanding' : s >= 121 ? 'Great' : s >= 91 ? 'Above average' : 'Decent', best, sum: s };
+}
+/* STJERNENE (ønske 18): én rad. Født = judge på de egentlige IV-ene, og endres aldri. Nå = det samme med hypertrente verdier regnet som 31.
+   STYRKEN (ønske 20) = summen av verdiene slik de er nå (nivå, IV, EV, natur, shiny, form og størrelse): det den faktisk stiller med. */
+const starsFor = s => s >= 186 ? 5 : s >= 151 ? 4 : s >= 121 ? 3 : s >= 91 ? 2 : 1;
+const bornStars = m => starsFor(m.iv.reduce((a, b) => a + b, 0)), nowStars = m => starsFor(m.iv.reduce((a, b, i) => a + ivOf(m, i), 0));
+const pwOf = m => statsOf(m).reduce((a, b) => a + b, 0);
+/* Det en shiny har over en vanlig av samme art med de samme nivåene og treningen (IV 15 i alt): per verdi, og hvor mye av det som er IV-ene. */
+function shinyGain(m) {
+  if (m.sh !== 1) return null;
+  const base = Object.assign({}, m, { sh: 0, iv: [15, 15, 15, 15, 15, 15], ht: null }), ivs = Object.assign({}, m, { sh: 0, ht: null }), a = statsOf(base), b = statsOf(ivs), c = statsOf(m);
+  return { d: c.map((v, i) => v - a[i]), iv: b.map((v, i) => v - a[i]), sum: c.reduce((x, y) => x + y, 0) - a.reduce((x, y) => x + y, 0) };
 }
 const rollIv = egg => Array.from({ length: 6 }, () => egg ? Math.max(rnd(32), rnd(32)) : rnd(32));
 function ensure(m) {
@@ -360,7 +400,7 @@ function wildLv(id, t) {
 const KEY = 'fokusdex.v1';
 function fresh() {
   return {
-    v: 1, mig: 16, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
+    v: 1, mig: 17, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
     items: { poke: 20, great: 0, ultra: 0, dusk: 0, master: 0, gberry: 0, candy: 0, stone: 0, mstone: 0, incense: 0, potion: 0, super: 0, hyper: 0, maxp: 0, heal: 0, revive: 0, maxrev: 0, ash: 0 }, charm: 0, ring: 0, lst: {},
     lure: 0, slure: 0, prism: 0, shb: null,
     mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, routes: [1], eggs: [], pend: [], incOn: 0,
@@ -486,6 +526,22 @@ const LNO = {
   'Battle rewards grow with today\'s focus and peak when you reach your goal: a higher goal has a higher peak. Past the goal your team is tired (half XP, no encounters).': 'Belønningene i kampene vokser med dagens fokus og topper når du når målet: et høyere mål har en høyere topp. Etter målet er laget slitent (halv XP, ingen møter).',
   'Move hints mark how well each move works against the foe. Type tags show the types by the HP boxes. Battle speed, music and forfeit are in the Pause menu during a battle.': 'Move hints merker hvor godt hvert angrep virker mot motstanderen. Type tags viser typene ved HP-boksene. Kampfart, musikk og å gi opp ligger i Pause-menyen under en kamp.',
   'Your game is saved on this device. Sync keeps it in a private GitHub repository so it follows you between devices.': 'Spillet lagres på denne enheten. Sync legger det i et privat GitHub-repo, så det følger deg mellom enheter.',
+  // Steg 1.6: Team og kortet
+  'Tap two to see them side by side.': 'Trykk på to for å se dem side om side.',
+  'Power is what a Pokémon really brings right now: level, training, nature, shiny and size all count, not only the species.': 'Power er det en Pokémon faktisk stiller med akkurat nå: nivå, trening, natur, shiny og størrelse teller, ikke bare arten.',
+  'Everyone you have is on the team. Catch more in the grass or open a pack.': 'Alle du har, er på laget. Fang flere i gresset eller åpne en pakke.',
+  'The team is full. Tap the one that should make room.': 'Laget er fullt. Trykk på den som skal gi plass.',
+  'The numbers are what each one has right now. A lower level catches up as it grows; stars and size do not change.': 'Tallene er det hver av dem har akkurat nå. Et lavere nivå tar igjen når den vokser; stjernene og størrelsen endrer seg ikke.',
+  'Tap a move to see what it does.': 'Trykk på et angrep for å se hva det gjør.',
+  'Stars': 'Stjernene',
+  'The filled ones are what it was born with (its IVs) and never change. The pale ones come from Hyper Training.': 'De fylte er det den ble født med (IV-ene) og endrer seg aldri. De bleke kommer fra Hyper Training.',
+  'Its nature gives {a} 10 % more and {b} 10 % less.': 'Naturen gir {a} 10 % mer og {b} 10 % mindre.',
+  'Its nature changes no stat.': 'Naturen endrer ingen verdi.',
+  'Size is something it is born with and can never be trained. It only changes HP: {p} %.': 'Størrelsen er noe den er født med, og den kan aldri trenes. Den endrer bare HP: {p} %.',
+  'A shiny is born with perfect IVs, and every stat is {p} % higher on top. Next to a regular {n} at the same level and training that is {x} more in all: {iv} from the IVs and {r} from the {p} %.': 'En shiny er født med perfekte IV-er, og hver verdi er {p} % høyere i tillegg. Mot en vanlig {n} på samme nivå og med samme trening er det {x} mer til sammen: {iv} fra IV-ene og {r} fra de {p} %.',
+  'Not sure? This picks its strongest moves in its own type, one for cover and one tactical.': 'Usikker? Dette velger de sterkeste angrepene i dens egen type, ett for dekning og ett taktisk.',
+  'It has learned every move it gets by level.': 'Den har lært alle angrepene den får med nivå.',
+  'Its nature stays as a Mega: {a} up, {b} down.': 'Naturen gjelder også som Mega: {a} opp, {b} ned.',
   // Steg 1 (Dusk): flere
 };
 const tl = (s, v) => { const x = typeof S !== 'undefined' && S && S.lang === 'no' && LNO[s] != null ? LNO[s] : s; return v ? x.replace(/\{(\w+)\}/g, (m, k) => v[k] != null ? v[k] : m) : x; };
@@ -561,6 +617,16 @@ function migrate12() {
 function raidRelevel(R) {
   try { if (!R || R.dk || R.hx != null || typeof LEG === 'undefined' || !LEG[R.id] || typeof raidLvFor !== 'function') return; const t = LEG[R.id].t; R.lv = raidLvFor(t); R.hx = +raidHx(t).toFixed(2); } catch (_) {}
 }
+/* Steg 1 (størrelsene): de som alt er fanget, får sin etter et fast tall fra nummeret og fangsttidspunktet, så den blir lik på alle enheter.
+   Ingen blir Small (ingen skal bli svakere av oppdateringen): 15 % Large og 2 % Giant, resten Normal. De legendariske er Normal. */
+function migrate17() {
+  for (const m of S.mons || []) {
+    if (m.sz != null) continue;
+    const r = (((m.u * 2246822519 + ((m.at || 0) % 1000003) * 3266489917) >>> 0) % 10000) / 10000, z = rollSz(m.id, r);
+    if (z > 1) m.sz = z;
+  }
+  S.mig = 17;
+}
 function adopt(o) {
   S = Object.assign(fresh(), o);
   S.lad = Object.assign(fresh().lad, o.lad || {}); S.fac = Object.assign(fresh().fac, o.fac || {});
@@ -583,6 +649,7 @@ function adopt(o) {
   if (!o.mig || o.mig < 14) migrate14();
   if (!o.mig || o.mig < 15) migrate15();
   if (!o.mig || o.mig < 16) migrate16();
+  if (!o.mig || o.mig < 17) migrate17();
   /* Et forsøk kan ikke være eldre enn raidet selv (S.raid.at = dagen det kom). Et slikt merke kommer fra en eldre appversjon som flettet inn
      forsøkene fra et tidligere raid av samme art: de gjelder ikke dette. */
   if (S.raid && S.raid.at && S.raid.day && S.raid.day < S.raid.at) { S.raid.tries = 0; S.raid.day = ''; }
@@ -874,6 +941,7 @@ const shinyOdds = () => (1 / SHINYN) * (1 + Math.min(streak(), 10) * 0.05) * (S.
 function addMon(id, lv, sh, egg, g) {
   const m = { u: S.uid++, id, lv, xp: xpAt(lv), sh: sh === 2 ? 2 : sh ? 1 : 0, fav: 0, at: Date.now(), iv: sh ? [31, 31, 31, 31, 31, 31] : rollIv(egg), ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: defaultMoves(id, lv), g: g == null ? rollG(id) : g };
   if (defForm(id)) m.mega = defForm(id);
+  const sz = rollSz(id); if (sz !== 1) m.sz = sz;
   S.mons.push(m);
   S.seen[id] = 1; S.caught[id] = 1; unlockRegions();
   if (S.party.length < 6) S.party.push(m.u);
@@ -1184,12 +1252,22 @@ function dupes() {
   return out;
 }
 function setPartner(m) { S.party = [m.u, ...S.party.filter(u => u !== m.u)].slice(0, 6); save(); }
+/* Bytt rett fra Team (ønske 1): inn på plassen til den som går ut (outU = 0: en ledig plass). Går partneren ut, blir den nye partner.
+   Alt som endrer hvem som er på laget, går gjennom setPartner, swapParty og toggleParty: der skal låsen under et løp (steg 1b.7) stå. */
+function swapParty(outU, inU) {
+  if (!monBy(inU) || S.party.includes(inU)) return false;
+  const i = S.party.indexOf(outU);
+  if (i >= 0) S.party[i] = inU; else if (S.party.length < 6) S.party.push(inU); else return false;
+  save(); return true;
+}
 function toggleParty(m) {
   if (S.party.includes(m.u)) { if (S.party.length > 1) S.party = S.party.filter(u => u !== m.u); }
   else if (S.party.length < 6) S.party.push(m.u);
   save();
 }
-function useCandy(m) { if (!(S.items.candy > 0) || m.lv >= 100) return false; S.items.candy--; m.lv++; m.xp = Math.max(m.xp, xpAt(m.lv)); learnUp(m, m.lv - 1); save(); return true; }
+/* Rare Candy: n om gangen (ønske 23). Svaret er hvor mange som ble brukt. Angrepene den går forbi, læres eller venter som ellers. */
+function useCandyN(m, n) { let k = 0; while (k < n && S.items.candy > 0 && m.lv < 100) { S.items.candy--; m.lv++; m.xp = Math.max(m.xp, xpAt(m.lv)); learnUp(m, m.lv - 1); k++; } if (k) save(); return k; }
+function useCandy(m) { return useCandyN(m, 1) > 0; }
 function buy(k) {
   const it = SHOP[k];
   if (!it || S.coins < it.p || (it.lv && tlv() < it.lv) || (it.ring && !S.ring) || shopFull(k)) return false;

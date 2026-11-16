@@ -197,7 +197,8 @@ const ABOF = {}; ABD.split('|').forEach(r => { const q = r.split(':'); q[1].spli
 /* Giratina i Origin Forme har Levitate i stedet for Pressure. */
 /* MEGA-FORMENE HAR SIN EGEN EGENSKAP der spillene gir dem en av dem motoren kjenner (art:form). '' = den mister artens egenskap (Mega Gengar svever ikke,
      Mega Aggron har ikke Sturdy). Former som ikke står her (de fra Legends: Z-A og de som får en egenskap motoren ikke har), beholder artens. */
-const MEGAAB = { '6:Y': 'drought', '94:': '', '127:': '', '130:': 'moldbreaker', '142:': '', '150:X': '', '150:Y': '', '181:': 'moldbreaker', '208:': '', '229:': '', '254:': 'lightningrod', '257:': 'speedboost', '303:': 'hugepower', '306:': '', '310:': 'intimidate', '319:': '', '359:': '', '373:': '', '376:': '' };
+/* (steg 1.6) Formene til de legendariske står her med egenskapen de har i spillene, der motoren kjenner den. */
+const MEGAAB = { '642:Therian': 'voltabsorb', '645:Therian': 'intimidate', '646:Black': 'teravolt', '646:White': 'turboblaze', '492:Sky': '', '641:Therian': '', '6:Y': 'drought', '94:': '', '127:': '', '130:': 'moldbreaker', '142:': '', '150:X': '', '150:Y': '', '181:': 'moldbreaker', '208:': '', '229:': '', '254:': 'lightningrod', '257:': 'speedboost', '303:': 'hugepower', '306:': '', '310:': 'intimidate', '319:': '', '359:': '', '373:': '', '376:': '' };
 const abilityOf = (id, mega) => { if (id === 487 && mega === ORIGIN) return 'levitate'; const g = mega ? MEGA[mega - 1] : null, k = g ? id + ':' + g[1] : ''; return g && k in MEGAAB ? MEGAAB[k] : ABOF[id] || ''; };
 const ab = b => b && !b.tf ? abilityOf(b.id, b.mega) : '';
 const mold = b => { const a = ab(b); return a === 'moldbreaker' || a === 'teravolt' || a === 'turboblaze'; };
@@ -437,6 +438,28 @@ Object.assign(UM, {
 UM['Sketch'] = UM['Mimic']; UM['Lunar Dance'] = UM['Healing Wish'];
 UM['Aromatherapy'] = UM['Heal Bell']; UM['Block'] = UM['Spider Web'] = UM['Mean Look']; UM['Mind Reader'] = UM['Lock-On'];
 /* Tilstander utover de fem vanlige (tilstandsnummeret fra dataene). */
+/* EGENSKAPEN KORTET VISER (steg 1.6, ønske 3 og 19). Mega-formene og formene har i spillene ofte en egenskap motoren ikke har ennå (den lages i
+   steg 1b.5). ABX = navnet og en linje om hver av dem, FORMAB = hvilken form som har hvilken (art:form). abShow gir det kortet skal vise:
+   { n, d, live }, der live = 1 betyr at den virker i kampene nå. Når motoren får en av dem (ABN), blir den live av seg selv. */
+const ABX = { thickfat: ['Thick Fat', 'Fire and Ice moves do half damage to it.'], toughclaws: ['Tough Claws', 'Its contact moves hit 30 % harder.'], megalauncher: ['Mega Launcher', 'Its pulse and aura moves hit 50 % harder.'],
+  adaptability: ['Adaptability', 'Moves of its own type hit even harder.'], noguard: ['No Guard', 'No move misses, its own or the foe\'s.'], trace: ['Trace', "Copies the foe's Ability when it enters."], shellarmor: ['Shell Armor', 'Cannot be struck by critical hits.'],
+  shadowtag: ['Shadow Tag', 'The foe cannot switch out.'], parentalbond: ['Parental Bond', 'Its moves hit twice, the second time weaker.'], aerilate: ['Aerilate', 'Normal moves become Flying and hit harder.'], steadfast: ['Steadfast', 'Speed rises each time it flinches.'],
+  insomnia: ['Insomnia', 'Cannot fall asleep.'], sandforce: ['Sand Force', 'Rock, Ground and Steel moves hit harder in a sandstorm.'], technician: ['Technician', 'Its weaker moves hit 50 % harder.'], skilllink: ['Skill Link', 'Multi-hit moves always hit five times.'],
+  solarpower: ['Solar Power', 'In harsh sunlight Sp. Atk rises, but it loses HP each turn.'], swiftswim: ['Swift Swim', 'Doubles its Speed in rain.'], pixilate: ['Pixilate', 'Normal moves become Fairy and hit harder.'], magicbounce: ['Magic Bounce', 'Sends status moves back at the user.'],
+  filter: ['Filter', 'Super effective moves do less damage to it.'], strongjaw: ['Strong Jaw', 'Its biting moves hit 50 % harder.'], sheerforce: ['Sheer Force', 'Moves lose their extra effects but hit harder.'], prankster: ['Prankster', 'Its status moves go first.'],
+  refrigerate: ['Refrigerate', 'Normal moves become Ice and hit harder.'], primordialsea: ['Primordial Sea', 'Brings heavy rain: Fire moves fail.'], desolateland: ['Desolate Land', 'Brings extremely harsh sunlight: Water moves fail.'],
+  deltastream: ['Delta Stream', 'Strong winds shield Flying types from their weaknesses.'], scrappy: ['Scrappy', 'Its Normal and Fighting moves hit Ghost types.'], innerfocus: ['Inner Focus', 'Cannot be made to flinch.'], healer: ['Healer', 'May cure an ally of its status.'],
+  serenegrace: ['Serene Grace', "Doubles the chance of its moves' extra effects."], regenerator: ['Regenerator', 'Heals a third of its HP when it switches out.'] };
+const FORMAB = { '3:': 'thickfat', '6:X': 'toughclaws', '9:': 'megalauncher', '15:': 'adaptability', '18:': 'noguard', '65:': 'trace', '80:': 'shellarmor', '94:': 'shadowtag', '115:': 'parentalbond', '127:': 'aerilate', '142:': 'toughclaws',
+  '150:X': 'steadfast', '150:Y': 'insomnia', '208:': 'sandforce', '212:': 'technician', '214:': 'skilllink', '229:': 'solarpower', '260:': 'swiftswim', '282:': 'pixilate', '302:': 'magicbounce', '306:': 'filter', '319:': 'strongjaw', '323:': 'sheerforce',
+  '334:': 'pixilate', '354:': 'prankster', '359:': 'magicbounce', '362:': 'refrigerate', '373:': 'aerilate', '376:': 'toughclaws', '382:Primal': 'primordialsea', '383:Primal': 'desolateland', '384:': 'deltastream', '428:': 'scrappy', '445:': 'sandforce',
+  '448:': 'adaptability', '475:': 'innerfocus', '531:': 'healer', '492:Sky': 'serenegrace', '641:Therian': 'regenerator' };
+function abShow(id, mega) {
+  const g = mega ? MEGA[mega - 1] : null, x = g ? FORMAB[id + ':' + g[1]] : '';
+  if (x && ABN[x]) return { n: ABN[x], d: ABTXT[x], live: 1 };
+  if (x && ABX[x]) return { n: ABX[x][0], d: ABX[x][1], live: 0 };
+  const a = abilityOf(id, mega); return a ? { n: ABN[a], d: ABTXT[a], live: 1 } : null;
+}
 /* Attract virker bare mellom en hann og en hunn (ikke på dem uten kjønn). */
 const canLove = (u, t) => u.g < 2 && t.g < 2 && u.g !== t.g;
 const AILX = {
