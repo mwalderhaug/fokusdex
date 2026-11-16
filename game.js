@@ -481,6 +481,11 @@ const LNO = {
   'Exam period: the bonus and XP are at full strength.': 'Eksamensperiode: bonusen og XP er på full styrke.',
   'Outside the exam period the top bonus and XP are {p} % lower. Start it under Profile when your exams are near.': 'Utenfor eksamensperioden er toppen på bonusen og XP {p} % lavere. Start den under Profile når eksamenene nærmer seg.',
   'Wild Pokémon from here show up in your encounters when the route is on.': 'Ville Pokémon herfra dukker opp i møtene dine når ruta er på.',
+  'Auto follows your device.': 'Auto følger enheten din.',
+  'Battles, raids and films keep their own dark look.': 'Kampene, raidene og filmene beholder sitt eget mørke utseende.',
+  'Battle rewards grow with today\'s focus and peak when you reach your goal: a higher goal has a higher peak. Past the goal your team is tired (half XP, no encounters).': 'Belønningene i kampene vokser med dagens fokus og topper når du når målet: et høyere mål har en høyere topp. Etter målet er laget slitent (halv XP, ingen møter).',
+  'Move hints mark how well each move works against the foe. Type tags show the types by the HP boxes. Battle speed, music and forfeit are in the Pause menu during a battle.': 'Move hints merker hvor godt hvert angrep virker mot motstanderen. Type tags viser typene ved HP-boksene. Kampfart, musikk og å gi opp ligger i Pause-menyen under en kamp.',
+  'Your game is saved on this device. Sync keeps it in a private GitHub repository so it follows you between devices.': 'Spillet lagres på denne enheten. Sync legger det i et privat GitHub-repo, så det følger deg mellom enheter.',
   // Steg 1 (Dusk): flere
 };
 const tl = (s, v) => { const x = typeof S !== 'undefined' && S && S.lang === 'no' && LNO[s] != null ? LNO[s] : s; return v ? x.replace(/\{(\w+)\}/g, (m, k) => v[k] != null ? v[k] : m) : x; };

@@ -4,16 +4,19 @@
 
    UTSEENDET VELGES PER ENHET (look.js setter attributtene på <html> før siden tegnes):
      data-theme = dark | light   (Settings → Appearance; «Auto» følger telefonen)
-     data-color = dusk | sage    (fargesettet: Dusk er lavendel og fersken, Sage er salviegrønt og strå)
+     data-color = dusk | night | sage   (fargesettet: Dusk er lavendel og fersken på plomme, Night er det samme på nesten svart,
+                                         Sage er salviegrønt og strå på varm brunsvart)
    Kampene, raidene og filmene har sitt eget, mørke utseende uansett (se «Mørk sone» under). */
 :root{
   /* Dusk · mørk (standard) */
-  --bg:#181430;--bg2:#0c1220;--panel:#1c1836;--panel2:#262144;
+  --bg:#1a1729;--bg2:#0e1018;--panel:#1e1b2f;--panel2:#28243b;
   --card:rgba(255,255,255,.065);--card2:rgba(255,255,255,.06);--line:rgba(255,255,255,.11);--soft:rgba(255,255,255,.08);--hi:rgba(255,255,255,.14);
-  --ink:#f4f1fb;--ink2:#b3acca;--ink3:#77718f;
-  --acc:#b9a7f6;--acc2:#f3b6a0;--accink:#1b1432;--accsoft:rgba(185,167,246,.17);
-  --gold:#f0c987;--goldsoft:rgba(240,201,135,.14);--goldink:#2a2109;--red:#e79a8c;--blue:#8fb2f0;--violet:#c3a3f7;--good:#a9d6a5;
-  --shade:rgba(5,4,20,.5);--scrim:rgba(6,5,18,.55);--track:rgba(255,255,255,.1);
+  --ink:#f3f1f8;--ink2:#b1acc2;--ink3:#777289;
+  --acc:#b5a8e6;--acc2:#edb5a0;--accink:#1a152c;--accsoft:rgba(181,168,230,.16);
+  --gold:#f0c987;--goldsoft:rgba(240,201,135,.14);--goldink:#2a2109;--red:#e79a8c;--blue:#8fb2f0;--violet:#bfa6ee;--good:#a9d6a5;
+  --shade:rgba(6,5,16,.5);--scrim:rgba(7,6,16,.55);--track:rgba(255,255,255,.1);
+  /* Nordlyset bak siden: hvor mye av aksenten (øverst) og av den andre aksenten (til høyre) som blandes inn. */
+  --au1:19%;--au2:14%;
   --t0:#a8a48f;--t1:#c8705e;--t2:#9fb0e0;--t3:#a97bbd;--t4:#c9a86a;--t5:#b3a374;--t6:#a3b556;--t7:#8676b3;--t8:#a9b3c2;
   --t9:#e28d5c;--t10:#6f9fe0;--t11:#7fbf7a;--t12:#e3c85a;--t13:#e2809f;--t14:#8fd0d0;--t15:#8473e6;--t16:#8a776b;--t17:#e3a8cb;--tyink:#17130f;
   --r0:#a39b8f;--r1:#a6c59c;--r2:#7fa8e6;--r3:#d48bf0;--r4:#f0c987;
@@ -21,22 +24,33 @@
   --sage:var(--acc);--sage-d:var(--accsoft);
   --font:system-ui,-apple-system,"SF Pro Display","SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",sans-serif;
   --r-card:26px;--r-in:18px;
-  --page:radial-gradient(120% 60% at 50% 10%,color-mix(in srgb,var(--acc) 24%,transparent),transparent 62%),radial-gradient(90% 45% at 96% 60%,color-mix(in srgb,var(--acc2) 17%,transparent),transparent 65%),linear-gradient(175deg,var(--bg),var(--bg2));
+  --page:radial-gradient(120% 60% at 50% 10%,color-mix(in srgb,var(--acc) var(--au1),transparent),transparent 62%),radial-gradient(90% 45% at 96% 60%,color-mix(in srgb,var(--acc2) var(--au2),transparent),transparent 65%),linear-gradient(175deg,var(--bg),var(--bg2));
   color-scheme:dark;
 }
 :root[data-color="sage"]{
   --bg:#1a1814;--bg2:#0f0d0b;--panel:#201d18;--panel2:#2a2620;
   --ink:#f3efe8;--ink2:#b3ab9e;--ink3:#72695f;--line:rgba(255,255,255,.1);
-  --acc:#a6c59c;--acc2:#d9d29a;--accink:#152013;--accsoft:rgba(166,197,156,.16);
+  --acc:#a6c59c;--acc2:#d9d29a;--accink:#152013;--accsoft:rgba(166,197,156,.16);--violet:#c3a3f7;
   --gold:#e3c577;--goldsoft:rgba(227,197,119,.13);--shade:rgba(6,4,0,.5);--scrim:rgba(8,6,2,.55);
+  --au1:24%;--au2:17%;
+}
+/* Night · mørk: «mer dark mode». Samme lavendel og fersken, men flaten er nesten svart og nordlyset er bare et skjær. */
+:root[data-color="night"]{
+  --bg:#121117;--bg2:#09090c;--panel:#18171e;--panel2:#211f29;
+  --card:rgba(255,255,255,.05);--card2:rgba(255,255,255,.045);--line:rgba(255,255,255,.09);--soft:rgba(255,255,255,.07);--hi:rgba(255,255,255,.12);
+  --ink:#f1eff4;--ink2:#a8a4b3;--ink3:#6c6877;
+  --acc:#b3a8df;--acc2:#e6b3a1;--accink:#17142a;--accsoft:rgba(179,168,223,.15);
+  --shade:rgba(0,0,0,.55);--scrim:rgba(0,0,0,.6);
+  --au1:11%;--au2:7%;
 }
 :root[data-theme="light"]{
-  --bg:#efecf9;--bg2:#fdf0ea;--panel:#f7f4fd;--panel2:#ffffff;
-  --card:rgba(255,255,255,.7);--card2:rgba(122,103,216,.075);--line:rgba(70,50,140,.14);--soft:rgba(70,50,140,.075);--hi:rgba(255,255,255,.9);
-  --ink:#2a2440;--ink2:#6d6690;--ink3:#a7a1c1;
-  --acc:#7765d6;--acc2:#e48d72;--accink:#ffffff;--accsoft:rgba(119,101,214,.13);
+  --bg:#efedf7;--bg2:#fcf0ea;--panel:#f7f5fc;--panel2:#ffffff;
+  --card:rgba(255,255,255,.7);--card2:rgba(116,102,204,.075);--line:rgba(66,52,130,.14);--soft:rgba(66,52,130,.075);--hi:rgba(255,255,255,.9);
+  --ink:#29243d;--ink2:#6c6689;--ink3:#a6a1bc;
+  --acc:#7466cc;--acc2:#df8c72;--accink:#ffffff;--accsoft:rgba(116,102,204,.13);
   --gold:#a8741f;--goldsoft:rgba(200,150,60,.16);--goldink:#ffffff;--red:#c2533f;--blue:#3f6fbe;--violet:#7d55cc;--good:#4c8a4a;
-  --shade:rgba(80,60,150,.16);--scrim:rgba(40,30,80,.3);--track:rgba(70,50,140,.12);
+  --shade:rgba(76,60,140,.16);--scrim:rgba(38,30,74,.3);--track:rgba(66,52,130,.12);
+  --au1:21%;--au2:16%;
   --t0:#8a8672;--t1:#b5533f;--t2:#6f84c4;--t3:#8f5ba6;--t4:#a8833c;--t5:#8f8050;--t6:#7d9130;--t7:#6a58a0;--t8:#7c8799;
   --t9:#cf6a35;--t10:#4279c8;--t11:#4f9a4a;--t12:#b8982a;--t13:#cc5580;--t14:#4fa9a9;--t15:#6453d6;--t16:#6b594e;--t17:#c873a6;--tyink:#ffffff;
   --r0:#8d8798;--r1:#4c8a4a;--r2:#3f6fbe;--r3:#a84fd6;--r4:#a8741f;
@@ -48,6 +62,16 @@
   --ink:#26231f;--ink2:#6f685c;--ink3:#a69e8f;
   --acc:#5a8254;--acc2:#93934a;--accink:#ffffff;--accsoft:rgba(90,130,84,.13);
   --gold:#9d7419;--goldsoft:rgba(190,150,50,.17);--shade:rgba(80,60,20,.15);--scrim:rgba(50,40,10,.3);--track:rgba(60,45,20,.12);--r0:#8f887b;
+  --au1:24%;--au2:17%;
+}
+/* Night · lys: rolig, nesten nøytralt papir med den samme lavendelen. */
+:root[data-theme="light"][data-color="night"]{
+  --bg:#f2f1f5;--bg2:#f7f4f1;--panel:#f8f7fa;--panel2:#ffffff;
+  --card:rgba(255,255,255,.76);--card2:rgba(60,55,95,.06);--line:rgba(40,35,70,.13);--soft:rgba(40,35,70,.065);
+  --ink:#24222b;--ink2:#6a6776;--ink3:#a4a1ae;
+  --acc:#6a5fb8;--acc2:#cc8870;--accink:#ffffff;--accsoft:rgba(106,95,184,.12);
+  --shade:rgba(40,35,70,.14);--scrim:rgba(25,22,40,.3);--track:rgba(40,35,70,.11);--r0:#8b8894;
+  --au1:10%;--au2:8%;
 }
 /* MØRK SONE: kampene, raidene og filmene er tegnet for mørk bakgrunn og beholder den, også når resten av appen er lys. Alt inni får de mørke
    fargene fra før Dusk (tette kort, salviegrønt), så ingenting der endrer seg med valget i Settings. Sett klassen dkz på flaten som skal være mørk. */
@@ -154,11 +178,7 @@ button:disabled{opacity:.4;cursor:default}
 .stamp{display:inline-block;padding:2px 9px;border:1.5px solid var(--rk);border-radius:6px;color:var(--rk);font-size:10.5px;font-weight:850;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;transform:rotate(-4deg);background:color-mix(in srgb,var(--rk) 12%,#1c1916)}
 .avf>.stamp{position:absolute;z-index:3;left:50%;bottom:-10px;transform:translateX(-50%) rotate(-4deg)}
 .avl{position:absolute;z-index:3;right:-5px;bottom:-5px;min-width:22px;height:19px;padding:0 5px;border-radius:10px;background:var(--sage);color:#17130f;font-size:11px;font-weight:800;line-height:19px;text-align:center;box-shadow:0 0 0 2px var(--bg,#17130f)}
-.avcard{display:flex;align-items:center;gap:18px;width:100%;text-align:left;padding-bottom:22px}
 .avpb{flex:none;display:inline-flex;border-radius:26px}
-.avcard .sp{display:flex;flex-direction:column;gap:3px;min-width:0}
-.avcard b{font-size:21px;letter-spacing:-.02em;color:var(--rk)}
-.avcard .bar{display:block;margin:5px 0 3px}
 .avgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .avgrid button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 2px 7px;border-radius:16px;background:var(--card);box-shadow:0 0 0 1px var(--line);min-width:0}
 .avgrid button[aria-pressed=true]{box-shadow:0 0 0 2px var(--sage);background:color-mix(in srgb,var(--sage) 16%,var(--card))}
@@ -238,13 +258,16 @@ svg.defs{position:absolute}
 .arc svg{width:150px;height:84px;overflow:visible}
 .arc .a0{fill:none;stroke:var(--track);stroke-width:7;stroke-linecap:round}
 .arc .a1{fill:none;stroke:url(#dg);stroke-width:7;stroke-linecap:round}
+.arc .a2{fill:none;stroke:var(--acc);stroke-width:7;stroke-linecap:round;opacity:.3}
 .arc .hd{fill:var(--ink3)}.arc .hd.on{fill:var(--bg)}
 .arc .qd{fill:var(--panel);stroke:var(--ink3);stroke-width:1.5}.arc .qd.on{fill:var(--gold);stroke:var(--gold)}
 .arc .kn{fill:var(--ink)}
 .arc .v{position:absolute;left:0;right:0;bottom:-2px;text-align:center;line-height:1}
 .arc .v b{display:block;font-size:27px;font-weight:300;letter-spacing:-.02em}
 .arc .v small{display:block;font-size:10.5px;font-weight:500;color:var(--ink2);margin-top:3px}
-.tr{display:flex;flex-direction:column;gap:7px;min-width:0}
+.tr{display:flex;flex-direction:column;gap:6px;min-width:0}
+.tr .nx{display:flex;align-items:center;gap:5px;font-size:13.5px;color:var(--acc);white-space:nowrap}
+.tr .nx b{font-weight:650}.tr .nx .icn{font-size:13px}
 .tr .t{font-size:13px;color:var(--ink2)}.tr .t b{font-size:16px;font-weight:500;color:var(--ink)}
 .tgs{display:flex;flex-wrap:wrap;gap:5px 10px}
 .tg{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--ink2);white-space:nowrap}
@@ -361,10 +384,6 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .evw::after{content:" ›"}
 .pick2{display:flex;flex-direction:column;gap:3px;text-align:left;width:100%}
 /* Volum */
-.volrow{display:flex;align-items:center;gap:12px;min-height:40px}
-.volrow span{width:58px;font-size:13.5px;font-weight:650;color:var(--ink2);flex:none}
-.volrow input{flex:1;min-width:0;accent-color:var(--sage);height:28px}
-.volrow b{width:44px;text-align:right;font-size:13.5px;flex:none}
 /* Fagredigering */
 .secard{display:flex;flex-direction:column;gap:12px}
 .sein{flex:1;min-width:0;height:46px;border-radius:14px;border:1px solid rgba(255,255,255,.13);background:var(--bg);padding:0 14px;font-size:17px;font-weight:750;color:var(--ink)}
@@ -449,10 +468,63 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .map{width:20px;height:20px;border-radius:5px;background:linear-gradient(135deg,var(--t11) 50%,var(--t10) 50%)}
 .badge{width:44px;height:44px;flex:none;clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800;color:var(--ink2)}
 .badge.on{background:var(--tc);color:#17130f}
+/* ---------- PROFILE (Dusk): trenerkortet, merkene, tallene og radene ---------- */
+.pcard{display:flex;align-items:center;gap:18px;padding:18px 16px 22px}
+.pcard .sp{display:flex;flex-direction:column;gap:3px;min-width:0}
+.pcard b{font-size:24px;font-weight:300;letter-spacing:-.02em;line-height:1.15;color:var(--rk)}
+.pcard .bar{display:block;margin:5px 0 2px}
+.exc{display:flex;flex-direction:column;gap:12px}
+.exc b{font-weight:600}
+button.pill{font:inherit;font-size:11.5px;font-weight:600;color:var(--ink2)}button.pill.on{color:var(--acc)}
+.bdgs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.bdg{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0;transition:transform .12s ease}
+.bdg:active{transform:scale(.94)}
+.bdg-r{position:relative;width:60px;height:60px;display:flex;align-items:center;justify-content:center;flex:none}
+.bdg-r .ringsv circle:nth-child(2){stroke:var(--tc)}
+.bdg-r b{font-size:11.5px;font-weight:600;letter-spacing:.01em;max-width:44px;overflow:hidden;text-overflow:clip;white-space:nowrap}
+.bdg:not(.on) .bdg-r b{color:var(--ink2)}
+.bdg-p{display:flex;gap:3px}.bdg-p i{width:5px;height:5px;border-radius:50%;background:var(--track)}.bdg-p i.on{background:var(--gold)}
+.bdg small{font-size:11.5px;color:var(--ink2)}
+.pst{display:grid;grid-template-columns:1.7fr 1fr 1fr 1fr;gap:6px;text-align:center;margin-bottom:12px}
+.pst.two{grid-template-columns:repeat(2,minmax(0,1fr));margin:0}
+.pst>div{display:flex;flex-direction:column;gap:1px;min-width:0}
+.pst b{font-size:18px;font-weight:300;letter-spacing:-.02em;white-space:nowrap}
+.pst .sm{font-size:11.5px}
 .hm{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,1fr);gap:4px}
-.hm i{display:block;aspect-ratio:1.6;border-radius:5px;background:rgba(255,255,255,.07)}
-.hm i.l1{background:color-mix(in srgb,var(--sage) 30%,#2a2622)}.hm i.l2{background:color-mix(in srgb,var(--sage) 55%,#2a2622)}.hm i.l3{background:color-mix(in srgb,var(--sage) 78%,#2a2622)}.hm i.l4{background:var(--sage)}
+.hm i{display:block;aspect-ratio:1.6;border-radius:5px;background:var(--track)}
+.hm i.l1{background:color-mix(in srgb,var(--acc) 30%,transparent)}.hm i.l2{background:color-mix(in srgb,var(--acc) 55%,transparent)}.hm i.l3{background:color-mix(in srgb,var(--acc) 78%,transparent)}.hm i.l4{background:var(--acc)}
 .hm i.td{box-shadow:0 0 0 1.5px var(--ink)}
+.pset{padding:2px 12px}
+.prow{width:100%;min-height:54px;gap:10px}
+.prow+.prow{border-top:1px solid var(--line)}
+.prow .ic{width:34px;height:34px;font-size:18px;color:var(--acc);background:var(--accsoft)}
+.prow>.sm{flex:none;max-width:52%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+.prow>.icn{color:var(--ink3);font-size:14px}
+/* Arkene bak radene: brytere, fargevalg og rader som åpner noe mer. */
+.setd{display:flex;flex-direction:column;gap:14px}
+.setd .hq{margin:0;width:30px;height:30px;font-size:15px}
+.tgls{display:flex;flex-direction:column}
+.tgl{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:50px;width:100%;text-align:left;font-weight:500}
+.tgl+.tgl{border-top:1px solid var(--line)}
+.tgl i{position:relative;flex:none;width:46px;height:28px;border-radius:14px;background:var(--track);transition:background-color .18s ease}
+.tgl i::after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:var(--ink2);transition:transform .18s ease,background-color .18s ease}
+.tgl[aria-checked="true"] i{background:var(--acc)}
+.tgl[aria-checked="true"] i::after{transform:translateX(18px);background:var(--accink)}
+/* Fargevelgeren: hver prikk viser flaten (venstre halvdel) og de to aksentene i settet, i modusen som vises nå. */
+.lkl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.lkc{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 6px 12px;border-radius:20px;background:var(--card2);box-shadow:inset 0 0 0 1px var(--line)}
+.lkc[aria-pressed="true"]{box-shadow:inset 0 0 0 1.5px var(--acc);background:var(--accsoft)}
+.lkc i{width:40px;height:40px;border-radius:50%;flex:none;background:linear-gradient(135deg,var(--sb) 0 50%,transparent 50%),linear-gradient(120deg,var(--sa),var(--sa2));box-shadow:0 0 0 1px var(--line)}
+.lkc b{font-weight:500;font-size:14px}
+.lkc-dusk i{--sb:#1a1729;--sa:#b5a8e6;--sa2:#edb5a0}.lkc-night i{--sb:#0b0b0e;--sa:#b3a8df;--sa2:#e6b3a1}.lkc-sage i{--sb:#1a1814;--sa:#a6c59c;--sa2:#d9d29a}
+:root[data-theme="light"] .lkc-dusk i{--sb:#efedf7;--sa:#7466cc;--sa2:#df8c72}:root[data-theme="light"] .lkc-night i{--sb:#f2f1f5;--sa:#6a5fb8;--sa2:#cc8870}:root[data-theme="light"] .lkc-sage i{--sb:#f1eee4;--sa:#5a8254;--sa2:#93934a}
+.rowb{justify-content:space-between;text-align:left;padding:0 16px;font-weight:500}
+.rowb>.icn{color:var(--ink3);font-size:14px}
+.volrow{display:flex;align-items:center;gap:12px;min-height:40px}
+.volrow span{width:58px;font-size:13.5px;font-weight:500;color:var(--ink2);flex:none}
+.volrow input{flex:1;min-width:0;accent-color:var(--acc);height:28px}
+.volrow b{width:44px;text-align:right;font-size:13.5px;font-weight:500;flex:none}
+.bdg-r.big{width:60px;height:60px}
 .field{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink2);font-weight:650}
 .field input,.field select{height:44px;border-radius:14px;border:1px solid var(--line);background:var(--card2);padding:0 12px;font-size:16px;color:var(--ink);width:100%;min-width:0}
 .seg{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px;background:var(--card);border-radius:999px;padding:4px;box-shadow:inset 0 0 0 1px var(--line)}
@@ -1690,12 +1762,22 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .shw-sil.leg .sprb{--s:60px}.shw-sil.leg .sprb.sil .spr{filter:brightness(0) opacity(.7)}
 .shw-sil.leg .raid-sp.qm{width:44px;height:44px;margin:0 0 0 6px}.shw-sil.leg .raid-sp.qm i{font-size:24px}
 /* Sandkassa: stripa øverst mens kopien er i bruk, og kortet som åpner den. */
-.sbxbar{display:flex;align-items:center;gap:8px;margin-right:42px;padding:9px 10px 9px 14px;border-radius:16px;background:color-mix(in srgb,var(--gold) 16%,var(--card));box-shadow:0 0 0 1.5px color-mix(in srgb,var(--gold) 55%,transparent)}
+.sbxbar{display:flex;align-items:center;gap:8px;margin-right:42px;padding:9px 10px 9px 14px;border-radius:20px;background:var(--goldsoft);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--gold) 55%,transparent)}
 .sbxbar .sp{display:flex;flex-direction:column;flex:1 1 auto;min-width:0}
 /* Sandkassa (m20): tittelen i linja åpner Sandbox-skjermen; fanene står fast øverst når du blar; Frontier-kortet med rundene, målerne og
    valgene; cupene og verktøyene i rutenett; resultatet i kopien har en egen rad. */
 .sbxhome{align-items:flex-start;text-align:left}
-.sbxseg{position:sticky;top:calc(env(safe-area-inset-top,0px) + 6px);z-index:3;box-shadow:0 0 0 1px var(--line),0 8px 18px rgba(0,0,0,.45)}
+.sbxseg{position:sticky;top:calc(env(safe-area-inset-top,0px) + 6px);z-index:3;background:var(--panel);box-shadow:inset 0 0 0 1px var(--line),0 8px 18px -6px var(--shade);display:flex;overflow-x:auto;scrollbar-width:none}
+.sbxseg::-webkit-scrollbar{display:none}
+.sbxseg button{flex:1 1 0;padding:0 2px;font-size:12.5px}
+.sbxq{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.sbxq .btn{min-height:44px;border-radius:16px;padding:0 10px;font-size:13.5px;justify-content:flex-start;gap:8px}
+.sbxq .icn{font-size:17px;color:var(--gold)}
+.sndl{display:flex;flex-direction:column}
+.sndl .sndb{min-height:46px;padding:0 4px;width:100%}.sndl .sndb+.sndb{border-top:1px solid var(--line)}
+.sbxfilms summary{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:46px;padding:0 14px;border-radius:16px;background:var(--card2);cursor:pointer;list-style:none}
+.sbxfilms summary::-webkit-details-marker{display:none}
+.sbxhome b{display:inline-flex;align-items:center;gap:4px}
 .sbxr{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:5px}
 .sbxr button{min-height:42px;border-radius:13px;background:var(--soft);font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;transition:transform .12s ease}
 .sbxr button:active{transform:scale(.94)}
@@ -1709,10 +1791,11 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .sbxcups,.sbxtg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .sbxcups .btn{min-height:52px;border-radius:16px;flex-direction:column;gap:1px;padding:6px 10px;font-size:14px;line-height:1.2}
 .sbxtg .btn{min-height:46px;border-radius:15px;padding:0 10px;font-size:13px;line-height:1.2;text-align:center}
-.sbxnow{display:flex;align-items:center;gap:8px;padding:10px 10px 10px 14px;border-radius:16px;background:color-mix(in srgb,var(--gold) 12%,var(--card));box-shadow:0 0 0 1px color-mix(in srgb,var(--gold) 45%,transparent)}
+.sbxnow{display:flex;align-items:center;gap:8px;padding:10px 10px 10px 14px;border-radius:20px;background:var(--goldsoft);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold) 45%,transparent)}
 .sbxnow .sp{display:flex;flex-direction:column;min-width:0}.sbxnow b{font-size:13.5px}
+.sbxnow.nopk{background:var(--card2);box-shadow:inset 0 0 0 1px var(--line)}.sbxnow.nopk .sp{flex:1}.sbxnow.nopk .btn{flex:none}
 .sbxacts{gap:8px}.sbxacts .btn{min-height:46px;border-radius:23px}.sbxbar b{color:var(--gold);font-size:14px;letter-spacing:.02em}
-.sbxbar .btn.gold{background:var(--gold);color:#2a2109}
+.sbxbar .btn.gold{background:var(--gold);color:var(--goldink);box-shadow:none}
 .sprb.plt>.spr{filter:var(--pf)}
 /* Studiemodus: forsiden før «Done for today». Luftig, og bare det som trengs. */
 .wnl{margin:10px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font-size:15px;line-height:1.4}

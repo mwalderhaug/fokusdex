@@ -195,9 +195,9 @@ const OWN = new Set(['evpick', 'dsell', 'mgive', 'triv', 'trev', 'mvtog', 'start
 const SND = {
   tab: 'tab', lagv: 'tab', dexr: 'tab', sbxtab: 'tab', shopt: 'tab', sinfo: 'open', pinfo: 'open',
   fag: 'chip', min: 'chip', reg: 'chip', sort: 'chip', filt: 'chip', sety: 'chip', extog: 'chip', sbxr: 'chip', sbxo: 'chip',
-  sbxpick: 'open', sbxtools: 'open', sbxfac: 'open', sbxlgo: 'open', sbxcup: 'open', sbxfinal: 'open', sbxagain: 'open',
+  sbxpick: 'open', sbxtools: 'open', sbxq: 'ok', jprev: 'open', jday: 'ok', sbxfac: 'open', sbxlgo: 'open', sbxcup: 'open', sbxfinal: 'open', sbxagain: 'open',
   ball: 'ball', spec: 'open', plan: 'open', sync: 'open', backup: 'open', snext: 'ok', seadd: 'open', avatar: 'open', avall: 'open', avpick: 'ok', ach: 'open', rkok: 'ok',
-  today: 'open', boinfo: 'warn', sopen: 'open', minfo: 'open', close: 'close', home: 'close', later: 'close', sback: 'close', sedel: 'close', skip: 'close', syncoff: 'close', toshop: 'open',
+  today: 'open', boinfo: 'warn', sopen: 'open', minfo: 'open', pset: 'open', badge: 'open', look: 'chip', hfx: 'chip', hty: 'chip', close: 'close', home: 'close', later: 'close', sback: 'close', sedel: 'close', skip: 'close', syncoff: 'close', toshop: 'open',
   train: 'open', trsel: 'chip', trback: 'close', trclr: 'warn',
   lead: 'ok', sesave: 'ok', syncsave: 'ok', bkcopy: 'ok', bkload: 'ok', party: 'ok', fav: 'fav',
   quit: 'warn', reset: 'warn', early: 'ok', pause: 'chip'
@@ -252,7 +252,7 @@ const dayOpenQ = () => !S.started || !!SBX || admOn() || S.dn === dayKey() || (S
 /* ADMIN VIEW: eieren (isAdmin) ser det samme som alle andre, til bryteren «Admin view» slås på. Da er alt framme uansett om dagen er ferdig, og
    Sandbox står der. Valget huskes på denne enheten. */
 const admOn = () => { if (U.adm == null) { try { U.adm = localStorage.getItem(KEY + '.adm') === '1'; } catch (_) { U.adm = false; } } return !!U.adm && isAdmin(); };
-const admRow = () => isAdmin() ? `<div class="admrow"><button type="button" class="btn sm2" data-a="adm" aria-pressed="${admOn()}">Admin view · ${admOn() ? 'on' : 'off'}</button>${admOn() ? '<button type="button" class="btn sm2" data-a="lab">Sandbox</button><button type="button" class="btn sm2" data-a="jprev">Journey preview</button>' : ''}</div>` : '';
+const admRow = () => isAdmin() ? `<div class="admrow"><button type="button" class="btn sm2" data-a="adm" aria-pressed="${admOn()}">Admin view · ${admOn() ? 'on' : 'off'}</button>${admOn() ? '<button type="button" class="btn sm2" data-a="lab">Sandbox</button>' : ''}</div>` : '';
 /* Foten på forsiden før «Done for today». */
 const studyFoot = () => `<button type="button" class="btn wide st-done" data-a="dn"><b>Done for today</b>${jOn() ? `<small>${tl('opens battles and the tabs')}</small>` : ''}</button>`;
 /* Raidet vises ellers først når dagen er åpnet; gaveraidet (ev) vises med en gang. */
@@ -436,6 +436,8 @@ const ICN = {
   up: ['f', 'M12 5l7 9H5z'], dn: ['f', 'M12 19l7-9H5z'],
   bolt: ['f', 'M13.500 2L5 13.500h5.500L9.500 22 19 10h-5.800z'], sword: ['', 'M14.500 4H20v5.500L9 20.500 3.500 15zM6 18l-2.500 2.500M5 13l6 6'],
   shield: ['', 'M12 3l7.500 3v5.500c0 4.500-3 8-7.500 9.500-4.500-1.500-7.500-5-7.500-9.500V6z'],
+  bell: ['', 'M6 16V11a6 6 0 0 1 12 0v5l1.500 2h-15zM10 20a2 2 0 0 0 4 0'], globe: ['', 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3 12h18M12 3c2.500 2.500 3.800 5.500 3.800 9s-1.300 6.500-3.800 9c-2.500-2.500-3.800-5.500-3.800-9S9.500 5.500 12 3z'],
+  cloud: ['', 'M7 18.500a4 4 0 0 1-.6-7.950 5.500 5.500 0 0 1 10.700-1.250A4.600 4.600 0 0 1 17 18.500z'], wrench: ['', 'M14.500 6.500a4 4 0 0 0 5 5L11 20a2.100 2.100 0 0 1-3-3l8.500-8.500zM14.500 6.500l3-3'],
   flag: ['', 'M6 21V4M6 5h11l-2.500 3.500L17 12H6'], tower: ['', 'M8 21V9l4-5 4 5v12M5 21h14M10.500 21v-4h3v4M10 12h4'],
   cup: ['', 'M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.500 20h7M10 17h4'], heart: ['', 'M12 20s-7.500-4.600-7.500-10A4.300 4.300 0 0 1 12 7.500 4.300 4.300 0 0 1 19.500 10c0 5.400-7.500 10-7.500 10z']
 };
@@ -466,14 +468,17 @@ function purseNote() {
 }
 /* Bonusen på et gitt antall minutter i dag (0,5 ved start, toppen ved dagsmålet). */
 const mulAt = m => { const g = goalMin(), top = goalTop(); return Math.round((0.5 + Math.min(1, m / g) * (top - 0.5)) * 10) / 10; };
-/* BUEN: dagens kampbonus som en halvsirkel fra start til dagsmålet. Prikkene er timene, de små ringene er dagens tre delmål (QUESTS). */
-function bonusArc(td, tq) {
+/* Neste trinn i bonusen: neste hele time (eller dagsmålet, om det kommer først), og minuttene dit. null når toppen er nådd. */
+const mulNext = t => { const g = goalMin(); if (t >= g) return null; const to = Math.min(g, Math.ceil((t + 1) / 60) * 60); return { min: to - t, x: mulAt(to) }; };
+/* BUEN: dagens kampbonus som en halvsirkel fra start til dagsmålet. Prikkene er timene, de små ringene er dagens tre delmål (QUESTS).
+   add = minuttene økta som er valgt, er verdt: det stykket tegnes svakt foran knotten, så en ser hvor langt den tar en. */
+function bonusArc(td, tq, add) {
   const g = goalMin(), gh = Math.max(1, Math.round(g / 60)), top = goalTop(), f = Math.min(1, td / g), ax = 75, ay = 76, ar = 64;
   const pt = x => [ax - Math.cos(Math.PI * x) * ar, ay - Math.sin(Math.PI * x) * ar], arc = x => { const [px, py] = pt(x); return `M${ax - ar} ${ay}A${ar} ${ar} 0 0 1 ${px.toFixed(1)} ${py.toFixed(1)}`; };
   const hrs = Array.from({ length: gh - 1 }, (_, i) => { const x = (i + 1) * 60 / g, [px, py] = pt(x); return `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="1.600" class="${td >= (i + 1) * 60 ? 'hd on' : 'hd'}"/>`; }).join('');
   const qs = QUESTS.filter(q => q.m < g).map(q => { const [px, py] = pt(q.m / g), on = tq >= q.m; return `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4" class="${on ? 'qd on' : 'qd'}"/>`; }).join('');
-  const [kx, ky] = pt(f);
-  return `<div class="arc"><svg viewBox="0 0 150 84" aria-hidden="true"><path d="${arc(1)}" class="a0"/>${f > 0.01 ? `<path d="${arc(f)}" class="a1"/>` : ''}${hrs}${qs}<circle cx="${kx.toFixed(1)}" cy="${ky.toFixed(1)}" r="6" class="kn"/></svg><div class="v"><b class="tn">×${mulAt(td).toFixed(1)}</b><small class="tn">${td >= g ? 'top bonus' : `max ×${top.toFixed(1)}`}</small></div></div>`;
+  const [kx, ky] = pt(f), f2 = add > 0 ? Math.min(1, (td + add) / g) : f, [gx, gy] = pt(f2);
+  return `<div class="arc"><svg viewBox="0 0 150 84" aria-hidden="true"><path d="${arc(1)}" class="a0"/>${f2 > f + 0.005 ? `<path d="M${kx.toFixed(1)} ${ky.toFixed(1)}A${ar} ${ar} 0 0 1 ${gx.toFixed(1)} ${gy.toFixed(1)}" class="a2"/>` : ''}${f > 0.01 ? `<path d="${arc(f)}" class="a1"/>` : ''}${hrs}${qs}<circle cx="${kx.toFixed(1)}" cy="${ky.toFixed(1)}" r="6" class="kn"/></svg><div class="v"><b class="tn">×${mulAt(td).toFixed(1)}</b><small class="tn">${td >= g ? 'top bonus' : `max ×${top.toFixed(1)}`}</small></div></div>`;
 }
 /* Det som virker akkurat nå utover røkelsen og lokkemidlene i raden under Start: shiny-røkelsen, Prism Lure, bossens premie og Shiny Charm. */
 function fxTags() {
@@ -548,7 +553,8 @@ VIEW.fokus = () => {
     <button type="button" class="go" data-a="start">Start ${min} min</button>
     <div class="meta tn">${left <= 0 ? `<span>${tl('Your team is tired today: half XP and no encounters.')}</span>` : `<span><b>${n}</b> ${n === 1 ? 'encounter' : 'encounters'}</span><span><b>${nb(xp)}</b> XP${rested ? ' <i class="au">rested</i>' : ''}</span>${tys}${w < 1 ? `<span class="half">${tl('counts half for the bonus')}</span>` : ''}`}</div>
     ${left > 0 ? boostRow() : ''}</div>`;
-  const today = `<div class="card today"><button type="button" class="tdb" data-a="today" aria-label="Today: ${hm(td)} of ${hm(S.cap)}. Battle bonus ×${mulAt(td + tdb).toFixed(1)}. Open the details">${bonusArc(td + tdb, td)}<span class="tr"><span class="t tn"><b>${hm(td)}</b> of ${hm(S.cap)}</span><span class="tgs"><span class="tg">${icn('gift')}<span class="tn">${QUESTS.filter(q => td >= q.m).length}/${QUESTS.length}</span></span>${fxTags()}</span></span></button>${examTag()}</div>`;
+  const mnx = mulNext(td + tdb), sesOn = left > 0 && (!open || !!U.sopen);
+  const today = `<div class="card today"><button type="button" class="tdb" data-a="today" aria-label="Today: ${hm(td)} of ${hm(S.cap)}. Battle bonus ×${mulAt(td + tdb).toFixed(1)}${mnx ? `, ×${mnx.x.toFixed(1)} in ${mnx.min} minutes` : ''}. Open the details">${bonusArc(td + tdb, td, sesOn ? em : 0)}<span class="tr"><span class="t tn"><b>${hm(td)}</b> of ${hm(S.cap)}</span>${mnx ? `<span class="nx tn">${icn('up')}<b>${mnx.min} min</b> to ×${mnx.x.toFixed(1)}</span>` : ''}<span class="tgs"><span class="tg">${icn('gift')}<span class="tn">${QUESTS.filter(q => td >= q.m).length}/${QUESTS.length}</span></span>${fxTags()}</span></span></button>${examTag()}</div>`;
   /* En vanlig dag ligger kampene nederst. På en eventdag står eventet og kampene øverst, og det som har med studeringen å gjøre, under. */
   const CL = clockLock(); if (CL) top += clockCard(CL);
   const fpk = S.fpk && Object.keys(S.fpk).length ? `<button type="button" class="btn wide gold" data-a="fpk">${icn('gift')}Open your free packs</button>` : '';
@@ -804,56 +810,90 @@ VIEW.butikk = () => {
     <div class="seg">${SHOPTABS.map(([k, n]) => `<button type="button" data-a="shopt" data-k="${k}" aria-pressed="${tab === k}">${n}${k === 'packs' && S.fpk && Object.keys(S.fpk).length ? '<i class="dot"></i>' : ''}</button>`).join('')}</div>${body}`;
 };
 
-/* ---------- Profil: merker, statistikk, innstillinger ---------- */
+/* ---------- Profil: trenerkortet, eksamensperioden, statistikken og innstillingene ----------
+   Siden er kort: trenerkortet, eksamensperioden som merker, fire tall med de ti siste ukene, og en liste med rader. Hver rad åpner et ark
+   (setSheet) med det som hører til: Appearance, Study, Battles, Sound, Language, Save and sync, Guide and rules, Fair play og Admin.
+   Raden viser det som gjelder nå, så en ser det uten å åpne. Ingen innstilling er borte, de er bare samlet. */
+const PSET = [['look', 'Appearance', 'sun'], ['study', 'Study', 'clock'], ['battle', 'Battles', 'sword'], ['sound', 'Sound', 'bell'], ['lang', 'Language', 'globe'], ['data', 'Save and sync', 'cloud'], ['about', 'Guide and rules', 'info'], ['fair', 'Fair play', 'shield'], ['admin', 'Admin', 'wrench']];
+/* Det raden sier om hva som gjelder nå. */
+function psetNow(k) {
+  if (k === 'look') { const o = LOOK.get(); return `${o.t === 'auto' ? 'Auto' : o.t === 'light' ? 'Light' : 'Dark'} · ${LOOK.COLORS[o.c].n}`; }
+  if (k === 'study') { const n = Object.keys(S.fag).length; return `${hm(S.cap)} goal · ${n} subject${n === 1 ? '' : 's'}${workIsOn() ? ' · work days' : ''}`; }
+  if (k === 'battle') return diff().n;
+  if (k === 'sound') return S.sound ? (S.music === 0 ? 'On · no music' : 'On') : 'Off';
+  if (k === 'lang') return S.lang === 'no' ? 'Norsk' : 'English';
+  if (k === 'data') return GH && GH.ok ? 'Sync ' + (ghState === 'ok' ? 'on' : ghState || 'connecting') : 'On this device';
+  if (k === 'fair') { const n = S.fair ? S.fair.n : 0; return n ? `${n} ${n === 1 ? 'mark' : 'marks'}` : 'Clean'; }
+  if (k === 'admin') return admOn() ? 'Admin view on' : 'Sandbox';
+  return '';
+}
+const workIsOn = () => !!(S.work && (S.work.fx || S.work.fx2 || Object.keys(S.work.one || {}).length));
+const DIFFTXT = ['Opponents are a good bit below your level, play simply and bring smaller teams. You may use 5 items per battle.', 'Opponents are slightly below your level and make the odd mistake. You may use 4 items per battle.', 'Opponents match your level, are well trained and play to win. You may use 3 items per battle.'];
+const tog = (a, on, lab, dis) => `<button type="button" class="tgl" data-a="${a}" role="switch" aria-checked="${!!on}"${dis ? ' disabled' : ''}><span>${lab}</span><i></i></button>`;
+/* ARKET TIL EN RAD. re = tegnes om på stedet etter et valg (uten at arket glir inn på nytt). */
+function setSheet(k, re) {
+  const def = PSET.find(x => x[0] === k); if (!def || (k === 'admin' && !isAdmin())) return;
+  U.pset = k; let h = '';
+  if (k === 'look') { const o = LOOK.get();
+    h = `<div><div class="lab">Mode</div><div class="seg">${[['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']].map(([v, n]) => `<button type="button" data-a="look" data-k="t" data-v="${v}" aria-pressed="${o.t === v}">${n}</button>`).join('')}</div><p class="sm" style="margin-top:6px">${tl('Auto follows your device.')}</p></div>
+      <div><div class="lab">Colour</div><div class="lkl">${Object.keys(LOOK.COLORS).map(c => `<button type="button" class="lkc lkc-${c}" data-a="look" data-k="c" data-v="${c}" aria-pressed="${o.c === c}"><i></i><b>${LOOK.COLORS[c].n}</b></button>`).join('')}</div></div>
+      <p class="sm">${tl('Battles, raids and films keep their own dark look.')}</p>`; }
+  else if (k === 'study') h = `<label class="field">Daily goal<select data-c="cap">${[120, 180, 240, 300, 360, 420, 480].map(c => `<option value="${c}"${S.cap === c ? ' selected' : ''}>${c / 60} hours · battle rewards up to ×${topFor(c).toFixed(1)}</option>`).join('')}</select></label>
+      <p class="sm" style="margin-top:-6px">${tl('Battle rewards grow with today\'s focus and peak when you reach your goal: a higher goal has a higher peak. Past the goal your team is tired (half XP, no encounters).')}</p>
+      <div class="stack"><button type="button" class="btn wide rowb" data-a="plan"><span>Subjects</span><span class="sm tn">${Object.keys(S.fag).map(f => esc(F(f).n)).join(' · ') || 'none yet'}</span></button>
+      <button type="button" class="btn wide rowb" data-a="exam"><span>Exam period</span><span class="sm tn">${examOn() ? 'until ' + dShort(examEnd()) : 'off'}</span></button>
+      <button type="button" class="btn wide rowb" data-a="work"><span>Work days</span><span class="sm tn">${workIsOn() ? 'on' : 'off'}</span></button></div>`;
+  else if (k === 'battle') { const d = S.diff == null ? 2 : S.diff;
+    h = `<div><div class="lab">Difficulty</div><div class="seg">${DIFF.map((x, i) => `<button type="button" data-a="diff" data-k="${i}" aria-pressed="${d === i}">${x.n}</button>`).join('')}</div>
+      <p class="sm" style="margin-top:6px">${DIFFTXT[d]} Coins ×${diff().coin} and XP ×${diff().xp} from battles.</p></div>
+      <div class="tgls">${tog('hfx', S.hfx !== 0, 'Move hints')}${tog('hty', S.hty !== 0, 'Type tags')}</div>
+      <p class="sm">${tl('Move hints mark how well each move works against the foe. Type tags show the types by the HP boxes. Battle speed, music and forfeit are in the Pause menu during a battle.')}</p>`; }
+  else if (k === 'sound') h = `<div class="tgls">${tog('sound', S.sound, 'Sound')}${tog('music', S.music !== 0, 'Battle music', !S.sound)}${tog('cries', S.cries, 'Cries', !S.sound)}${tog('fsnd', S.fsnd !== 0, 'Encounter sound in a session')}</div>
+      ${S.sound ? `<div>${S.music === 0 ? '' : `<div class="volrow"><span>Music</span><input type="range" min="0" max="100" step="5" value="${S.mvol}" data-v="mvol" aria-label="Music volume"><b class="tn" id="vv-mvol">${S.mvol}%</b></div>`}<div class="volrow"><span>Effects</span><input type="range" min="0" max="100" step="5" value="${S.vol}" data-v="vol" aria-label="Effects volume"><b class="tn" id="vv-vol">${S.vol}%</b></div>${S.cries ? `<div class="volrow"><span>Cries</span><input type="range" min="0" max="100" step="5" value="${S.cvol}" data-v="cvol" aria-label="Cries volume"><b class="tn" id="vv-cvol">${S.cvol}%</b></div>` : ''}</div>` : ''}`;
+  else if (k === 'lang') h = `${langSeg(false)}<p class="sm">${tl('Guides and introductions to new things. Names, types and moves stay in English.')}</p>`;
+  else if (k === 'data') h = `<div class="stack"><button type="button" class="btn wide rowb" data-a="sync"><span>Sync between devices</span><span class="sm tn">${GH && GH.ok ? (ghState === 'ok' ? 'on' : ghState || 'connecting') : 'off'}</span></button><button type="button" class="btn wide rowb" data-a="backup"><span>Backup</span>${icn('chev')}</button></div>
+      <p class="sm">${tl('Your game is saved on this device. Sync keeps it in a private GitHub repository so it follows you between devices.')}</p>`;
+  else if (k === 'about') h = `<div class="stack"><button type="button" class="btn wide rowb" data-a="tour"><span>Start guide</span>${icn('chev')}</button><button type="button" class="btn wide rowb" data-a="rules"><span>Rules and rewards</span>${icn('chev')}</button><button type="button" class="btn wide rowb" data-a="show"><span>Show the game</span><span class="sm">a trailer for a friend</span></button></div>
+      <p class="sm">Fokusdex is a private hobby project. Pokémon and the names belong to Nintendo, Game Freak and Creatures. Images are fetched from PokeAPI when the app is used and are not part of the app.</p>`;
+  else if (k === 'fair') { const F = S.fair, n = F ? F.n : 0, last = n ? F.l[F.l.length - 1] : null, hn = S.hon ? S.hon.n || 0 : 0;
+    h = `<div class="row" style="justify-content:space-between"><b class="mulnow" style="color:${n ? 'var(--red)' : 'var(--good)'}">${n ? `${n} ${n === 1 ? 'mark' : 'marks'}` : 'Clean'}</b><span class="pill tn">${n ? 'clock changed' : 'no marks'}</span></div>
+      <p class="sm">${n ? `The device clock did not match the game${last ? ' on ' + new Date(last.d + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : ''}. A mark does nothing but stand here.` : 'The clock has matched the game, and nothing has been rolled back.'} ${hn ? `You have answered ${hn} honest ${hn === 1 ? 'check' : 'checks'}.` : ''} Cheating is optional, but your integrity pays for it.</p>`; }
+  else if (k === 'admin') h = `<div class="tgls">${tog('adm', admOn(), 'Admin view · everything open')}</div>
+      <div class="stack"><button type="button" class="btn wide rowb" data-a="lab"><span>Sandbox</span><span class="sm">test anything</span></button><button type="button" class="btn wide rowb" data-a="jprev"><span>Journey preview</span><span class="sm">see it as a new player</span></button></div><p class="sm">Only you see this.</p>`;
+  const html = `<div class="row" style="justify-content:space-between"><h2 class="h" style="margin:0">${def[1]}</h2><button type="button" class="hq" data-a="close" aria-label="Close">${icn('x')}</button></div>${h}`;
+  const host = $('#setd'); if (re && host) host.innerHTML = html; else openSheet(`<div id="setd" class="setd">${html}</div>`);
+}
+/* Etter et valg i et ark: tegn arket om hvis det fortsatt står framme. */
+const setRe = () => { if (U.pset && !$('#sheet').hidden && $('#setd')) setSheet(U.pset, 1); };
 VIEW.profil = () => {
-  const t0 = new Date(), tot = totalMin(), ses = Object.values(S.log).reduce((s, d) => s + d.s, 0);
-  const exOn = examOn(), badges = Object.keys(S.fag).map(f => { const g = S.fag[f], c = F(f).c, on = exOn && !!g.xs && !!g.d, dd = g.d ? dIdx(g.d) - dIdx(dayKey()) : null;
-    const pct = on ? exFrac(g) : 0, xm = g.xm || 0, done = on && xm >= 4, gate = on ? exGate(g) : 0;
-    const line = !on ? `${hm(fagMin(f))} in all` : done ? 'badge complete' : `${hm(g.xf || 0)} this exam period · next reward at ${(xm + 1) * 25}%${gate > 0 && pct >= (xm + 1) / 4 ? ` · ${hm(gate)} more here first` : ''}`;
-    return `<div class="item" style="--tc:${c}"><span class="badge${done ? ' on' : ''}">${esc(short(F(f).n))}</span><div class="sp"><div class="row" style="justify-content:space-between"><b>${esc(F(f).n)}</b><span class="sm tn">${dd == null || (!on && dd < 0) ? '' : dd > 0 ? 'exam in ' + dd + ' d' : dd === 0 ? 'exam today' : 'exam done'}</span></div>
-      ${on ? `<div class="bar" style="margin-top:6px"><i style="width:${Math.round(pct * 100)}%;background:${c}"></i></div>` : ''}<div class="sm tn" style="margin-top:4px">${line}</div></div></div>`; }).join('');
+  const t0 = new Date(), tot = totalMin(), ses = Object.values(S.log).reduce((s, d) => s + d.s, 0), l = tlv(), xa = tlvXp(l), xb = tlvXp(l + 1);
+  const exOn = examOn(), fs = Object.keys(S.fag);
+  /* Merkene: ett per fag. I perioden fylles ringen med tida mot eksamen, og prikkene er de fire belønningene (25, 50, 75 % og eksamensdagen). */
+  const badges = fs.map(f => { const g = S.fag[f], c = F(f).c, on = exOn && !!g.xs && !!g.d, dd = g.d ? dIdx(g.d) - dIdx(dayKey()) : null, pct = on ? exFrac(g) : 0, xm = g.xm || 0;
+    return `<button type="button" class="bdg${on ? ' on' : ''}" data-a="badge" data-k="${esc(f)}" style="--tc:${c}" aria-label="${esc(F(f).n)}${dd != null && dd >= 0 ? `, exam in ${dd} days` : ''}"><span class="bdg-r">${ringEl(60, 26, pct, 4)}<b>${esc(short(F(f).n))}</b></span><span class="bdg-p">${[0, 1, 2, 3].map(i => `<i class="${i < xm ? 'on' : ''}"></i>`).join('')}</span><small class="tn">${dd == null || (!on && dd < 0) ? hm(fagMin(f)) : dd > 0 ? dd + ' d' : dd === 0 ? 'today' : 'done'}</small></button>`; }).join('');
   let heat = '';
   const mon = addDays(t0, -((t0.getDay() + 6) % 7) - 63);
   for (let i = 0; i < 70; i++) { const d = addDays(mon, i), k = dayKey(d), m = (S.log[k] || { m: 0 }).m; heat += `<i class="${m ? (m < 90 ? 'l1' : m < 180 ? 'l2' : m < 270 ? 'l3' : 'l4') : ''}${k === dayKey() ? ' td' : ''}" title="${d.getDate()}.${d.getMonth() + 1}: ${m} min"></i>`; }
-  const all = [1, 2, 3, 4, 5].reduce((s, x) => s + dexCount(x), 0), sp = focusSplit(), hasS = Object.keys(S.fag).length > 0;
-  return `<h1 class="big">Profile</h1>${topBar()}
-    ${(() => { const as = U.as || achSum(), R = as.R, pct = R.next ? Math.round((R.p - R.at) / (R.next - R.at) * 100) : 100;
-      return `<div class="card avcard" style="--rk:${R.c}"><button type="button" class="avpb" data-a="ach" aria-label="Achievements. Rank: ${R.n}">${avFrame(R, 'lg', 1)}</button><span class="sp"><span class="sm">${S.av ? esc(avName()) : 'No character yet'}</span><b>${R.n}</b>
-        <span class="bar"><i style="width:${pct}%;background:${R.c}"></i></span><span class="sm tn">${R.p} of ${achTotal()} medals${R.nn ? ` · ${R.next - R.p} more to ${R.nn}` : ''}</span></span></div>
-      <div class="row"><button type="button" class="btn sp${as.open ? ' gold' : ''}" data-a="ach">${as.open ? `${as.open} reward${as.open > 1 ? 's' : ''} ready` : 'Achievements'}</button><button type="button" class="btn sp" data-a="avatar">${S.av ? 'Change character' : 'Pick a character'}</button></div>`; })()}
-    <div class="card stack shwc"><div><b>Show the game</b><p class="sm" style="margin-top:4px">A trailer and an overview of what is in here, without giving away what is waiting. Made for showing a friend.</p></div><div class="row"><button type="button" class="btn sp gold" data-a="show">Open the showcase</button><button type="button" class="btn sp" data-a="tour">Start guide</button></div><div class="row"><button type="button" class="btn sp" data-a="rules">Rules and rewards</button>${admOn() ? '<button type="button" class="btn sp" data-a="lab">Sandbox</button>' : ''}</div></div>
-    <h2 class="h">Badges</h2>
-    <div class="card stack"><div class="row" style="justify-content:space-between;align-items:center"><b>Exam period</b><span class="pill${exOn ? ' on' : ''}">${exOn ? 'until ' + dShort(examEnd()) : 'off'}</span></div>
-      <p class="sm">${tl(exOn ? 'Each badge counts down to its exam. More hours studied give a bigger boost.' : 'There is a bigger bonus in the exam period: more hours studied give a bigger boost.')}</p>
-      <button type="button" class="btn sp${exOn ? '' : ' gold'}" data-a="exam">${exOn ? 'Exam dates' : 'Start exam period'}</button></div>
-    ${badges ? `<div class="card" style="padding-top:6px;padding-bottom:6px">${badges}</div>` : ''}
-    <h2 class="h">Stats</h2>
-    <div class="gain"><div><span class="sm">${hasS ? 'Subject hours' : 'Total focus'}</span><b class="tn">${hm(hasS ? sp.subj : tot)}</b></div><div><span class="sm">Sessions</span><b class="tn">${ses}</b></div><div><span class="sm">Day streak</span><b class="tn">${streak()}</b></div><div><span class="sm">Species caught</span><b class="tn">${all}</b></div></div>
-    ${hasS && sp.other ? `<p class="sm">Plus ${hm(sp.other)} of other things, which count at half value for the battle bonus.</p>` : ''}
-    <div class="card"><div class="lab">Last ten weeks</div><div class="hm">${heat}</div></div>
-    ${fairCard()}
-    <h2 class="h">Settings</h2>
-    <div class="card stack">
-      <label class="field">Daily goal<select data-c="cap">${[120, 180, 240, 300, 360, 420, 480].map(c => `<option value="${c}"${S.cap === c ? ' selected' : ''}>${c / 60} hours · battle rewards up to ×${topFor(c).toFixed(1)}</option>`).join('')}</select></label>
-      <p class="sm" style="margin-top:-4px">Battle rewards grow with today's focus and peak when you reach your goal: a higher goal has a higher peak. Past the goal your team is tired (half XP, no encounters).</p>
-      <div><div class="lab">${tl('Language for explanations')}</div>${langSeg(false)}<p class="sm" style="margin-top:6px">${tl('Guides and introductions to new things. Names, types and moves stay in English.')}</p></div>
-      <div><div class="lab">Difficulty</div><div class="seg">${DIFF.map((d, i) => `<button type="button" data-a="diff" data-k="${i}" aria-pressed="${(S.diff == null ? 2 : S.diff) === i}">${d.n}</button>`).join('')}</div>
-        <p class="sm" style="margin-top:6px">${['Opponents are a good bit below your level, play simply and bring smaller teams. You may use 5 items per battle.', 'Opponents are slightly below your level and make the odd mistake. You may use 4 items per battle.', 'Opponents match your level, are well trained and play to win. You may use 3 items per battle.'][S.diff == null ? 2 : S.diff]} Coins ×${diff().coin} and XP ×${diff().xp} from battles.</p></div>
-      <div class="row"><button type="button" class="btn sp" data-a="hfx">Move hints: ${S.hfx === 0 ? 'off' : 'on'}</button><button type="button" class="btn sp" data-a="hty">Type tags: ${S.hty === 0 ? 'off' : 'on'}</button></div>
-      <div class="row"><button type="button" class="btn sp" data-a="fsnd">Encounter sound: ${S.fsnd === 0 ? 'off' : 'on'}</button></div>
-      <div class="row"><button type="button" class="btn sp" data-a="sound">Sound: ${S.sound ? 'on' : 'off'}</button><button type="button" class="btn sp" data-a="cries"${S.sound ? '' : ' disabled'}>Cries: ${S.cries ? 'on' : 'off'}</button></div>
-      <button type="button" class="btn wide" data-a="music"${S.sound ? '' : ' disabled'}>Battle music: ${S.music === 0 ? 'off' : 'on'}</button>
-      ${S.sound ? `${S.music === 0 ? '' : `<div class="volrow"><span>Music</span><input type="range" min="0" max="100" step="5" value="${S.mvol}" data-v="mvol" aria-label="Music volume"><b class="tn" id="vv-mvol">${S.mvol}%</b></div>`}<div class="volrow"><span>Effects</span><input type="range" min="0" max="100" step="5" value="${S.vol}" data-v="vol" aria-label="Effects volume"><b class="tn" id="vv-vol">${S.vol}%</b></div>${S.cries ? `<div class="volrow"><span>Cries</span><input type="range" min="0" max="100" step="5" value="${S.cvol}" data-v="cvol" aria-label="Cries volume"><b class="tn" id="vv-cvol">${S.cvol}%</b></div>` : ''}` : ''}
-      <button type="button" class="btn wide" data-a="plan">Edit subjects</button>
-      <button type="button" class="btn wide" data-a="adv" aria-expanded="${!!U.adv}">Advanced options</button>
-      ${U.adv ? `<button type="button" class="btn wide" data-a="work">Work days${S.work && (S.work.fx || S.work.fx2 || Object.keys(S.work.one || {}).length) ? ' · on' : ''}</button>` : ''}
-      <button type="button" class="btn wide" data-a="sync">Sync between devices${GH && GH.ok ? ' · ' + (ghState === 'ok' ? 'on' : ghState || 'connecting') : ''}</button>
-      <button type="button" class="btn wide" data-a="backup">Backup</button>
-      ${isAdmin() ? '<button type="button" class="btn wide" data-a="lab">Demo · battles, raids and packs (admin)</button>' : ''}
-    </div>
-    <p class="sm">Battle speed, music and forfeit are in the Pause menu during a battle.</p>
-    <p class="sm">Fokusdex is a private hobby project. Pokémon and the names belong to Nintendo, Game Freak and Creatures. Images are fetched from PokeAPI when the app is used and are not part of the app.</p>`;
+  const all = [1, 2, 3, 4, 5].reduce((s, x) => s + dexCount(x), 0), sp = focusSplit(), hasS = fs.length > 0, as = U.as || achSum(), R = as.R, pct = R.next ? Math.round((R.p - R.at) / (R.next - R.at) * 100) : 100;
+  return `<h1 class="big">Profile</h1>
+    <div class="card pcard" style="--rk:${R.c}"><button type="button" class="avpb" data-a="ach" aria-label="Achievements. Rank: ${R.n}">${avFrame(R, 'lg', 1)}</button><span class="sp"><span class="sm">${S.av ? esc(avName()) : 'No character yet'}</span><b>${R.n}</b>
+      <span class="bar"><i style="width:${pct}%;background:${R.c}"></i></span><span class="sm tn">${R.p} of ${achTotal()} medals${R.nn ? ` · ${R.next - R.p} to ${R.nn}` : ''}</span><span class="sm tn">Level ${l} · ${nb(S.xp - xa)} of ${nb(xb - xa)} XP</span></span></div>
+    <div class="row"><button type="button" class="btn sp${as.open ? ' gold' : ''}" data-a="ach">${as.open ? `${as.open} reward${as.open > 1 ? 's' : ''} ready` : 'Achievements'}</button><button type="button" class="btn sp" data-a="avatar">${S.av ? 'Character' : 'Pick a character'}</button></div>
+    ${hasS ? `<div class="card exc"><div class="row" style="justify-content:space-between"><b>Exam period</b><button type="button" class="pill${exOn ? ' on' : ''}" data-a="exam">${exOn ? 'until ' + dShort(examEnd()) : 'off · start'}</button></div><div class="bdgs">${badges}</div></div>` : ''}
+    <div class="card"><div class="pst"><div><b class="tn">${hm(hasS ? sp.subj : tot)}</b><span class="sm">${hasS ? 'Subjects' : 'Focus'}</span></div><div><b class="tn">${ses}</b><span class="sm">Sessions</span></div><div><b class="tn">${streak()}</b><span class="sm">Streak</span></div><div><b class="tn">${all}</b><span class="sm">Species</span></div></div>
+      <div class="hm" role="img" aria-label="Focus the last ten weeks${hasS && sp.other ? `. Plus ${hm(sp.other)} of other things` : ''}">${heat}</div></div>
+    <div class="card slist pset">${PSET.filter(x => x[0] !== 'admin' || isAdmin()).map(([k, n, ic]) => `<button type="button" class="srow-m prow" data-a="pset" data-k="${k}"><span class="ic">${icn(ic)}</span><span class="sp"><b>${n}</b></span><span class="sm tn">${psetNow(k)}</span>${icn('chev')}</button>`).join('')}</div>
+    <p class="sm" style="text-align:center">Fokusdex is a private hobby project. Pokémon and the names belong to Nintendo, Game Freak and Creatures.</p>`;
 };
+/* Arket til et merke: det som før sto som linjer under hvert fag. */
+function badgeSheet(f) {
+  const g = S.fag[f]; if (!g) return;
+  const exOn = examOn(), on = exOn && !!g.xs && !!g.d, dd = g.d ? dIdx(g.d) - dIdx(dayKey()) : null, pct = on ? exFrac(g) : 0, xm = g.xm || 0, done = on && xm >= 4, gate = on ? exGate(g) : 0;
+  openSheet(`<div class="shead it" style="--tc:${F(f).c}"><span class="bdg-r big">${ringEl(60, 26, pct, 4)}<b>${esc(short(F(f).n))}</b></span><div class="sp"><div class="pn">${esc(F(f).n)}</div><div class="sm tn">${dd == null ? 'no exam date' : dd > 0 ? 'exam in ' + dd + ' d' : dd === 0 ? 'exam today' : 'exam done'}</div></div></div>
+    <div class="pst two"><div><b class="tn">${hm(fagMin(f))}</b><span class="sm">in all</span></div>${on ? `<div><b class="tn">${hm(g.xf || 0)}</b><span class="sm">this exam period</span></div>` : ''}</div>
+    ${on ? `<p class="sm">${done ? 'Badge complete.' : `Next reward at ${(xm + 1) * 25} % of the way to the exam${gate > 0 ? `, once you have logged ${hm(gate)} more here` : ''}. You have ${xm} of 4.`}</p>` : `<p class="sm">${tl('There is a bigger bonus in the exam period: more hours studied give a bigger boost.')}</p>`}
+    <div class="acts"><button type="button" class="btn" data-a="exam">${exOn ? 'Exam dates' : 'Start exam period'}</button><button type="button" class="btn nf" data-a="close">Close</button></div>`);
+}
 /* ---------- Fag: brukes både ved første start og fra Profil ---------- */
 const subjDraft = () => Object.keys(S.fag).map(k => { const f = S.fag[k]; return { k, n: f.n, ty: (f.ty || []).slice(0, 2), d: f.d || '' }; });
 /* «14 Nov» */
@@ -971,7 +1011,7 @@ function backupSheet() {
 
 /* ---------- Ark ---------- */
 function openSheet(html) { const w = $('#sheet'); w.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><span class="grab"></span>${html}</div>`; w.hidden = false; }
-function closeSheet() { const w = $('#sheet'); w.hidden = true; w.innerHTML = ''; }
+function closeSheet() { const w = $('#sheet'); w.hidden = true; w.innerHTML = ''; U.pset = null; }
 /* Åpner en encounter-pakke: pakken ristes opp, tre kort kommer ut med baksiden opp, og hvert snus med et trykk. Fargen på kortet røper sjeldenheten først når det snus. */
 function packShow(k, encs, demo) {
   const P = PACKS[k]; U.pk = encs; U.pkDemo = demo ? k : '';
@@ -979,7 +1019,7 @@ function packShow(k, encs, demo) {
     <button type="button" class="pk-pack" data-a="pkopen" aria-label="Open the pack"><span class="pk-ic big"><i></i></span><b>${P.n}</b></button>
     <div class="pk-cards">${encs.map((e, i) => `<button type="button" class="pk-card r${e.t}${e.sh ? ' shy' : ''}" data-a="pkflip" data-k="${i}" style="--i:${i}" aria-label="Card ${i + 1}"><span class="pk-in"><span class="pk-back"><i></i></span>${e.myst ? '<span class="pk-front pkq"><span class="pkq-o" aria-hidden="true"><i>?</i></span><b>? ? ?</b><span class="tier r4">Legendary</span><span class="sm">Who is it? Find out in the grass</span></span>' : `<span class="pk-front">${spr(e.id, { ani: 1, sh: e.sh, mega: defForm(e.id) })}<b>${e.sh ? 'Shiny ' : ''}${esc(D(e.id)[0])}${gs(e)}</b><span class="tier r${e.t}">${TIERS[e.t]}</span><span class="sm tn">Lv ${e.lv}${S.caught[e.id] ? '' : ' · new'}</span></span>`}</span></button>`).join('')}</div>
     <p class="sm" id="pkt" style="text-align:center">Tap the pack to open it</p>
-    <div class="acts" id="pka" style="visibility:hidden">${demo ? `<button type="button" class="btn gold" data-a="pkdemo" data-k="${k}">Open another</button><button type="button" class="btn nf" data-a="packlab">Back to the packs</button>` : '<button type="button" class="btn gold" data-a="pkhunt">Catch them now</button><button type="button" class="btn nf" data-a="pkdone">Later</button>'}</div>${demo ? '<p class="sm tn" style="text-align:center">Demo · free, and nothing is kept</p>' : ''}</div>`, 'packov', P.c);
+    <div class="acts" id="pka" style="visibility:hidden">${demo ? `<button type="button" class="btn gold" data-a="pkdemo" data-k="${k}">Open another</button><button type="button" class="btn nf" data-a="${U.pkFrom === 'odds' ? 'packlab' : 'lab'}">${U.pkFrom === 'odds' ? 'Back to the odds' : 'Back to the Sandbox'}</button>` : '<button type="button" class="btn gold" data-a="pkhunt">Catch them now</button><button type="button" class="btn nf" data-a="pkdone">Later</button>'}</div>${demo ? '<p class="sm tn" style="text-align:center">Demo · free, and nothing is kept</p>' : ''}</div>`, 'packov', P.c);
 }
 function ov(html, cls, tc) { const o = $('#ov'); o.className = 'ov' + (cls ? ' ' + cls : ''); o.style.setProperty('--tc', tc || 'var(--sage)'); o.innerHTML = `<div class="ovin">${html}</div>`; o.hidden = false; }
 function closeOv() { const o = $('#ov'); o.hidden = true; o.innerHTML = ''; }
@@ -1205,10 +1245,13 @@ const A = {
   tab: el => { if (!dayOpenQ()) return; U.tab = el.dataset.k; render(); $('#main').scrollTop = 0; enter(); },
   smore: () => { U.more = !U.more; render(); },
   today: () => todaySheet(),
+  pset: el => setSheet(el.dataset.k),
+  look: el => { LOOK.set(el.dataset.k, el.dataset.v); render(); setRe(); },
+  badge: el => badgeSheet(el.dataset.k),
   sopen: () => { U.sopen = 1; render(); },
   minfo: el => modeInfo(el.dataset.k || ''),
   boinfo: el => { const k = el.dataset.k, it = SHOP[k], st = boostState(k); if (!it) return; toast(st === 'on' ? `${it.n} is already active.` : st === 'lk' ? `${it.n} opens at trainer level ${it.lv}.` : `${it.n} costs ${nb(it.p)} coins. You have ${nb(S.coins)}.`); },
-  adm: () => { if (!isAdmin()) return; U.adm = !admOn(); try { localStorage.setItem(KEY + '.adm', U.adm ? '1' : '0'); } catch (_) {} render(); toast(U.adm ? 'Admin view is on: everything is open, and the Sandbox is here.' : 'Admin view is off: you see what everyone sees.'); },
+  adm: () => { if (!isAdmin()) return; U.adm = !admOn(); try { localStorage.setItem(KEY + '.adm', U.adm ? '1' : '0'); } catch (_) {} render(); setRe(); toast(U.adm ? 'Admin view is on: everything is open, and the Sandbox is here.' : 'Admin view is off: you see what everyone sees.'); },
   wnok: () => { closeSheet(); if (!giftSheet() && !jAfter() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
   fpk: () => { const k = Object.keys(S.fpk || {}).find(x => PACKS[x]); if (!k) return render(); const out = openPack(k); if (!out) return toast('Catch some of your waiting encounters first.'); sfx.coin(); render(); packShow(k, out); },
   newsok: el => { S.news = (S.news || []).filter(k => k !== el.dataset.k); save(true); render(); },
@@ -1296,18 +1339,18 @@ const A = {
   },
   pkdone: () => { U.pk = null; closeOv(); render(); },
   pkhunt: () => { U.pk = null; hunt(); },
-  sound: () => { S.sound = S.sound ? 0 : 1; save(); sfx.tap(); render(); },
+  sound: () => { S.sound = S.sound ? 0 : 1; save(); sfx.tap(); render(); setRe(); },
   /* Lyden når et møte dukker opp under en økt (S.fsnd = 0: av). Bjella på timeren og knappen under Settings. */
-  fsnd: () => { S.fsnd = S.fsnd === 0 ? 1 : 0; save(); const b = $('#t-snd'); if (b) { b.innerHTML = bellSvg(S.fsnd !== 0); b.setAttribute('aria-pressed', S.fsnd !== 0); } else render(); toast(S.fsnd === 0 ? 'Encounter sound off' : 'Encounter sound on'); },
-  lang: el => { S.lang = el.dataset.k === 'no' ? 'no' : 'en'; save(true); if (!S.started) intro(); else render(); },
-  diff: el => { S.diff = +el.dataset.k; save(); render(); toast(`Difficulty: ${diff().n}. It applies from your next battle.`); },
-  hfx: () => { S.hfx = S.hfx === 0 ? 1 : 0; save(); render(); },
-  hty: () => { S.hty = S.hty === 0 ? 1 : 0; save(); render(); },
+  fsnd: () => { S.fsnd = S.fsnd === 0 ? 1 : 0; save(); const b = $('#t-snd'); if (b) { b.innerHTML = bellSvg(S.fsnd !== 0); b.setAttribute('aria-pressed', S.fsnd !== 0); } else { render(); setRe(); } toast(S.fsnd === 0 ? 'Encounter sound off' : 'Encounter sound on'); },
+  lang: el => { S.lang = el.dataset.k === 'no' ? 'no' : 'en'; save(true); if (!S.started) intro(); else { render(); setRe(); } },
+  diff: el => { S.diff = +el.dataset.k; save(); render(); setRe(); toast(`Difficulty: ${diff().n}. It applies from your next battle.`); },
+  hfx: () => { S.hfx = S.hfx === 0 ? 1 : 0; save(); render(); setRe(); },
+  hty: () => { S.hty = S.hty === 0 ? 1 : 0; save(); render(); setRe(); },
   nick: el => { const m = monBy(+el.dataset.u); if (!m) return; U.nick = m.u; monSheet(m); const i = $('#nkin'); if (i) { i.focus(); i.select(); } },
   nicksave: el => { const m = monBy(+el.dataset.u), i = $('#nkin'); if (!m) return; const n = setNick(m, i ? i.value : ''); U.nick = 0; render(); monSheet(m); toast(n ? `${D(m.id)[0]} is now called ${n}.` : `${D(m.id)[0]} goes by its own name again.`); },
   form: el => { const m = monBy(+el.dataset.u); if (!m || m.id !== 487) return; m.mega = m.mega === ORIGIN ? 0 : ORIGIN; save(); sfx.evo(); render(); monSheet(m); },
-  music: () => { S.music = S.music === 0 ? 1 : 0; save(); sfx.tap(); render(); },
-  cries: () => { S.cries = S.cries ? 0 : 1; save(); if (S.cries) { const p = partner(); if (p) cry(p.id); } render(); },
+  music: () => { S.music = S.music === 0 ? 1 : 0; save(); sfx.tap(); render(); setRe(); },
+  cries: () => { S.cries = S.cries ? 0 : 1; save(); if (S.cries) { const p = partner(); if (p) cry(p.id); } render(); setRe(); },
   plan: () => subjSheet(),
   seadd: () => { if (U.sd.length < 4) { U.sd.push({ k: '', n: '', ty: [], t: '', h: '', d: '' }); seRedraw(); const f = document.querySelectorAll('#se .sein'); if (f.length) f[f.length - 1].focus(); } },
   sedel: el => { U.sd.splice(+el.dataset.i, 1); seRedraw(); },
@@ -1380,7 +1423,7 @@ document.addEventListener('input', ev => {
 });
 document.addEventListener('change', ev => { if (ev.target.dataset && ev.target.dataset.v) save(); });
 document.addEventListener('input', ev => { const t = ev.target; if (t.dataset && t.dataset.f && U.sd && U.sd[+t.dataset.i]) { U.sd[+t.dataset.i][t.dataset.f] = t.value; const e = $('#se-err'); if (e) e.textContent = ''; } });
-document.addEventListener('change', ev => { if (ev.target.dataset && ev.target.dataset.c === 'cap') { S.cap = +ev.target.value; save(); render(); } });
+document.addEventListener('change', ev => { if (ev.target.dataset && ev.target.dataset.c === 'cap') { S.cap = +ev.target.value; save(); render(); setRe(); } });
 document.addEventListener('keydown', ev => {
   if (ev.key === 'Escape' && !$('#sheet').hidden) return closeSheet();
   if ((ev.key === ' ' || ev.key === 'Enter') && E.e && !$('#ov').hidden && $('#e-m') && ev.target.tagName !== 'BUTTON') { ev.preventDefault(); doThrow(); }
