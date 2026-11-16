@@ -198,7 +198,7 @@ const SND = {
   pknext: 'tab', pkskip: 'open', pktog: 'chip', pkkeep: 'ok', pkpick: 'open', pkdone: 'close',
   sbxpick: 'open', sbxtools: 'open', sbxq: 'ok', jprev: 'open', jday: 'ok', sbxfac: 'open', sbxlgo: 'open', sbxcup: 'open', sbxfinal: 'open', sbxagain: 'open',
   ball: 'ball', spec: 'open', plan: 'open', sync: 'open', backup: 'open', snext: 'ok', seadd: 'open', avatar: 'open', avall: 'open', avpick: 'ok', ach: 'open', rkok: 'ok',
-  today: 'open', boinfo: 'warn', sopen: 'open', minfo: 'open', pset: 'open', badge: 'open', look: 'chip', hfx: 'chip', hty: 'chip', binfo: 'open', btyback: 'close', rdet: 'chip', close: 'close', home: 'close', later: 'close', sback: 'close', sedel: 'close', skip: 'close', syncoff: 'close', toshop: 'open',
+  today: 'open', boinfo: 'warn', sopen: 'open', minfo: 'open', pset: 'open', badge: 'open', look: 'chip', hfx: 'chip', hty: 'chip', binfo: 'open', btyback: 'close', rdet: 'chip', stnext: 'ok', stback: 'close', stknow: 'chip', stdiff: 'chip', streg: 'chip', seopen: 'chip', know: 'chip', helpmore: 'chip', close: 'close', home: 'close', later: 'close', sback: 'close', sedel: 'close', skip: 'close', syncoff: 'close', toshop: 'open',
   train: 'open', trsel: 'chip', trback: 'close', trclr: 'warn',
   bxg: 'chip', bxf: 'chip', dupt: 'chip', tord: 'chip', tipok: 'ok', cmp: 'chip', cmpick: 'chip', cmpw: 'open', tsw: 'open', tswb: 'close', tsws: 'chip', tswc: 'open', tswr: 'ok', mstat: 'open', mback: 'close', mvinfo: 'chip', mvsug: 'ok', mvpick: 'open',
   lead: 'ok', sesave: 'ok', syncsave: 'ok', bkcopy: 'ok', bkload: 'ok', party: 'ok', fav: 'fav',
@@ -211,7 +211,7 @@ let toastT = 0;
 function toast(t) { const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, 2600); }
 
 /* ---------- Faner ---------- */
-const U = { step: 1, sd: null, tab: 'fokus', lag: 'lag', fag: null, min: null, sort: 'ny', dex: null, R: null, enc: null, quit: 0 };
+const U = { step: 0, sd: null, tab: 'fokus', lag: 'lag', fag: null, min: null, sort: 'ny', dex: null, R: null, enc: null, quit: 0 };
 const NAV = [
   ['fokus', 'Focus', '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9.5 2.5h5"/>'],
   ['lag', 'Team', '<circle cx="7" cy="9" r="2"/><circle cx="12" cy="6.5" r="2"/><circle cx="17" cy="9" r="2"/><path d="M12 12c-3 0-5.5 2.6-5.5 5.2 0 1.6 1.4 2.3 3 2.3 1 0 1.6-.5 2.5-.5s1.5.5 2.5.5c1.6 0 3-.7 3-2.3C17.500 14.6 15 12 12 12z"/>'],
@@ -628,7 +628,7 @@ function bstEl(id, mega, sh) {
   return `<div class="bst" role="table" aria-label="Base stats">${['HP', 'Attack', 'Defense', 'Sp. Atk', 'Sp. Def', 'Speed'].map((n, i) => `<div role="row"><span role="cell">${n}</span><b class="tn" role="cell">${b[i]}</b><span class="bst-b" role="cell" aria-hidden="true"><i style="width:${Math.min(100, Math.round(b[i] / 180 * 100))}%;background:${BSC(b[i])}"></i></span></div>`).join('')}<div class="bst-t" role="row"><span role="cell">Total</span><b class="tn" role="cell">${tot}</b><span class="sm" role="cell">${sh ? `Shiny: every stat is ${id === ARCEUS ? Math.round((SHINYARC - 1) * 100) : Math.round((SHINYST - 1) * 100)} % higher` : ''}</span></div></div>`;
 }
 function hexEl(m) {
-  const st = statsOf(m), up = natUp(m.nat), dn = natDn(m.nat), cx = 130, cy = 104, R = 64;
+  const st = statsOf(m), pot = potOn(), up = pot ? natUp(m.nat) : 0, dn = pot ? natDn(m.nat) : 0, cx = 130, cy = 104, R = 64;
   const ref = i => i === 0 ? Math.floor(291 * m.lv / 100) + m.lv + 10 : Math.floor(291 * m.lv / 100) + 5;
   const pt = (i, f) => { const a = (-90 + i * 60) * Math.PI / 180; return [Math.round((cx + Math.cos(a) * R * f) * 10) / 10, Math.round((cy + Math.sin(a) * R * f) * 10) / 10]; };
   const order = [0, 1, 2, 5, 4, 3], ring = f => order.map((_, k) => pt(k, f).join(',')).join(' ');
@@ -683,7 +683,16 @@ const mcat = c => `<span class="mcat s ${['stt', 'ph', 'spc'][c]}" title="${CLS[
 /* Tegner innholdet i arket som står åpent på nytt, uten at det glir inn igjen og uten å miste plassen i rullingen. */
 function reSheet(html) { const w = $('#sheet'), s = w.querySelector('.sheet'); if (w.hidden || !s) return openSheet(html); const y = s.scrollTop; s.innerHTML = `<span class="grab"></span>${html}`; s.scrollTop = y; }
 /* Forklaringen som vises én gang (S.tip[k]) og kvitteres med OK. */
-const tipEl = (k, txt) => S.tip && S.tip[k] ? '' : `<div class="tipc">${icn('info')}<p class="sm">${txt}</p><button type="button" class="btn sm2" data-a="tipok" data-k="${k}">OK</button></div>`;
+const tipEl = (k, txt, lvl) => (S.tip && S.tip[k]) || know() > (lvl == null ? 2 : lvl) ? '' : `<div class="tipc">${icn('info')}<p class="sm">${txt}</p><button type="button" class="btn sm2" data-a="tipok" data-k="${k}">OK</button></div>`;
+/* Kortet til en Pokémon forklarer én ny ting om gangen, første gang den står der: typer (for den som er ny), stjernene og naturen (når potensial
+   er åpnet), og størrelsen (ny for alle). Neste forklaring kommer neste gang et kort åpnes. */
+function cardTip(m) {
+  const sz = szOf(m), up = natUp(m.nat), dn = natDn(m.nat);
+  return tipEl('ty', tl('Every Pokémon and every move has a type. Types beat each other like rock, paper, scissors: Water beats Fire, Fire beats Grass, Grass beats Water.'), 0)
+    || (potOn() ? tipEl('st', tl('Filled stars are what it was born with, and they never change. Fainter stars come from training.'), 1) : '')
+    || (potOn() && up !== dn ? tipEl('nat', tl('Its nature, {n}, lifts {a} by 10 % and lowers {b}.', { n: NAT[m.nat], a: SN[up], b: SN[dn] }), 1) : '')
+    || (szOn() && sz !== 1 ? tipEl('sz', tl('{n}: {p} % HP against a Normal one. Size is something it is born with, and it can never be trained.', { n: SZN[sz], p: (SZHP[sz] > 1 ? '+' : '') + Math.round((SZHP[sz] - 1) * 100) })) : '');
+}
 
 /* ---------- Team ---------- */
 /* Lagkortene (ønske 1, 2 og 20): typen som et preg i kortet og som ikon, styrken slik den faktisk er, stjernene, og bytt rett fra kortet.
@@ -783,7 +792,7 @@ function monSheet(m, re) {
         ${m.nn && !ed ? `<div class="sm">${esc(spName(m))}</div>` : ''}
         <div class="mc-t">${mTyChips(m)}${tierEl(m.id)}${m.sh === 2 ? '<span class="pill dkp">Dark</span>' : m.sh ? '<span class="pill au">Shiny</span>' : ''}${fn ? `<span class="pill">${fn} Forme</span>` : ''}${szTag(m)}</div></div>
       <button type="button" class="mc-f${m.fav ? ' on' : ''}" data-a="fav" data-u="${m.u}" aria-pressed="${!!m.fav}" aria-label="${m.fav ? 'Favourite: on' : 'Mark as favourite'}">${icn('heart')}</button></div>
-    <div class="card2 mc-s" style="--tc:var(--t${ty[0]})">
+    ${cardTip(m)}<div class="card2 mc-s" style="--tc:var(--t${ty[0]})">
       <button type="button" class="mc-pw" data-a="mstat" data-u="${m.u}" aria-label="Power ${pwOf(m)}. See the numbers"><span class="pw tn"><b>${nb(pwOf(m))}</b><small>power</small></span><span class="sp">${potOn() ? `${starRow(m, 'lg')}<small>${now > born ? `Born ${JT[born - 1].toLowerCase()} · trained to ${now} stars` : `Born ${JT[born - 1].toLowerCase()}`}</small>` : ''}
         <span class="mtrs"><span class="mtr" role="img" aria-label="Level ${m.lv} of 100"><small>Level</small><i><b style="width:${m.lv}%"></b></i></span>${has('train') ? `<span class="mtr" role="img" aria-label="Training: ${evSum(m)} of ${EVTOT} EVs"><small>Training</small><i><b style="width:${Math.round(evSum(m) / EVTOT * 100)}%"></b></i></span>` : ''}</span></span>${icn('chev')}</button>
       ${hexEl(m)}
@@ -902,7 +911,7 @@ function movePick(m, re) {
   for (let i = 0; i < l.length; i += 2) if (l[i] > m.lv && !known.includes(l[i + 1]) && !DEADMV.has(l[i + 1]) && !later.some(x => x[1] === l[i + 1])) later.push([l[i], l[i + 1]]);
   const row = (x, lv) => mvRow(x, m, lv ? { lv } : { act: 'mvtog', on: sel.includes(x) });
   const html = `<div class="row" style="justify-content:space-between"><h2 class="h" style="margin:0">Moves for ${esc(mName(m))}</h2><span class="pill tn" id="mvn">${sel.length} of 4</span></div>
-    ${known.filter(x => !DEADMV.has(x)).length > 4 ? `<button type="button" class="btn ${jOn() ? 'pri' : ''} wide sug" data-a="mvsug" data-u="${m.u}">${icn('spark')}Suggest four</button>${jOn() ? `<p class="sm" style="margin-top:-6px">${tl('Not sure? This picks its strongest moves in its own type, one for cover and one tactical.')}</p>` : ''}` : ''}
+    ${known.filter(x => !DEADMV.has(x)).length > 4 ? `<button type="button" class="btn ${know() === 0 || (jOn() && know() < 2) ? 'pri' : ''} wide sug" data-a="mvsug" data-u="${m.u}">${icn('spark')}Suggest four</button>${jOn() ? `<p class="sm" style="margin-top:-6px">${tl('Not sure? This picks its strongest moves in its own type, one for cover and one tactical.')}</p>` : ''}` : ''}
     <div class="mvls">${known.map(x => row(x, 0)).join('')}</div>
     <p class="err" id="mv-err" role="alert"></p>
     ${later.length ? `<details class="hfold mvlt"${U.mvlt ? ' open' : ''}><summary><b>Learns later</b><span class="sm tn">${later.length} · next at level ${later[0][0]}</span></summary><div class="mvls">${later.map(([lv, x]) => row(x, lv)).join('')}</div></details>` : `<p class="sm">${tl('It has learned every move it gets by level.')}</p>`}
@@ -925,7 +934,7 @@ VIEW.dex = () => {
     <div class="seg">${[1, 2, 3, 4, 5].map(x => `<button type="button" data-a="dexr" data-k="${x}" aria-pressed="${r === x}">${REG[x].n}</button>`).join('')}</div>
     <div class="card"><div class="row" style="justify-content:space-between"><b>${g.n}</b><span class="sm tn">${dexCount(r)} of ${g.b - g.a + 1} caught</span></div><div class="bar" style="margin-top:8px"><i style="width:${Math.round(dexCount(r) / (g.b - g.a + 1) * 100)}%"></i></div>
       ${open ? `<div class="row" style="justify-content:space-between;margin-top:10px"><span class="sm">${tl('Wild Pokémon from here show up in your encounters when the route is on.')}</span><button type="button" class="btn sm2${S.routes.includes(r) ? ' pri' : ''}" data-a="reg" data-k="${r}" aria-pressed="${S.routes.includes(r)}">Route ${S.routes.includes(r) ? 'on' : 'off'}</button></div>`
-        : `<p class="sm tn" style="margin-top:10px">${icn('lock')} Opens at trainer level ${g.lv} (you are ${tlv()}) or ${g.dex} species caught (you have ${dexAll()}).</p><div class="bar gold" style="margin-top:6px"><i style="width:${Math.round(Math.min(1, Math.max((tlv() - 1) / Math.max(1, g.lv - 1), dexAll() / g.dex)) * 100)}%"></i></div>`}</div>
+        : `<p class="sm tn" style="margin-top:10px">${icn('lock')} ${regOrder().find(x => !S.regions.includes(x)) === r ? `Opens at trainer level ${regNeed(r).lv} (you are ${tlv()}) or ${regNeed(r).dex} species caught (you have ${dexAll()}).` : `Opens after ${REG[regOrder().find(x => !S.regions.includes(x))].n}.`}</p>${regOrder().find(x => !S.regions.includes(x)) === r ? `<div class="bar gold" style="margin-top:6px"><i style="width:${Math.round(Math.min(1, Math.max((tlv() - 1) / Math.max(1, regNeed(r).lv - 1), dexAll() / regNeed(r).dex)) * 100)}%"></i></div>` : ''}`}</div>
     <div class="grid">${cells}</div>`;
 };
 function specSheet(id) {
@@ -997,14 +1006,14 @@ VIEW.butikk = () => {
    Siden er kort: trenerkortet, eksamensperioden som merker, fire tall med de ti siste ukene, og en liste med rader. Hver rad åpner et ark
    (setSheet) med det som hører til: Appearance, Study, Battles, Sound, Language, Save and sync, Guide and rules, Fair play og Admin.
    Raden viser det som gjelder nå, så en ser det uten å åpne. Ingen innstilling er borte, de er bare samlet. */
-const PSET = [['look', 'Appearance', 'sun'], ['study', 'Study', 'clock'], ['battle', 'Battles', 'sword'], ['sound', 'Sound', 'bell'], ['lang', 'Language', 'globe'], ['data', 'Save and sync', 'cloud'], ['about', 'Guide and rules', 'info'], ['fair', 'Fair play', 'shield'], ['admin', 'Admin', 'wrench']];
+const PSET = [['look', 'Appearance', 'sun'], ['study', 'Study', 'clock'], ['battle', 'Battles', 'sword'], ['sound', 'Sound', 'bell'], ['lang', 'Explanations', 'globe'], ['data', 'Save and sync', 'cloud'], ['about', 'Guide and rules', 'info'], ['fair', 'Fair play', 'shield'], ['admin', 'Admin', 'wrench']];
 /* Det raden sier om hva som gjelder nå. */
 function psetNow(k) {
   if (k === 'look') { const o = LOOK.get(); return `${o.t === 'auto' ? 'Auto' : o.t === 'light' ? 'Light' : 'Dark'} · ${LOOK.COLORS[o.c].n}`; }
   if (k === 'study') { const n = Object.keys(S.fag).length; return `${hm(S.cap)} goal · ${n} subject${n === 1 ? '' : 's'}${workIsOn() ? ' · work days' : ''}`; }
   if (k === 'battle') return diff().n;
   if (k === 'sound') return S.sound ? (S.music === 0 ? 'On · no music' : 'On') : 'Off';
-  if (k === 'lang') return S.lang === 'no' ? 'Norsk' : 'English';
+  if (k === 'lang') return (S.lang === 'no' ? 'Norsk' : 'English') + ' · ' + ['everything', 'some', 'few'][know()];
   if (k === 'data') return GH && GH.ok ? 'Sync ' + (ghState === 'ok' ? 'on' : ghState || 'connecting') : 'On this device';
   if (k === 'fair') { const n = S.fair ? S.fair.n : 0; return n ? `${n} ${n === 1 ? 'mark' : 'marks'}` : 'Clean'; }
   if (k === 'admin') return admOn() ? 'Admin view on' : 'Sandbox';
@@ -1034,7 +1043,8 @@ function setSheet(k, re) {
       <p class="sm">${tl('Battle speed, music and forfeit are in the Pause menu during a battle.')}</p>`; }
   else if (k === 'sound') h = `<div class="tgls">${tog('sound', S.sound, 'Sound')}${tog('music', S.music !== 0, 'Battle music', !S.sound)}${tog('cries', S.cries, 'Cries', !S.sound)}${tog('fsnd', S.fsnd !== 0, 'Encounter sound in a session')}</div>
       ${S.sound ? `<div>${S.music === 0 ? '' : `<div class="volrow"><span>Music</span><input type="range" min="0" max="100" step="5" value="${S.mvol}" data-v="mvol" aria-label="Music volume"><b class="tn" id="vv-mvol">${S.mvol}%</b></div>`}<div class="volrow"><span>Effects</span><input type="range" min="0" max="100" step="5" value="${S.vol}" data-v="vol" aria-label="Effects volume"><b class="tn" id="vv-vol">${S.vol}%</b></div>${S.cries ? `<div class="volrow"><span>Cries</span><input type="range" min="0" max="100" step="5" value="${S.cvol}" data-v="cvol" aria-label="Cries volume"><b class="tn" id="vv-cvol">${S.cvol}%</b></div>` : ''}</div>` : ''}`;
-  else if (k === 'lang') h = `${langSeg(false)}<p class="sm">${tl('Guides and introductions to new things. Names, types and moves stay in English.')}</p>`;
+  else if (k === 'lang') h = `<div><div class="lab">Language</div>${langSeg(false)}<p class="sm" style="margin-top:6px">${tl('Guides and introductions to new things. Names, types and moves stay in English.')}</p></div>
+      <div><div class="lab">${tl('How well you know Pokémon')}</div><div class="seg">${['New', 'A bit', 'Well'].map((n, i) => `<button type="button" data-a="know" data-k="${i}" aria-pressed="${know() === i}">${n}</button>`).join('')}</div><p class="sm" style="margin-top:6px">${tl(['Everything is explained, one small thing at a time.', 'The basics are skipped. New things here are still explained.', 'Only what differs from the main games is explained.'][know()])}</p></div>`;
   else if (k === 'data') h = `<div class="stack"><button type="button" class="btn wide rowb" data-a="sync"><span>Sync between devices</span><span class="sm tn">${GH && GH.ok ? (ghState === 'ok' ? 'on' : ghState || 'connecting') : 'off'}</span></button><button type="button" class="btn wide rowb" data-a="backup"><span>Backup</span>${icn('chev')}</button></div>
       <p class="sm">${tl('Your game is saved on this device. Sync keeps it in a private GitHub repository so it follows you between devices.')}</p>`;
   else if (k === 'about') h = `<div class="stack"><button type="button" class="btn wide rowb" data-a="tour"><span>Start guide</span>${icn('chev')}</button><button type="button" class="btn wide rowb" data-a="rules"><span>Rules and rewards</span>${icn('chev')}</button><button type="button" class="btn wide rowb" data-a="show"><span>Show the game</span><span class="sm">a trailer for a friend</span></button></div>
@@ -1083,10 +1093,11 @@ const subjDraft = () => Object.keys(S.fag).map(k => { const f = S.fag[k]; return
 /* «14 Nov» */
 const dShort = k => new Date(k + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 function seCards() {
-  const sd = U.sd;
-  return sd.map((s, i) => `<div class="card secard"><div class="row"><input class="sein" data-f="n" data-i="${i}" maxlength="14" placeholder="Subject name" autocomplete="off" value="${esc(s.n)}" aria-label="Subject name"><button type="button" class="btn sm2" data-a="sedel" data-i="${i}" aria-label="Remove ${esc(s.n) || 'subject'}">Remove</button></div>
-    <label class="field">Exam date (optional)<input type="date" data-f="d" data-i="${i}" value="${esc(s.d)}"></label>
-    <div><div class="lab">Types that show up more often · pick up to 2</div><div class="tychips">${TYN.map((n, t) => `<button type="button" class="tyc" data-a="sety" data-i="${i}" data-k="${t}" aria-pressed="${s.ty.includes(t)}" style="--c:var(--t${t})">${n}</button>`).join('')}</div></div></div>`).join('') +
+  const sd = U.sd, O = U.seo || (U.seo = {});
+  return sd.map((s, i) => { const o = O[i] || ''; return `<div class="card secard"><div class="row"><input class="sein" data-f="n" data-i="${i}" maxlength="14" placeholder="Subject name" autocomplete="off" value="${esc(s.n)}" aria-label="Subject name"><button type="button" class="btn sm2" data-a="sedel" data-i="${i}" aria-label="Remove ${esc(s.n) || 'subject'}">Remove</button></div>
+    <div class="se-x"><button type="button" class="chip" data-a="seopen" data-i="${i}" data-k="ty" aria-expanded="${o === 'ty'}">Types: ${s.ty.length ? s.ty.map(t => TYN[t]).join(', ') : 'any'}${icn('down')}</button><button type="button" class="chip" data-a="seopen" data-i="${i}" data-k="d" aria-expanded="${o === 'd'}">${s.d && /^\d{4}-\d{2}-\d{2}$/.test(s.d) ? 'Exam ' + dShort(s.d) : 'Exam date'}${icn('down')}</button></div>
+    ${o === 'd' ? `<label class="field">Exam date (optional)<input type="date" data-f="d" data-i="${i}" value="${esc(s.d)}"></label>` : ''}
+    ${o === 'ty' ? `<div><div class="lab">${tl('These types show up more often when you study this subject. Pick up to 2.')}</div><div class="tychips">${TYN.map((n, t) => `<button type="button" class="tyc" data-a="sety" data-i="${i}" data-k="${t}" aria-pressed="${s.ty.includes(t)}" style="--c:var(--t${t})">${n}</button>`).join('')}</div></div>` : ''}</div>`; }).join('') +
     (sd.length < 4 ? '<button type="button" class="pfree" data-a="seadd">+ Add subject</button>' : '');
 }
 function seRedraw() { const el = $('#se'); if (el) el.innerHTML = seCards(); }
@@ -1103,7 +1114,7 @@ function seRead() {
   return out;
 }
 function subjSheet() {
-  U.sd = subjDraft(); U.ex = (S.extra || []).filter(k => k !== 'annet' && EXTRA[k]);
+  U.sd = subjDraft(); U.seo = {}; U.ex = (S.extra || []).filter(k => k !== 'annet' && EXTRA[k]);
   openSheet(`<h2 class="h">Your subjects</h2><p class="sm">Up to four. Their types show up more often in their sessions, and in an exam period each badge counts down to its exam. Subjects count in full.</p>
     <div id="se" class="stack">${seCards()}</div>
     <div><div class="lab">Other things you log · half value for the battle bonus</div><div class="chips">${Object.keys(EXTRA).filter(k => k !== 'annet').map(k => `<button type="button" class="chip" data-a="extog" data-k="${k}" aria-pressed="${U.ex.includes(k)}">${EXTRA[k].n}</button>`).join('')}<span class="chip" style="display:inline-flex;align-items:center;opacity:.55">Other · always there</span></div>
@@ -1290,23 +1301,58 @@ function pkEnd() {
 function ov(html, cls, tc) { const o = $('#ov'); o.className = 'ov' + (cls ? ' ' + cls : ''); o.style.setProperty('--tc', tc || 'var(--sage)'); o.innerHTML = `<div class="ovin">${html}</div>`; o.hidden = false; }
 function closeOv() { const o = $('#ov'); o.hidden = true; o.innerHTML = ''; }
 
-/* ---------- Start: velg partner ---------- */
+/* ---------- STARTEN (steg 1.10, ønske 8, 10, 16 og 17) ----------
+   Fem korte skjermer, én idé på hver: velkommen og løftet · hvor godt du kjenner Pokémon · hvor vanskelige kampene skal være · region og
+   partner · fagene. START holder valgene til spillet starter (begin i game.js). U.step = hvilken skjerm (0–4). */
 let pick = 0;
+const START = { know: null, diff: null, reg: 1 }, STEPS = 5;
 /* Språkvalget: på startskjermen (kort, med «Explanations in») og under Settings i Profile. */
 const langSeg = small => `<div class="langseg${small ? ' sm' : ''}">${small ? `<span class="sm">${tl('Explanations in')}</span>` : ''}<div class="seg">${[['en', 'English'], ['no', 'Norsk']].map(([k, n]) => `<button type="button" data-a="lang" data-k="${k}" aria-pressed="${(S.lang || 'en') === k}">${n}</button>`).join('')}</div></div>`;
+const stTop = i => `<div class="st-top"><button type="button" class="btn sm2" data-a="stback">Back</button><span class="st-dots" role="img" aria-label="Step ${i + 1} of ${STEPS}">${Array.from({ length: STEPS }, (_, k) => `<i class="${k === i ? 'on' : k < i ? 'was' : ''}"></i>`).join('')}</span><span class="st-sp"></span></div>`;
+/* Et valg på startskjermene: bilde, navn og én linje. */
+const stCard = (a, k, on, pic, t, s, x) => `<button type="button" class="stc" data-a="${a}" data-k="${k}" role="radio" aria-checked="${!!on}"><span class="stc-i">${pic}</span><span class="sp"><b>${t}</b><span class="sm">${s}</span></span>${x || ''}</button>`;
+/* Veien videre: hver prikk er en studiedag. De første lyser, resten er hemmelige, og den siste er noe stort. */
+const stPath = () => `<div class="st-path" aria-hidden="true">${[ballEl('poke', '20px'), '<span class="coin"><i></i></span>', icn('spark'), '?', '?', '?', '?'].map((x, i) => `<i class="${i < 3 ? 'on' : i === 6 ? 'big' : 'q'}" style="--i:${i}">${x}</i>`).join('')}</div>`;
+const KNOWS = [['New to Pokémon', 'Everything is explained, one small thing at a time.'], ['Played a bit', 'I know catching, types and evolving.'], ['I know it well', 'Types, stats, natures and IVs. Skip the basics.']];
+const DIFFWHO = ['For those new to Pokémon. Opponents are below your level and play simply, and one loss a day is forgiven.', 'For those who have played a bit. Opponents are near your level and pick sensible moves.', 'For those who know types and strategy. Opponents are fully trained and play to win.'];
+const stDiff = () => START.diff != null ? START.diff : START.know != null ? START.know : 1;
 function intro() {
-  if (U.step === 2) {
-    ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="sback">Back</button><span class="pill">Step 2 of 2</span></div>
-      <div><h1 class="big">${tl('Your subjects')}</h1><p class="mut" style="margin-top:6px">${tl('Add up to four subjects you are studying for. The types you pick show up more often in their sessions. You can change this later in Profile.')}</p></div>
+  const st = U.step = Math.max(0, Math.min(STEPS - 1, U.step || 0)), K = START.know, k0 = K === 0;
+  if (st === 4) {
+    if (!U.sd) U.sd = [{ k: '', n: '', ty: [], d: '' }];
+    ov(`${stTop(4)}<div><h1 class="big">${tl('What are you studying?')}</h1><p class="mut" style="margin-top:6px">${tl('Add up to four subjects. You can change them later in Profile.')}</p></div>
       <div id="se" class="stack">${seCards()}</div><p class="err" id="se-err" role="alert"></p>
       <label class="field">${tl('How long do you usually study a day?')}<select data-c="cap">${[120, 180, 240, 300, 360, 420, 480].map(c => `<option value="${c}"${(S.cap || 360) === c ? ' selected' : ''}>${hm(c)}</option>`).join('')}</select></label>
       <div class="acts"><button type="button" class="btn pri" data-a="sestart">Start with ${esc(D(pick)[0])}</button></div>`);
     return;
   }
-  ov(`<div class="row" style="justify-content:space-between;align-items:center">${langSeg(true)}<span class="pill">Step 1 of 2</span></div><div class="mid"><h1 class="big">Fokusdex</h1><p class="mut" style="max-width:30ch">${tl('Every minute you focus earns XP and coins. Every session lures out wild Pokémon you can catch, evolve and collect.')}</p>
-    <div class="starters">${[1, 4, 7].map(id => `<button type="button" data-a="pick" data-k="${id}" aria-pressed="${pick === id}" style="--tc:var(--t${D(id)[1]})">${spr(id, { ani: 1 })}<span>${D(id)[0]}</span>${types(id)}</button>`).join('')}</div>
-    <p class="sm" style="max-width:32ch">${tl('Pick your partner. You start with 20 Poké Balls, and next you add your subjects.')}</p></div>
-    <div class="acts"><button type="button" class="btn pri" data-a="snext"${pick ? '' : ' disabled'}>${pick ? 'Next' : 'Choose a partner'}</button></div>`);
+  if (st === 3) {
+    const trio = STARTERS[START.reg] || STARTERS[1];
+    ov(`${stTop(3)}<div class="mid st3"><h1 class="big">${tl('Choose your partner')}</h1>
+      <div class="seg st-reg" role="tablist" aria-label="Region">${[1, 2, 3, 4, 5].map(r => `<button type="button" role="tab" data-a="streg" data-k="${r}" aria-pressed="${START.reg === r}">${REG[r].n}</button>`).join('')}</div>
+      <div class="starters">${trio.map(id => `<button type="button" data-a="pick" data-k="${id}" aria-pressed="${pick === id}" style="--tc:var(--t${D(id)[1]})">${spr(id, { ani: 1 })}<span>${D(id)[0]}</span>${types(id)}</button>`).join('')}</div>
+      <p class="sm" style="max-width:32ch">${k0 ? tl('Grass, Fire or Water: all three are equally strong. Pick the one you like.') : tl('The region decides which Pokémon you meet first. The others open as you go.')}</p></div>
+      <div class="acts"><button type="button" class="btn pri" data-a="stnext"${pick ? '' : ' disabled'}>${pick ? 'Next' : 'Choose a partner'}</button></div>`);
+    return;
+  }
+  if (st === 2) {
+    const d = stDiff();
+    ov(`${stTop(2)}<div class="mid st2"><h1 class="big">${tl('How hard should the battles be?')}</h1>
+      <div class="stcs" role="radiogroup">${DIFF.map((x, i) => stCard('stdiff', i, d === i, `<span class="st-pips p${i}"><i></i><i></i><i></i></span>`, x.n, tl(DIFFWHO[i]), `<span class="st-pay tn"><span class="coin"><i></i></span>×${x.coin}</span>`)).join('')}</div>
+      <p class="sm" style="max-width:34ch">${tl('Harder battles pay more. You can change this any time under Profile → Settings.')}</p></div>
+      <div class="acts"><button type="button" class="btn pri" data-a="stnext">Next</button></div>`);
+    return;
+  }
+  if (st === 1) {
+    ov(`${stTop(1)}<div class="mid st1"><div><h1 class="big">${tl('How well do you know Pokémon?')}</h1><p class="mut" style="margin-top:8px">${tl('It decides how much is explained along the way.')}</p></div>
+      <div class="stcs" role="radiogroup">${KNOWS.map((x, i) => stCard('stknow', i, K === i, [icn('egg'), ballEl('poke', '26px'), icn('star')][i], tl(x[0]), tl(x[1]))).join('')}</div></div>
+      <div class="acts"><button type="button" class="btn pri" data-a="stnext"${K == null ? ' disabled' : ''}>${K == null ? 'Choose one' : 'Next'}</button></div>`);
+    return;
+  }
+  ov(`<div class="st-top">${langSeg(true)}</div><div class="mid st0">${stPath()}<div><h1 class="big st-name">Fokusdex</h1><p class="mut" style="margin-top:8px;max-width:28ch">${tl('Study, and a Pokémon world grows around it.')}</p></div>
+      <div class="st-prom"><div>${icn('clock')}<p><b>${tl('A little at a time')}</b><span class="sm">${tl('Each study day opens a few new things, so you master one before the next.')}</span></p></div>
+        <div>${icn('spark')}<p><b>${tl('Deeper than it looks')}</b><span class="sm">${tl('Bosses, legendary raids and rewards worth waiting for.')}</span></p></div></div></div>
+    <div class="acts"><button type="button" class="btn pri" data-a="stnext">Begin</button></div>`);
 }
 
 /* ---------- Fokusklokka ---------- */
@@ -1436,7 +1482,7 @@ function drawEnc(reveal) {
       <div id="e-info"><p class="sm" style="margin-top:8px" id="e-msg">${S.caught[e.id] ? (n ? `You already have ${n}.` : 'You have had it before.') : `<b style="color:var(--sage)">New to your collection</b> · +${NEWCOIN[e.t]} coins if you catch it`}</p>
       <div class="hearts" id="e-hearts" aria-label="Attempts left" style="margin-top:10px">${Array.from({ length: (isLeg(e.id) ? 4 : 3) + (e.fed ? 1 : 0) }, (_, i) => `<i class="${i < e.tr ? '' : 'off'}"></i>`).join('')}</div>${e.fed ? '<p class="sm tn" style="margin-top:6px;color:var(--gold)">It ate a Golden Razz Berry: one more throw, and better odds.</p>' : ''}</div></div></div>
     <div id="e-ctl" style="display:flex;flex-direction:column;gap:12px">${noBalls ? `<p class="sm" style="text-align:center">You are out of balls. Buy more in the shop and the encounter will wait here.</p><div class="acts"><button type="button" class="btn pri" data-a="toshop">To the shop</button><button type="button" class="btn nf" data-a="skip">Let it go</button></div>` : `
-      <div class="row sm tn" style="justify-content:space-between;gap:10px"><span id="e-odds">${oddsEl(e)}</span><span style="text-align:right">green = good · gold = perfect</span></div>
+      <div class="row sm tn" style="justify-content:space-between;gap:10px"><span id="e-odds">${oddsEl(e)}</span><span style="text-align:right">${know() === 0 && S.mons.length < 3 ? tl('Tap Throw when the marker is over the green') : 'green = good · gold = perfect'}</span></div>
       <button type="button" class="meter" data-a="throw" aria-label="Throw when the marker is in the green zone"><span class="z" id="e-z"></span><span class="g" id="e-g"></span><span class="m" id="e-m"></span></button>
       <div class="balls">${BALLS.filter(k => S.items[k] > 0 || k === 'poke' || k === 'great' || k === 'ultra').map(k => `<button type="button" data-a="ball" data-k="${k}" aria-pressed="${E.ball === k}" aria-label="${SHOP[k].n}"${S.items[k] > 0 ? '' : ' disabled'}>${ballEl(k, '28px')}<span class="tn">${S.items[k]}</span></button>`).join('')}</div>
       ${S.items.gberry > 0 && !e.fed ? `<button type="button" class="btn sm2 wide" data-a="berry">Feed a Golden Razz Berry · one more throw (${S.items.gberry})</button>` : ''}
@@ -1448,8 +1494,8 @@ const oddsEl = e => { const o = oddsOf(e, E.ball); return `Catch odds: <b class=
 function catchCard(r, e) {
   const m = r.mon, j = judge(m), st = ['Decent', 'Above average', 'Great', 'Outstanding', 'Flawless'].indexOf(j.t) + 1, reg = regOf(e.id), tot = REG[reg].b - REG[reg].a + 1, n = countOf(e.id);
   return `<div class="ecard"><div class="row" style="justify-content:center;gap:8px"><b class="ecard-h">${r.took ? 'It is yours.' : 'Caught!'}</b>${r.crit ? '<span class="pill ecrit">Critical capture</span>' : ''}</div>
-    <div class="epot" role="img" aria-label="Potential: ${j.t}, ${st} of 5 stars"><span class="sm">Potential · IVs</span><span class="epot-s">${Array.from({ length: 5 }, (_, i) => `<i class="${i < st ? 'on' : ''}" style="animation-delay:${0.25 + i * 0.16}s"></i>`).join('')}</span><b class="epot-t" style="animation-delay:${0.3 + st * 0.16}s">${j.t}</b></div>
-    <div class="sm tn ecard-n">${NAT[m.nat]} nature · best stat ${SN[j.best]}${szTag(m)}</div>
+    ${potOn() ? `<div class="epot" role="img" aria-label="Born with ${st} of 5 stars: ${j.t}"><span class="sm">Born with</span><span class="epot-s">${Array.from({ length: 5 }, (_, i) => `<i class="${i < st ? 'on' : ''}" style="animation-delay:${0.25 + i * 0.16}s"></i>`).join('')}</span><b class="epot-t" style="animation-delay:${0.3 + st * 0.16}s">${j.t}</b></div>
+    <div class="sm tn ecard-n">${NAT[m.nat]} nature · best stat ${SN[j.best]}${szTag(m)}</div>` : szOn() && szOf(m) !== 1 ? `<div class="sm tn ecard-n">${szTag(m)}</div>` : ''}
     ${r.bonus.c ? `<div class="ecoin"><b>+${coinEl(r.bonus.c)}</b><span class="sm">${esc(r.bonus.why.join(' · '))}</span></div>` : ''}
     <div class="sm">${r.isNew ? `<b style="color:var(--sage)">New species</b> · ${REG[reg].n} ${dexCount(reg)} of ${tot}` : r.took ? `It has taken the place of your Mewtwo: the same Pokémon at Lv ${m.lv}, now dark, with perfect IVs and full training.` : `You have ${n} now. A duplicate sells for ${nb(sellValue(m))} coins.`}</div></div>`;
 }
@@ -1547,7 +1593,7 @@ const A = {
   mon: el => { const m = monBy(+el.dataset.u); if (m) { U.nick = 0; U.mvx = null; cry(m.id, 0, 0.35); monSheet(m); } },
   /* Team (steg 1.6): rekkefølgen som vises, forklaringen som kvitteres, sammenligning og bytte rett fra kortet. */
   tord: el => { U.tord = el.dataset.k; render(); },
-  tipok: el => { (S.tip || (S.tip = {}))[el.dataset.k] = 1; save(true); render(); },
+  tipok: el => { (S.tip || (S.tip = {}))[el.dataset.k] = 1; save(true); const c = el.closest('.tipc'), inner = !!el.closest('#ov, #sheet'); if (c) c.remove(); if (!inner) render(); },
   cmp: () => { U.cmp = U.cmp ? null : []; render(); },
   cmpick: el => { const u = +el.dataset.u, c = U.cmp || (U.cmp = []), i = c.indexOf(u); if (i >= 0) c.splice(i, 1); else c.push(u); if (c.length < 2) return render(); const a = monBy(c[0]), b = monBy(c[1]); U.cmp = null; U.sw = null; render(); cmpSheet(a, b); },
   cmpw: el => { U.sw = { mode: 'cmp', u: +el.dataset.u }; U.swq = ''; swapSheet(); },
@@ -1653,7 +1699,7 @@ const A = {
   cries: () => { S.cries = S.cries ? 0 : 1; save(); if (S.cries) { const p = partner(); if (p) cry(p.id); } render(); setRe(); },
   plan: () => subjSheet(),
   seadd: () => { if (U.sd.length < 4) { U.sd.push({ k: '', n: '', ty: [], t: '', h: '', d: '' }); seRedraw(); const f = document.querySelectorAll('#se .sein'); if (f.length) f[f.length - 1].focus(); } },
-  sedel: el => { U.sd.splice(+el.dataset.i, 1); seRedraw(); },
+  sedel: el => { U.sd.splice(+el.dataset.i, 1); U.seo = {}; seRedraw(); },
   sety: el => { const s = U.sd[+el.dataset.i], t = +el.dataset.k; if (s.ty.includes(t)) s.ty = s.ty.filter(x => x !== t); else { s.ty.push(t); if (s.ty.length > 2) s.ty.shift(); } seRedraw(); },
   exam: () => examSheet(),
   adv: () => { U.adv = !U.adv; render(); },
@@ -1669,9 +1715,15 @@ const A = {
   exend: el => { if (!el.dataset.ok) { el.dataset.ok = 1; el.textContent = 'Tap again to end'; return; } examStop(); save(true); closeSheet(); render(); toast('Exam period ended.'); },
   sesave: () => { const r = seRead(); if (typeof r === 'string') { $('#se-err').textContent = r; return; } if (U.ex) S.extra = Object.keys(EXTRA).filter(k => k === 'annet' || U.ex.includes(k)); setSubjects(r); save(); closeSheet(); render(); toast('Subjects saved.'); },
   extog: el => { const k = el.dataset.k, i = U.ex.indexOf(k); if (i >= 0) U.ex.splice(i, 1); else U.ex.push(k); el.setAttribute('aria-pressed', String(i < 0)); },
-  snext: () => { if (!pick) return; U.step = 2; if (!U.sd) U.sd = [{ k: '', n: '', ty: [], d: '' }]; intro(); $('#ov').scrollTop = 0; },
-  sback: () => { U.step = 1; intro(); },
-  sestart: () => { const r = seRead(); if (typeof r === 'string') { $('#se-err').textContent = r; return; } setSubjects(r); const c = begin(pick); S.tour = 0; save(true); sfx.evo(); closeOv(); render(); tourShow(0); if (c) toast(`${nb(c)} coins for the hours you have already done.`); },
+  /* Starten (steg 1.10): fram og tilbake mellom de fem skjermene, og valgene på dem. */
+  stnext: () => { const st = U.step || 0; if ((st === 1 && START.know == null) || (st === 3 && !pick)) return; U.step = st + 1; intro(); $('#ov').scrollTop = 0; },
+  stback: () => { U.step = Math.max(0, (U.step || 0) - 1); intro(); },
+  stknow: el => { START.know = +el.dataset.k; intro(); },
+  stdiff: el => { START.diff = +el.dataset.k; intro(); },
+  streg: el => { const r = +el.dataset.k; if (!STARTERS[r] || START.reg === r) return; START.reg = r; if (!STARTERS[r].includes(pick)) pick = 0; intro(); },
+  seopen: el => { const O = U.seo || (U.seo = {}), i = +el.dataset.i; O[i] = O[i] === el.dataset.k ? '' : el.dataset.k; seRedraw(); },
+  know: el => { S.know = Math.max(0, Math.min(2, +el.dataset.k || 0)); save(); render(); setRe(); },
+  sestart: () => { const r = seRead(); if (typeof r === 'string') { $('#se-err').textContent = r; return; } setSubjects(r); const c = begin(pick, { reg: START.reg, know: START.know == null ? 1 : START.know, diff: stDiff() }); S.tour = 0; save(true); sfx.evo(); closeOv(); render(); tourShow(0); if (c) toast(`${nb(c)} coins for the hours you have already done.`); },
   sync: () => SBX ? toast('Leave the sandbox first: Sync is paused in here.') : syncSheet(),
   synclb: () => { try { const lb = JSON.parse(localStorage.getItem('lb.gh')); $('#gh-r').value = lb.repo; $('#gh-t').value = lb.t; } catch (_) {} },
   syncsave: async () => {
@@ -1704,7 +1756,7 @@ const A = {
     const p = S; adopt(o); carry(p); S.rev = Math.max(S.rev, p.rev || 0); save(); closeSheet(); render(); toast('Game restored.');
   },
   bkold: el => { if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = 'Tap again: replaces the current game'; return; } try { const o = JSON.parse(localStorage.getItem(KEY + '.bak')); if (!o || o.v !== 1) throw 0; const rev = S.rev, p = S; adopt(o); carry(p); S.rev = Math.max(S.rev, rev); save(); closeSheet(); render(); toast('The earlier save is back.'); } catch (_) { toast('No earlier save found.'); } },
-  reset: el => { if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = 'Tap again: everything is deleted'; return; } S = fresh(); save(); pick = 0; U.step = 1; U.sd = null; closeSheet(); render(); },
+  reset: el => { if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = 'Tap again: everything is deleted'; return; } S = fresh(); save(); pick = 0; U.step = 0; U.sd = null; U.seo = {}; START.know = null; START.diff = null; START.reg = 1; closeSheet(); render(); },
   pick: el => { pick = +el.dataset.k; cry(pick, 0, 0.4); intro(); },
 };
 document.addEventListener('click', ev => {

@@ -469,17 +469,16 @@ function modeSheet() {
   if (!S.lad.day || !modePicks()) { closeOv(); return render(); }
   const bo = dayBoost(), L1 = S.lad, R = S.fac.run, WR = pwtRun(), wc = WR ? CUPS[WR.wd] : cupNow(), W = pwt(), sel = MODES.includes(BT.msel) ? BT.msel : '';
   const C = {
-    league: { s: `${leagueTag()} · ${L1.n >= LAPN - 1 ? 'the final' : L1.n <= 0 ? 'a new lap' : 'the class rises'}`, d: 'Your own team of six. Every win gives the whole team XP, and bosses give Rare Candy and items.', a: ladLives() > 1 ? 'You can lose once and try again' : 'One loss ends the lap', n: ladLives(), u: ladFails() },
-    factory: { s: R ? `Round ${R.round} · ${R.w}/${FACN} wins · streak ${R.streak}` : `Rental Pokémon at Lv ${FACLV}${S.fac.best ? ' · best streak ' + S.fac.best : ''}`, d: 'Rental Pokémon, so your own team does not fight. You win coins, items and encounters, and your own team gets XP for every win.', a: `${FACLIVES} runs · a loss ends a run`, n: FACLIVES, u: facFails() },
-    pwt: { s: `Today: ${wc.n}`, d: `A knockout cup, three rounds, three on three, and a new cup each weekday. Your three play at Lv ${WR ? WR.lv : pwtLv()}. Coins and XP for every round, and the winner takes a trophy and ${aN(PACKS[wc.pk].n)}.`, a: 'One cup · a loss ends it', n: 1, u: W.day === S.lad.day && !WR ? 1 : 0 }
+    league: { s: `${leagueTag()} · ${L1.n >= LAPN - 1 ? 'the final' : L1.n <= 0 ? 'a new lap' : 'the class rises'}`, d: 'Your own team', a: ladLives() > 1 ? 'You can lose once and try again' : 'One loss ends the lap', n: ladLives(), u: ladFails() },
+    factory: { s: R ? `Round ${R.round} · ${R.w}/${FACN} wins · streak ${R.streak}` : `Rental Pokémon at Lv ${FACLV}${S.fac.best ? ' · best streak ' + S.fac.best : ''}`, d: R ? 'Rental Pokémon' : '', a: `${FACLIVES} runs · a loss ends a run`, n: FACLIVES, u: facFails() },
+    pwt: { s: `Today: ${wc.n}`, d: 'A cup, three on three', a: 'One cup · a loss ends it', n: 1, u: W.day === S.lad.day && !WR ? 1 : 0 }
   };
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Not now</button><span class="pill tn">Choose 1 of ${MODES.length}</span></div>
-    <div><h1 class="big" style="font-size:30px">Today's mode ${hq('modes', 'What are the modes?')}</h1><p class="sm" style="margin-top:6px">Pick one way to battle today. The other two stay closed until your next battle day.</p></div>
+    <div><h1 class="big" style="font-size:30px">Today's mode ${hq('modes', 'What are the modes?')}</h1><p class="sm" style="margin-top:6px">${tl('Pick one way to battle today.')}</p></div>
     <div class="mdl">${MODES.map(k => `<button type="button" class="mdc${sel === k ? ' on' : ''}${bo.mode === k ? ' bo' : ''}" data-a="msel" data-k="${k}" aria-pressed="${sel === k}">
-      <span class="mdc-top"><span class="ficon">${MODEIC[k]}</span><span class="sp"><b>${MODEN[k]}</b><span class="sm tn">${esc(C[k].s)}</span></span>${pipsEl(C[k].n, C[k].u)}</span>
-      <span class="sm mdc-d">${esc(C[k].d)}</span>
+      <span class="mdc-top"><span class="ficon">${MODEIC[k]}</span><span class="sp"><b>${MODEN[k]}${k === 'league' && jOn() && !(S.jx || {}).b ? ' <i class="mdc-st">Start here</i>' : ''}</b><span class="sm tn">${esc(C[k].d ? C[k].d + ' · ' : '')}${esc(C[k].s)}</span></span>${pipsEl(C[k].n, C[k].u)}</span>
       <span class="mdc-f"><span class="pill tn">Coins ×${smFor(k)}</span>${bo.mode === k ? `<span class="bonus">Bonus today · coins ×${DAYCOIN}</span>` : ''}<span class="sm">${esc(C[k].a)}</span></span></button>`).join('')}</div>
-    <p class="sm" style="text-align:center">Coins ×${studyMult()} comes from your ${hm(ladMin())} of focus. A special event may show itself once you have chosen.</p>
+    <p class="sm" style="text-align:center">${tl('Coins ×{x} from your {t} of focus today.', { x: studyMult(), t: hm(ladMin()) })}</p>
     <div class="acts"><button type="button" class="btn gold" id="mgo" data-a="mgo"${sel ? '' : ' disabled'}>${sel ? `Play the ${MODEN[sel]} today` : 'Tap a mode to choose it'}</button></div>`, 'tint modeov', 'var(--gold)');
 }
 /* Hva kampdagen heter når den ikke er i dag. */
@@ -563,6 +562,7 @@ function preBattle() {
     <div class="card mystc"><div class="pre-foe"><span class="tsb qmb big" aria-hidden="true"><i>?</i></span><div class="sp"><div class="sm">${L.n <= 0 ? 'Class 1 of 9 · the lap starts here' : L.n >= LAPN - 1 ? 'The final of the lap' : 'The class rises as you go'}</div><b style="font-size:19px">${nextHint()}</b>
       <div class="sm tn" style="margin-top:4px">Around your team's level (Lv ${lv})</div><div class="sm tn" style="margin-top:4px;color:var(--gold)">Higher class, more coins${firstWin() ? ' · first win today pays double' : ''} · ${diff().n}</div></div></div>${lapPips()}</div>
     <div><div class="lab">Your team · tap the one that leads</div><div class="lineup">${team.map(m => `<button type="button" data-a="blead" data-u="${m.u}" class="${m.u === BT.lead ? 'lead' : ''}">${spr(m.id, { it: m.item, sh: m.sh, mega: m.mega })}<span class="sp"><b>${esc(mName(m))}</b><br><span class="sm tn">Lv ${m.lv} · ${m.mv.map(x => esc(MOVES[x][0])).join(', ')}</span> ${evTag(m)}</span>${hasNews(m) ? '<span class="bang">!</span>' : ''}${m.u === BT.lead ? '<span class="pill">Leads</span>' : ''}</button>`).join('')}</div></div>
+    ${tipEl('bat', tl('Tap FIGHT and pick a move. The number on a move shows how hard it hits: 2× is strong, ½ is weak.'), 0)}
     <div class="acts"><button type="button" class="btn gold" data-a="bgo">Start battle</button><button type="button" class="btn nf" data-a="bteam">Edit team</button></div>`, 'tint', 'var(--sage)');
 }
 /* ---------- Kampskjermen ---------- */

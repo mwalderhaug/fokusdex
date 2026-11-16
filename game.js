@@ -614,6 +614,77 @@ const LNO = {
   'The dimmed ones are duplicates no better than what you have. Tap a card to change it.': 'De dempede er duplikater som ikke er bedre enn det du har. Trykk på et kort for å endre det.',
   'Tap a card to let it go for coins instead of catching it.': 'Trykk på et kort for å slippe det for mynter i stedet for å fange det.',
   // Steg 1 (Dusk): flere
+  'Every Pokémon and every move has a type. Types beat each other like rock, paper, scissors: Water beats Fire, Fire beats Grass, Grass beats Water.': 'Hver Pokémon og hvert angrep har en type. Typene slår hverandre som stein, saks, papir: Water slår Fire, Fire slår Grass, Grass slår Water.',
+  'Filled stars are what it was born with, and they never change. Fainter stars come from training.': 'Fylte stjerner er det den er født med, og de endres aldri. Svakere stjerner kommer av trening.',
+  'Its nature, {n}, lifts {a} by 10 % and lowers {b}.': 'Naturen dens, {n}, løfter {a} med 10 % og senker {b}.',
+  '{n}: {p} % HP against a Normal one. Size is something it is born with, and it can never be trained.': '{n}: {p} % HP mot en Normal. Størrelsen er noe den er født med, og den kan aldri trenes.',
+  'Tap Throw when the marker is over the green': 'Trykk Throw når markøren er over det grønne',
+  'Pick one way to battle today.': 'Velg én måte å kjempe på i dag.',
+  'Coins ×{x} from your {t} of focus today.': 'Mynter ×{x} fra {t} med fokus i dag.',
+  'Tap FIGHT and pick a move. The number on a move shows how hard it hits: 2× is strong, ½ is weak.': 'Trykk FIGHT og velg et angrep. Tallet på et angrep viser hvor hardt det treffer: 2× er sterkt, ½ er svakt.',
+  'Study, and a Pokémon world grows around it.': 'Les, og en Pokémon-verden vokser fram rundt det.',
+  'A little at a time': 'Litt om gangen',
+  'Each study day opens a few new things, so you master one before the next.': 'Hver studiedag åpner noen få nye ting, så du mestrer én før den neste kommer.',
+  'Deeper than it looks': 'Dypere enn det ser ut',
+  'Bosses, legendary raids and rewards worth waiting for.': 'Bosser, legendariske raid og belønninger som er verdt å vente på.',
+  'How well do you know Pokémon?': 'Hvor godt kjenner du Pokémon?',
+  'It decides how much is explained along the way.': 'Det avgjør hvor mye som blir forklart underveis.',
+  'New to Pokémon': 'Ny til Pokémon',
+  'Played a bit': 'Har spilt litt',
+  'I know it well': 'Kan det godt',
+  'Everything is explained, one small thing at a time.': 'Alt blir forklart, én liten ting om gangen.',
+  'I know catching, types and evolving.': 'Jeg kan fangst, typer og utvikling.',
+  'Types, stats, natures and IVs. Skip the basics.': 'Typer, verdier, natur og IV-er. Hopp over det grunnleggende.',
+  'How hard should the battles be?': 'Hvor vanskelige skal kampene være?',
+  'For those new to Pokémon. Opponents are below your level and play simply, and one loss a day is forgiven.': 'For deg som er ny til Pokémon. Motstanderne ligger under nivået ditt og spiller enkelt, og ett tap om dagen er tilgitt.',
+  'For those who have played a bit. Opponents are near your level and pick sensible moves.': 'For deg som har spilt litt. Motstanderne er nær nivået ditt og velger fornuftige angrep.',
+  'For those who know types and strategy. Opponents are fully trained and play to win.': 'For deg som kan typer og strategi. Motstanderne er fullt trent og spiller for å vinne.',
+  'Harder battles pay more. You can change this any time under Profile → Settings.': 'Vanskeligere kamper gir mer. Du kan endre dette når som helst under Profile → Settings.',
+  'Choose your partner': 'Velg partneren din',
+  'Grass, Fire or Water: all three are equally strong. Pick the one you like.': 'Grass, Fire eller Water: alle tre er like sterke. Velg den du liker.',
+  'The region decides which Pokémon you meet first. The others open as you go.': 'Regionen avgjør hvilke Pokémon du møter først. De andre åpnes underveis.',
+  'What are you studying?': 'Hva studerer du?',
+  'Add up to four subjects. You can change them later in Profile.': 'Legg inn opptil fire fag. Du kan endre dem senere i Profile.',
+  'These types show up more often when you study this subject. Pick up to 2.': 'Disse typene dukker oftere opp når du leser dette faget. Velg opptil 2.',
+  'How well you know Pokémon': 'Hvor godt du kjenner Pokémon',
+  'The basics are skipped. New things here are still explained.': 'Det grunnleggende hoppes over. Nye ting her blir fortsatt forklart.',
+  'Only what differs from the main games is explained.': 'Bare det som er annerledes enn i hovedspillene, blir forklart.',
+  'every 20 minutes': 'hvert 20. minutt',
+  'Meet {name}': 'Møt {name}',
+  'A Pokémon is a creature that grows with you. {name} gains experience for every minute you study.': 'En Pokémon er en skapning som vokser sammen med deg. {name} får erfaring for hvert minutt du leser.',
+  'Study, and more appear': 'Les, så dukker flere opp',
+  'Press Start and put the phone away. Every 20 minutes a wild Pokémon turns up and waits for you.': 'Trykk Start og legg bort telefonen. Hvert 20. minutt dukker en vill Pokémon opp og venter på deg.',
+  'Catch them afterwards': 'Fang dem etterpå',
+  'Stop the marker in the green zone, and the ball does the rest.': 'Stopp markøren i den grønne sonen, så gjør ballen resten.',
+  'Then your team battles': 'Så kjemper laget ditt',
+  'After {min} minutes of study in a day, press Done for today. Your Pokémon then fight other trainers.': 'Etter {min} minutter med lesing på en dag trykker du Done for today. Da kjemper Pokémonene dine mot andre trenere.',
+  'A lot is new': 'Mye er nytt',
+  'Fokusdex has been updated. Here is the daily round as it works now, in three cards.': 'Fokusdex er oppdatert. Her er den daglige runden slik den virker nå, på tre kort.',
+  'Study is the engine': 'Lesingen er motoren',
+  'Every minute gives XP and coins. Every 20 minutes a wild Pokémon waits in the grass.': 'Hvert minutt gir XP og mynter. Hvert 20. minutt venter en vill Pokémon i gresset.',
+  'today\'s battle bonus': 'dagens kampbonus',
+  'The day ends in battles': 'Dagen ender i kamper',
+  'After {min} minutes, press Done for today. The more you studied, the more the battles pay.': 'Etter {min} minutter trykker du Done for today. Jo mer du har lest, jo mer gir kampene.',
+  'One study day at a time': 'Én studiedag om gangen',
+  'Shop, shinies, potential, training and raids open as you go. Some rules differ from the main games, so read the short cards.': 'Shop, shinies, potensial, trening og raid åpnes underveis. Noen regler er annerledes enn i hovedspillene, så les de korte kortene.',
+  'The basics': 'Det grunnleggende',
+  'Your Pokémon': 'Dine Pokémon',
+  'More': 'Mer',
+  'Study with the timer on. Every minute gives XP and coins, and every 20 minutes a wild Pokémon turns up. When the day is done, your team battles. The game only gives: a day you skip costs nothing.': 'Les med klokka på. Hvert minutt gir XP og mynter, og hvert 20. minutt dukker en vill Pokémon opp. Når dagen er ferdig, kjemper laget ditt. Spillet bare gir: en dag du hopper over, koster ingenting.',
+  'Pick a subject and a length, and press Start. You can lock the phone: the timer follows the clock. Your own subjects count in full, and other things at half value for the battle bonus.': 'Velg et fag og en lengde, og trykk Start. Du kan låse telefonen: klokka går videre. Dine egne fag teller fullt, og andre ting teller halvt for kampbonusen.',
+  'Wild Pokémon wait in the grass until you have time. Stop the marker in the green zone to catch one, or in the gold for a perfect throw. You get three throws before it runs.': 'Ville Pokémon venter i gresset til du har tid. Stopp markøren i den grønne sonen for å fange en, eller i gullet for et perfekt kast. Du får tre kast før den stikker.',
+  'Six Pokémon fight for you. The first is your partner: it gets all the XP from your study minutes, the others 30 %. Tap one in Team to see its power and moves, or to swap it.': 'Seks Pokémon kjemper for deg. Den første er partneren din: den får all XP fra studieminuttene, de andre 30 %. Trykk på en i Team for å se styrken og angrepene, eller for å bytte den.',
+  'Stars show how strong a Pokémon was born. Training with coins adds on top of that, and your partner trains a little for every two minutes you study.': 'Stjernene viser hvor sterk en Pokémon er født. Trening med mynter legger på mer, og partneren din trener litt for hvert andre minutt du leser.',
+  'A Pokémon can hold one item in battle: a berry that heals it, a plate that makes one type hit harder, or gear. Give it on the card under Team.': 'En Pokémon kan holde én gjenstand i kamp: et bær som helbreder den, en plate som gjør én type sterkere, eller utstyr. Gi den på kortet under Team.',
+  'The first Champion you beat gives you the Mega Ring. One Pokémon holding its Mega Stone can then Mega Evolve each battle, from the move menu.': 'Den første mesteren du slår, gir deg Mega Ring. Én Pokémon som holder sin Mega Stone, kan da megautvikle seg i hver kamp, fra angrepsmenyen.',
+  'After {min} minutes of study, press Done for today and pick one mode: the Trainer League with your own team, the Battle Frontier with rentals, or the World Tournament.': 'Etter {min} minutter med lesing trykker du Done for today og velger én modus: Trainer League med ditt eget lag, Battle Frontier med leie-Pokémon, eller World Tournament.',
+  'Every minute you study today raises today\'s battle bonus, from ×0.5 up to ×{top} at your goal. It multiplies the coins your battles pay.': 'Hvert minutt du leser i dag, øker dagens kampbonus, fra ×0.5 opp til ×{top} ved målet ditt. Den ganger opp myntene kampene gir.',
+  'About every third battle day is special: more coins, Mega forms for three of yours, better shiny odds and more. Events are only ever for you, never for your opponents.': 'Omtrent hver tredje kampdag er spesiell: flere mynter, Mega-former for tre av dine, bedre shiny-sjanser og mer. Hendelsene er bare for deg, aldri for motstanderne.',
+  'Now and then a legendary Pokémon shows itself after the day\'s battles. It fights your whole team, and you get {n} attempts, one a day. Win, and it is yours.': 'Av og til viser en legendarisk Pokémon seg etter dagens kamper. Den kjemper mot hele laget ditt, og du får {n} forsøk, ett om dagen. Vinn, og den er din.',
+  'Coins come from study and battles. They buy balls, packs of three encounters and things for your team. Every pack shows your own odds before you buy.': 'Mynter kommer fra lesing og kamper. De kjøper baller, pakker med tre møter og ting til laget. Hver pakke viser dine egne sjanser før du kjøper.',
+  'Medals for what you do: study hours, species caught, League wins. Each step pays coins, and your medals raise your rank, the frame around your picture.': 'Medaljer for det du gjør: studietimer, arter fanget, seire i ligaen. Hvert trinn gir mynter, og medaljene løfter rangen din, rammen rundt bildet ditt.',
+  'Fokusdex cannot see whether you really study, and trusts you with that. It only closes the shortcuts it can: the clock, old saves and abandoned battles.': 'Fokusdex kan ikke se om du faktisk leser, og stoler på deg. Det stenger bare snarveiene det kan: klokka, gamle lagringer og kamper du forlater.',
+  'Your game is saved on this device as you go. Sync keeps a copy in a private GitHub repository, so it follows you between devices.': 'Spillet lagres på denne enheten underveis. Synk holder en kopi i et privat GitHub-repo, så det følger deg mellom enheter.',
 };
 const tl = (s, v) => { const x = typeof S !== 'undefined' && S && S.lang === 'no' && LNO[s] != null ? LNO[s] : s; return v ? x.replace(/\{(\w+)\}/g, (m, k) => v[k] != null ? v[k] : m) : x; };
 /* REISEN: nye spillere får ting åpnet etter STUDIEDAGER (ikke trenernivå), én ny ting per dag, og ser det når dagen er ferdig («Done for today»).
@@ -1402,10 +1473,17 @@ function buyN(k, n) {
 /* Områdene åpnes av trenernivå eller antall arter fanget (REG). Nye områder slås på med en gang. Gir navnene på dem som ble åpnet nå;
    de legges også i S.nreg, så skjermen kan si fra én gang. */
 const dexAll = () => Object.keys(S.caught || {}).length;
-const regReady = r => { const g = REG[r]; return !!g && (tlv() >= g.lv || dexAll() >= g.dex); };
+/* STARTREGIONEN (steg 1.10, ønske 17): spilleren velger region og får startertrioen derfra (S.rs; mangler den, er det Kanto). De andre åpnes i
+   rekkefølge fra generasjon 1 og oppover, og REGT er terskelen for region nummer to, tre, fire og fem i spillerens egen rekkefølge: trenernivå
+   eller arter fanget. Litt høyere enn før steg 1 (5/30, 9/70, 14/120, 19/180). Den som alt har en region, beholder den. */
+const STARTERS = { 1: [1, 4, 7], 2: [152, 155, 158], 3: [252, 255, 258], 4: [387, 390, 393], 5: [495, 498, 501] };
+const REGT = [{ lv: 6, dex: 35 }, { lv: 10, dex: 80 }, { lv: 15, dex: 135 }, { lv: 20, dex: 200 }];
+const regOrder = () => [1, 2, 3, 4, 5].filter(r => r !== (S.rs || 1));
+const regNeed = r => REGT[regOrder().indexOf(r)] || null;
+const regReady = r => { const g = regNeed(r); return !!g && (tlv() >= g.lv || dexAll() >= g.dex); };
 function unlockRegions() {
   const out = [];
-  for (let r = 2; r < REG.length; r++) if (!S.regions.includes(r) && regReady(r)) { S.regions.push(r); S.regions.sort(); if (!S.routes.includes(r)) { S.routes.push(r); S.routes.sort(); } out.push(REG[r].n); }
+  for (const r of regOrder()) { if (S.regions.includes(r)) continue; if (!regReady(r)) break; S.regions.push(r); S.regions.sort(); if (!S.routes.includes(r)) { S.routes.push(r); S.routes.sort(); } out.push(REG[r].n); }
   if (out.length) S.nreg = (S.nreg || []).concat(out);
   return out;
 }
@@ -1418,13 +1496,23 @@ function toggleRoute(r) {
 }
 function dexCount(r) { const g = REG[r]; let c = 0; for (let id = g.a; id <= g.b; id++) if (S.caught[id]) c++; return c; }
 /* Første start: timer som alt er gjort i fagene gir 60 mynter per time og et forsprang på merkene. */
-function begin(id) {
+/* Starteren er født med høyere potensial enn et vanlig møte: alltid fire stjerner («Outstanding»), aldri feilfri. Det vises først når
+   potensial introduseres på reisen (dag 4), og den fødte stjerneraden står der for alltid. */
+function starterIv() { for (let i = 0; i < 200; i++) { const iv = Array.from({ length: 6 }, () => 21 + rnd(11)), s = iv.reduce((a, b) => a + b, 0); if (s >= 151 && s < 186) return iv; } return [27, 25, 26, 28, 24, 26]; }
+/* HVOR MYE SPILLEREN KAN OM POKÉMON (S.know, ønske 16): 0 = helt ny, 1 = har spilt litt, 2 = kan det godt. Styrer guiden, hvor mye som forklares
+   underveis og forslaget til vanskelighetsgrad. De som spilte før valget fantes, regnes som 2 (ingen grunnleggende forklaringer dukker opp). */
+const know = () => S.know == null ? 2 : S.know;
+/* o = { reg, know, diff } fra startskjermene. Uten o: regionen arten hører til, og resten som før. */
+function begin(id, o) {
+  o = o || {}; const reg = STARTERS[o.reg] && STARTERS[o.reg].includes(id) ? o.reg : STARTERS[regOf(id)] ? regOf(id) : 1;
+  S.rs = reg; S.regions = [reg]; S.region = reg; S.routes = [reg];
+  if (o.know != null) S.know = Math.max(0, Math.min(2, +o.know || 0)); if (o.diff != null && DIFF[o.diff]) S.diff = +o.diff;
   S.started = 1; S.wn = WNV; S.j = 1; S.jd = 0; S.ulk = {}; S.js = []; S.jx = {}; if (typeof TOURV !== 'undefined') S.tour = TOURV;
   let head = 0;
   for (const f in S.fag) { const g = S.fag[f]; head += g.b || 0; g.ms = g.t > 0 ? Math.min(3, Math.floor((g.b || 0) / (g.t * 60) * 4)) : 0; }
   const coins = Math.round(Math.min(head, STARTCAP) / 60 * 60);
   S.coins += coins; S.last.fag = Object.keys(S.fag)[0] || 'annet';
-  addMon(id, 5, 0); save();
+  const m = addMon(id, 5, 0); m.iv = starterIv(); m.st0 = 1; save();
   return coins;
 }
 /* Lagrer fagene fra redigeringen. Eksisterende fag beholder nøkkel, minutter og milepæler. */

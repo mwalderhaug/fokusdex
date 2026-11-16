@@ -215,24 +215,46 @@ function helpTrain() {
     ${hNote('Why it matters: at Lv 100 a perfect IV is worth 31 points in a stat and full EVs 63. A base-100 stat is 205 with neither and 299 with both, so the same Pokémon can be almost half again as fast or as strong.')}`;
 }
 
-/* ---------- Hubben ---------- */
+/* ---------- Hubben (steg 1.10): et rutenett med emner i grupper ----------
+   Hvert emne åpner med ett bilde og en kort forklaring (HLEAD, høyst rundt 40 ord, på begge språk); «More» folder ut alt det andre.
+   HGRP = gruppene og emnene i rutenettet. HSUB = emner som hører under et annet (lenket derfra, ikke egne ruter). */
 /* Emnene som hører til noe spilleren ikke har møtt ennå (reisen), vises ikke før det er åpnet. */
 const HELPJ = { modes: 'battles', bonus: 'battles', events: 'held', train: 'train', held: 'held', mega: 'train', shop: 'shop', ach: 'shop' };
 const helpOk = k => typeof jOn !== 'function' || !jOn() || (k === 'raids' ? !!S.humb : !HELPJ[k] || has(HELPJ[k]));
-function helpOpen(k) {
-  const T = HELP.find(t => t.k === k);
+const HGRP = [['The basics', ['start', 'timer', 'catch']], ['Your Pokémon', ['team', 'train', 'held']], ['Battles', ['modes', 'raids']], ['More', ['shop', 'ach', 'sync']]];
+const HSUB = { modes: ['bonus', 'events'], held: ['mega'], sync: ['fair'] };
+const HSHORT = { start: 'How it works', timer: 'The timer', catch: 'Catching', team: 'Your team', train: 'Training', held: 'Held items', modes: 'Battles', raids: 'Raids', shop: 'Shop', ach: 'Medals', sync: 'Saving', bonus: 'The battle bonus', events: 'Special events', mega: 'Mega Evolution', fair: 'Fair play' };
+const HLEAD = {
+  start: { pic: () => `<div class="hl-flow">${icn('clock')}<i></i><span class="grass live"><i></i><i></i><i></i><i></i></span><i></i>${icn('sword')}</div>`, t: 'Study with the timer on. Every minute gives XP and coins, and every 20 minutes a wild Pokémon turns up. When the day is done, your team battles. The game only gives: a day you skip costs nothing.' },
+  timer: { pic: () => '<span class="go tr-go">Start 45 min</span>', t: 'Pick a subject and a length, and press Start. You can lock the phone: the timer follows the clock. Your own subjects count in full, and other things at half value for the battle bonus.' },
+  catch: { pic: () => `<div class="hl-col">${ballEl('poke', '40px')}${hMeter()}</div>`, t: 'Wild Pokémon wait in the grass until you have time. Stop the marker in the green zone to catch one, or in the gold for a perfect throw. You get three throws before it runs.' },
+  team: { pic: () => spr(hMyPartner(), { ani: 1, s: '96px' }), t: 'Six Pokémon fight for you. The first is your partner: it gets all the XP from your study minutes, the others 30 %. Tap one in Team to see its power and moves, or to swap it.' },
+  train: { pic: () => '<div class="hl-col"><span class="hl-stars">★★★<i>★★</i></span><span class="tb hbx" style="width:140px"><i style="width:62%"></i></span></div>', t: 'Stars show how strong a Pokémon was born. Training with coins adds on top of that, and your partner trains a little for every two minutes you study.' },
+  held: { pic: () => heldEl('sitrus', '56px'), t: 'A Pokémon can hold one item in battle: a berry that heals it, a plate that makes one type hit harder, or gear. Give it on the card under Team.' },
+  mega: { pic: () => '<span class="gem mg" style="width:56px;height:56px"></span>', t: 'The first Champion you beat gives you the Mega Ring. One Pokémon holding its Mega Stone can then Mega Evolve each battle, from the move menu.' },
+  modes: { pic: () => '<div class="tr-modes"><span class="ficon hfi">L</span><span class="ficon hfi">F</span><span class="ficon hfi">W</span></div>', t: 'After {min} minutes of study, press Done for today and pick one mode: the Trainer League with your own team, the Battle Frontier with rentals, or the World Tournament.', v: () => ({ min: OPENMIN }) },
+  bonus: { pic: () => `<div class="tr-bar">${hBar(0.62, 0.5, goalTop().toFixed(1))}</div>`, t: 'Every minute you study today raises today\'s battle bonus, from ×0.5 up to ×{top} at your goal. It multiplies the coins your battles pay.', v: () => ({ top: goalTop().toFixed(1) }) },
+  events: { pic: () => `<span class="evc-ic hev" style="--ec:${EVENTS.gold.c};transform:scale(1.5)">${EVENTS.gold.ic}</span>`, t: 'About every third battle day is special: more coins, Mega forms for three of yours, better shiny odds and more. Events are only ever for you, never for your opponents.' },
+  raids: { pic: () => '<span class="raid-sp qm hqm tr-raid"><i>?</i></span>', t: 'Now and then a legendary Pokémon shows itself after the day\'s battles. It fights your whole team, and you get {n} attempts, one a day. Win, and it is yours.', v: () => ({ n: RAIDTRIES }) },
+  shop: { pic: () => '<span class="coin hcoin" style="transform:scale(1.6)"><i></i></span>', t: 'Coins come from study and battles. They buy balls, packs of three encounters and things for your team. Every pack shows your own odds before you buy.' },
+  ach: { pic: () => { const R = rankOf(); return avFrame(R, 'lg', 1); }, t: 'Medals for what you do: study hours, species caught, League wins. Each step pays coins, and your medals raise your rank, the frame around your picture.' },
+  fair: { pic: () => hSym('✓', 'var(--sage)'), t: 'Fokusdex cannot see whether you really study, and trusts you with that. It only closes the shortcuts it can: the clock, old saves and abandoned battles.' },
+  sync: { pic: () => hSym('⇅', 'var(--blue)'), t: 'Your game is saved on this device as you go. Sync keeps a copy in a private GitHub repository, so it follows you between devices.' }
+};
+function helpOpen(k, more) {
+  const T = HELP.find(t => t.k === k), L = T && HLEAD[k], subs = T ? (HSUB[k] || []).filter(helpOk) : [], par = T ? Object.keys(HSUB).find(p => HSUB[p].includes(k)) : '';
+  if (T) U.hmore = more ? k : '';
+  const tile = t => `<button type="button" class="htile" data-a="help" data-k="${t.k}"><span class="hic">${t.ic()}</span><b>${HSHORT[t.k] || t.n}</b></button>`;
   const html = T
-    ? `<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="help" data-k="">‹ All topics</button><button type="button" class="btn sm2" data-a="close">Close</button></div>
-       <div class="hhead"><span class="hic">${T.ic()}</span><div><h2 class="h" style="font-size:22px">${T.n}</h2><p class="sm">${T.s}</p></div></div><div class="hbody">${T.body()}</div>
-       <button type="button" class="btn wide" data-a="help" data-k="">All topics</button>`
-    : `<div class="row" style="justify-content:space-between"><h2 class="h" style="font-size:22px;margin:0">Questions</h2><button type="button" class="btn sm2" data-a="close">Close</button></div>
-       <p class="sm">Pick a topic. Short answers, with pictures.</p>
-       <div class="hlist">${HELP.filter(t => helpOk(t.k)).map(t => `<button type="button" class="hitem" data-a="help" data-k="${t.k}"><span class="hic">${t.ic()}</span><span class="sp"><b>${t.n}</b><span class="sm">${t.s}</span></span><span class="hgo">›</span></button>`).join('')}</div>
-       <button type="button" class="btn wide" data-a="tour">Show the guide again</button>
-       <button type="button" class="btn wide" data-a="show">Show the game · trailer and overview</button>
-       <button type="button" class="btn wide nf" data-a="rules">Rules and rewards · every number</button>`;
+    ? `<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="help" data-k="${par && helpOk(par) ? par : ''}">‹ ${par && helpOk(par) ? HSHORT[par] : 'All topics'}</button><button type="button" class="hq" data-a="close" aria-label="Close">${icn('x')}</button></div>
+       <div class="hlead"><div class="hl-pic">${L ? L.pic() : T.ic()}</div><h2 class="h">${T.n}</h2><p class="hl-t">${L ? tl(L.t, L.v ? L.v() : null) : T.s}</p></div>
+       ${subs.length ? `<div class="hmore" style="justify-content:center">${subs.map(s => hLink(s, HSHORT[s])).join('')}</div>` : ''}
+       ${U.hmore === k ? `<div class="hbody">${T.body()}</div>` : `<button type="button" class="rs-more" data-a="helpmore" data-k="${k}" aria-expanded="false"><span>More</span>${icn('down')}</button>`}`
+    : `<div class="row" style="justify-content:space-between"><h2 class="h" style="font-size:22px;margin:0">Questions</h2><button type="button" class="hq" data-a="close" aria-label="Close">${icn('x')}</button></div>
+       ${HGRP.map(([g, ks]) => { const l = ks.map(x => HELP.find(t => t.k === x)).filter(t => t && helpOk(t.k)); return l.length ? `<section class="hgrp"><h3 class="lab">${tl(g)}</h3><div class="hgrid3">${l.map(tile).join('')}</div></section>` : ''; }).join('')}
+       <div class="hfoot"><button type="button" class="chip" data-a="tour">Start guide</button><button type="button" class="chip" data-a="show">Show the game</button><button type="button" class="chip" data-a="rules">Rules and rewards</button></div>`;
   const sh = document.querySelector('#sheet .sheet.helpsh');
-  if (sh) { sh.innerHTML = `<span class="grab"></span>${html}`; sh.scrollTop = 0; }
+  if (sh) { sh.innerHTML = `<span class="grab"></span>${html}`; if (!more) sh.scrollTop = 0; }
   else { openSheet(html); const s = document.querySelector('#sheet .sheet'); if (s) s.classList.add('helpsh'); }
   if (!S.hseen) { S.hseen = 1; save(true); const b = document.querySelector('.helpb'); if (b) b.classList.remove('new'); }
 }
@@ -240,33 +262,33 @@ function helpOpen(k) {
 const helpBtn = () => `<button type="button" class="helpb${S.hseen ? '' : ' new'}" data-a="help" data-k="" aria-label="Questions and help">?</button>`;
 const hq = (k, label) => `<button type="button" class="hq" data-a="help" data-k="${k}" aria-label="${label || 'What is this?'}">?</button>`;
 
-/* ---------- Guiden ----------
-   Ti korte steg. Vises én gang: rett etter at en ny spiller har valgt partner og fag, og første gang appen åpnes etter en oppdatering som har endret
-   reglene (S.tour !== TOURV). Kan vises igjen fra hubben og fra Profil. */
+/* ---------- Guiden (steg 1.10) ----------
+   Tre eller fire kort, ikke ti: bare runden du går hver dag (les, fang, kjemp). Alt annet kommer med reisen, én ting per studiedag.
+   Den som er ny til Pokémon (know() === 0), får kortene med enklere ord og ett til om hva en Pokémon er. Vises én gang rett etter starten, og
+   første gang appen åpnes etter en oppdatering som har endret reglene (S.tour !== TOURV). Kan vises igjen fra hubben og fra Profile. */
 const TOURV = 2;
 function tourSteps() {
-  const g = goalMin(), top = goalTop().toFixed(1), fags = Object.keys(FAGS).slice(0, 4), pid = hMyPartner(), old = S.tour === 1 || (S.tour == null && S.mons.length > 1);
-  return [
-    { pic: `<span class="tr-mon">${spr(pid, { ani: 1, s: '120px' })}</span>`, n: old ? 'A lot is new' : 'Welcome, trainer', t: old ? 'Fokusdex has been updated: the League, the raids, training and the rewards have changed. Here is the whole game as it works now, in one minute.' : 'Fokusdex turns your study time into a Pokémon adventure. Here is how it works, in one minute.' },
-    { pic: `<div class="chips tr-chips">${fags.map((f, i) => `<span class="chip" aria-pressed="${i === 0}" style="--tc:${F(f).c}">${esc(F(f).n)}</span>`).join('')}</div>`, n: '1 · Pick what you study', t: 'Tap a subject on the Focus page. Your own subjects count in full. Other things, like job applications or music, count at half value.' },
-    { pic: `<span class="go tr-go">Start 45 min</span><span class="tr-sub"><span class="grass live"><i></i><i></i><i></i><i></i></span> every 20 minutes</span>`, n: '2 · Start the timer', t: 'Choose a length and press Start. Then study. You can lock your phone, the timer keeps going. Every 20 minutes a wild Pokémon shows up.' },
-    { pic: `<div class="tr-rew"><span><b class="tn">+450</b><span class="sm">XP</span></span><span><b class="tn">${coinEl(135)}</b><span class="sm">coins</span></span><span>${ballEl('poke', '34px')}<span class="sm">encounters</span></span></div>${hMeter()}`, n: '3 · Collect your rewards', t: 'After a session you get XP and coins, and the Pokémon you found wait in the grass. Stop the marker in the green zone to catch them.' },
-    { pic: `<div class="tr-bar">${hBar(0.62, 0.5, top)}<span class="sm">today's battle bonus</span></div>`, n: '4 · Study raises the battle bonus', t: `Every minute you study today raises today's bonus, from ×0.5 up to ×${top} at your goal of ${hm(g)}. It multiplies the coins you win in battles, and lifts the XP and the Rare Candy too.` },
-    { pic: `<div class="tr-modes"><span class="ficon hfi">L</span><span class="ficon hfi">F</span><span class="ficon hfi">W</span><span class="evc-ic hev" style="--ec:${EVENTS.gold.c}">${EVENTS.gold.ic}</span></div>`, n: '5 · Battle when you are done', t: `After ${OPENMIN} minutes of focus you can press Done for today and choose one of three battle modes. All three give your own team XP. Some days a special event shows up, with a bonus just for you. No time to battle? Let the game simulate the day for a smaller reward, or skip it.` },
-    { pic: `<div class="tr-lap">${Array.from({ length: LAPN }, (_, n) => `<i class="${n < 5 ? 'on' : n === 5 ? 'cur' : ''}${n === LAPN - 1 ? ' ul' : ''}"></i>`).join('')}</div><span class="sm">${LAPN} battles to a Champion</span>`, n: '6 · The League is one clean run', t: `The class rises as you go, and a Champion waits in battle ${LAPN}. One loss ends the lap, and the next lap starts from battle 1. So build your team before you go for the final.` },
-    { pic: `<div class="tr-iv"><span><b>IV</b><span class="tb g hbx"><i style="width:60%"></i></span><span class="sm tn">max 31</span></span><span><b>EV</b><span class="tb hbx"><i style="width:40%"></i></span><span class="sm tn">max ${EVMAX}</span></span></div>`, n: '7 · Train your team', t: `Open a Pokémon and press Train. EVs are what training adds: up to ${EVMAX} in a stat, enough to max two. IVs are what it was born with, and Hyper Training can lift them from Lv ${HTLV}.` },
-    { pic: '<span class="raid-sp qm hqm tr-raid"><i>?</i></span>', n: '8 · Legendary raids', t: `Now and then a legendary shows itself, once the day's battles are done. You do not know who it is until you stand in front of it, and you get ${RAIDTRIES} attempts. Beat it, and it is yours.` },
-    { pic: '<span class="helpb tr-q" aria-hidden="true">?</span>', n: 'Questions?', t: 'The ? in the top corner has short answers with pictures, and Rules and rewards on the Focus page has every number. This guide is under Profile, next to the showcase: a trailer and an overview for showing a friend.' }
+  const pid = hMyPartner(), nm = esc(D(pid)[0]), old = S.tour === 1 || (S.tour == null && S.mons.length > 1), nw = know() === 0 && !old, min = OPENMIN;
+  const go = `<span class="go tr-go">Start 45 min</span><span class="tr-sub"><span class="grass live"><i></i><i></i><i></i><i></i></span> ${tl('every 20 minutes')}</span>`;
+  const path = typeof stPath === 'function' ? stPath() : '';
+  if (nw) return [
+    { pic: `<span class="tr-mon">${spr(pid, { ani: 1, s: '120px' })}</span>`, n: tl('Meet {name}', { name: nm }), t: tl('A Pokémon is a creature that grows with you. {name} gains experience for every minute you study.', { name: nm }) },
+    { pic: go, n: tl('Study, and more appear'), t: tl('Press Start and put the phone away. Every 20 minutes a wild Pokémon turns up and waits for you.') },
+    { pic: `<div class="hl-col">${ballEl('poke', '44px')}${hMeter()}</div>`, n: tl('Catch them afterwards'), t: tl('Stop the marker in the green zone, and the ball does the rest.') },
+    { pic: `<div class="tr-vs">${spr(pid, { s: '84px' })}<b>VS</b>${spr(19, { s: '84px', sil: 1 })}</div>`, n: tl('Then your team battles'), t: tl('After {min} minutes of study in a day, press Done for today. Your Pokémon then fight other trainers.', { min }) }
   ];
+  return (old ? [{ pic: `<span class="tr-mon">${spr(pid, { ani: 1, s: '120px' })}</span>`, n: tl('A lot is new'), t: tl('Fokusdex has been updated. Here is the daily round as it works now, in three cards.') }] : []).concat([
+    { pic: go, n: tl('Study is the engine'), t: tl('Every minute gives XP and coins. Every 20 minutes a wild Pokémon waits in the grass.') },
+    { pic: `<div class="tr-bar">${hBar(0.62, 0.5, goalTop().toFixed(1))}<span class="sm">${tl('today\'s battle bonus')}</span></div>`, n: tl('The day ends in battles'), t: tl('After {min} minutes, press Done for today. The more you studied, the more the battles pay.', { min }) },
+    { pic: path, n: tl('One study day at a time'), t: tl('Shop, shinies, potential, training and raids open as you go. Some rules differ from the main games, so read the short cards.') }
+  ]);
 }
 function tourShow(i) {
   const L = tourSteps(); i = Math.max(0, Math.min(L.length - 1, i || 0)); U.tour = i;
   const s = L[i], last = i === L.length - 1;
-  ov(`<div class="row" style="justify-content:space-between"><span class="pill tn">${i + 1} of ${L.length}</span>${last ? '<span></span>' : '<button type="button" class="btn sm2" data-a="tourend">Skip</button>'}</div>
-    <div class="mid tour"><div class="tr-pic">${s.pic}</div><div><h1 class="big" style="font-size:28px">${s.n}</h1><p class="mut" style="margin-top:10px;max-width:34ch;font-size:16px;line-height:1.45">${s.t}</p></div>
-      <div class="tr-dots" aria-hidden="true">${L.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div></div>
-    <div class="acts">${i ? '<button type="button" class="btn nf" data-a="tourgo" data-k="-1">Back</button>' : ''}<button type="button" class="btn ${last ? 'gold' : 'pri'}" data-a="${last ? 'tourend' : 'tourgo'}" data-k="1">${last ? 'Start studying' : 'Next'}</button></div>
-    ${last ? '<button type="button" class="btn wide nf" data-a="tourhub">Open the question hub</button>' : ''}`, 'tint', 'var(--sage)');
+  ov(`<div class="st-top">${i ? '<button type="button" class="btn sm2" data-a="tourgo" data-k="-1">Back</button>' : '<span class="st-sp"></span>'}<span class="st-dots" role="img" aria-label="${i + 1} of ${L.length}">${L.map((_, k) => `<i class="${k === i ? 'on' : k < i ? 'was' : ''}"></i>`).join('')}</span>${last ? '<span class="st-sp"></span>' : '<button type="button" class="btn sm2" data-a="tourend">Skip</button>'}</div>
+    <div class="mid tour"><div class="tr-pic">${s.pic}</div><div><h1 class="big" style="font-size:28px">${s.n}</h1><p class="mut" style="margin-top:10px;max-width:30ch;font-size:16px;line-height:1.45">${s.t}</p></div></div>
+    <div class="acts"><button type="button" class="btn ${last ? 'gold' : 'pri'}" data-a="${last ? 'tourend' : 'tourgo'}" data-k="1">${last ? 'Start studying' : 'Next'}</button></div>`, 'tint', 'var(--sage)');
 }
 function tourEnd(hub) { if (S.tour !== TOURV) { S.tour = TOURV; save(true); } closeOv(); render(); if (hub) helpOpen(''); else if (typeof raidArrive === 'function' && raidGo()) raidArrive(); }
 
@@ -280,6 +302,7 @@ function trainTip() {
 
 const HA = {
   help: el => { sfx.open(); helpOpen(el.dataset.k || ''); },
+  helpmore: el => { helpOpen(el.dataset.k || '', 1); const b = document.querySelector('.helpsh .hbody'); if (b && b.scrollIntoView) b.scrollIntoView({ block: 'start', behavior: 'smooth' }); },
   tour: () => { closeSheet(); sfx.open(); tourShow(0); },
   tourgo: el => { tourShow((U.tour || 0) + (+el.dataset.k || 1)); },
   tourend: () => { sfx.ok(); tourEnd(false); },
