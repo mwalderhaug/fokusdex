@@ -22,7 +22,7 @@ Teksten i appen er på engelsk. Kommentarene i koden er på norsk.
 belønninger) · `bfx`, `ebx`, `ebxp` (effekter, EBDX-animasjoner) · `raid`, `raidf`, `raidx` (raidfilmer, entréer, stedene) · `bossf`, `darkf`
 (filmene til Ghetsis/Cynthia og Dark Mewtwo) · `pack` (henter ressurspakken) · `bui` (kampskjermen, resultatet, raidskjermene, regelkortet) ·
 `music` · `help` (hjelp og guide) · `show` (raidvarselet, demoen/Sandbox, showcase) · `ui` (resten av grensesnittet, handlingene `A.*`, oppstart).
-`sw.js` er service workeren. `style.css` er all stil.
+`sw.js` er service workeren. `style.css` er all stil. Lærerangrepene `TUTMV` og egg-angrepene `EGGMV` i `data2.js` lages av `work/tools/tutors.js`.
 
 ## Arbeidsmåten
 - Verktøyene ligger i `/home/claude/work` (eierens private repo, `dev/`). Ny økt: se under.
