@@ -653,11 +653,11 @@ const LNO = {
   'Open a Pokémon in Team and tap Train. Coins raise the stats you choose, and your partner trains a little while you study.': 'Åpne en Pokémon i Team og trykk Train. Mynter løfter verdiene du velger, og partneren din trener litt mens du leser.',
   'A Pokémon can hold one item in battle: a berry, a plate or gear. Give it on its card in Team.': 'En Pokémon kan holde én gjenstand i kamp: et bær, en plate eller utstyr. Gi den på kortet i Team.',
   'Size': 'Størrelse',
-  'Some Pokémon are born Small, Large or Giant. Size moves HP a little, and it can never be trained, so a Giant is one to keep.': 'Noen Pokémon er født Small, Large eller Giant. Størrelsen flytter HP litt, og den kan aldri trenes, så en Giant er en å beholde.',
+  'Some Pokémon are born Small, Large or Giant. Size moves HP a little and is fixed for life, so keep a Giant.': 'Noen Pokémon er født Small, Large eller Giant. Størrelsen flytter HP litt og er fast for livet, så behold en Giant.',
   'Not all of them are the same size.': 'Ikke alle er like store.',
   // Steg 1b.8: lærerne
   'Move Tutors': 'Lærerne', 'Tutors': 'Lærere', 'Someone who can teach your team new moves.': 'Noen som kan lære laget ditt nye angrep.', 'In {n} study days: {hint}': 'Om {n} studiedager: {hint}',
-  'Four tutors now teach in the Shop. For coins they teach your Pokémon moves it never learns by level: a strong one in its own type, or cover for what it cannot hit.': 'Fire lærere holder nå til i Shop. For mynter lærer de Pokémonene dine angrep de aldri lærer med nivå: et sterkt i egen type, eller dekning mot det de ikke biter på.',
+  'Four tutors teach in the Shop. For coins, your Pokémon learns moves it never gets by level: a strong one in its own type, or cover for what it cannot hit.': 'Fire lærere holder til i Shop. For mynter lærer Pokémonene dine angrep de aldri får med nivå: et sterkt i egen type, eller dekning mot det de ikke biter på.',
   'Tutors teach moves a Pokémon never learns by level. Pick a move, see who on your team can learn it, and teach it with one tap.': 'Lærerne lærer bort angrep en Pokémon aldri lærer med nivå. Velg et angrep, se hvem på laget som kan lære det, og lær det bort med ett trykk.',
   'An evolved Pokémon can also pick the moves its earlier forms learned, and one hatched from an egg knows an egg move. Both are free: open its card in Team and tap Change.': 'En utviklet Pokémon kan også velge angrepene de tidligere formene lærte, og en som er klekket av et egg, kan et egg-angrep. Begge deler er gratis: åpne kortet i Team og trykk Change.',
   'You hold the Diamond Symbol. Everything here is free.': 'Du har diamantsymbolet. Alt her er gratis.',
@@ -765,8 +765,8 @@ const JOURNEY = [['battles', 1, 'Battles', 'Your team can fight when the day is 
   ['nature', 4, 'Potential', 'Two of the same Pokémon are not equally strong. The stars show what each was born with, so keep the ones with many.'],
   ['train', 5, 'Training', 'Open a Pokémon in Team and tap Train. Coins raise the stats you choose, and your partner trains a little while you study.'],
   ['held', 6, 'Held items', 'A Pokémon can hold one item in battle: a berry, a plate or gear. Give it on its card in Team.'],
-  ['size', 7, 'Size', 'Some Pokémon are born Small, Large or Giant. Size moves HP a little, and it can never be trained, so a Giant is one to keep.'],
-  ['tutor', 9, 'Move Tutors', 'Four tutors now teach in the Shop. For coins they teach your Pokémon moves it never learns by level: a strong one in its own type, or cover for what it cannot hit.']];
+  ['size', 7, 'Size', 'Some Pokémon are born Small, Large or Giant. Size moves HP a little and is fixed for life, so keep a Giant.'],
+  ['tutor', 9, 'Move Tutors', 'Four tutors teach in the Shop. For coins, your Pokémon learns moves it never gets by level: a strong one in its own type, or cover for what it cannot hit.']];
 /* Korte navn til rutene på kortet, og hintet om hva som kommer neste studiedag. */
 const JSHORT = { battles: 'Battles', shop: 'Shop', shiny: 'Shiny', nature: 'Stars', train: 'Training', held: 'Items', size: 'Size', tutor: 'Tutors' };
 const JHINT = { battles: 'Your team gets to fight.', shop: 'Somewhere to spend your coins.', shiny: 'Something rare in the grass.', nature: 'Why two of the same are not equal.', train: 'A way to make your team stronger.', held: 'Something for your team to carry.', size: 'Not all of them are the same size.', tutor: 'Someone who can teach your team new moves.' };
