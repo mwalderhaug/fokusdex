@@ -30,7 +30,8 @@ const RECHARGE = new Set(['Hyper Beam', 'Giga Impact', 'Blast Burn', 'Frenzy Pla
 /* To-runders angrep: [tekst i første runde, 1 = utenfor rekkevidde mens den lader]. */
 const CHARGE = { 'Fly': ['flew up high!', 1], 'Dig': ['burrowed its way under the ground!', 1], 'Bounce': ['sprang up!', 1], 'Dive': ['hid underwater!', 1], 'Shadow Force': ['vanished instantly!', 1],
   'Sky Drop': ['took its foe into the sky!', 1],
-  'Solar Beam': ['absorbed light!', 0], 'Skull Bash': ['tucked in its head!', 0], 'Razor Wind': ['whipped up a whirlwind!', 0], 'Sky Attack': ['became cloaked in a harsh light!', 0] };
+  'Solar Beam': ['absorbed light!', 0], 'Skull Bash': ['tucked in its head!', 0], 'Razor Wind': ['whipped up a whirlwind!', 0], 'Sky Attack': ['became cloaked in a harsh light!', 0],
+  'Freeze Shock': ['became cloaked in a freezing light!', 0], 'Ice Burn': ['became cloaked in freezing air!', 0] };
 /* Den som er utenfor rekkevidde (i lufta, under jorda eller under vann), kan likevel treffes av noen få angrep, og da med dobbel styrke for dem i AWAY2. */
 const AIRHIT = ['Gust', 'Twister', 'Thunder', 'Hurricane', 'Sky Uppercut', 'Smack Down'];
 const AWAYHIT = { 'Fly': AIRHIT, 'Bounce': AIRHIT, 'Sky Drop': AIRHIT, 'Dig': ['Earthquake', 'Magnitude', 'Fissure'], 'Dive': ['Whirlpool'] }, AWAY2 = new Set(['Gust', 'Twister', 'Earthquake', 'Magnitude', 'Whirlpool']);
@@ -77,6 +78,7 @@ function mvEff(B, u, m) {
   if (m[0] === 'Hidden Power' && u && u.src && u.src.iv) ty = hpType(u.src.iv);
   else if (m[0] === 'Weather Ball' && B && WXT[B.wx.k] != null) ty = WXT[B.wx.k];
   else if (m[0] === 'Judgment' && u && u.src && plateTy(u.src) >= 0) ty = plateTy(u.src);
+  else if (m[0] === 'Techno Blast' && u && u.src && u.src.drive != null) ty = u.src.drive;
   if (ty === m[1]) return m;
   const c = m.slice(); c[1] = ty; return c;
 }
@@ -400,7 +402,7 @@ const UM = {
   'Soak': c => { keep(c.t); c.t.ty = [10, -1]; c.say(`${nmOf(c.o, c.t)} transformed into the Water type!`); },
   'Reflect Type': c => { keep(c.u); c.u.ty = c.t.ty.slice(); c.say(`${c.N}'s type became the same as ${lc(nmOf(c.o, c.t))}'s type!`); },
   'Conversion': c => { keep(c.u); c.u.ty = [MOVES[c.u.mv[0].i][1], -1]; c.say(`${c.N} transformed into the ${TYN[c.u.ty[0]]} type!`); },
-  'Spite': c => { const tv = c.t.v, x = tv.last != null && tv.last >= 0 ? c.t.mv[tv.last] : null; if (!x || !x.pp) return fail(c); x.pp = Math.max(0, x.pp - 4); c.say(`It reduced the PP of ${lc(nmOf(c.o, c.t))}'s ${MOVES[x.i][0]}!`); },
+  'Spite': c => { const tv = c.t.v, x = tv.last != null && tv.last >= 0 ? c.t.mv[tv.last] : null; if (!x || !x.pp || c.t.big) return fail(c); x.pp = Math.max(0, x.pp - 4); c.say(`It reduced the PP of ${lc(nmOf(c.o, c.t))}'s ${MOVES[x.i][0]}!`); },
   'Belly Drum': c => { const u = c.u; if (u.hp <= u.max / 2 || u.sg[1] >= 6) return fail(c); u.hp -= Math.floor(u.max / 2); u.sg[1] = 6; c.ev.push({ t: 'hit', side: c.s, hp: u.hp, e: 1, quiet: 1 }, { t: 'stat', side: c.s, up: true }); c.say(`${c.N} cut its own HP and maximized its Attack!`); },
   'Wish': c => { const sd = c.B.sd[c.s]; if (sd.wish) return fail(c); sd.wish = { n: 2, hp: Math.floor(c.u.max / 2) }; c.say(`${c.N} made a wish!`); },
   'Pain Split': c => { if (c.t.big || c.u.big) return fail(c); const a = Math.floor((c.u.hp + c.t.hp) / 2); c.u.hp = Math.min(c.u.max, a); c.t.hp = Math.min(c.t.max, a); c.ev.push({ t: 'heal', side: c.s, hp: c.u.hp, q: 1 }, { t: 'heal', side: c.o, hp: c.t.hp, q: 1 }); c.say('The battlers shared their pain!'); },
@@ -514,7 +516,7 @@ function useMove(B, s, k, ev, ord) {
     if (V.torm && V.last === k && u.mv.length > 1) { say(`${N} can't use the same move twice in a row due to the torment!`); return; }
     if (V.hblock && (m[6] === 3 || m[6] === 8 || HEALS.has(m[0]))) { say(`${N} can't use ${m[0]} because of Heal Block!`); return; }
     if (t.hp > 0 && t.v.imprison && t.mv.some(x => x.i === slot.i)) { say(`${N} can't use its sealed ${m[0]}!`); return; }
-    slot.pp = Math.max(0, slot.pp - (m[4] > 0 && t.hp > 0 && ab(t) === 'pressure' ? 2 : 1));
+    if (!u.big) slot.pp = Math.max(0, slot.pp - (m[4] > 0 && t.hp > 0 && ab(t) === 'pressure' ? 2 : 1));
   }
   V.last = k; if (k >= 0) (V.used || (V.used = {}))[k] = 1;
   V.rage = m[0] === 'Rage' ? 1 : 0;
@@ -550,6 +552,7 @@ function useMove(B, s, k, ev, ord) {
   else if (m[0] === 'Copycat' || m[0] === 'Mirror Move') { const lm = B.lastM[o]; if (lm == null || lm < 0 || MOVES[lm][4] === 0 || CHARGE[MOVES[lm][0]]) return say('But it failed!'); mi = lm; m = MOVES[mi]; say(`${N} used ${m[0]}!`); }
   B.lastM[s] = mi;
   m = mvEff(B, u, m);
+  if (m[0] === 'Techno Blast' && u.src.drive != null && !u.drv) { u.drv = 1; say(`${N}'s Drive charged it with ${TYN[m[1]]} power!`); }
   const atFoe = m[4] > 0 || m[0] === 'Heal Pulse' || (m[17] !== 1 && ![3, 10, 11].includes(m[6]) && (m[6] !== 13 || FOEU.has(m[0])) && !UM_SELF.has(m[0]));
   if (m[0] === 'Dream Eater' && t.status !== 'slp') { say('But it failed!'); return stop(); }
   if (m[0] === 'Snore' && u.status !== 'slp') { say('But it failed!'); return stop(); }
@@ -775,6 +778,8 @@ function endTurn(B, ev) {
 }
 
 /* ---------- Motstanderens valg ---------- */
+/* Treffsikkerheten slik været gjør den (som i useMove). */
+const accOf = (B, m) => !m[3] ? 1 : m[0] === 'Thunder' || m[0] === 'Hurricane' ? (B.wx.k === 'rain' ? 1 : B.wx.k === 'sun' ? 0.5 : m[3] / 100) : m[0] === 'Blizzard' && B.wx.k === 'hail' ? 1 : m[3] / 100;
 /* Forventet skade (i HP) for ett angrep og det beste angrepet u har mot t. */
 function estDmg(B, u, t, m) {
   if (m[4] === 0) return 0;
@@ -782,17 +787,59 @@ function estDmg(B, u, t, m) {
   if (FIXED[m[0]]) return typeEff(m[1], t) === 0 && m[0] !== 'Bide' ? 0 : FIXED[m[0]](u, t, B) || 0;
   if (typeEff(m[1], t) === 0 || abImm(u, t, m)) return 0;
   if (m[6] === 9) return u.lv >= t.lv && !t.big ? t.hp * 0.3 : 0;
-  let d = dmgOf(B, u, t, m, powOf(B, u, t, m, 1), false, false) * hitsFor(B, u, m, true) * (m[3] ? m[3] / 100 : 1);
-  if (CHARGE[m[0]] || RECHARGE.has(m[0])) d *= 0.6;
+  let d = dmgOf(B, u, t, m, powOf(B, u, t, m, 1), false, false) * hitsFor(B, u, m, true) * accOf(B, m);
+  if ((CHARGE[m[0]] && !(m[0] === 'Solar Beam' && B.wx.k === 'sun')) || RECHARGE.has(m[0])) d *= 0.6;
   if (m[0] === 'Focus Punch') d *= 0.4;
   if ((m[0] === 'Dream Eater' && t.status !== 'slp') || (m[0] === 'Snore' && u.status !== 'slp') || (m[0] === 'Fake Out' && u.v.t)) d = 0;
   return d;
 }
 const bestDmg = (B, u, t) => u.mv.reduce((best, x) => x.pp > 0 ? Math.max(best, estDmg(B, u, t, MOVES[x.i])) : best, 0);
+/* TAKTISKE ANGREP (steg 1b.4): med taktikk leser treneren stillingen før et statusangrep velges. Gir poeng, eller undefined når den vanlige
+   vurderingen i aiStatus gjelder. im = angrepet spilleren ventes å bruke (det sterkeste mot den som står inne), id = skaden det gjør.
+     skjermer     den som stopper det ventede angrepet (Reflect mot fysisk, Light Screen mot spesial)
+     vær          også når det gjør egne angrep treffsikre (Thunder og Hurricane i regn, Blizzard i hagl) eller lader Solar Beam
+     Taunt        mot en som kan bygge seg opp · Disable på angrepet som gjør mest · Psych Up, Heart Swap og Haze mot en som har bygget seg opp
+     Psycho Shift når den selv har fått en tilstand · Gravity mot en som svever, når den har Ground-angrep · Imprison når de deler angrep
+     senke en verdi (Charm, Metal Sound, Scary Face) når verdien betyr noe nå */
+function aiTact(B, u, t, m, iq) {
+  const n = m[0], V = u.v, tv = t.v, sdU = B.sd.foe;
+  let im = null, id = 0;
+  for (const x of t.mv) { if (x.pp <= 0) continue; const d = estDmg(B, t, u, MOVES[x.i]); if (d > id) { id = d; im = MOVES[x.i]; } }
+  const has = f => u.mv.some(x => x.pp > 0 && f(MOVES[x.i])), wx = k => B.wx.k === k || airOn(B), felt = id >= mx(u) * 0.08, pro = 50 + 14 * iq;
+  switch (n) {
+    case 'Reflect': case 'Light Screen': return sdU[n === 'Reflect' ? 'ref' : 'ls'] ? 0 : im && felt && (im[4] === 1) === (n === 'Reflect') ? pro - 4 : 6;
+    case 'Rain Dance': return wx('rain') ? 0 : u.ty.includes(10) || has(x => x[0] === 'Thunder' || x[0] === 'Hurricane') ? pro : 6;
+    case 'Sunny Day': return wx('sun') ? 0 : u.ty.includes(9) || has(x => x[0] === 'Solar Beam') ? pro : 6;
+    case 'Hail': return wx('hail') ? 0 : has(x => x[0] === 'Blizzard') ? pro : u.ty.includes(14) ? 30 : 4;
+    case 'Sandstorm': return wx('sand') ? 0 : ab(u) === 'sandforce' ? pro : u.ty.includes(5) || u.ty.includes(4) || u.ty.includes(8) ? 30 : 4;
+    case 'Tailwind': return sdU.tail ? 0 : aiSlow(B, u, t) ? pro - 6 : 8;
+    case 'Stealth Rock': return B.sd.me.rock || B.me.filter(x => x.hp > 0).length < 3 ? 0 : pro - 6;
+    case 'Taunt': { if (tv.taunt) return 0; const up = t.mv.some(x => { const y = MOVES[x.i]; return y[4] === 0 && y[17] === 1 && y[12].some(s => s[1] > 0); }); return up && boosts(t) < 4 ? 30 + 18 * iq : t.mv.some(x => MOVES[x.i][4] === 0) ? 24 : 4; }
+    case 'Disable': return tv.dis || tv.last == null || tv.last < 0 || !t.mv[tv.last] ? 0 : im && felt && MOVES[t.mv[tv.last].i] === im && t.mv.length > 1 ? 26 + 22 * iq : 10;
+    case 'Psych Up': return boosts(t) >= 2 && boosts(t) > boosts(u) ? 38 + 16 * iq : 0;
+    case 'Heart Swap': return t.sg.reduce((a, c) => a + c, 0) - u.sg.reduce((a, c) => a + c, 0) >= 2 ? 40 + 20 * iq : 0;
+    case 'Psycho Shift': return u.status && u.status !== 'slp' && !t.status && !tv.sub && ailOk(t, u.status) && !B.sd.me.safe ? 62 : 0;
+    case 'Haze': return boosts(t) >= 2 && boosts(t) > boosts(u) ? 48 : 0;
+    case 'Gravity': return B.grav ? 0 : ((t.ty.includes(2) || ab(t) === 'levitate' || tv.mag) && has(x => x[4] > 0 && x[1] === 4) ? pro - 14 : 0) + (has(x => x[4] > 0 && x[3] > 0 && x[3] <= 85) ? 10 : 0) || 3;
+    case 'Imprison': return !V.imprison && t.mv.some(x => MOVES[x.i][4] > 0 && u.mv.some(y => y.i === x.i)) ? 34 : 0;
+  }
+  /* Søvn er verdt mest for den som har noe å bruke den til: Bad Dreams, Nightmare eller Dream Eater. */
+  if (m[6] === 1 && m[7] === 2 && (ab(u) === 'baddreams' || has(x => x[0] === 'Nightmare' || x[0] === 'Dream Eater'))) return tv.sub || B.sd.me.safe || !ailOk(t, 'slp') ? 0 : 30 + pro * (m[3] ? m[3] / 100 : 1);
+  if (m[4] === 0 && m[6] === 2 && m[17] !== 1 && m[12].length && m[12][0][1] < 0) {
+    const s = m[12][0][0], a = ab(t);
+    if (t.sg[s - 1] <= -2 || tv.sub || B.sd.me.mist || ((a === 'clearbody' || a === 'whitesmoke' || (a === 'hypercutter' && s === 2)) && !mold(u))) return 0;
+    let bm = null, bd = 0;
+    for (const x of u.mv) { if (x.pp <= 0 || MOVES[x.i][4] === 0) continue; const d = estDmg(B, u, t, MOVES[x.i]); if (d > bd) { bd = d; bm = MOVES[x.i]; } }
+    /* Målet må tåle minst to treff til for at en senket forsvarsverdi skal rekke å lønne seg. */
+    const lasts = bd < t.hp * 0.45, rel = s === 2 ? !!im && felt && im[4] === 1 : s === 4 ? !!im && felt && im[4] === 2 : s === 6 ? aiSlow(B, u, t) : s === 3 ? lasts && !!bm && bm[4] === 1 : s === 5 ? lasts && !!bm && bm[4] === 2 : false;
+    return rel ? 24 + 18 * iq : 5;
+  }
+}
 /* Poeng for et statusangrep: hvor nyttig er det akkurat nå? */
 function aiStatus(B, u, t, m, iq) {
   const V = u.v, tv = t.v, sdU = B.sd.foe, sdT = B.sd.me, n = m[0], low = u.hp < u.max * 0.45, safe = bestDmg(B, t, u) < u.hp * 0.5;
   const bench = B.me.filter(x => x.hp > 0).length - 1;
+  if (iq > 0) { const x = aiTact(B, u, t, m, iq); if (x != null) return x; }
   switch (n) {
     case 'Protect': case 'Detect': return V.lastProt ? 0 : tv.lock && tv.lock.kind === 'charge' ? 55 : t.status === 'psn' || t.status === 'brn' || tv.seed || tv.curse ? 26 : 7;
     case 'Endure': return 0;
@@ -946,6 +993,8 @@ function aiAct(B) {
   }
   /* Slår motstanderen den ut før den rekker å slå, er det bare et raskt angrep som kommer fram. */
   const late = iq > 0 && aiSlow(B, u, t) && bestDmg(B, t, u) >= u.hp;
+  /* Et varslet angrep (Future Sight, Doom Desire) kan ikke varsles en gang til før det har truffet: de med taktikk, og de ville, prøver ikke. */
+  const fut = (iq > 0 || B.tr.wild) && !!B.sd.me.fut;
   const opts = [];
   u.mv.forEach((x, k) => {
     if (x.pp <= 0 || (V.dis && V.dis.k === k) || (V.enc && V.enc.k !== k) || (V.torm && V.last === k && u.mv.length > 1) || (t.v.imprison && t.mv.some(y => y.i === x.i))) return;
@@ -954,6 +1003,9 @@ function aiAct(B) {
       const d = estDmg(B, u, t, m);
       sc = Math.min(100, d / t.hp * 100) + (d >= t.hp ? 30 + (m[5] > 0 ? 12 : 0) : 0);
       if (late && d > 0) sc = m[5] > 0 ? sc + 45 * iq : sc * (1 - 0.6 * iq);
+      if (fut && (m[0] === 'Future Sight' || m[0] === 'Doom Desire')) sc = 0;
+      /* Angrep som senker brukerens egen slagkraft (Psycho Boost, Superpower, Overheat) spares til de avgjør. */
+      if ((iq > 0 || B.tr.wild) && d < t.hp && m[6] === 7 && m[12].some(s => s[1] < 0 && (s[0] === 2 || s[0] === 4))) sc *= 1 - 0.45 * (B.tr.wild ? Math.max(iq, 0.8) : iq);
       if (t.v.away) sc = 1;
       if (BOOM.has(m[0]) || m[0] === 'Final Gambit') sc = u.hp < u.max * 0.25 ? sc * 0.8 : sc * 0.12;
       if (m[9] < 0 && u.hp < u.max * 0.2) sc *= 0.8;

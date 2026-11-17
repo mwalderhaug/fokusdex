@@ -988,7 +988,7 @@ function trainSheet(m) {
    Angrep uten virkning i disse kampene (DEADMV) vises bare hvis den har dem på seg, så de kan byttes ut. Lærerne og egg-angrepene (steg 1b.8)
    får sin egen del her, under «Learns later». */
 function movePick(m, re) {
-  const sel = U.mvsel, at = movesAt(m.id, m.lv), known = m.mv.concat(at.filter(x => !m.mv.includes(x)).reverse()).filter(x => !DEADMV.has(x) || m.mv.includes(x)), l = LEARN[m.id - 1], later = [];
+  const sel = U.mvsel, at = movesAt(m.id, m.lv).concat(extraMoves(m)).filter((x, i, a) => a.indexOf(x) === i), known = m.mv.concat(at.filter(x => !m.mv.includes(x)).reverse()).filter(x => !DEADMV.has(x) || m.mv.includes(x)), l = LEARN[m.id - 1], later = [];
   for (let i = 0; i < l.length; i += 2) if (l[i] > m.lv && !known.includes(l[i + 1]) && !DEADMV.has(l[i + 1]) && !later.some(x => x[1] === l[i + 1])) later.push([l[i], l[i + 1]]);
   const row = (x, lv) => mvRow(x, m, lv ? { lv } : { act: 'mvtog', on: sel.includes(x) });
   const html = `<div class="row" style="justify-content:space-between"><h2 class="h" style="margin:0">Moves for ${esc(mName(m))}</h2><span class="pill tn" id="mvn">${sel.length} of 4</span></div>

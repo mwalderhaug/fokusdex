@@ -424,7 +424,7 @@ function foeMoves(id, lv, q) {
 /* «SUGGEST FOUR» i angrepsvalget (ønske 22): det sterkeste angrepet i hver av dens egne typer, ett som dekker det de ikke biter på, og ett taktisk.
    Regnes på det den faktisk er (verdiene nå, formen), blant angrepene den kan velge (pool, ellers alt den har lært). Angrep uten virkning er aldri med. */
 function suggestMoves(m, pool) {
-  const all = (pool || movesAt(m.id, m.lv).concat(m.mv)).filter((x, i, a) => a.indexOf(x) === i && !DEADMV.has(x));
+  const all = (pool || movesAt(m.id, m.lv).concat(m.mv, extraMoves(m))).filter((x, i, a) => a.indexOf(x) === i && !DEADMV.has(x));
   if (all.length <= 4) return all.slice();
   const st = statsOf(m), own = mTypes(m).filter(t => t >= 0), top = Math.max(st[1], st[3], 1), mvOf = x => MOVES[x][0] === 'Hidden Power' ? mvEff(null, { src: m }, MOVES[x]) : MOVES[x];
   const val = x => {
@@ -1056,15 +1056,14 @@ const LEG = {}; LEGD.split('|').forEach(r => { const q = r.split(','); LEG[+q[0]
         og hver gang du slår Mewtwo, reiser skyggen seg: runde to, mot Dark Mewtwo.
    BELØNNING: mynter (RAIDCOIN × vanskelighetsgrad), Rare Candy (RAIDCANDY), mye XP til hele laget, og den legendariske selv: seieren er fangsten
    (raidCatch). Før måtte den fanges med kast etterpå, og da slapp fire av ti unna etter et vunnet raid. */
-const RAIDLV = [75, 88, 82, 96, 100], RAIDHP = [2.4, 3.2, 2.8, 3.4, 3.6], RAIDCOIN = [1800, 3800, 2700, 7500, 12000], RAIDCANDY = [3, 5, 4, 8, 10], RAIDOFF = [8, 12, 10, 13, 16], RAIDREL = [0.22, 0.32, 0.27, 0.36, 0.45], RAIDCAPHP = 0.025;
+const RAIDLV = [75, 88, 82, 96, 100], RAIDHP = [2.0, 3.2, 1.8, 3.4, 3.6], RAIDCOIN = [1800, 3800, 2700, 7500, 12000], RAIDCANDY = [3, 5, 4, 8, 10], RAIDOFF = [6, 12, 5, 13, 16], RAIDREL = [0.16, 0.32, 0.13, 0.36, 0.45], RAIDCAPHP = 0.025;
 const RAIDTRIES = 2, RAIDP0 = 0.08, RAIDPITY = 0.035, RAIDWIN = 0.25, RAIDCOOL = 3, MEWP = 0.08, MEWP1 = 0.16;
 /* Egen HP-faktor for enkelte arter, oppå klassens (RAIDHP). Innen «de største» var spredningen for stor: Dialga, Palkia, Zekrom og Reshiram var nesten
    uslåelige for alle lag uten legendariske, og hardere enn Mewtwo og Arceus, som skal være de to vanskeligste. Stilt inn med sim/perleg.js. */
-const RAIDX = { 150: [1.3, 1], 493: [0.85, 1], 386: [1.4, 1], 483: [0.6, 0.94], 484: [0.6, 0.94], 644: [0.75, 0.97], 643: [0.7, 0.96] };
+const RAIDX = { 144: [1.1, 1], 145: [0.89, 1], 146: [1.13, 1.02], 150: [0.5, 0.96], 151: [1.34, 1], 243: [0.68, 1], 244: [0.98, 1], 245: [0.84, 1], 249: [0.58, 0.98], 251: [1.5, 1.04], 377: [1.07, 1], 378: [1.2, 1.05], 379: [1.2, 1.05], 380: [0.82, 1], 381: [0.52, 1], 382: [0.5, 0.88], 383: [0.79, 1], 384: [0.85, 1], 385: [1.35, 1], 386: [1.4, 1], 480: [1.09, 1], 481: [0.76, 1], 482: [1.13, 1], 483: [0.5, 0.86], 484: [0.52, 0.86], 485: [1.19, 1.04], 486: [1.08, 1], 487: [0.5, 0.96], 488: [1.16, 1], 490: [0.55, 1], 491: [0.8, 1], 492: [1, 1], 493: [0.85, 1], 494: [1.5, 1.1], 638: [0.79, 1], 639: [0.61, 1], 640: [0.93, 1], 641: [1.2, 1.05], 642: [1.16, 1.04], 643: [0.54, 0.94], 644: [0.52, 0.97], 645: [1.2, 1.05], 646: [0.58, 0.98], 647: [0.52, 0.88], 648: [1.5, 1.1], 649: [0.96, 1] };
 const raidX = id => RAIDX[id] || [1, 1];
-/* Mewtwo, Arceus og den mørke går ikke tomme: de har RAIDPP ganger så mange PP. De andre har vanlige PP, så de sterkeste angrepene deres tar slutt i en
-   lang kamp (det er en del av hvorfor en lang kamp kan vinnes). */
-const RAIDPP = 4;
+/* Ingen legendarisk går tom for PP i et raid (steg 1b.4, useMove i battle.js). Før gjaldt det bare Mewtwo, Arceus, Deoxys og den mørke, og de andre
+   mistet de sterkeste angrepene sine i en lang kamp. */
 /* De sterkeste viser seg bare for lag som kan gi dem kamp: de mytiske fra lagnivå 25, de største fra 35, og Mewtwo og Arceus fra 45. (Dark Mewtwo kommer bare ut av en slått Mewtwo.) */
 const RAIDGATE = [0, 35, 25, 45, 45];
 /* Nivået den ville hatt uten tak: laget ditt + RAIDOFF nivåer, eller + RAIDREL i andel (det som er høyest, så den står like langt over et sterkt lag som
@@ -1229,11 +1228,7 @@ function raidForm(B, ev, to) {
    ARCW = vektene i valget: [tåle angrepet den sist ble truffet av, treffe Pokémonen din hardt, tåle typene dens, tilfeldighet]. Forsvar veier tyngst:
    den tilpasser seg det du kaster mot den, så samme angrep virker dårligere og dårligere, og du må veksle. */
 const ARCW = [10, 3, 2, 2];
-const ARCEV = 3, ARCEV2 = 2, ARCMOVES = ['Judgment', 'Earth Power', 'Extreme Speed', 'Hyper Voice'];
-const arcMoves = () => { const l = ARCMOVES.map(n => MOVES.findIndex(m => m[0] === n)).filter(i => i >= 0); return l.length === 4 ? l : null; };
-/* Deoxys i raid: et sett som ikke senker dens egne verdier (med Psycho Boost gjorde den seg selv ufarlig etter to angrep). */
-const DEOXMOVES = ['Psychic', 'Shadow Ball', 'Ice Beam', 'Extreme Speed'];
-const deoxMoves = () => { const l = DEOXMOVES.map(n => MOVES.findIndex(m => m[0] === n)).filter(i => i >= 0); return l.length === 4 ? l : null; };
+const ARCEV = 3, ARCEV2 = 2;
 function arcPlate(B, ev) {
   const f = B.foe[B.b], b = B.me[B.a]; if (f.id !== ARCEUS || f.hp <= 0 || !b || b.hp <= 0) return false;
   const li = B.lastM.me, lm = li != null && li >= 0 && MOVES[li][4] > 0 ? mvEff(B, b, MOVES[li]) : null, lt = lm ? lm[1] : -1;
@@ -1269,23 +1264,72 @@ const raidMega = R => R.dk || R.id === 150 ? 0 : megaOpts(R.id)[0] || 0;
 const legStone = id => id === 382 ? 'the Blue Orb' : id === 383 ? 'the Red Orb' : `${D(id)[0]}'s Mega Stone`;
 function legTr(id, dk) {
   const L = dk ? DARK : LEG[id], d = D(id);
-  /* iq 0: de ville har ingen taktikk ennå (aiIq i battle.js). Steg 1b.4 setter den sammen med settene deres. */
-  return { n: dk ? L.n : d[0], img: '', title: raidTitle(id, dk), ty: d[1], kind: 'legend', ci: 10, cn: 'Legendary raid', skill: 1, iq: 0, boss: true, ultra: true, gold: L.t === 4, int: 8,
+  /* Taktikken (aiIq i battle.js) følger vanskelighetsgraden som hos trenerne: raidBattle setter skill, så Easy har ingen, Normal halvparten og Hard alt. */
+  return { n: dk ? L.n : d[0], img: '', title: raidTitle(id, dk), ty: d[1], kind: 'legend', ci: 10, cn: 'Legendary raid', skill: 1, boss: true, ultra: true, gold: L.t === 4, int: 8,
     sc: L.sc, th: L.th, cc: L.cc, arena: 'hall', v: 0, mre: L.mre, wild: 1, leg: id, dk: dk ? 1 : 0, lt: L.t, lbg: L.bg, sig: L.sig };
 }
 /* En legendarisk i raid slår aldri ut seg selv: Explosion, Final Gambit, Memento og lignende byttes ut med det beste den ellers kan. */
 /* Den helbreder seg heller ikke: med flere ganger så mye HP som en vanlig Pokémon ville Rest eller Recover gjort kampen håpløs. */
 const SELFKO = new Set(['Explosion', 'Self-Destruct', 'Final Gambit', 'Memento', 'Healing Wish', 'Lunar Dance', 'Destiny Bond', 'Perish Song',
   'Rest', 'Recover', 'Roost', 'Soft-Boiled', 'Synthesis', 'Moonlight', 'Morning Sun', 'Milk Drink', 'Slack Off', 'Heal Order', 'Wish', 'Swallow', 'Pain Split', 'Leech Seed', 'Ingrain', 'Aqua Ring']);
-/* Dark Mewtwo har sitt eget sett: Psystrike, Shadow Ball, Aura Sphere og Dark Pulse treffer alle typer med minst ett angrep. Med det arten lærer av seg
-   selv (Future Sight, Aura Sphere, Swift, Psystrike) var en Ghost/Dark-type som Sableye helt urørlig, og den sterkeste i spillet kunne bare stå og se på. */
-const DKMOVES = ['Psystrike', 'Shadow Ball', 'Aura Sphere', 'Dark Pulse'];
-/* MEWTWO I RAID har de samme fire angrepene på alle nivåer: de den ellers først har fra nivå 93–100. Med nivålista hadde den under raidnivå 90 bare
-   Psychic-angrep og Swift, og et lag med en Dark-type slo den nesten hver gang (målt: 96–100 % for pseudo-legendariske på nivå 35–60). I demoen
-   (Mewtwo → Dark) har den nivålista som før, så en kommer fram til forvandlingen. */
-const MEWMOVES = ['Psystrike', 'Aura Sphere', 'Future Sight', 'Swift'];
-const mewMoves = () => { const l = MEWMOVES.map(n => MOVES.findIndex(m => m[0] === n)).filter(i => i >= 0); return l.length === 4 ? l : null; };
-const dkMoves = () => { const l = DKMOVES.map(n => MOVES.findIndex(m => m[0] === n)).filter(i => i >= 0); return l.length === 4 ? l : null; };
+/* ---------- Settene til de legendariske (steg 1b.4) ----------
+   Hver av de 47 (og Dark Mewtwo) har et håndplukket sett: signaturangrepet eller det arten er kjent for, et angrep av egen type, dekning og ett
+   taktisk. Bare angrep arten kan lære i spillene (sjekket mot PokeAPI med work/sim/t_b9.js, i en hvilken som helst form og et hvilket som
+   helst spill), og ingen som slår den ut selv, helbreder den eller bygger opp verdiene dens (SELFKO): med flere ganger så mye HP ville
+   det gjort kampen håpløs. Settet er det samme på alle nivåer, og i et raid går den aldri tom for PP (useMove i battle.js: den som har b.big).
+   Den som fanges, får settet som utgangspunkt (addMon), og angrepene kan byttes som ellers; de fire står alltid i angrepsvalget (extraMoves).
+   Før steg 1b.4 ble settet trukket fra nivålista (legLevelMoves), og da fikk Uxie Flail og Mewtwo Swift. */
+const LEGSET = {
+  144: 'Blizzard|Hurricane|Ancient Power|Hail', 145: 'Thunder|Drill Peck|Heat Wave|Rain Dance', 146: 'Fire Blast|Air Slash|Solar Beam|Sunny Day',
+  150: 'Psystrike|Aura Sphere|Ice Beam|Psych Up', 151: 'Psychic|Aura Sphere|Flamethrower|Thunder Wave',
+  243: 'Thunderbolt|Extrasensory|Shadow Ball|Reflect', 244: 'Sacred Fire|Eruption|Stone Edge|Roar', 245: 'Hydro Pump|Scald|Ice Beam|Tailwind',
+  249: 'Aeroblast|Psychic|Hydro Pump|Whirlwind', 250: 'Sacred Fire|Brave Bird|Earthquake|Sunny Day', 251: 'Future Sight|Psychic|Energy Ball|Earth Power',
+  377: 'Hammer Arm|Stone Edge|Earthquake|Stealth Rock', 378: 'Ice Beam|Thunderbolt|Flash Cannon|Thunder Wave', 379: 'Iron Head|Hammer Arm|Earthquake|Toxic',
+  380: 'Mist Ball|Dragon Pulse|Thunderbolt|Reflect', 381: 'Luster Purge|Dragon Pulse|Aura Sphere|Light Screen',
+  382: 'Water Spout|Hydro Pump|Ice Beam|Thunder', 383: 'Eruption|Earthquake|Solar Beam|Stealth Rock', 384: 'Outrage|Air Slash|Earthquake|Extreme Speed',
+  385: 'Doom Desire|Iron Head|Psychic|Thunder Wave', 386: 'Psycho Boost|Psychic|Brick Break|Extreme Speed',
+  480: 'Psychic|Foul Play|Thunderbolt|Yawn', 481: 'Psychic|Ice Beam|Thunderbolt|Charm', 482: 'Psychic|Flamethrower|Shadow Ball|Taunt',
+  483: 'Roar of Time|Flash Cannon|Earth Power|Thunder Wave', 484: 'Spacial Rend|Hydro Pump|Earth Power|Gravity', 485: 'Magma Storm|Flash Cannon|Earth Power|Will-O-Wisp',
+  486: 'Crush Grip|Earthquake|Hammer Arm|Confuse Ray', 487: 'Shadow Force|Dragon Claw|Aura Sphere|Will-O-Wisp', 488: 'Psychic|Ice Beam|Shadow Ball|Psycho Shift',
+  490: 'Scald|Ice Beam|Energy Ball|Heart Swap', 491: 'Dark Void|Dark Pulse|Ice Beam|Nightmare', 492: 'Seed Flare|Energy Ball|Earth Power|Sweet Kiss',
+  493: 'Judgment|Earth Power|Extreme Speed|Hyper Voice', 494: 'V-create|Psychic|Thunderbolt|Will-O-Wisp',
+  638: 'Sacred Sword|Iron Head|Stone Edge|Thunder Wave', 639: 'Sacred Sword|Stone Edge|Earthquake|Taunt', 640: 'Sacred Sword|Leaf Blade|Stone Edge|Reflect',
+  641: 'Hurricane|Dark Pulse|Hammer Arm|Tailwind', 642: 'Thunderbolt|Dark Pulse|Hammer Arm|Thunder Wave', 645: 'Earthquake|Stone Edge|Hammer Arm|Sandstorm',
+  643: 'Blue Flare|Dragon Pulse|Earth Power|Sunny Day', 644: 'Bolt Strike|Dragon Claw|Stone Edge|Light Screen', 646: 'Glaciate|Ice Beam|Dragon Pulse|Earth Power',
+  647: 'Secret Sword|Hydro Pump|Ice Beam|Aqua Jet', 648: 'Relic Song|Psychic|Close Combat|Teeter Dance', 649: 'Techno Blast|Bug Buzz|Flash Cannon|Metal Sound'
+};
+/* Dark Mewtwo: Psystrike, Shadow Ball, Aura Sphere og Dark Pulse treffer alle typer med minst ett angrep. */
+const DKSET = 'Psystrike|Shadow Ball|Aura Sphere|Dark Pulse';
+/* MEW kan lære alt. I et raid velger den dekningen etter laget ditt: de to angrepene fra MEWCOV som til sammen treffer flest av dine hardt (sammen
+   med Psychic), og Will-O-Wisp hvis de fleste av dine slår fysisk, ellers Thunder Wave. En Mew du eier, kan velge blant alle disse. */
+const MEWCOV = ['Aura Sphere', 'Flamethrower', 'Ice Beam', 'Thunderbolt', 'Energy Ball', 'Earth Power', 'Shadow Ball', 'Dark Pulse', 'Sludge Bomb', 'Bug Buzz', 'Flash Cannon', 'Dragon Pulse'], MEWTAC = ['Will-O-Wisp', 'Thunder Wave'];
+/* GENESECT i raid bærer en Drive: Techno Blast får den typen (ild, is, vann eller elektrisk) som treffer laget ditt hardest (src.drive, mvEff i battle.js). */
+const DRIVES = [9, 14, 10, 12];
+const mvIx = n => MOVES.findIndex(m => m[0] === n);
+const _ls = {};
+function legSet(id, dk) {
+  const k = dk ? 'dk' : id;
+  if (_ls[k] === undefined) { const s = dk ? DKSET : LEGSET[id], l = s ? s.split('|').map(mvIx) : null; _ls[k] = l && l.length === 4 && l.every(i => i >= 0) ? l : null; }
+  return _ls[k] ? _ls[k].slice() : null;
+}
+/* Hvor hardt typen ty treffer en av dine (til valgene Mew og Genesect gjør før kampen). */
+const legEff = (ty, m) => typeEff(ty, { ty: mTypes(m), v: {} });
+function mewSet(party) {
+  const cov = MEWCOV.map(mvIx).filter(i => i >= 0), psy = mvIx('Psychic'); if (psy < 0 || cov.length < 2 || !party.length) return legSet(151);
+  const sc = (a, b) => party.reduce((s, m) => s + Math.min(2, Math.max(legEff(13, m), legEff(MOVES[a][1], m), legEff(MOVES[b][1], m))), 0) + Math.random() * 0.3;
+  let best = null, bs = -1;
+  for (let i = 0; i < cov.length; i++) for (let j = i + 1; j < cov.length; j++) { const v = sc(cov[i], cov[j]); if (v > bs) { bs = v; best = [cov[i], cov[j]]; } }
+  const phys = party.filter(m => { const st = statsOf(m); return st[1] > st[3]; }).length, tac = mvIx(MEWTAC[phys * 2 > party.length ? 0 : 1]);
+  return tac >= 0 ? [psy, best[0], best[1], tac] : legSet(151);
+}
+const driveFor = party => { let best = DRIVES[0], bs = -1; for (const ty of DRIVES) { const v = party.reduce((s, m) => s + Math.min(2, legEff(ty, m)), 0) + Math.random() * 0.3; if (v > bs) { bs = v; best = ty; } } return best; };
+/* Angrep en art kan velge i tillegg til nivålista: settet til en legendarisk (og hele utvalget til Mew). Lærerne og egg-angrepene (steg 1b.8) kommer hit. */
+function extraMoves(m) {
+  if (!m || !LEGSET[m.id]) return [];
+  const l = (legSet(m.id, m.sh === 2) || []).concat(m.id === 151 ? MEWCOV.concat(MEWTAC).map(mvIx).filter(i => i >= 0) : []);
+  return l.filter((x, i) => l.indexOf(x) === i);
+}
+const dkMoves = () => legSet(150, 1);
 /* Den mørke tar plassen til en Mewtwo du eier: det er den samme Pokémonen (nivå, XP, kallenavn og det den holder står), men mørk, og alltid med de
    beste verdiene: IV 31 i alt, naturen Timid (DKNAT) og EV fullt ut i Sp. Atk og Speed (DKEV). Angrepene blir de fire den mørke bruker. */
 const DKNAT = 10, DKEV = [6, 0, 0, 252, 0, 252];
@@ -1296,13 +1340,16 @@ function darkTake(m) {
   const mv = dkMoves(); if (mv) m.mv = mv.slice();
   return m;
 }
-function raidMoves(id, lv) {
+/* Settet fra nivålista, slik alle raid var før steg 1b.4. Nå bare for Mewtwo i demoen (der den har vanlig HP, så en kommer fram til forvandlingen),
+   og som reserve hvis et sett skulle mangle. */
+function legLevelMoves(id, lv) {
   /* Og den bygger seg ikke opp med Cosmic Power, Calm Mind og lignende: den angriper. */
   const ok = x => { const m = MOVES[x]; return !SELFKO.has(m[0]) && !(m[4] === 0 && m[17] === 1 && m[12].length); }, mv = foeMoves(id, lv, 2).filter(ok);
   for (const x of movesAt(id, lv + 8).filter(x => ok(x) && !DEADMV.has(x) && MOVES[x][4] > 0).sort((a, b) => (MOVES[b][2] || 0) - (MOVES[a][2] || 0))) { if (mv.length >= 4) break; if (!mv.includes(x)) mv.push(x); }
   return mv.length ? mv : defaultMoves(id, lv);
 }
-/* demo = arten som skal prøves i demoen (gir ingenting). Ellers den som har vist seg. */
+/* Angrepene i et raid: settet til arten (LEGSET). Mew velger dekningen etter laget ditt (party). */
+function raidMoves(id, lv, dk, party) { return (id === 151 && !dk && party && party.length ? mewSet(party) : null) || legSet(id, dk) || legLevelMoves(id, lv); }
 /* demo = arten som skal prøves i demoen (gir ingenting), eller 'dk' for Dark Mewtwo. Ellers den som har vist seg. */
 function raidBattle(lead, demo) {
   const R = demo === 'dk' ? { id: 150, dk: 1, lv: raidLvFor(5), hx: raidHx(5) } : demo ? { id: demo, lv: raidLvFor(LEG[demo].t), hx: raidHx(LEG[demo].t) } : S.raid, L = raidInfo(R), party = S.party.map(monBy).filter(Boolean);
@@ -1310,11 +1357,11 @@ function raidBattle(lead, demo) {
   /* Hvem som venter, er hemmelig til filmen har gått: fra første forsøk er den kjent (R.seen), og kortet viser den. */
   if (!demo && S.raid && !S.raid.seen) { S.raid.seen = 1; save(); }
   /* Vanskelighetsgraden senker nivået og HP-en til den legendariske (Hard = som før). */
-  const dd = diff(), lv = R.ev ? 100 : Math.max(10, Math.round(R.lv * dd.rlv * (R.dk ? 1 : raidX(R.id)[1]))), e = Math.round((R.dk ? 85 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : R.sh ? 1 : 0, g: rollG(R.id), mega: R.id === DEOXYS ? DEOXA : defForm(R.id), ms: raidMega(R), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: (R.dk && dkMoves()) || (R.id === ARCEUS && arcMoves()) || (R.id === DEOXYS && deoxMoves()) || (R.id === 150 && demo !== 150 && mewMoves()) || raidMoves(R.id, lv) };
+  const dd = diff(), lv = R.ev ? 100 : Math.max(10, Math.round(R.lv * dd.rlv * (R.dk ? 1 : raidX(R.id)[1]))), e = Math.round((R.dk ? 85 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : R.sh ? 1 : 0, g: rollG(R.id), mega: R.id === DEOXYS ? DEOXA : defForm(R.id), ms: raidMega(R), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: demo === 150 ? legLevelMoves(150, lv) : raidMoves(R.id, lv, R.dk, party), drive: R.id === 649 ? driveFor(party) : null };
   const B = mkBattle(demo ? party : party.map(evSrc), [foe], legTr(R.id, R.dk), { mode: demo ? 'lab' : 'raid', raid: 1, st: TCL.supreme, k: 'legend', rd: 0, n: 0, lap: 0, ti: 0, bag: bagN(), xm: 3 * dd.xp, sm: 1, dc: dd.coin, boost: { mode: '', m: 1, xp: 1 } });
   B.tr.skill = dd.sk; if (demo) labMega(B); else evApply(B);
   /* I demoen har Mewtwo vanlig HP (ikke raid-HP), så en kommer fram til forvandlingen: det er den demoen er til for. */
-  const f = B.foe[0], big = demo === 150 ? 1 : RAIDHP[L.t - 1] * (R.ev ? 1 : dd.rhp) * (R.dk ? 1 : (R.hx || 1) * raidX(R.id)[0]); f.max = f.hp = Math.round(f.max * big); f.big = big; if (L.t >= 4 || R.id === 150 || R.id === 386) f.mv.forEach(m => { m.pp = m.max = m.max * RAIDPP; }); if (R.dk) f.short = 'D.Mewtwo';
+  const f = B.foe[0], big = demo === 150 ? 1 : RAIDHP[L.t - 1] * (R.ev ? 1 : dd.rhp) * (R.dk ? 1 : (R.hx || 1) * raidX(R.id)[0]); f.max = f.hp = Math.round(f.max * big); f.big = big; if (R.dk) f.short = 'D.Mewtwo';
   return B;
 }
 function finishRaid(B) {

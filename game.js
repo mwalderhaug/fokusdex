@@ -1110,7 +1110,7 @@ const shinyBoost = () => S.shb && S.shb.until > Date.now() ? S.shb.m : 1;
 const shinyOdds = () => (1 / SHINYN) * (1 + Math.min(streak(), 10) * 0.05) * (S.charm > 0 ? CHARM.m : 1) * shinyBoost();
 
 function addMon(id, lv, sh, egg, g) {
-  const m = { u: S.uid++, id, lv, xp: xpAt(lv), sh: sh === 2 ? 2 : sh ? 1 : 0, fav: 0, at: Date.now(), iv: sh ? [31, 31, 31, 31, 31, 31] : rollIv(egg), ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: defaultMoves(id, lv), g: g == null ? rollG(id) : g };
+  const m = { u: S.uid++, id, lv, xp: xpAt(lv), sh: sh === 2 ? 2 : sh ? 1 : 0, fav: 0, at: Date.now(), iv: sh ? [31, 31, 31, 31, 31, 31] : rollIv(egg), ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: (typeof legSet === 'function' && legSet(id, sh === 2)) || defaultMoves(id, lv), g: g == null ? rollG(id) : g };
   if (defForm(id)) m.mega = defForm(id);
   const sz = rollSz(id); if (sz !== 1) m.sz = sz;
   S.mons.push(m);
