@@ -832,7 +832,7 @@ function finishFactory(B) {
     /* Sjelden boss: klassens egen belønning på toppen, som i ligaen. */
     { const bonus = Math.round(FACROUND(r) * sm * (B.dc || 1)); res.coins += bonus; S.coins += bonus; res.perks.push(`Round ${r} cleared: ${bonus.toLocaleString('en-US')} coins on top.`); }
     if (B.tr.ultra) { const c = B.tr.ci, extra = Math.round([600, 1000, 2000][c - 7] * sm * (B.dc || 1)); res.coins += extra; S.coins += extra; rareLoot(c, res, give, [B.tr.ty]); ringAward(c, res); rarePrize(c, res); res.note = `${B.tr.cn}: extra rewards.`; }
-    { const sy = facBossOf(r).sym || 0; if (sy > (S.fac.sym || 0)) { S.fac.sym = sy; res.sym = sy; res.perks.push(`You earned the ${FACSYM[sy]} Symbol. Its prize waits under Profile, Badges.`); } }
+    { const sy = facBossOf(r).sym || 0; if (sy > (S.fac.sym || 0)) { S.fac.sym = sy; res.sym = sy; res.perks.push(`You earned the ${FACSYM[sy]} Symbol. Its prize waits under Profile, Achievements.`); } }
     res.roundDone = true; raidRoll(RAIDWIN); raidUnhide(); S.fac.keep = R.team.map(x => ({ id: x.id, sh: x.sh || 0, iv: (x.iv || []).slice(), nat: x.nat || 0 })); res.keep = 1;
     if (r >= FACEND) { const d = S.lad.day || dayKey(); res.done = 1; res.note = 'Frontier conquered.'; S.fac.tries = { d, n: Math.max(facFails(), facLives()) }; S.fac.lost = d; S.fac.run = null; save(); return res; }
     R.round++; R.w = 0; R.team = null; R.offer = facOffer(R.round); R.open = 0;
