@@ -1891,14 +1891,14 @@ function facLuckShow(R, n) { const F = S.fac, l0 = Math.max(0, Math.min(FACLUCKN
 const luckBar = (v, cls) => `<span class="flk${cls ? ' ' + cls : ''}${v >= FACLUCKN ? ' full' : ''}" role="img" aria-label="Frontier luck ${v} of ${FACLUCKN}"><i style="width:${Math.round(v / FACLUCKN * 100)}%"></i></span>`;
 const facStage = m => { const kind = m.mega ? 'mega' : facRare(m); return `<button type="button" class="fstage k-${kind || facBall(m)}" id="fstage" data-a="fskip" style="--tc:var(--t${mTypes(m)[0]})" aria-label="Opening the ball. Tap to skip."><span class="fst-g" aria-hidden="true"></span><span class="fst-r" aria-hidden="true"></span><span class="fst-b">${ballEl(facBallImg(m), '84px')}</span><span class="fst-s">${spr(m.id, { ani: 1, mega: m.mega, sh: m.sh, s: '132px' })}</span><b class="fst-c">${kind ? FACCALL[kind] : ''}</b><small class="fst-n">${esc(mName(m))}</small><span class="fst-k">tap to skip</span></button>`; };
 function facDraw(R) {
-  const n = R.open == null ? 7 : Math.min(7, R.open), all = n >= 7, sel = BT.fsel, rev = BT.frev && BT.frev.i < n ? BT.frev : (BT.frev = null);
+  const n = R.open == null ? 7 : Math.min(7, R.open), sel = BT.fsel, rev = BT.frev && BT.frev.i < n ? BT.frev : (BT.frev = null), all = n >= 7 && !rev;
   const vi = BT.fview != null && BT.fview < n ? BT.fview : n - 1, cur = vi >= 0 ? R.offer[vi] : null, fresh = !!BT.fnew && vi === n - 1, opened = R.offer.slice(0, n), nx = n < 7 ? R.offer[n] : null, lk = facLuckShow(R, rev ? n - 1 : n);
   BT.fnew = false;
   const tile = (m, i) => i < n && !(rev && rev.i === i)
     ? `<button type="button" class="ft open${m.mega ? ' mega' : ''}${facRare(m) ? ' rr-' + facRare(m) : ''}${i === vi && !rev ? ' on' : ''}${sel.includes(i) ? ' sel' : ''}" data-a="fview" data-k="${i}" style="--tc:var(--t${mTypes(m)[0]})" aria-label="${esc(mName(m))}, rated ${facRate(m).n} of 5${sel.includes(i) ? ', picked' : ''}">${sel.includes(i) ? `<span class="ord">${sel.indexOf(i) + 1}</span>` : ''}${spr(m.id, { mega: m.mega, sh: m.sh })}<b>${esc(mName(m))}</b>${rateEl(m, { sm: 1 })}${statMini(m)}</button>`
     : `<span class="ft shut b-${facBallK(m)}${i === n && !rev ? ' next' : ''}${n === 0 ? ' drop' : ''}${rev && rev.i === i ? ' gone' : ''}" style="--i:${i}">${ballEl(facBallImg(m))}</span>`;
   const head = n === 0 ? ['Seven Poké Balls.', 'Open them one at a time. The ball tells you a little: a Great Ball holds a better Pokémon than a Poké Ball, and an Ultra Ball the best. A ball that looks different holds something rare.']
-    : !all ? [`Pokémon ${Math.min(n, vi + 1)} of 7`, 'Look it over, then open the next ball.'] : ['Pick 4 of 7.', 'Tap one to look at it, and tap it again to pick it. The first one you pick leads.'];
+    : !all ? [`Pokémon ${rev ? rev.i + 1 : Math.min(n, vi + 1)} of 7`, n >= 7 ? 'The last one.' : 'Look it over, then open the next ball.'] : ['Pick 4 of 7.', 'Tap one to look at it, and tap it again to pick it. The first one you pick leads.'];
   const card = rev ? facStage(R.offer[rev.i]) : cur ? sumCard(cur, fresh, { ref: opened, cap: opened.length > 2 ? 'against the other rentals here' : '', pick: all ? { i: vi, on: sel.includes(vi), full: sel.length >= 4 } : null }) : '<div class="fsum empty"><p class="mut">Nothing opened yet.</p></div>';
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Battle Frontier · Round ${R.round}</span></div>
     <div><h1 class="big">${head[0]}</h1><p class="mut" style="margin-top:6px">${head[1]}</p></div>
@@ -2015,7 +2015,7 @@ const BA = {
   fsel: el => { const R = S.fac.run; if (!R || !R.offer || R.open < 7) return; const i = +el.dataset.k, s = BT.fsel, k = s.indexOf(i); if (k >= 0) { s.splice(k, 1); sfx.close(); } else if (s.length < 4) { s.push(i); sfx.ok(); buzz(15); } else { sfx.warn(); return toast('Four are picked. Take one out first.'); } BT.fview = i; facScreen(); },
   fpick: () => { if (BT.fsel.length !== 4) return; facPick(BT.fsel.slice()); BT.fsel = []; BT.fpick = false; BT.fview = null; sfx.ok(); facScreen(); },
   fluck: () => { sfx.open(); openSheet(`<h2 class="h" style="margin-top:0">Frontier luck</h2>
-    <div class="flkrow">${luckBar(facLuck(), 'wide')}<b class="tn">${facLuck()} / ${FACLUCKN}</b></div>
+    <div class="flkrow" style="grid-template-columns:1fr auto">${luckBar(facLuck(), 'wide')}<b class="tn">${facLuck()} / ${FACLUCKN}</b></div>
     <p class="sm" style="margin-top:10px">Now and then one of the seven balls is rare: a <b>shiny</b> rental, an <b>ace</b> (one of the very best, with the nature that suits it) or a <b>legend on loan</b>. A rare ball is always the last one you open.</p>
     <p class="sm">Every ball in a set without a rare one fills the meter, and it stays with you between runs and days. When it is full, your next seven hold a rare ball for sure.</p>
     <p class="sm">Clear the round, and a shiny or an ace you rented can be the one you keep. A legend is on loan and goes back.</p>

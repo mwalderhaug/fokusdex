@@ -1542,15 +1542,6 @@ button.pill{font:inherit;font-size:11.5px;font-weight:600;color:var(--ink2)}butt
 /* Varselet i demoen når ressurspakken ikke er lastet. */
 .card.nopack{box-shadow:0 0 0 2px color-mix(in srgb,var(--gold) 70%,transparent);background:color-mix(in srgb,var(--gold) 10%,var(--card))}
 /* ---------- Battle Frontier: trekk én og én ---------- */
-.fdr{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-.fdb{position:relative;aspect-ratio:1;border-radius:14px;background:var(--card);box-shadow:0 0 0 1px var(--line);display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0}
-.fdb .ball{--s:60%;width:60%;height:auto;opacity:.5}
-.fdb.next{box-shadow:0 0 0 2px var(--gold)}
-.fdb.next .ball{opacity:1;animation:bob .9s ease-in-out infinite}
-.fdb.open .sprb{position:absolute;inset:0;width:auto;height:auto}
-.fdb.open .spr{position:absolute;left:50%;top:50%;width:130%;height:130%;max-width:none;object-fit:contain;transform:translate(-50%,-50%);image-rendering:pixelated}
-.fdb.on{box-shadow:0 0 0 2px var(--ink)}
-.fdb.mega{background:linear-gradient(135deg,#3a2a5a,#5a3a1a);box-shadow:0 0 0 2px var(--gold)}
 .fsum{border-radius:22px;padding:14px 16px;background:linear-gradient(color-mix(in srgb,var(--tc) 22%,var(--card)),var(--card) 62%);box-shadow:0 0 0 1px var(--line);display:flex;flex-direction:column;gap:12px}
 .fsum.empty{min-height:120px;align-items:center;justify-content:center}
 .fsum.pop{animation:fsPop .5s cubic-bezier(.2,.9,.3,1.2)}
@@ -1569,10 +1560,6 @@ button.pill{font:inherit;font-size:11.5px;font-weight:600;color:var(--ink2)}butt
 .fs-st i{height:7px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}
 .fs-st b{display:block;height:100%;border-radius:4px}
 .fs-st em{font-style:normal;text-align:right;font-weight:700}
-.fs-mv{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.fs-mv span{border-radius:10px;padding:6px 9px;background:color-mix(in srgb,var(--c) 26%,var(--card));box-shadow:inset 3px 0 0 var(--c);display:flex;flex-direction:column;min-width:0}
-.fs-mv b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.fs-mv small{font-size:10.5px;color:var(--ink2)}
 .rent button.mega{box-shadow:0 0 0 2px var(--gold)}
 .bw-p .nm u{text-decoration:none;font-size:.8em;color:#f8c830}
 /* ---------- Legendariske kamper ---------- */
@@ -1936,16 +1923,8 @@ button.pkm{cursor:pointer}
 .swc.moved .swt{background:var(--sage);color:#152013}.swr.th .swc.moved .swt{background:var(--ink2);color:#17130f}
 .swmid{display:flex;align-items:center;gap:10px;color:var(--ink2);font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
 .swmid i{flex:1;height:1px;background:var(--line)}
-.fstar{color:var(--gold);font-size:10.5px;letter-spacing:1px;line-height:1}
-.fstar i{font-style:normal;color:rgba(255,255,255,.16)}
-.fstar.sm{position:absolute;right:8px;top:8px}
 .fs-role{display:flex;align-items:center;gap:8px;margin-top:4px;font-size:12.5px}
-.fdb.drop{animation:fdDrop .5s cubic-bezier(.2,.9,.3,1.25) backwards;animation-delay:calc(var(--i)*.09s)}
 @keyframes fdDrop{from{transform:translateY(-46px) scale(.6);opacity:0}}
-.fdb.b-great{box-shadow:0 0 0 1px color-mix(in srgb,var(--blue) 55%,var(--line))}
-.fdb.b-ultra{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--gold) 65%,var(--line))}
-.fdb.b-mega{box-shadow:0 0 0 2px var(--gold),0 0 16px color-mix(in srgb,var(--violet) 60%,transparent)}
-.fdb.next{box-shadow:0 0 0 2px var(--gold)}
 @media (prefers-reduced-motion:reduce){.fdb.drop{animation:none}}
 
 /* ---------- Achievements ---------- */
@@ -2632,6 +2611,7 @@ button.pkm{cursor:pointer}
 .flk.full i{animation:frGlow 1.4s ease-in-out infinite}
 .flk.wide{width:100%}
 .flkrow{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px}
+.flkb{width:100%;border:0;background:none;padding:2px 0;font:inherit;color:inherit;cursor:pointer;text-align:left}
 .fact{position:sticky;bottom:10px;z-index:3}
 /* scenen der en ball åpnes: mørk i begge utseender, som et lite rampelys */
 .fstage{position:relative;display:block;width:100%;height:260px;border:0;border-radius:22px;overflow:hidden;cursor:pointer;font:inherit;color:#f4f1ea;background:radial-gradient(circle at 50% 46%,color-mix(in srgb,var(--tc) 34%,#1d1a26),#0d0c12 74%);box-shadow:0 0 0 1px var(--line)}

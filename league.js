@@ -976,9 +976,13 @@ function megaPick(used) {
 const FACRARE = { leg: 0.022, sh: 0.035, ace: 0.14 }, FACLUCKN = 35, FACLUCKW = { sh: 0.2, leg: 0.1, ace: 0.7 }, FACACEP = 68, FACACEIV = 8;
 const FACRN = { sh: 'Shiny', ace: 'Ace', leg: 'Legend on loan' };
 const facRare = m => m ? m.rr || (m.sh ? 'sh' : '') : '';
-/* Naturen som passer: hever den sterkeste av Attack og Sp. Atk (farten for den som er rask og jevn) og senker den slagkraften den ikke bruker. */
-function facNat(id, mega) {
-  const b = mega ? MEGA[mega - 1][4] : BST[id - 1], ab = abilityOf(id, mega), atk = b[1] * (ab === 'hugepower' || ab === 'purepower' ? 2 : 1), phys = atk >= b[3], up = b[5] >= 100 && Math.abs(atk - b[3]) < 25 ? 5 : phys ? 1 : 3, dn = phys ? 3 : 1;
+/* Naturen som passer: hever den sterkeste av Attack og Sp. Atk (farten for den som er rask og jevn) og senker den slagkraften den ikke bruker.
+   Er de to nesten like, avgjør angrepene (mv = settet den får med nøytral natur, eller settet til en legendarisk). */
+function facNat(id, mega, mv) {
+  const b = mega ? MEGA[mega - 1][4] : BST[id - 1], ab = abilityOf(id, mega), atk = b[1] * (ab === 'hugepower' || ab === 'purepower' ? 2 : 1);
+  mv = mv || (LEGSET[id] ? legSet(id) : rentMoves({ id, mega: mega || 0, lv: FACLV, sh: 0, iv: [15, 15, 15, 15, 15, 15], ev: [0, 0, 0, 0, 0, 0], nat: 0 }, 1));
+  const cls = c => mv.filter(x => MOVES[x][4] === c && !FIXED[MOVES[x][0]] && MOVES[x][0] !== 'Foul Play').length, phys = Math.abs(atk - b[3]) < 15 && cls(1) !== cls(2) ? cls(1) > cls(2) : atk >= b[3];
+  const up = b[5] >= 100 && Math.abs(atk - b[3]) < 25 ? 5 : phys ? 1 : 3, dn = phys ? 3 : 1;
   const n = NAT.findIndex((_, k) => natUp(k) === up && natDn(k) === dn); return n < 0 ? 0 : n;
 }
 function facAce(r, used, tys) {
