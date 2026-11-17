@@ -449,9 +449,76 @@ function reqLv(id) {
   const own = d[5] || [0, 18, 34][st];
   return st === 2 ? Math.max(own, reqLv(d[4]) + 1) : own;
 }
+/* NIVÅET PÅ ET MØTE (steg 1c.6, Jazz 16.11): det følger arten mer enn laget, så en Dratini ikke kommer på nivå 68.
+   - En som skal utvikle seg, kommer under nivået den utvikler seg på (Dratini under 30), en i midten mellom de to (Dragonair 30–54), og en
+     ferdig utviklet litt over nivået den blir til på. Laget teller bare litt (pull), og aldri over lagets høyeste nivå.
+   - Jo sjeldnere, jo lavere i spennet (WILDDOWN per klasse). Epic i første form kommer på WILDEPIC (5–15) og trenes opp fra bunnen.
+   - De legendariske kommer på et fast nivå uansett lag: LEGLV[0] for de vanlige og LEGLV[1] for de største (raidklasse 2 og over).
+   Pakkene, premiene og raidfangsten bruker samme regel (alle går gjennom genEnc). Egg klekkes som før på nivå 1.
+   Før: rundt lagets høyeste nivå, litt lavere jo sjeldnere (60 % for de legendariske). */
+const LEGLV = [40, 50], WILDEPIC = [5, 15], WILDDOWN = [1, 0.9, 0.65, 0.3, 0.3];
 function wildLv(id, t) {
-  const P = refLv(), base = [P - rnd(3), P - 1 - rnd(3), Math.round(P * 0.75) - rnd(2), Math.round(P * 0.65) - rnd(2), Math.round(P * 0.6)][t];
-  return Math.max(2, Math.min(P, Math.max(base, reqLv(id))));
+  const P = Math.max(2, refLv());
+  if (isLeg(id)) return typeof LEG !== 'undefined' && LEG[id] && LEG[id].t >= 2 ? LEGLV[1] : LEGLV[0];
+  const lo = Math.max(2, reqLv(id)), st = stageOf(id) && reqLv(id) > 1 ? 1 : 0, nx = (EVO[id] || []).map(reqLv).filter(x => x > lo), hi = nx.length ? Math.min(...nx) - 1 : lo + (st ? 10 : 22);
+  let lv;
+  if (t >= 3 && !st) lv = WILDEPIC[0] + rnd(WILDEPIC[1] - WILDEPIC[0] + 1);
+  else { const pull = Math.max(0, Math.min(1, (P - lo) / 50)); lv = lo + (hi - lo) * (0.15 + 0.45 * pull + 0.3 * Math.random()) * WILDDOWN[t]; }
+  return Math.max(2, Math.min(P, Math.round(lv)));
+}
+/* ARTEN STYRER KASTET (steg 1c.6, C2): hvert møte har et lynne som leses av artens verdier og typer, og det endrer måleren, ikke tiden.
+     skit   sky (rask og skjør, som Abra): to kast, så er den borte, men sonen er bred
+     heavy  tung (mye HP, eller hard og treg, som Snorlax): fire kast, treg markør og liten sone
+     rest   urolig (fugler og raske insekter): markøren skifter fart
+     fierce hissig (mye Attack, som Mankey): sonen flytter seg
+     calm   rolig: som før
+   tr = kast, g og au = tillegg til grønn og gull sone (prosent), sp = ganger farten, jit/drift = bevegelsen (aim i ui.js).
+   Lynnet settes når møtet lages (e.tp), så møter som ventet fra før, er som de var. De legendariske har alltid fire kast og rolig måler. */
+const TEMPER = {
+  calm: { n: 'Calm', d: 'green = good · gold = perfect', tr: 3 },
+  skit: { n: 'Skittish', d: 'Two throws, then it is gone. A wide zone.', tr: 2, g: 12, au: 3 },
+  heavy: { n: 'Heavy', d: 'Slow marker, small zone, four throws.', tr: 4, g: -8, sp: 0.68 },
+  rest: { n: 'Restless', d: 'The marker changes speed.', tr: 3, g: 2, jit: 1 },
+  fierce: { n: 'Fierce', d: 'The zone moves. Wait for it.', tr: 3, g: 4, drift: 1 }
+};
+function temperOf(id) {
+  if (isLeg(id) || typeof BST === 'undefined') return 'calm';
+  const b = BST[id - 1], s = b.reduce((a, c) => a + c, 0), d = D(id), ty = t => d[1] === t || d[2] === t;
+  if (b[5] / s >= 0.22 && (b[0] + b[2]) / s <= 0.24) return 'skit';
+  if (b[0] / s >= 0.24 || ((b[0] + b[2]) / s >= 0.42 && b[5] / s <= 0.12)) return 'heavy';
+  if (ty(2) || (ty(6) && b[5] / s >= 0.18)) return 'rest';
+  if (b[1] / s >= 0.23 && b[1] >= b[3] * 1.5) return 'fierce';
+  return 'calm';
+}
+const encTr = e => isLeg(e.id) ? 4 : (TEMPER[e.tp] || TEMPER.calm).tr;
+/* KJEDER SOM I POKÉ RADAR (steg 1c.6, Jazz 15.11): fanger du samme art flere ganger på rad, stiger shiny-sjansen.
+   S.chain = { id: første form i linja, n: lengden, sg: hvordan tua dens rister (0–2) }. En fangst starter en kjede når ingen er i gang.
+   I gresset (radarScreen i ui.js) rister én tue som kjeden: går du inn der, møter du arten igjen, og møtet BRUKER OPP et av dem som venter
+   (chainFuel: et vanlig møte av samme klasse eller sjeldnere, det minst sjeldne først, aldri en shiny, en fra en pakke eller en premie).
+   Slik blir de vanlige verdt noe, og kjeden lager ikke flere eller sjeldnere Pokémon enn du ellers ville fått.
+   Kjeden ryker når den stikker av eller slippes, eller når du går inn i en annen tue mens kjedetua står der. Finnes det ikke noe å bruke opp,
+   hviler kjeden. chainOdds(n) = shiny-sjansen for neste i kjeden: grunnsjansen ganger 1 + CHAINK[0]·n + CHAINK[1]·n², aldri over SHINYCAP
+   (uten andre bonuser: 1 av 79 ved 10, 1 av 37 ved 20, 1 av 21 ved 30 og taket 1 av 15 fra 38; rundt én shiny i en kjede på 40).
+   En fanget i kjeden fødes også litt bedre: hver IV er minst CHAINIV[0]·n (høyst CHAINIV[1]), og fra CHAINEGG[0] kan den kunne et egg-angrep. */
+const CHAINK = [0.2, 0.008], CHAINIV = [0.5, 15], CHAINEGG = [5, 0.05, 0.5];
+const chainOdds = n => Math.min(SHINYCAP, shinyOdds() * (1 + CHAINK[0] * n + CHAINK[1] * n * n));
+const plainEnc = e => !e.sh && !e.myst && !e.sure && !e.pk && !e.iv && !e.rr && e.ch == null && e.t < 4 && !isLeg(e.id);
+function chainFuel() { const C = S.chain; if (!C) return null; const t = tierOf(C.id); let f = null; for (const e of S.pend) if (plainEnc(e) && e.t >= t && (!f || e.t < f.t)) f = e; return f; }
+function chainEnter() {
+  const C = S.chain, f = chainFuel(); if (!C || !f) return null;
+  const e = genEnc({ ids: [C.id] }); e.sh = Math.random() < chainOdds(C.n) ? 1 : 0; e.ch = C.n; S.pend[S.pend.indexOf(f)] = e; save();
+  return e;
+}
+function chainCaught(e, mon) {
+  const b = lineRoot(e.id), C = S.chain;
+  if (e.ch != null && C && C.id === b) {
+    const n0 = C.n; C.n++; S.chbest = Math.max(S.chbest || 0, C.n); let egg = -1;
+    if (!mon.sh) { const fl = Math.min(CHAINIV[1], Math.floor(n0 * CHAINIV[0])); if (fl > 0) mon.iv = mon.iv.map(v => Math.max(v, fl)); }
+    if (n0 >= CHAINEGG[0] && Math.random() < Math.min(CHAINEGG[2], CHAINEGG[1] * n0) && typeof eggGive === 'function') egg = eggGive(mon);
+    return { n: C.n, egg };
+  }
+  if (!C && !isLeg(e.id) && e.t < 4 && !e.sure) { S.chain = { id: b, n: 1, sg: rnd(3) }; return { n: 1, egg: -1, start: 1 }; }
+  return null;
 }
 
 /* ---------- Tilstand ---------- */
@@ -498,6 +565,11 @@ function migrate11() {
 /* SPRÅK: forklaringer og introduksjoner kan leses på norsk (S.lang = 'no'). Navn, typer, angrep, knapper og faner står alltid på engelsk.
    tl(tekst, verdier): den engelske teksten er nøkkelen, LNO[tekst] den norske; {navn} byttes med verdier.navn. Mangler en oversettelse, står den engelske. */
 const LNO = {
+  // Steg 1c.6: radar-gresset og kjedene
+  'One patch moves like your chain. Step in there to meet the same Pokémon again. Any other patch ends the chain.': 'Én tue rører seg som kjeden din. Gå inn der for å møte den samme Pokémonen igjen. En annen tue avslutter kjeden.',
+  'Step into a patch that moves. A sparkle means a shiny is in there.': 'Gå inn i en tue som rører seg. Glitter betyr at det er en shiny der.',
+  'Resting: it needs a waiting encounter as common as itself.': 'Hviler: den trenger et møte som venter, like vanlig som den selv.',
+  'Catch the same Pokémon again and again, and the odds of a shiny climb with the chain.': 'Fang den samme Pokémonen igjen og igjen, så stiger sjansen for en shiny med kjeden.',
   // Steg 1c.5: utfordreren, veiskillet, den ukjente og premieballene
   'A team built around a shiny. Win, and its kind waits in your grass as a shiny, with double coins. Lose, and the lap simply goes on.': 'Et lag bygget rundt en shiny. Vinner du, venter arten som shiny i gresset, med doble mynter. Taper du, går runden bare videre.',
   'Two trainers are waiting. Pick the one you want to battle.': 'To trenere venter. Velg den du vil møte.',
@@ -1221,12 +1293,12 @@ function genEnc(o = {}) {
   const evoP = o.egg || o.ids || o.leg ? 0 : o.evo != null ? o.evo : EVOLUCK * L;
   if (evoP > 0 && Math.random() < evoP) for (let nx; (nx = (EVO[id] || []).filter(y => reqLv(y) <= P && !isLeg(y) && S.regions.includes(regOf(y)))).length;) id = nx[rnd(nx.length)];
   const lv = o.egg ? 1 : wildLv(id, tierOf(id));
-  return { id, lv, sh: Math.random() < Math.min(SHINYCAP, shinyOdds() * (o.egg ? 4 : 1) * (o.shm || 1) * (typeof evShiny === 'function' ? evShiny() : 1)) ? 1 : 0, t: tierOf(id), tr: isLeg(id) ? 4 : 3, g: rollG(id) };
+  return { id, lv, sh: Math.random() < Math.min(SHINYCAP, shinyOdds() * (o.egg ? 4 : 1) * (o.shm || 1) * (typeof evShiny === 'function' ? evShiny() : 1)) ? 1 : 0, t: tierOf(id), tp: temperOf(id), tr: isLeg(id) ? 4 : TEMPER[temperOf(id)].tr, g: rollG(id) };
 }
 /* Sjansen for fangst. zone: 0 = bom, 1 = grønn sone, 2 = gull. */
 const catchP = (id, ball, zone, e) => ball === 'master' || (e && e.sure) ? 1 : Math.min(0.97, Math.pow(D(id)[3] / 255, 0.45) * BALLM[ball] * (ball === 'dusk' && isLeg(id) ? LEGBALL : 1) * (e && e.fed ? BERRYM : 1) * [0.5, 1, 1.6][zone]);
 /* Sonene på timing-måleren i prosent: grønn bredde og gull bredde. Sjeldnere = smalere og raskere. */
-const zones = (e, ball) => ({ g: Math.max(14, 36 - e.t * 5 + (ball === 'great' ? 4 : ball === 'poke' ? 0 : 8)), au: 7, sp: 0.9 + e.t * 0.22 });
+const zones = (e, ball) => { const T = TEMPER[e.tp] || TEMPER.calm; return { g: Math.max(12, Math.max(14, 36 - e.t * 5 + (ball === 'great' ? 4 : ball === 'poke' ? 0 : 8)) + (T.g || 0)), au: 7 + (T.au || 0), sp: (0.9 + e.t * 0.22) * (T.sp || 1), jit: T.jit || 0, drift: T.drift || 0 }; };
 /* Det en fangst gir utover Pokémonen: mynter for en ny art (NEWCOIN etter sjeldenhet), for et perfekt kast (PERFCOIN), og for flere fangster på rad uten
    at noen slipper unna (STREAKC per fangst fra den tredje, høyst STREAKMAX). S.cst = rekka akkurat nå.
    Kritisk fangst: en sjelden gang (critP, litt oftere jo flere arter du har) sitter ballen ekstra godt, og sjansen er CRITM ganger så stor. */
@@ -1242,20 +1314,20 @@ function throwBall(e, ball, zone) {
   const crit = Math.random() < critP(), p = ball === 'master' ? 1 : Math.min(0.97, catchP(e.id, ball, zone, e) * (crit ? CRITM : 1)), ok = Math.random() < p;
   if (zone === 2) achInit().pf++;
   S.seen[e.id] = 1;
-  let mon = null, isNew = false; const bonus = { c: 0, why: [] };
+  let mon = null, isNew = false, chn = null, chb = 0; const bonus = { c: 0, why: [] };
   if (ok) {
     isNew = !S.caught[e.id]; mon = addMon(e.id, e.lv, e.sh, 0, e.g); if (e.pk) mon.pk = 1;
     if (e.iv && e.iv.length === 6) { mon.iv = e.iv.slice(); if (e.nat != null) mon.nat = e.nat; if (e.sz != null && !isLeg(e.id)) mon.sz = e.sz; else delete mon.sz; }
-    dropPend(e);
+    dropPend(e); chn = chainCaught(e, mon);
     S.cst = (S.cst || 0) + 1;
     const add = (n, s) => { if (n > 0) { bonus.c += n; bonus.why.push(`${s} +${n}`); } };
     if (isNew) add(NEWCOIN[e.t] || 0, 'New species');
     if (zone === 2) add(PERFCOIN, 'Perfect throw');
     if (S.cst >= 3) add(Math.min(STREAKMAX, STREAKC * S.cst), `${S.cst} in a row`);
     S.coins += bonus.c;
-  } else if (e.tr <= 0) { dropPend(e); S.cst = 0; }
+  } else if (e.tr <= 0) { dropPend(e); S.cst = 0; if (e.ch != null && S.chain) { chb = S.chain.n; S.chain = null; } }
   save();
-  return { ok, p, mon, isNew, fled: !ok && e.tr <= 0, crit: crit && ok, bonus };
+  return { ok, p, mon, isNew, fled: !ok && e.tr <= 0, crit: crit && ok, bonus, chain: chn, chb };
 }
 /* Golden Razz Berry: ett kast til, og litt bedre sjanse resten av møtet. Én per møte. */
 function feedBerry(e) { if (!e || e.fed || !(S.items.gberry > 0) || e.tr <= 0) return false; S.items.gberry--; e.fed = 1; e.tr++; save(); return true; }

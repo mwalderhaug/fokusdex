@@ -186,6 +186,7 @@ function raidScreen() {
       ${dom ? `<p class="sm" style="margin-top:6px"><b>${dom.n}.</b> The place fights with it: every third turn ${dom.d}. Below half HP it becomes enraged, grows stronger, and it happens every second turn.</p>` : ''}
       <p class="sm" style="margin-top:6px">Win: it is yours, with ${nb(Math.round(RAIDCOIN[t - 1] * diff().coin))} coins, ${RAIDCANDY[t - 1]} Rare Candy and a lot of XP for the whole team. Lose: ${lose}</p></div>
     ${team}`, 'tint', L.cc);
+  if (V.sh === 1 && BT.rsh !== R.at + ':' + R.id) { BT.rsh = R.at + ':' + R.id; setTimeout(() => { const h = $('#ov .raid-sp'); if (h) { h.style.position = 'relative'; shinyFx(h); } }, 450); }
 }
 /* ---------- Rundt de legendariske i kampen (bildene ligger i raidx.js, reglene for stedet i league.js) ---------- */
 /* Hvilken entré den legendariske har, og hvordan figuren kommer inn i det den viser seg. */
@@ -1378,6 +1379,7 @@ async function playOne(B, e) {
       cry(b.id, 200, big ? 0.5 : 0.35); if (big) shake(500 / spdF(), 4, 1);
     }
     await bwait(380); paintBox(side);
+    if (side === 'foe' && b.sh === 1 && sp.isConnected) { shinyFx(sp); await bwait(650); }
     if (B.mode !== 'lab') S.seen[b.id] = 1;
     await bwait(big ? 1100 : 620);
     sp.classList.remove('in', ...Object.values(ENTC));
@@ -1843,8 +1845,9 @@ function rulesSheet() {
       ${row('At Lv 100', 'perfect IV: +31 in a stat<br>full EVs: +63 in a stat')}${row('One EV', `${EVP} coins`)}${row('Hyper Training', `${nb(HTP)} coins a stat, from Lv ${HTLV}`)}${row('One Pokémon, fully trained', `${nb(EVTOT * EVP)} coins for the EVs<br>up to ${nb(6 * HTP)} for Hyper Training`)}</div>
     <div class="card stack"><b>Shiny Pokémon</b><p class="sm">A shiny is born with perfect IVs in every stat and has ${Math.round((SHINYST - 1) * 100)} % higher stats than an ordinary one of its kind (a shiny Arceus ${Math.round((SHINYARC - 1) * 100)} %, and it glows), so the best Pokémon you can own is a fully trained shiny. The odds follow your streak, and incense from the Shop multiplies them for a while in the grass, in packs and in eggs. They can never pass 1 in ${Math.round(1 / SHINYCAP)}.</p>
       ${row('Incense', ['glint', 'gleam', 'radiant'].map(k => `×${SHOP[k].sb[0]} for ${SHOP[k].sb[1]} h`).join(' · '))}${row('Prism Lure', `the next raid: 1 in ${Math.round(1 / PRISMP)}`)}${row('Sold', 'five times the price')}</div>
-    <div class="card stack"><b>Catching</b><p class="sm">Every encounter gives you three throws, four for a legendary. Stop the marker in the green zone for a good throw and in the gold for a perfect one. The dots at the top show how many are still waiting. Who they are, and how rare, you see when you meet them. A catch shows the Pokémon's potential (its IVs) in stars: from Lv ${HTLV} Hyper Training can make up for low ones.</p>
+    <div class="card stack"><b>Catching</b><p class="sm">Every encounter gives you three throws, four for a legendary. The Pokémon itself shapes the throw: a skittish one gives you two throws and a wide zone, a heavy one four throws and a small zone, a restless one a marker that changes speed, and a fierce one a zone that moves. Its level follows the species, not your team: one that still evolves comes below the level it evolves at, the rarest come low, and legendaries come at Lv ${LEGLV[0]} or ${LEGLV[1]}. Stop the marker in the green zone for a good throw and in the gold for a perfect one. The dots at the top show how many are still waiting. Who they are, and how rare, you see when you meet them. A catch shows the Pokémon's potential (its IVs) in stars: from Lv ${HTLV} Hyper Training can make up for low ones.</p>
       ${row('New species', NEWCOIN.map((c, i) => `${TIERS[i].toLowerCase()} ${c}`).join(' · ') + ' coins')}
+      ${row('Chains', `the same Pokémon again and again: shiny 1 in ${Math.round(1 / chainOdds(10))} at 10, 1 in ${Math.round(1 / chainOdds(20))} at 20, 1 in ${Math.round(1 / chainOdds(40))} at 40`)}
       ${row('Perfect throw', `+${PERFCOIN} coins`)}${row('Catches in a row', `+${STREAKC} coins each from the third, up to ${STREAKMAX}`)}
       ${row('Critical capture', 'now and then the ball holds extra well')}
       ${row('Dusk Ball', `Ultra Ball odds, ×${LEGBALL} on legendary Pokémon`)}${row('Golden Razz Berry', `one more throw and ×${BERRYM} odds, once per encounter`)}${row('Master Ball', `never fails · you can carry one<br>from Cynthia and Ghetsis the first time, or the Shop from trainer level ${SHOP.master.lv}`)}${row('Lure · Super Lure', `${LUREN} sessions: one more encounter · rarer Pokémon`)}</div>

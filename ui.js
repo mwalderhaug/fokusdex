@@ -166,6 +166,7 @@ const sfx = {
   done: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, 0.2, 0.06, 'triangle')),
   event: () => { [392, 523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, i * 0.09, 0.22, 0.05, 'triangle')); tone(1568, 0.58, 0.5, 0.04, 'square'); tone(784, 0.58, 0.6, 0.04, 'triangle'); },
   found: () => { tone(880, 0, 0.07); tone(1175, 0.08, 0.09); },
+  rustle: () => { noise(0, 0.18, 0.02, 1800, 5200); noise(0.24, 0.14, 0.016, 2200, 6000); },
   appear: () => { for (let i = 0; i < 10; i++) tone(i % 2 ? 330 + i * 40 : 1320 - i * 60, i * 0.035, 0.04, 0.03); noise(0.35, 0.3, 0.025, 600, 3000); },
   thr: () => { noise(0, 0.28, 0.05, 3500, 500); tone(600, 0.05, 0.22, 0.02, 'triangle', 220); },
   wob: n => { tone(170 + (n || 0) * 25, 0, 0.07, 0.06, 'triangle'); tone(2400, 0, 0.012, 0.02); },
@@ -1456,6 +1457,7 @@ function pkHero(el, e) {
   const o = $('#pko'), b = $('#pkbig'); if (!o || !b) return;
   o.style.setProperty('--hc', e.sh ? 'var(--gold)' : e.myst ? 'var(--r4)' : e.t >= 3 ? `var(--r${e.t})` : 'var(--gold)');
   b.innerHTML = `<b>${pkWord(e)}</b>`; o.classList.remove('bigr'); void o.offsetWidth; o.classList.add('bigr'); el.classList.add('hero');
+  if (e.sh === 1) { if (getComputedStyle(el).position === 'static') el.style.position = 'relative'; shinyFx(el); }
   clearTimeout(pkHero.t); pkHero.t = setTimeout(() => { const q = $('#pko'); if (q) q.classList.remove('bigr'); el.classList.remove('hero'); }, 1700);
 }
 /* Alle kortene i pakken er snudd: neste pakke, eller slutten (big = det siste kortet fikk sitt øyeblikk, som får stå ferdig). */
@@ -1634,10 +1636,41 @@ const E = { e: null, ball: 'poke', c: 50, pos: 50, raf: 0, t0: 0, busy: false, d
 /* Master Ball velges aldri av seg selv, bare når den er den eneste som er igjen. */
 function bestBall() { return ['poke', 'great', 'ultra', 'dusk'].find(k => S.items[k] > 0) || (S.items.master > 0 ? 'master' : 'poke'); }
 function encQuiet() { if (E.mus) { E.mus = 0; if (typeof stopMusic === 'function') stopMusic(); } }
+/* ---------- Radar-gresset (steg 1c.6, C1) ----------
+   Før et møte rister gresset på noen steder, og du velger hvor du går inn: hver tue som rister, er ett av møtene som venter (de tre første),
+   og en tue med glitter har en shiny. Er en kjede i gang og det finnes et møte å bruke opp (chainFuel), rister én tue slik kjeden gjør
+   (C.sg: tre ulike bevegelser, den samme vises ved kjedelinja øverst). Går du inn der, møter du arten igjen; en annen tue avslutter kjeden.
+   Ett trykk, så er møtet som før. Radaren kommer når du har fanget RADMIN arter, og bare når det er noe å velge (to møter, eller en kjede).
+   U.rad = { items: [{ k: 'chain' | 'enc', e, sg, sp }], pos: plassen til hver, chain: kjedetua står der }. */
+const RADMIN = 6, RADPOS = [[8, 10], [57, 4], [33, 37], [66, 50], [5, 56]];
+const radarOn = () => Object.keys(S.caught).length >= RADMIN;
+function radarOpen() {
+  const C = S.chain, fuel = chainFuel(), items = [], pos = [0, 1, 2, 3, 4].sort(() => Math.random() - 0.5), csg = C ? C.sg || 0 : 0;
+  if (fuel) items.push({ k: 'chain', sg: csg });
+  S.pend.slice(0, fuel ? 2 : 3).forEach(e => items.push({ k: 'enc', e, sg: fuel ? (csg + 1 + rnd(2)) % 3 : rnd(3), sp: e.sh === 1 }));
+  U.rad = { items, pos, chain: !!fuel };
+  radarScreen(); sfx.rustle();
+}
+function radarScreen() {
+  const R = U.rad, C = S.chain; if (!R) return hunt();
+  const at = {}; R.items.forEach((it, i) => { at[R.pos[i]] = i; });
+  const bl = '<i></i><i></i><i></i><i></i>';
+  const field = RADPOS.map((p, j) => { const i = at[j], it = i == null ? null : R.items[i];
+    return it ? `<button type="button" class="rtf sg${it.sg}${it.sp ? ' sp' : ''}${it.k === 'chain' && calm() ? ' ring' : ''}" style="left:${p[0]}%;top:${p[1]}%" data-a="rad" data-i="${i}" aria-label="${it.k === 'chain' ? 'The patch that moves like your chain' : it.sp ? 'A moving patch with a sparkle' : 'A moving patch'}">${bl}</button>` : `<span class="rtf still" style="left:${p[0]}%;top:${p[1]}%" aria-hidden="true">${bl}</span>`; }).join('');
+  ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="later">Save for later</button><span class="pill tn">${S.pend.length} ${S.pend.length === 1 ? 'encounter' : 'encounters'} waiting</span></div>
+    <div><h1 class="big">The grass is moving.</h1><p class="mut" style="margin-top:6px">${R.chain ? tl('One patch moves like your chain. Step in there to meet the same Pokémon again. Any other patch ends the chain.') : tl('Step into a patch that moves. A sparkle means a shiny is in there.')}</p></div>
+    ${C ? `<div class="rchn"><span class="rtf sg${C.sg || 0} mini" aria-hidden="true">${bl}</span><span class="sp"><b>Chain ${C.n} · ${esc(D(C.id)[0])}</b><span class="sm tn">${R.chain ? `the next one is shiny 1 in ${Math.max(1, Math.round(1 / chainOdds(C.n)))}` : tl('Resting: it needs a waiting encounter as common as itself.')}</span></span>${spr(C.id, { s: '40px' })}</div>` : ''}
+    <div class="rfield">${field}</div>
+    ${tipEl('rad', tl('Catch the same Pokémon again and again, and the odds of a shiny climb with the chain.'), 2)}`, 'tint', 'var(--r1)');
+}
 function hunt() {
-  encQuiet();
+  encQuiet(); U.rad = null;
   if (!S.pend.length) { closeOv(); return render(); }
-  E.e = S.pend[0]; E.done = null; E.busy = true;
+  if (radarOn() && (S.pend.length >= 2 || chainFuel())) return radarOpen();
+  meet(S.pend[0]);
+}
+function meet(e) {
+  E.e = e; E.done = null; E.busy = true;
   if (!(S.items[E.ball] > 0)) E.ball = bestBall();
   if (E.e.myst && typeof legendIntro === 'function' && typeof LEG !== 'undefined' && LEG[E.e.id]) return mystIntro(E.e);
   delete E.e.myst;
@@ -1666,15 +1699,17 @@ function drawEnc(reveal) {
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="later">Save for later</button><span class="row" style="gap:8px">${(S.cst || 0) >= 2 ? `<span class="pill tn estk">${S.cst} in a row</span>` : ''}<span class="pill tn" id="e-left">${S.pend.length} ${S.pend.length === 1 ? 'encounter' : 'encounters'} left</span></span></div>
     ${q ? `<div class="encq" aria-label="Encounters waiting">${q}</div>` : ''}
     <div class="mid r${e.t}${e.sh ? ' shy' : ''}"><div class="stage${reveal ? ' rev' : ''}" id="e-stage">${spr(e.id, { ani: 1, sh: e.sh, mega: defForm(e.id) })}<span class="tball">${ballEl(E.ball, '54px')}</span><span class="stars" id="e-stars"></span><span class="egrass" aria-hidden="true">${'<i></i>'.repeat(15)}</span>${reveal && call ? `<span class="ecall">${call}!</span>` : ''}</div>
-      <div><div class="ename">${e.sh === 2 ? 'Dark ' : e.sh ? 'Shiny ' : ''}${esc(d[0])}${gs(e)}</div><div class="row" style="justify-content:center;margin-top:8px;flex-wrap:wrap;gap:6px">${tierEl(e.id)} ${types(e.id)} <span class="pill tn">Level ${e.lv}</span></div>
-      <div id="e-info"><p class="sm" style="margin-top:8px" id="e-msg">${S.caught[e.id] ? (n ? `You already have ${n}.` : 'You have had it before.') : `<b style="color:var(--sage)">New to your collection</b> · +${NEWCOIN[e.t]} coins if you catch it`}</p>
-      <div class="hearts" id="e-hearts" aria-label="Attempts left" style="margin-top:10px">${Array.from({ length: (isLeg(e.id) ? 4 : 3) + (e.fed ? 1 : 0) }, (_, i) => `<i class="${i < e.tr ? '' : 'off'}"></i>`).join('')}</div>${e.fed ? '<p class="sm tn" style="margin-top:6px;color:var(--gold)">It ate a Golden Razz Berry: one more throw, and better odds.</p>' : ''}</div></div></div>
+      <div><div class="ename">${e.sh === 2 ? 'Dark ' : e.sh ? 'Shiny ' : ''}${esc(d[0])}${gs(e)}</div><div class="row" style="justify-content:center;margin-top:8px;flex-wrap:wrap;gap:6px">${tierEl(e.id)} ${types(e.id)} <span class="pill tn">Level ${e.lv}</span>${e.tp && e.tp !== 'calm' && !isLeg(e.id) ? `<span class="pill tn tpp tp-${e.tp}">${TEMPER[e.tp].n}</span>` : ''}</div>
+      <div id="e-info"><p class="sm" style="margin-top:8px" id="e-msg">${e.ch != null && S.chain ? `<b style="color:var(--gold)">Chain ${S.chain.n}</b> · catch it to keep the chain going` : S.caught[e.id] ? (n ? `You already have ${n}.` : 'You have had it before.') : `<b style="color:var(--sage)">New to your collection</b> · +${NEWCOIN[e.t]} coins if you catch it`}</p>
+      <div class="hearts" id="e-hearts" aria-label="Attempts left" style="margin-top:10px">${Array.from({ length: encTr(e) + (e.fed ? 1 : 0) }, (_, i) => `<i class="${i < e.tr ? '' : 'off'}"></i>`).join('')}</div>${e.fed ? '<p class="sm tn" style="margin-top:6px;color:var(--gold)">It ate a Golden Razz Berry: one more throw, and better odds.</p>' : ''}</div></div></div>
     <div id="e-ctl" style="display:flex;flex-direction:column;gap:12px">${noBalls ? `<p class="sm" style="text-align:center">You are out of balls. Buy more in the shop and the encounter will wait here.</p><div class="acts"><button type="button" class="btn pri" data-a="toshop">To the shop</button><button type="button" class="btn nf" data-a="skip">Let it go</button></div>` : `
-      <div class="row sm tn" style="justify-content:space-between;gap:10px"><span id="e-odds">${oddsEl(e)}</span><span style="text-align:right">${know() === 0 && S.mons.length < 3 ? tl('Tap Throw when the marker is over the green') : 'green = good · gold = perfect'}</span></div>
+      <div class="row sm tn" style="justify-content:space-between;gap:10px"><span id="e-odds">${oddsEl(e)}</span><span style="text-align:right">${know() === 0 && S.mons.length < 3 ? tl('Tap Throw when the marker is over the green') : e.tp && TEMPER[e.tp] && !isLeg(e.id) ? TEMPER[e.tp].d : 'green = good · gold = perfect'}</span></div>
       <button type="button" class="meter" data-a="throw" aria-label="Throw when the marker is in the green zone"><span class="z" id="e-z"></span><span class="g" id="e-g"></span><span class="m" id="e-m"></span></button>
       <div class="balls">${BALLS.filter(k => S.items[k] > 0 || k === 'poke' || k === 'great' || k === 'ultra').map(k => `<button type="button" data-a="ball" data-k="${k}" aria-pressed="${E.ball === k}" aria-label="${SHOP[k].n}"${S.items[k] > 0 ? '' : ' disabled'}>${ballEl(k, '28px')}<span class="tn">${S.items[k]}</span></button>`).join('')}</div>
       ${S.items.gberry > 0 && !e.fed ? `<button type="button" class="btn sm2 wide" data-a="berry">Feed a Golden Razz Berry · one more throw (${S.items.gberry})</button>` : ''}
       <div class="acts"><button type="button" class="btn gold" data-a="throw">Throw</button><button type="button" class="btn nf" data-a="skip">Let it go</button></div>`}</div>`, 'tint', `var(--r${e.t})`);
+  /* En shiny synes med en gang (steg 1c.6): stjernene og lyden i det den dukker opp. */
+  if (reveal && e.sh === 1) setTimeout(() => { if (E.e === e && $('#e-stage')) shinyFx($('#e-stage')); }, 520);
 }
 /* Hvor god sjansen er med ballen som er valgt (i den grønne sonen). */
 const oddsEl = e => { const o = oddsOf(e, E.ball); return `Catch odds: <b class="od${o}">${['tough', 'even', 'good'][o]}</b>`; };
@@ -1685,16 +1720,20 @@ function catchCard(r, e) {
     ${potOn() ? `<div class="epot" role="img" aria-label="Born with ${st} of 5 stars: ${j.t}"><span class="sm">Born with</span><span class="epot-s">${Array.from({ length: 5 }, (_, i) => `<i class="${i < st ? 'on' : ''}" style="animation-delay:${0.25 + i * 0.16}s"></i>`).join('')}</span><b class="epot-t" style="animation-delay:${0.3 + st * 0.16}s">${j.t}</b></div>
     <div class="sm tn ecard-n">${NAT[m.nat]} nature · best stat ${SN[j.best]}${szTag(m)}</div>` : szOn() && szOf(m) !== 1 ? `<div class="sm tn ecard-n">${szTag(m)}</div>` : ''}
     ${r.bonus.c ? `<div class="ecoin"><b>+${coinEl(r.bonus.c)}</b><span class="sm">${esc(r.bonus.why.join(' · '))}</span></div>` : ''}
+    ${r.chain && (r.chain.n >= 2 || radarOn()) ? `<div class="echn"><b>Chain ${r.chain.n}</b><span class="sm tn">${r.chain.start ? 'meet it again to build the chain' : `next one shiny 1 in ${Math.max(1, Math.round(1 / chainOdds(r.chain.n)))}`}${r.chain.egg >= 0 ? ' · it knows ' + esc(MOVES[r.chain.egg][0]) : ''}</span></div>` : ''}
     <div class="sm">${r.isNew ? `<b style="color:var(--sage)">New species</b> · ${REG[reg].n} ${dexCount(reg)} of ${tot}` : r.took ? `It has taken the place of your Mewtwo: the same Pokémon at Lv ${m.lv}, now dark, with perfect IVs and full training.` : `You have ${n} now. A duplicate sells for ${nb(sellValue(m))} coins.`}</div></div>`;
 }
 function aim() {
   cancelAnimationFrame(E.raf);
   if (!$('#e-m')) return;
-  const z = zones(E.e, E.ball);
-  E.c = 22 + Math.random() * 56; E.t0 = performance.now();
-  $('#e-z').style.cssText = `left:${E.c - z.g / 2}%;width:${z.g}%`;
-  $('#e-g').style.cssText = `left:${E.c - z.au / 2}%;width:${z.au}%`;
-  (function f(t) { const m = $('#e-m'); if (!m || E.busy) return; E.pos = 50 + 48 * Math.sin((t - E.t0) / 1000 * z.sp * 2.4); m.style.left = E.pos + '%'; E.raf = requestAnimationFrame(f); })(E.t0);
+  const z = zones(E.e, E.ball), c0 = 22 + Math.random() * 56;
+  E.c = c0; E.t0 = performance.now();
+  const put = () => { const a = $('#e-z'), b = $('#e-g'); if (!a || !b) return; a.style.cssText = `left:${E.c - z.g / 2}%;width:${z.g}%`; b.style.cssText = `left:${E.c - z.au / 2}%;width:${z.au}%`; };
+  put();
+  (function f(t) { const m = $('#e-m'); if (!m || E.busy) return; const s = (t - E.t0) / 1000;
+    E.pos = 50 + 48 * Math.sin(s * z.sp * 2.4 + (z.jit ? 0.9 * Math.sin(s * 3.1) : 0)); m.style.left = E.pos + '%';
+    if (z.drift) { E.c = Math.max(z.g / 2 + 2, Math.min(98 - z.g / 2, c0 + 13 * Math.sin(s * 1.5))); put(); }
+    E.raf = requestAnimationFrame(f); })(E.t0);
 }
 function doThrow() {
   if (E.busy || !E.e || E.done) return;
@@ -1721,7 +1760,7 @@ function doThrow() {
       cry(e.id, 650); E.done = 'got'; $('#e-left').textContent = S.pend.length ? `${S.pend.length} ${S.pend.length === 1 ? 'encounter' : 'encounters'} left` : 'Last encounter';
     } else {
       st.className = 'stage out'; if (r.fled) sfx.flee(); else sfx.fail();
-      if (r.fled) { setTimeout(() => { st.className = 'stage fled'; }, 380); msg.textContent = 'It ran away.'; E.done = 'fled'; }
+      if (r.fled) { setTimeout(() => { st.className = 'stage fled'; }, 380); msg.textContent = r.chb ? `It ran away, and your chain of ${r.chb} ended.` : 'It ran away.'; E.done = 'fled'; }
       else { msg.textContent = `It broke free. ${e.tr} ${e.tr === 1 ? 'attempt' : 'attempts'} left.`; }
     }
     setTimeout(() => {
@@ -1773,7 +1812,12 @@ const A = {
   hunt: () => { if (jOn() && (S.jx || {}).sh === 1 && $('#sheet').hidden) { snd('ok'); closeOv(); render(); jAfter(); return; } closeSheet(); hunt(); },
   jok: () => { closeSheet(); if (jAfter() || incSheet()) return; const d = U.jfrom === 'dn'; U.jfrom = ''; if (d && has('battles') && S.party.length && openNeed() <= 0 && (!S.lad.day || (dayOld() && dayDone()))) BA.bdone(); else if (typeof raidArrive === 'function' && raidGo()) raidArrive(); },
   later: () => { cancelAnimationFrame(E.raf); encQuiet(); closeOv(); render(); },
-  skip: () => { if (E.busy) return; cancelAnimationFrame(E.raf); dropPend(E.e); S.cst = 0; save(); hunt(); },
+  skip: () => { if (E.busy) return; cancelAnimationFrame(E.raf); if (E.e && E.e.ch != null && S.chain) { toast(`Your chain of ${S.chain.n} ended.`); S.chain = null; } dropPend(E.e); S.cst = 0; save(); hunt(); },
+  rad: el => { const Q = U.rad, it = Q && Q.items[+el.dataset.i]; U.rad = null; if (!it) return hunt();
+    if (it.k === 'chain') { const e = chainEnter(); return e ? meet(e) : hunt(); }
+    if (!S.pend.includes(it.e)) return hunt();
+    if (Q.chain && S.chain) { toast(`Your chain of ${S.chain.n} ended.`); S.chain = null; save(); }
+    meet(it.e); },
   toshop: () => { closeOv(); U.tab = 'butikk'; render(); },
   ball: el => { if (E.busy) return; E.ball = el.dataset.k; drawEnc(false); aim(); },
   berry: () => { if (E.busy || !E.e || E.done) return; if (feedBerry(E.e)) { sfx.heal(); buzz(25); drawEnc(false); aim(); } },
