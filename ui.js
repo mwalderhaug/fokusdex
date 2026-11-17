@@ -97,7 +97,7 @@ function bus() { const a = ac(); if (!a) return null; if (!BUS) { try { BUS = bu
 /* Musikken (music.js og pack.js) kobler seg til master(). Effektene går til out(), og skrikene rett til fxBus(). */
 function master() { const b = bus(); return b ? b.mus : null; }
 function fxBus() { const b = bus(); return b ? b.fx : null; }
-function out() { const a = ac(); if (!a) return null; if (!MG) { MG = a.createGain(); MG.connect(fxBus() || a.destination); } MG.gain.value = Math.pow((S.vol == null ? 70 : S.vol) / 100, 1.6) * 2.13; return MG; }
+function out() { SNDP = 1; const a = ac(); if (!a) return null; if (!MG) { MG = a.createGain(); MG.connect(fxBus() || a.destination); } MG.gain.value = Math.pow((S.vol == null ? 70 : S.vol) / 100, 1.6) * 2.13; return MG; }
 /* Lydstyrken (K-vektet som i LUFS-målinger) i det sterkeste 400 ms-vinduet av en dekodet lyd. Brukes til å holde angrepslyder og skrik på
    nivå med musikken, uansett hvor sterkt filene er tatt opp. Regnes én gang per lyd. */
 function loudOf(buf) {
@@ -209,21 +209,51 @@ function cry(id, delay = 0, vol = 0.45) {
     window.cryCount++;
   }).catch(() => {});
 }
-/* Lyd per type trykk. Handlinger med egen lyd (kast, kjøp, utvikling osv.) får ikke en ekstra. */
-const OWN = new Set(['evpick', 'dsell', 'mgive', 'triv', 'trev', 'mvtog', 'start', 'throw', 'buy', 'buy10', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'buyreg', 'evolve', 'sestart', 'sound', 'hunt', 'pick', 'cries', 'mon', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'fswm', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'buse', 'btypes', 'honyes', 'clkagain', 'help', 'tour', 'tourgo', 'tourend', 'tourhub', 'trtipok', 'trtip', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats', 'achget', 'achall', 'sbxsnd', 'held', 'heldgive', 'heldoff', 'heldshop', 'heldbuy', 'form', 'tswp', 'tswgo', 'pkrel']);
+/* LYD PER TRYKK (steg 1.12). Ett trykk gir én lyd, og lyden sier hva som skjedde:
+     tap   en vanlig knapp                  tab   en annen fane, eller neste kort
+     chip  et valg eller en bryter          open  et ark eller en meny åpnes (ett nivå inn)
+     close lukk, tilbake, nei takk          ok    bekreftet og lagret
+     warn  en advarsel, første trykk på «Tap again», og når knappen sier nei
+   SND gir lyden for hver handling (ellers tap). Trykket spilles etter handlingen: har handlingen selv spilt en lyd (SNDP settes i out()),
+   faller trykklyden bort, så ingenting blir dobbelt. En handling kan si fra selv med snd('warn') eller snd('') (stille).
+   OWN = handlinger som skal være stille når de ikke spiller noe med en gang (kampen, kastet og filmene har sine egne lyder litt etter). */
+const OWN = new Set(['evpick', 'mgive', 'triv', 'trev', 'start', 'throw', 'buy', 'buy10', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'evolve', 'sestart', 'sound', 'hunt', 'cries', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'buse', 'btypes', 'honyes', 'clkagain', 'help', 'tour', 'tourend', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats', 'achget', 'achall', 'sbxsnd', 'held', 'heldgive', 'heldoff', 'heldshop', 'heldbuy', 'form', 'tswp', 'tswgo', 'pkrel', 'early', 'bforfeit', 'bmega', 'berry', 'showfilm']);
 const SND = {
-  tab: 'tab', lagv: 'tab', dexr: 'tab', sbxtab: 'tab', shopt: 'tab', sinfo: 'open', pinfo: 'open',
-  fag: 'chip', min: 'chip', reg: 'chip', sort: 'chip', filt: 'chip', sety: 'chip', extog: 'chip', sbxr: 'chip', sbxo: 'chip',
-  pknext: 'tab', pkskip: 'open', pktog: 'chip', pkkeep: 'ok', pkpick: 'open', pkdone: 'close',
-  sbxpick: 'open', sbxtools: 'open', sbxq: 'ok', jprev: 'open', jday: 'ok', sbxfac: 'open', sbxlgo: 'open', sbxcup: 'open', sbxfinal: 'open', sbxagain: 'open',
-  ball: 'ball', spec: 'open', plan: 'open', sync: 'open', backup: 'open', snext: 'ok', seadd: 'open', avatar: 'open', avall: 'open', avpick: 'ok', ach: 'open', rkok: 'ok',
-  today: 'open', boinfo: 'warn', sopen: 'open', minfo: 'open', pset: 'open', badge: 'open', look: 'chip', hfx: 'chip', hty: 'chip', binfo: 'open', btyback: 'close', rdet: 'chip', stnext: 'ok', stback: 'close', stknow: 'chip', stdiff: 'chip', streg: 'chip', seopen: 'chip', know: 'chip', helpmore: 'chip', close: 'close', home: 'close', later: 'close', sback: 'close', sedel: 'close', skip: 'close', syncoff: 'close', toshop: 'open',
-  train: 'open', trsel: 'chip', trback: 'close', trclr: 'warn',
-  bxg: 'chip', bxf: 'chip', dupt: 'chip', tord: 'chip', tipok: 'ok', cmp: 'chip', cmpick: 'chip', cmpw: 'open', tsw: 'open', tswb: 'close', tsws: 'chip', tswc: 'open', tswr: 'ok', mstat: 'open', mback: 'close', mvinfo: 'chip', mvsug: 'ok', mvpick: 'open',
-  lead: 'ok', sesave: 'ok', syncsave: 'ok', bkcopy: 'ok', bkload: 'ok', party: 'ok', fav: 'fav',
-  quit: 'warn', reset: 'warn', early: 'ok', pause: 'chip'
+  /* Faner og sider */
+  tab: 'tab', lagv: 'tab', dexr: 'tab', sbxtab: 'tab', shopt: 'tab', pknext: 'tab', tourgo: 'tab', toshop: 'tab', bteam: 'tab', sbxsounds: 'tab',
+  /* Valg og brytere */
+  fag: 'chip', min: 'chip', reg: 'chip', sort: 'chip', sety: 'chip', extog: 'chip', sbxr: 'chip', sbxo: 'chip', pktog: 'chip', look: 'chip', hfx: 'chip', hty: 'chip', rdet: 'chip',
+  stknow: 'chip', stdiff: 'chip', streg: 'chip', seopen: 'chip', know: 'chip', helpmore: 'chip', trsel: 'chip', bxg: 'chip', bxf: 'chip', dupt: 'chip', tord: 'chip', cmp: 'chip', cmpick: 'chip',
+  tsws: 'chip', mvinfo: 'chip', mvtog: 'chip', pause: 'chip', pick: 'chip', smore: 'chip', adm: 'chip', fsnd: 'chip', lang: 'chip', diff: 'chip', adv: 'chip', wday: 'chip',
+  trtip: 'chip', rlead: 'chip', blead: 'chip', flead: 'chip', labmode: 'chip', bfast: 'chip', bdx: 'chip', bmusic: 'chip', fview: 'chip', fsel: 'chip', wsel: 'chip',
+  /* Et ark eller en meny åpnes */
+  mon: 'open', sinfo: 'open', pinfo: 'open', pkskip: 'open', pkpick: 'open', sbxpick: 'open', sbxtools: 'open', jprev: 'open', sbxfac: 'open', sbxlgo: 'open', sbxcup: 'open', sbxfinal: 'open', sbxagain: 'open',
+  spec: 'open', plan: 'open', sync: 'open', backup: 'open', seadd: 'open', avatar: 'open', avall: 'open', ach: 'open', today: 'open', sopen: 'open', minfo: 'open', pset: 'open', badge: 'open',
+  train: 'open', cmpw: 'open', tsw: 'open', tswc: 'open', mstat: 'open', mvpick: 'open', mlearn: 'open', nick: 'open', exam: 'open', work: 'open', tourhub: 'open',
+  lab: 'open', binfo: 'open', bbag: 'open', bfightm: 'open', bswitch: 'open', bpause: 'open', bpre: 'open', blearn: 'open', tpick: 'open', packlab: 'open', sbxopen: 'open',
+  /* Lukk, tilbake, nei takk */
+  close: 'close', home: 'close', later: 'close', sedel: 'close', skip: 'close', syncoff: 'close', pkdone: 'close', btyback: 'close', stback: 'close', trback: 'close', tswb: 'close', mback: 'close',
+  tswr: 'close', wdel: 'close', woff: 'close', exend: 'close', quit: 'close', reset: 'close', trclr: 'close', bback: 'close', fkeepno: 'close', lskip: 'close', tback: 'close', swback: 'close',
+  showstop: 'close', exexit: 'close', sbxleave: 'close',
+  /* Bekreftet og lagret */
+  pkkeep: 'ok', sbxq: 'ok', jday: 'ok', avpick: 'ok', rkok: 'ok', stnext: 'ok', tipok: 'ok', mvsug: 'ok', lead: 'ok', sesave: 'ok', party: 'ok', wnok: 'ok', newsok: 'ok', jok: 'ok', mvsave: 'ok',
+  nicksave: 'ok', wsave: 'ok', wone: 'ok', wearly: 'ok', exsave: 'ok', upd: 'ok', trtipok: 'ok', rcdone: 'ok', jnext: 'ok',
+  bkcopy: 'saved', bkload: 'saved', bkold: 'saved',
+  /* Ellers */
+  ball: 'ball', fav: 'fav', boinfo: 'warn'
 };
-function click(a) { if (OWN.has(a)) return; (sfx[SND[a]] || sfx.tap)(); }
+let CLK = '', SNDP = 0;
+const snd = k => { CLK = k || ''; };
+function press(el, fn) {
+  const a = el.dataset.a, arm = el.dataset.ok;
+  CLK = OWN.has(a) ? '' : SND[a] || 'tap'; SNDP = 0;
+  try { fn(el); } finally {
+    /* «Tap again»-knappene: det første trykket er en advarsel, ikke en bekreftelse. */
+    if (!arm && el.dataset.ok && el.isConnected) CLK = 'warn';
+    const k = SNDP ? '' : CLK; CLK = ''; if (k && sfx[k]) sfx[k]();
+  }
+}
+const heldSnd = k => (HELD[k].g === 'once' ? sfx.berry : HELD[k].g === 'plate' ? sfx.keyitem : sfx.item)();
 const buzz = p => { try { if (navigator.vibrate) navigator.vibrate(p); } catch (_) {} };
 
 let toastT = 0;
@@ -1443,7 +1473,7 @@ function paintTimer() {
 function endTimer() {
   clearInterval(tick); dropAwake(); document.title = 'Fokusdex';
   const R = finishTimer();
-  if (!R || !R.min) { closeOv(); toast('The session was under a minute and does not count.'); return render(); }
+  if (!R || !R.min) { sfx.close(); closeOv(); toast('The session was under a minute and does not count.'); return render(); }
   sfx.done(); buzz([120, 60, 120]);
   showReward(R);
 }
@@ -1616,7 +1646,7 @@ const A = {
   boinfo: el => { const k = el.dataset.k, it = SHOP[k], st = boostState(k); if (!it) return; toast(st === 'on' ? `${it.n} is already active.` : st === 'lk' ? `${it.n} opens at trainer level ${it.lv}.` : `${it.n} costs ${nb(it.p)} coins. You have ${nb(S.coins)}.`); },
   adm: () => { if (!isAdmin()) return; U.adm = !admOn(); try { localStorage.setItem(KEY + '.adm', U.adm ? '1' : '0'); } catch (_) {} render(); setRe(); toast(U.adm ? 'Admin view is on: everything is open, and the Sandbox is here.' : 'Admin view is off: you see what everyone sees.'); },
   wnok: () => { closeSheet(); if (!giftSheet() && !jAfter() && !incSheet() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
-  fpk: () => { const k = Object.keys(S.fpk || {}).find(x => PACKS[x]); if (!k) return render(); const out = openPacks(k, Math.min(10, S.fpk[k])); if (!out) return toast('Catch some of your waiting encounters first.'); sfx.coin(); render(); packShow(k, out); },
+  fpk: () => { const k = Object.keys(S.fpk || {}).find(x => PACKS[x]); if (!k) return render(); const out = openPacks(k, Math.min(10, S.fpk[k])); if (!out) { snd('warn'); return toast('Catch some of your waiting encounters first.'); } sfx.coin(); render(); packShow(k, out); },
   newsok: el => { S.news = (S.news || []).filter(k => k !== el.dataset.k); save(true); render(); },
   /* «Done for today»: resten av appen kommer fram. Er det studert nok til kampene (og de er åpnet for deg), åpnes kampdagen med det samme. */
   dn: () => { if (typeof fairGate === 'function' && fairGate()) return; S.dn = dayKey(); stamp(); save(); sfx.open(); render(); $('#main').scrollTop = 0; enter();
@@ -1631,17 +1661,17 @@ const A = {
   clkagain: async el => { el.disabled = true; el.textContent = 'Checking…'; await netTime(); closeSheet(); render(); const L = clockCheck(); if (L) clockSheet(L); else { sfx.ok(); toast('The clock is fine.'); } },
   pause: () => { togglePause(); paintTimer(); },
   early: () => endTimer(),
-  quit: () => { if (!U.quit) { U.quit = 1; $('#t-quit').textContent = 'Tap again to cancel'; setTimeout(() => { U.quit = 0; const b = $('#t-quit'); if (b) b.textContent = 'Cancel'; }, 3000); return; } clearInterval(tick); dropAwake(); S.timer = null; save(true); document.title = 'Fokusdex'; closeOv(); render(); },
+  quit: () => { if (!U.quit) { snd('warn'); U.quit = 1; $('#t-quit').textContent = 'Tap again to cancel'; setTimeout(() => { U.quit = 0; const b = $('#t-quit'); if (b) b.textContent = 'Cancel'; }, 3000); return; } clearInterval(tick); dropAwake(); S.timer = null; save(true); document.title = 'Fokusdex'; closeOv(); render(); },
   home: () => { encQuiet(); closeOv(); render(); if (!jAfter() && !incSheet() && !giftSheet() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
-  hunt: () => { if (jOn() && (S.jx || {}).sh === 1 && $('#sheet').hidden) { closeOv(); render(); jAfter(); return; } closeSheet(); hunt(); },
+  hunt: () => { if (jOn() && (S.jx || {}).sh === 1 && $('#sheet').hidden) { snd('ok'); closeOv(); render(); jAfter(); return; } closeSheet(); hunt(); },
   jok: () => { closeSheet(); if (jAfter() || incSheet()) return; const d = U.jfrom === 'dn'; U.jfrom = ''; if (d && has('battles') && S.party.length && openNeed() <= 0 && (!S.lad.day || (dayOld() && dayDone()))) BA.bdone(); else if (typeof raidArrive === 'function' && raidGo()) raidArrive(); },
   later: () => { cancelAnimationFrame(E.raf); encQuiet(); closeOv(); render(); },
   skip: () => { if (E.busy) return; cancelAnimationFrame(E.raf); dropPend(E.e); S.cst = 0; save(); hunt(); },
   toshop: () => { closeOv(); U.tab = 'butikk'; render(); },
   ball: el => { if (E.busy) return; E.ball = el.dataset.k; drawEnc(false); aim(); },
-  berry: () => { if (E.busy || !E.e || E.done) return; if (feedBerry(E.e)) { sfx.coin(); buzz(25); drawEnc(false); aim(); } },
+  berry: () => { if (E.busy || !E.e || E.done) return; if (feedBerry(E.e)) { sfx.heal(); buzz(25); drawEnc(false); aim(); } },
   throw: () => doThrow(),
-  mon: el => { const m = monBy(+el.dataset.u); if (m) { U.nick = 0; U.mvx = null; cry(m.id, 0, 0.35); monSheet(m); } },
+  mon: el => { const m = monBy(+el.dataset.u); if (m) { U.nick = 0; U.mvx = null; monSheet(m); } },
   /* Team (steg 1.6): rekkefølgen som vises, forklaringen som kvitteres, sammenligning og bytte rett fra kortet. */
   tord: el => { U.tord = el.dataset.k; render(); },
   tipok: el => { (S.tip || (S.tip = {}))[el.dataset.k] = 1; save(true); const c = el.closest('.tipc'), inner = !!el.closest('#ov, #sheet'); if (c) c.remove(); if (!inner) render(); },
@@ -1682,18 +1712,18 @@ const A = {
   dupt: el => { const m = monBy(+el.dataset.u); if (m && dupToggle(m)) render(); },
   dexr: el => { U.dex = +el.dataset.k; render(); },
   lead: el => { const m = monBy(+el.dataset.u); setPartner(m); closeSheet(); render(); toast(`${D(m.id)[0]} is now your partner.`); },
-  party: el => { const m = monBy(+el.dataset.u); if (!m) return; if (!S.party.includes(m.u) && S.party.length >= 6) { U.sw = { mode: 'slot', u: m.u }; return swapSheet(); } toggleParty(m); render(); monSheet(m, 1); },
+  party: el => { const m = monBy(+el.dataset.u); if (!m) return; if (!S.party.includes(m.u) && S.party.length >= 6) { snd('open'); U.sw = { mode: 'slot', u: m.u }; return swapSheet(); } const was = S.party.includes(m.u); toggleParty(m); snd(S.party.includes(m.u) === was ? 'warn' : was ? 'close' : 'ok'); render(); monSheet(m, 1); },
   fav: el => { const m = monBy(+el.dataset.u); m.fav = m.fav ? 0 : 1; save(); render(); monSheet(m, 1); },
   mvpick: el => { const m = monBy(+el.dataset.u); U.mvsel = m.mv.slice(); U.mvu = m.u; movePick(m); },
   mlearn: el => { const m = monBy(+el.dataset.u); if (m) learnSheet(m, 'sheet'); },
-  mvtog: el => { const x = +el.dataset.k, s = U.mvsel, i = s.indexOf(x); if (i >= 0) s.splice(i, 1); else if (s.length < 4) s.push(x); else { $('#mv-err').textContent = 'Four is the limit. Tap one to remove it first.'; return; } movePick(monBy(U.mvu), 1); },
-  mvsave: el => { const m = monBy(+el.dataset.u); if (!U.mvsel.length) { $('#mv-err').textContent = 'Keep at least one move.'; return; } m.mv = U.mvsel.slice(); save(); monSheet(m); toast('Moves saved.'); },
+  mvtog: el => { const x = +el.dataset.k, s = U.mvsel, i = s.indexOf(x); if (i >= 0) s.splice(i, 1); else if (s.length < 4) s.push(x); else { $('#mv-err').textContent = 'Four is the limit. Tap one to remove it first.'; return snd('warn'); } movePick(monBy(U.mvu), 1); },
+  mvsave: el => { const m = monBy(+el.dataset.u); if (!U.mvsel.length) { $('#mv-err').textContent = 'Keep at least one move.'; return snd('warn'); } m.mv = U.mvsel.slice(); save(); monSheet(m); toast('Moves saved.'); },
   candy: el => { const m = monBy(+el.dataset.u), k = m ? useCandyN(m, Math.max(1, +el.dataset.n || 1)) : 0; if (k) { sfx.coin(); render(); monSheet(m, 1); if (k > 1) toast(`${mName(m)} grew ${k} levels.`); } },
   held: el => { const m = monBy(+el.dataset.u); if (m) { sfx.open(); heldSheet(m); } },
-  heldgive: el => { const m = monBy(+el.dataset.u), k = el.dataset.k; if (m && giveHeld(m, k)) { (HELD[k].g === 'once' ? sfx.berry : sfx.keyitem)(); render(); monSheet(m); toast(`${mName(m)} now holds the ${HELD[k].n}.`); } },
+  heldgive: el => { const m = monBy(+el.dataset.u), k = el.dataset.k; if (m && giveHeld(m, k)) { heldSnd(k); render(); monSheet(m); toast(`${mName(m)} now holds the ${HELD[k].n}.`); } },
   heldoff: el => { const m = monBy(+el.dataset.u), n = heldOf(m) ? heldOf(m).n : ''; if (m && giveHeld(m, '')) { sfx.close(); render(); monSheet(m); toast(`The ${n} is back in the bag.`); } },
   heldshop: el => { sfx.open(); heldShop(el && el.dataset.u ? +el.dataset.u : 0); },
-  heldbuy: el => { const k = el.dataset.k, u = el.dataset.u ? +el.dataset.u : 0; if (buyHeld(k)) { (HELD[k].g === 'once' ? sfx.berry : sfx.keyitem)(); render(); heldShop(u); toast(`${HELD[k].n} bought.`); } },
+  heldbuy: el => { const k = el.dataset.k, u = el.dataset.u ? +el.dataset.u : 0; if (buyHeld(k)) { heldSnd(k); render(); heldShop(u); toast(`${HELD[k].n} bought.`); } },
   mgive: el => { const m = monBy(+el.dataset.u), k = +el.dataset.k; if (!m) return; const had = megaOpts(m.id).includes(m.ms) || isLeg(m.id); if (bondMega(m, k)) { sfx.evo(); render(); monSheet(m, 1); toast(had ? `${megaName(k)} it is.` : `${mName(m)} now holds a Mega Stone.`); } },
   train: el => { const m = monBy(+el.dataset.u); if (!m) return; U.tru = m.u; U.tri = null; trainSheet(m); },
   trsel: el => { const m = monBy(U.tru); if (!m) return; U.tri = +el.dataset.k; trainSheet(m); },
@@ -1736,7 +1766,7 @@ const A = {
   pkpick: () => { const X = U.pk; if (!X) return; X.pick = 1; X.rel = null; pkEnd(); },
   pkdone: () => { U.pk = null; closeOv(); render(); },
   pkhunt: () => { U.pk = null; hunt(); },
-  sound: () => { S.sound = S.sound ? 0 : 1; save(); sfx.tap(); render(); setRe(); },
+  sound: () => { S.sound = S.sound ? 0 : 1; save(); sfx.chip(); render(); setRe(); },
   /* Lyden når et møte dukker opp under en økt (S.fsnd = 0: av). Bjella på timeren og knappen under Settings. */
   fsnd: () => { S.fsnd = S.fsnd === 0 ? 1 : 0; save(); const b = $('#t-snd'); if (b) { b.innerHTML = bellSvg(S.fsnd !== 0); b.setAttribute('aria-pressed', S.fsnd !== 0); } else { render(); setRe(); } toast(S.fsnd === 0 ? 'Encounter sound off' : 'Encounter sound on'); },
   lang: el => { S.lang = el.dataset.k === 'no' ? 'no' : 'en'; save(true); if (!S.started) intro(); else { render(); setRe(); } },
@@ -1746,8 +1776,8 @@ const A = {
   nick: el => { const m = monBy(+el.dataset.u); if (!m) return; U.nick = m.u; monSheet(m, 1); const i = $('#nkin'); if (i) { i.focus(); i.select(); } },
   nicksave: el => { const m = monBy(+el.dataset.u), i = $('#nkin'); if (!m) return; const n = setNick(m, i ? i.value : ''); U.nick = 0; render(); monSheet(m, 1); toast(n ? `${D(m.id)[0]} is now called ${n}.` : `${D(m.id)[0]} goes by its own name again.`); },
   form: el => { const m = monBy(+el.dataset.u); if (!m || !setForm(m, +el.dataset.k || 0)) return; sfx.evo(); render(); monSheet(m, 1); toast(`${mName(m)} is now in its ${formName(m)} Forme.`); },
-  music: () => { S.music = S.music === 0 ? 1 : 0; save(); sfx.tap(); render(); setRe(); },
-  cries: () => { S.cries = S.cries ? 0 : 1; save(); if (S.cries) { const p = partner(); if (p) cry(p.id); } render(); setRe(); },
+  music: () => { S.music = S.music === 0 ? 1 : 0; save(); sfx.chip(); render(); setRe(); },
+  cries: () => { S.cries = S.cries ? 0 : 1; save(); sfx.chip(); if (S.cries) { const p = partner(); if (p) cry(p.id, 160); } render(); setRe(); },
   plan: () => subjSheet(),
   seadd: () => { if (U.sd.length < 4) { U.sd.push({ k: '', n: '', ty: [], t: '', h: '', d: '' }); seRedraw(); const f = document.querySelectorAll('#se .sein'); if (f.length) f[f.length - 1].focus(); } },
   sedel: el => { U.sd.splice(+el.dataset.i, 1); U.seo = {}; seRedraw(); },
@@ -1756,15 +1786,15 @@ const A = {
   adv: () => { U.adv = !U.adv; render(); },
   work: () => { U.wd = null; workSheet(); },
   wday: el => { const d = +el.dataset.k, i = U.wd.indexOf(d); if (i >= 0) U.wd.splice(i, 1); else U.wd.push(d); el.setAttribute('aria-pressed', String(i < 0)); },
-  wsave: () => { const r = wRead('w'); if (typeof r === 'string') { $('#w-err').textContent = r; return; } S.work = S.work || {}; S.work.fx2 = Object.assign(r, { days: U.wd.slice().sort(), from: dayKey(addDays(new Date(), 1)) }); save(true); closeSheet(); render(); toast(U.wd.length ? 'Work days saved. They count from tomorrow.' : 'No fixed work days from tomorrow.'); },
-  wone: () => { const r = wRead('o'), d = ($('#o-d') || {}).value || ''; if (typeof r === 'string') { $('#w-err').textContent = r; return; } if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || d < dayKey() || (d === dayKey() && r.s <= nowMin())) { $('#w-err').textContent = 'A single day must be added before it starts.'; return; } S.work = S.work || {}; (S.work.one = S.work.one || {})[d] = r; save(true); workSheet(); toast('Work day added.'); },
-  wdel: el => { const d = el.dataset.k, w = ((S.work || {}).one || {})[d]; if (!w || d < dayKey() || (d === dayKey() && w.s <= nowMin())) return toast('That day has already started.'); delete S.work.one[d]; save(true); workSheet(); },
+  wsave: () => { const r = wRead('w'); if (typeof r === 'string') { $('#w-err').textContent = r; return snd('warn'); } S.work = S.work || {}; S.work.fx2 = Object.assign(r, { days: U.wd.slice().sort(), from: dayKey(addDays(new Date(), 1)) }); save(true); closeSheet(); render(); toast(U.wd.length ? 'Work days saved. They count from tomorrow.' : 'No fixed work days from tomorrow.'); },
+  wone: () => { const r = wRead('o'), d = ($('#o-d') || {}).value || ''; if (typeof r === 'string') { $('#w-err').textContent = r; return snd('warn'); } if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || d < dayKey() || (d === dayKey() && r.s <= nowMin())) { $('#w-err').textContent = 'A single day must be added before it starts.'; return snd('warn'); } S.work = S.work || {}; (S.work.one = S.work.one || {})[d] = r; save(true); workSheet(); toast('Work day added.'); },
+  wdel: el => { const d = el.dataset.k, w = ((S.work || {}).one || {})[d]; if (!w || d < dayKey() || (d === dayKey() && w.s <= nowMin())) { snd('warn'); return toast('That day has already started.'); } delete S.work.one[d]; save(true); workSheet(); },
   woff: el => { if (!el.dataset.ok) { el.dataset.ok = 1; el.textContent = 'Tap again to turn off'; return; } const k = dayKey(), W = S.work || {}; W.fx2 = { days: [], from: dayKey(addDays(new Date(), 1)) }; for (const d in W.one || {}) if (d > k) delete W.one[d]; S.work = W; save(true); closeSheet(); render(); toast('Work days are off from tomorrow.'); },
   wearly: el => { if (!el.dataset.ok) { el.dataset.ok = 1; el.textContent = 'Tap again: work is over for today'; return; } (S.work.early = S.work.early || {})[dayKey()] = nowMin(); const b = workCredit(); save(true); U.wlock = 0; closeOv(); render(); toast(b ? `Work done: +${hm(b)} for the battle bonus.` : 'Work done for today.'); },
-  exgo: () => { const r = exRead(true); if (typeof r === 'string') { $('#ex-err').textContent = r; return; } const c = $('#ex-cap'); if (c) S.cap = +c.value; examStart(); save(true); closeSheet(); render(); sfx.ok(); toast('Exam period on. Good luck!'); },
-  exsave: () => { const r = exRead(false); if (typeof r === 'string') { $('#ex-err').textContent = r; return; } examCheck(); save(true); closeSheet(); render(); toast('Exam dates saved.'); },
+  exgo: () => { const r = exRead(true); if (typeof r === 'string') { $('#ex-err').textContent = r; return snd('warn'); } const c = $('#ex-cap'); if (c) S.cap = +c.value; examStart(); save(true); closeSheet(); render(); sfx.ok(); toast('Exam period on. Good luck!'); },
+  exsave: () => { const r = exRead(false); if (typeof r === 'string') { $('#ex-err').textContent = r; return snd('warn'); } examCheck(); save(true); closeSheet(); render(); toast('Exam dates saved.'); },
   exend: el => { if (!el.dataset.ok) { el.dataset.ok = 1; el.textContent = 'Tap again to end'; return; } examStop(); save(true); closeSheet(); render(); toast('Exam period ended.'); },
-  sesave: () => { const r = seRead(); if (typeof r === 'string') { $('#se-err').textContent = r; return; } if (U.ex) S.extra = Object.keys(EXTRA).filter(k => k === 'annet' || U.ex.includes(k)); setSubjects(r); save(); closeSheet(); render(); toast('Subjects saved.'); },
+  sesave: () => { const r = seRead(); if (typeof r === 'string') { $('#se-err').textContent = r; return snd('warn'); } if (U.ex) S.extra = Object.keys(EXTRA).filter(k => k === 'annet' || U.ex.includes(k)); setSubjects(r); save(); closeSheet(); render(); toast('Subjects saved.'); },
   extog: el => { const k = el.dataset.k, i = U.ex.indexOf(k); if (i >= 0) U.ex.splice(i, 1); else U.ex.push(k); el.setAttribute('aria-pressed', String(i < 0)); },
   /* Starten (steg 1.10): fram og tilbake mellom de fem skjermene, og valgene på dem. */
   stnext: () => { const st = U.step || 0; if ((st === 1 && START.know == null) || (st === 3 && !pick)) return; U.step = st + 1; intro(); $('#ov').scrollTop = 0; },
@@ -1774,16 +1804,16 @@ const A = {
   streg: el => { const r = +el.dataset.k; if (!STARTERS[r] || START.reg === r) return; START.reg = r; if (!STARTERS[r].includes(pick)) pick = 0; intro(); },
   seopen: el => { const O = U.seo || (U.seo = {}), i = +el.dataset.i; O[i] = O[i] === el.dataset.k ? '' : el.dataset.k; seRedraw(); },
   know: el => { S.know = Math.max(0, Math.min(2, +el.dataset.k || 0)); save(); render(); setRe(); },
-  sestart: () => { const r = seRead(); if (typeof r === 'string') { $('#se-err').textContent = r; return; } setSubjects(r); const c = begin(pick, { reg: START.reg, know: START.know == null ? 1 : START.know, diff: stDiff() }); S.tour = 0; save(true); sfx.evo(); closeOv(); render(); tourShow(0); if (c) toast(`${nb(c)} coins for the hours you have already done.`); },
-  sync: () => SBX ? toast('Leave the sandbox first: Sync is paused in here.') : syncSheet(),
+  sestart: () => { const r = seRead(); if (typeof r === 'string') { $('#se-err').textContent = r; return snd('warn'); } setSubjects(r); const c = begin(pick, { reg: START.reg, know: START.know == null ? 1 : START.know, diff: stDiff() }); S.tour = 0; save(true); sfx.evo(); closeOv(); render(); tourShow(0); if (c) toast(`${nb(c)} coins for the hours you have already done.`); },
+  sync: () => SBX ? (snd('warn'), toast('Leave the sandbox first: Sync is paused in here.')) : syncSheet(),
   synclb: () => { try { const lb = JSON.parse(localStorage.getItem('lb.gh')); $('#gh-r').value = lb.repo; $('#gh-t').value = lb.t; } catch (_) {} },
   syncsave: async () => {
     const t = $('#gh-t').value.trim(), r = $('#gh-r').value.trim();
-    if (!t || !/^[\w.-]+\/[\w.-]+$/.test(r)) { $('#gh-s').textContent = 'Enter the repo as owner/name and paste the key.'; return; }
+    if (!t || !/^[\w.-]+\/[\w.-]+$/.test(r)) { $('#gh-s').textContent = 'Enter the repo as owner/name and paste the key.'; return snd('warn'); }
     ghSet(t, r); $('#gh-s').textContent = 'Connecting…';
     const p = await ghProbe();
-    if (p.st === 'err') { const s = $('#gh-s'); if (s) s.textContent = ghState; GH = null; ghStore(); return; }
-    if (p.st === 'none') { await ghLink('local'); PACK.init(true); closeSheet(); render(); toast(ghState === 'ok' ? 'Sync is on. This game is now saved to GitHub.' : ghState); return; }
+    if (p.st === 'err') { const s = $('#gh-s'); if (s) s.textContent = ghState; GH = null; ghStore(); return sfx.warn(); }
+    if (p.st === 'none') { await ghLink('local'); PACK.init(true); closeSheet(); render(); (ghState === 'ok' ? sfx.saved : sfx.warn)(); toast(ghState === 'ok' ? 'Sync is on. This game is now saved to GitHub.' : ghState); return; }
     U.remote = p.o;
     /* Viser hvor langt hver lagring er kommet, og merker den med mest framgang, så det ikke er mulig å velge feil ved et uhell. */
     const top = o => (o.mons || []).reduce((a, m) => Math.max(a, m.lv || 1), 1), mins = o => Object.values(o.log || {}).reduce((a, d) => a + (d.m || 0), 0);
@@ -1794,27 +1824,27 @@ const A = {
       <button type="button" class="card pick2" data-a="syncuse"${here ? ' data-warn="1"' : ''}><b>Use the save from GitHub${here ? '' : more}</b><span class="sm tn">${sum(p.o)}${p.o.at ? ' · saved ' + new Date(p.o.at).toLocaleDateString('en-GB') : ''}</span></button>
       <button type="button" class="btn wide" data-a="syncoff">Cancel</button>`);
   },
-  syncuse: async el => { if (el.dataset.warn === '1' && el.dataset.ok !== '1') { el.dataset.ok = '1'; el.querySelector('b').textContent = 'Tap again: this device has more progress'; return; } await ghLink('remote', U.remote); PACK.init(true); closeSheet(); if (!$('#ov').hidden) closeOv(); render(); toast('Loaded the save from GitHub. Sync is on.'); },
-  syncup: async () => { await ghLink('local', U.remote); PACK.init(true); closeSheet(); render(); toast(ghState === 'ok' ? 'This game replaced the save on GitHub. Sync is on.' : ghState); },
+  syncuse: async el => { if (el.dataset.warn === '1' && el.dataset.ok !== '1') { el.dataset.ok = '1'; el.querySelector('b').textContent = 'Tap again: this device has more progress'; return; } await ghLink('remote', U.remote); PACK.init(true); closeSheet(); if (!$('#ov').hidden) closeOv(); render(); sfx.saved(); toast('Loaded the save from GitHub. Sync is on.'); },
+  syncup: async () => { await ghLink('local', U.remote); PACK.init(true); closeSheet(); render(); (ghState === 'ok' ? sfx.saved : sfx.warn)(); toast(ghState === 'ok' ? 'This game replaced the save on GitHub. Sync is on.' : ghState); },
   syncoff: () => { ghSet('', ''); closeSheet(); render(); toast('Sync turned off.'); },
-  backup: () => SBX ? toast('Leave the sandbox first.') : backupSheet(),
+  backup: () => SBX ? (snd('warn'), toast('Leave the sandbox first.')) : backupSheet(),
   bkcopy: () => { const txt = b64e(JSON.stringify(S)); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Copied.'), () => { $('#bk-in').value = txt; toast('Copy the text in the field.'); }); },
   bkload: () => {
     let o = null; try { o = JSON.parse(b64d($('#bk-in').value.trim())); if (!o || o.v !== 1 || !Array.isArray(o.mons)) o = null; } catch (_) { o = null; }
-    if (!o) return toast('That was not a valid copy.');
+    if (!o) { snd('warn'); return toast('That was not a valid copy.'); }
     /* En kopi som er eldre enn spillet på enheten, ville rullet tilbake det som har skjedd siden (tap, åpnede pakker, kast). Den tas ikke inn. */
     if (!canAdopt(o)) { const e = $('#bk-err'); if (e) e.textContent = 'This copy is older than the game on this device, so it cannot replace it. Copies are for moving to a new device, or for getting your game back after losing it.'; return sfx.warn(); }
     const p = S; adopt(o); carry(p); S.rev = Math.max(S.rev, p.rev || 0); save(); closeSheet(); render(); toast('Game restored.');
   },
-  bkold: el => { if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = 'Tap again: replaces the current game'; return; } try { const o = JSON.parse(localStorage.getItem(KEY + '.bak')); if (!o || o.v !== 1) throw 0; const rev = S.rev, p = S; adopt(o); carry(p); S.rev = Math.max(S.rev, rev); save(); closeSheet(); render(); toast('The earlier save is back.'); } catch (_) { toast('No earlier save found.'); } },
+  bkold: el => { if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = 'Tap again: replaces the current game'; return; } try { const o = JSON.parse(localStorage.getItem(KEY + '.bak')); if (!o || o.v !== 1) throw 0; const rev = S.rev, p = S; adopt(o); carry(p); S.rev = Math.max(S.rev, rev); save(); closeSheet(); render(); toast('The earlier save is back.'); } catch (_) { snd('warn'); toast('No earlier save found.'); } },
   reset: el => { if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = 'Tap again: everything is deleted'; return; } S = fresh(); save(); pick = 0; U.step = 0; U.sd = null; U.seo = {}; START.know = null; START.diff = null; START.reg = 1; closeSheet(); render(); },
-  pick: el => { pick = +el.dataset.k; cry(pick, 0, 0.4); intro(); },
+  pick: el => { pick = +el.dataset.k; cry(pick, 120, 0.4); intro(); },
 };
 document.addEventListener('click', ev => {
   const el = ev.target.closest('[data-a]');
   const fn = el && !el.disabled && (A[el.dataset.a] || BA[el.dataset.a] || HA[el.dataset.a] || (typeof XA !== 'undefined' && XA[el.dataset.a]));
-  if (fn) { click(el.dataset.a); fn(el); return; }
-  if (ev.target.id === 'sheet') closeSheet();
+  if (fn) { press(el, fn); return; }
+  if (ev.target.id === 'sheet') { sfx.close(); closeSheet(); }
 });
 let volT = 0;
 document.addEventListener('input', ev => {
@@ -1887,7 +1917,7 @@ function updReady() {
   if (Date.now() - UPD.t0 < 6000 && !busy) { try { save(true); } catch (_) {} location.reload(); return; }
   UPD.on = 1; updBar();
 }
-A.upd = () => { if (typeof BT !== 'undefined' && BT.B) return toast('Finish the battle first, then reload.'); try { save(true); } catch (_) {} location.reload(); };
+A.upd = () => { if (typeof BT !== 'undefined' && BT.B) { snd('warn'); return toast('Finish the battle first, then reload.'); } try { save(true); } catch (_) {} location.reload(); };
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   const hadCtl = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadCtl) updReady(); });
