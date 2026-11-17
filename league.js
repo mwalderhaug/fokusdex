@@ -486,7 +486,11 @@ function suggestMoves(m, pool) {
     const mv = MOVES[x], n = mv[0];
     if (mv[6] === 1) return mv[7] === 2 ? 9 : mv[7] === 1 || mv[7] === 4 || n === 'Toxic' || mv[7] === 18 ? 7 : mv[7] === 5 || mv[7] === 6 || mv[7] === 14 ? 5 : 2;
     if (mv[6] === 3 || n === 'Rest') return 6;
-    if (mv[12].length && mv[17] === 1) return mv[12].reduce((a, s) => a + Math.max(0, s[1]), 0) >= 2 ? 8 : 4;
+    if (mv[12].length && mv[17] === 1) {
+      const up = i => mv[12].some(s => s[0] === i && s[1] > 0), phys = st[1] >= st[3];
+      if ((up(2) && !up(4) && !up(6) && !phys) || (up(4) && !up(2) && !up(6) && phys)) return 1;
+      return mv[12].reduce((a, s) => a + Math.max(0, s[1]), 0) >= 2 ? 8 : 4;
+    }
     if (['Reflect', 'Light Screen', 'Stealth Rock', 'Substitute', 'Protect', 'Rain Dance', 'Sunny Day', 'Sandstorm', 'Hail', 'Taunt', 'Roar', 'Whirlwind', 'Spikes', 'Toxic Spikes', 'Wish', 'Belly Drum'].includes(n)) return 5;
     return mv[12].length ? 2 : UM[n] ? 2 : 0;
   };
