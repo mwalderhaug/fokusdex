@@ -21,11 +21,11 @@ const TCL = {
   gym: { i: 2, n: 'Gym Leader', mons: 4, rel: 0.97, sk: 0.84, iv: 18, ev: 24, q: 2, coin: 250, xp: 1.3, slack: 5 },
   evilteam: { i: 3, n: 'Evil Team', mons: 5, rel: 0.97, sk: 0.85, iv: 18, ev: 24, q: 2, coin: 220, xp: 1.35 },
   eviladmin: { i: 4, n: 'Evil Admin', mons: 5, rel: 0.975, sk: 0.87, iv: 17, ev: 20, q: 2, coin: 330, xp: 1.4, slack: 6 },
-  e4: { i: 5, n: 'Elite Four', mons: 5, rel: 0.98, sk: 0.9, iv: 21, ev: 28, q: 2, coin: 420, xp: 1.5, slack: 8 },
-  rival: { i: 6, n: 'Rival', mons: 6, rel: 0.985, sk: 0.93, iv: 19, ev: 22, q: 2, coin: 500, xp: 1.6, slack: 8 },
-  evilboss: { i: 7, n: 'Evil Leader', mons: 6, rel: 0.99, sk: 0.96, iv: 20, ev: 28, q: 2, coin: 750, xp: 1.75, slack: 12 },
-  champ: { i: 8, n: 'Champion', mons: 6, rel: 1, sk: 1, iv: 28, ev: 56, q: 2, coin: 1100, xp: 1.9, slack: 16 },
-  supreme: { i: 9, n: 'Supreme Boss', mons: 6, rel: 1.01, sk: 1, iv: 31, ev: 60, q: 2, coin: 2000, xp: 2.2, slack: 30 }
+  e4: { i: 5, n: 'Elite Four', mons: 5, rel: 0.98, sk: 0.9, iv: 21, ev: 28, q: 2, tut: 1, coin: 420, xp: 1.5, slack: 8 },
+  rival: { i: 6, n: 'Rival', mons: 6, rel: 0.985, sk: 0.93, iv: 19, ev: 22, q: 2, tut: 1, coin: 500, xp: 1.6, slack: 8 },
+  evilboss: { i: 7, n: 'Evil Leader', mons: 6, rel: 0.99, sk: 0.96, iv: 20, ev: 28, q: 2, tut: 1, coin: 750, xp: 1.75, slack: 12 },
+  champ: { i: 8, n: 'Champion', mons: 6, rel: 1, sk: 1, iv: 28, ev: 56, q: 2, tut: 2, coin: 1100, xp: 1.9, slack: 16 },
+  supreme: { i: 9, n: 'Supreme Boss', mons: 6, rel: 1.01, sk: 1, iv: 31, ev: 60, q: 2, tut: 3, coin: 2000, xp: 2.2, slack: 30 }
 };
 /* Vanskelighetsgrad (S.diff): 0 Easy, 1 Normal, 2 Hard. Tallene i klassetabellen over er Hard, slik spillet var før valget kom.
    lives = forsøk i ligaen per dag (Easy tåler ett tap, slik Battle Frontier alltid har gjort). coin/xp/candy = belønningen: mynter, XP og sjansen
@@ -36,12 +36,12 @@ const TCL = {
    trukket fra pausen etter et raid (RAIDCOOL), lg = sjansen for det legendariske møtet fra de aller største (rareLoot). Målt over 28 dager med tre timer
    om dagen gir Hard rundt 30 % flere mynter og seks nivåer mer enn Normal, og nesten dobbelt så mange raid. */
 const DIFF = [
-  { n: 'Easy', rel: -0.1, sk: 0.6, iv: 0.4, ev: 0, q: 1, mons: -1, slack: 0.5, coin: 0.5, xp: 0.75, candy: 0.6, lives: 2, bag: 5, rlv: 0.96, rhp: 0.9, rf: 0.6, rc: 1, lg: 0.5 },
-  { n: 'Normal', rel: -0.05, sk: 0.85, iv: 0.75, ev: 0.5, q: 2, mons: 0, slack: 0.8, coin: 1, xp: 1, candy: 1, lives: 1, bag: 4, rlv: 1, rhp: 0.9, rf: 1, rc: 0, lg: 1 },
-  { n: 'Hard', rel: 0, sk: 1, iv: 1, ev: 1, q: 2, mons: 0, slack: 1, coin: 2.3, xp: 1.5, candy: 1.7, lives: 1, bag: 3, rlv: 1.02, rhp: 1.05, rf: 1.8, rc: -1, lg: 1 }
+  { n: 'Easy', rel: -0.1, sk: 0.6, iv: 0.4, ev: 0, q: 1, tut: -9, mons: -1, slack: 0.5, coin: 0.5, xp: 0.75, candy: 0.6, lives: 2, bag: 5, rlv: 0.96, rhp: 0.9, rf: 0.6, rc: 1, lg: 0.5 },
+  { n: 'Normal', rel: -0.05, sk: 0.85, iv: 0.75, ev: 0.5, q: 2, tut: -1, mons: 0, slack: 0.8, coin: 1, xp: 1, candy: 1, lives: 1, bag: 4, rlv: 1, rhp: 0.9, rf: 1, rc: 0, lg: 1 },
+  { n: 'Hard', rel: 0, sk: 1, iv: 1, ev: 1, q: 2, tut: 0, mons: 0, slack: 1, coin: 2.3, xp: 1.5, candy: 1.7, lives: 1, bag: 3, rlv: 1.02, rhp: 1.05, rf: 1.8, rc: -1, lg: 1 }
 ];
 const diff = () => DIFF[S.diff == null ? 2 : S.diff] || DIFF[2];
-const diffSt = st => { const d = diff(); return d.rel === 0 ? st : Object.assign({}, st, { mons: Math.max(st.i >= 2 ? 3 : 2, st.mons + d.mons), rel: st.rel + d.rel, sk: st.sk * d.sk, iv: Math.round(st.iv * d.iv), ev: Math.round(st.ev * d.ev), q: Math.min(st.q, d.q), slack: Math.round((st.slack || 0) * d.slack) }); };
+const diffSt = st => { const d = diff(); return d.rel === 0 ? st : Object.assign({}, st, { mons: Math.max(st.i >= 2 ? 3 : 2, st.mons + d.mons), rel: st.rel + d.rel, sk: st.sk * d.sk, iv: Math.round(st.iv * d.iv), ev: Math.round(st.ev * d.ev), q: Math.min(st.q, d.q), tut: Math.max(0, (st.tut || 0) + (d.tut || 0)), slack: Math.round((st.slack || 0) * d.slack) }); };
 const ORDER = ['trainer', 'gym', 'evilteam', 'eviladmin', 'e4', 'rival', 'evilboss', 'champ', 'supreme'];
 const ULTRA = new Set(['evilboss', 'champ', 'supreme']);
 const clsI = k => (TCL[k] || TCL.trainer).i;
@@ -435,13 +435,18 @@ function evRoll(mode) {
 function fitForm(id, lv, slack) { while (stageOf(id) > 0 && lv < reqLv(id) - slack && !(D(D(id)[4])[6] & 4)) id = D(id)[4]; return id; }
 /* Angrepene til en motstander. q = 0: de fire nyeste. q = 1: beste angrep per type pluss ett nyttig statusangrep. q = 2: som 1, og kan angrep fra litt høyere nivå. */
 function foeMoves(id, lv, q) {
-  const all = movesAt(id, lv + (q >= 2 ? 8 : 0)).filter(x => !DEADMV.has(x));
+  let all = movesAt(id, lv + (q >= 2 ? 8 : 0));
+  /* q = 3 (toppene i ligaen og turneringen, steg 1b.8): også det formene før lærte, og det lærerne kan lære arten. */
+  if (q >= 3) all = all.concat(preMoves(id, lv), tutFoe(id)).filter((x, i, a) => a.indexOf(x) === i);
+  all = all.filter(x => !DEADMV.has(x));
   if (!q || all.length <= 4) return defaultMoves(id, lv);
   const d = D(id), st = BST[id - 1], phys = st[1] >= st[3];
   const val = x => {
-    const m = MOVES[x]; let p = (m[2] || (FIXED[m[0]] ? 45 : 60)) * (m[3] ? m[3] / 100 : 1) * (m[13] ? 3 : 1);
+    const m = MOVES[x]; let p = (m[2] || (m[0] === 'Return' && q >= 3 ? 100 : FIXED[m[0]] ? 45 : 60)) * (m[3] ? m[3] / 100 : 1) * (m[13] ? (m[13] + m[14]) / 2 : 1);
     if (CHARGE[m[0]] || RECHARGE.has(m[0])) p *= 0.55;
     if (BOOM.has(m[0]) || ['Dream Eater', 'Focus Punch', 'Last Resort', 'Fake Out', 'Snore', 'Synchronoise', 'Final Gambit', 'Counter', 'Mirror Coat', 'Metal Burst', 'Endeavor'].includes(m[0])) p *= 0.3;
+    /* Toppene: angrep som koster en runde eller slagkraften teller mindre, og Normal dekker ingenting for den som ikke er Normal selv. */
+    if (q >= 3 && (m[0] === 'Sky Attack' || m[0] === 'Overheat' || m[0] === 'Future Sight' || m[0] === 'Doom Desire' || (m[1] === 0 && d[1] !== 0 && d[2] !== 0))) p *= 0.6;
     if (m[9] < 0) p *= 0.9; if (m[6] === 9) p = 30;
     return p * (((m[4] === 1) === phys) ? 1 : 0.7) * (m[1] === d[1] || m[1] === d[2] ? 1.5 : 1);
   };
@@ -449,7 +454,11 @@ function foeMoves(id, lv, q) {
     const m = MOVES[x], n = m[0];
     if (m[6] === 1) return m[7] === 2 ? 9 : m[7] === 1 || m[7] === 4 || n === 'Toxic' || m[7] === 18 ? 7 : m[7] === 5 || m[7] === 6 || m[7] === 14 ? 5 : 2;
     if (m[6] === 3 || n === 'Rest') return 6;
-    if (m[12].length && m[17] === 1) return m[12].reduce((a, s) => a + Math.max(0, s[1]), 0) >= 2 ? 7 : 4;
+    if (m[12].length && m[17] === 1) {
+      /* Toppene bygger ikke opp den slagkraften de ikke bruker (Swords Dance på en som slår spesielt). */
+      if (q >= 3) { const up = i => m[12].some(s => s[0] === i && s[1] > 0); if ((up(2) && !up(4) && !up(6) && !phys) || (up(4) && !up(2) && !up(6) && phys)) return 1; }
+      return m[12].reduce((a, s) => a + Math.max(0, s[1]), 0) >= 2 ? 7 : 4;
+    }
     if (['Reflect', 'Light Screen', 'Stealth Rock', 'Substitute', 'Protect', 'Rain Dance', 'Sunny Day', 'Sandstorm', 'Hail', 'Taunt', 'Roar', 'Whirlwind'].includes(n)) return 5;
     return m[12].length ? 2 : UM[n] ? 2 : 0;
   };
@@ -525,7 +534,9 @@ function regTeam(theme, n, base, st, flat) {
    (ligaen lagrer det sammen med treneren som venter); ellers trekkes det nå. late = så mange av de faste som sendes ut rett før esset. */
 function bossTeam(d, n, base, st, flat, pre) {
   const src = (pre && pre.length ? pre : drawTeam(d)).slice(0, Math.max(2, n)), lt = Math.min((d[6] || {}).late || 0, src.length - 2), ids = src.slice(1 + lt).concat(src.slice(1, 1 + lt), src[0]);
-  const team = ids.map((id, k) => { const ace = k === ids.length - 1, lv = flat ? base : Math.max(3, Math.min(100, base + (ace ? 1 : -1 - rnd(2)))); return foeMon(fitForm(id, lv, st.slack || 0), lv, st); });
+  /* st.tut (steg 1b.8) = så mange som har vært hos lærerne: esset, og så de som sendes ut rett før det. De får q = 3 i foeMoves. */
+  const tq = st.tut ? Object.assign({}, st, { q: 3 }) : st;
+  const team = ids.map((id, k) => { const ace = k === ids.length - 1, lv = flat ? base : Math.max(3, Math.min(100, base + (ace ? 1 : -1 - rnd(2)))); return foeMon(fitForm(id, lv, st.slack || 0), lv, k >= ids.length - (st.tut || 0) ? tq : st); });
   /* Mega: Champion og Supreme Boss (klasse 8 og 9) bærer Mega Ring på Normal og Hard. Esset får steinen hvis arten har en Mega-form, ellers den
      sterkeste av de andre som har det. Den mega-utvikler seg første gang den angriper. */
   if (megaCls(st)) {
@@ -1391,10 +1402,97 @@ function mewSet(party) {
 const driveFor = party => { let best = DRIVES[0], bs = -1; for (const ty of DRIVES) { const v = party.reduce((s, m) => s + Math.min(2, legEff(ty, m)), 0) + Math.random() * 0.3; if (v > bs) { bs = v; best = ty; } } return best; };
 /* Angrep en art kan velge i tillegg til nivålista: settet til en legendarisk (og hele utvalget til Mew). Lærerne og egg-angrepene (steg 1b.8) kommer hit. */
 function extraMoves(m) {
-  if (!m || !LEGSET[m.id]) return [];
-  const l = (legSet(m.id, m.sh === 2) || []).concat(m.id === 151 ? MEWCOV.concat(MEWTAC).map(mvIx).filter(i => i >= 0) : [], m.id === 646 && KYU[formName(m)] ? KYU[formName(m)].map(mvIx).filter(i => i >= 0) : []);
+  if (!m) return [];
+  let l = !LEGSET[m.id] ? [] : (legSet(m.id, m.sh === 2) || []).concat(m.id === 151 ? MEWCOV.concat(MEWTAC).map(mvIx).filter(i => i >= 0) : [], m.id === 646 && KYU[formName(m)] ? KYU[formName(m)].map(mvIx).filter(i => i >= 0) : []);
+  l = l.concat(preMoves(m.id, m.lv), m.tm || [], m.em || []);
   return l.filter((x, i) => l.indexOf(x) === i);
 }
+/* ---------- ANGREPENE UTOVER NIVÅLISTA (steg 1b.8, Jazz 16.11) ----------
+   Før lærte en Pokémon bare angrep ved å gå opp i nivå. Målt på de 346 sisteformene på nivå 100 manglet 30 et skadeangrep i egen type, og 86
+   hadde bare svake. Tre kilder til, alle samlet i extraMoves(m), som angrepsvalget (movePick) og «Suggest four» leser:
+   1. TIDLIGERE FORMER (preMoves): en utviklet Pokémon kan velge blant det formene før den lærte opp til nivået sitt. Gratis, og det redder
+      dem som utvikler seg med stein (Starmie, Ninetales, Vileplume).
+   2. LÆRERNE (m.tm = angrepene denne ene har lært av en lærer). Ikke TM-er: fire faste lærere med hver sin personlighet og sitt tema, som i
+      Black 2 og White 2. Hvem som kan lære hva, følger TM- og lærerlistene i generasjon 5 (TUTMV i data2.js, laget av tools/tutors.js).
+        Sten   kraft: fysiske angrep            Ilse   elementene: spesialangrep
+        Mirin  taktikk: statusangrep            Asta   mesteren: de sjeldne, som åpnes av symbolene i Battle Frontier (TUTNEED)
+      De vanlige koster mynter (tutBase: 300, 800 eller 1 500 etter styrke, statusangrep 400), og én av de tre første har tilbud hver uke
+      (tutWeek, TUTOFF). De sjeldne er premier: Pledge-angrepene og Volt Tackle med bronsesymbolet, startertrioenes ultimate-angrep med sølv,
+      Draco Meteor med gull, og med diamant lærer Asta bort alt gratis. S.tut.r[angrep] = 1 åpner ett sjeldent angrep uten symbolet
+      (tutUnlock: til ukemodusen i steg 1d). Ingen ny valuta.
+   3. EGG-ANGREP (m.em): den som klekkes av et egg, kan ett egg-angrep fra spillene (EGGMV per utviklingslinje, eggMove). Selges den, går
+      angrepet i arv til en annen i samme linje (eggPass, som i Nursery i Sword og Shield), så duplikatene er verdt noe.
+   Fanen «Tutors» i Shop åpnes på studiedag 9 på reisen (tutOn). Alt er låst under et løp (tutTeach spør locked()). */
+function preMoves(id, lv) { let l = []; for (let p = D(id)[4]; p; p = D(p)[4]) l = l.concat(movesAt(p, lv)); return l; }
+const TUTORS = [
+  { k: 'power', n: 'Sten', t: 'The Quarryman', ic: 'gym', c: '#c9a26b', q: 'No tricks. Hit it until it stops moving.', d: 'Physical moves that hit hard, and the punches, fangs and tails that cover what a Pokémon\'s own type cannot.' },
+  { k: 'elem', n: 'Ilse', t: 'The Element Scholar', ic: 'flame', c: '#7fa8e6', q: 'Every type is a language. Let me teach yours a new one.', d: 'Special moves in every element: the big one a Pokémon should have in its own type, and cover for the rest.' },
+  { k: 'tact', n: 'Mirin', t: 'The Strategist', ic: 'shield', c: '#a6c59c', q: 'The best move is the one they did not plan for.', d: 'Moves that do no damage and win battles anyway: build up, slow them down, change the weather.' },
+  { k: 'master', n: 'Asta', t: 'The Frontier Master', ic: 'tower', c: '#b295e6', q: 'A Symbol first. Then we talk.', d: 'The rarest moves there are. Each one opens with a Symbol from the Battle Frontier.' }
+];
+const TUTL = {
+  power: 'Earthquake|Stone Edge|Rock Slide|Superpower|Brick Break|Drain Punch|Low Kick|Iron Head|Iron Tail|X-Scissor|Bug Bite|U-turn|Poison Jab|Gunk Shot|Shadow Claw|Waterfall|Aqua Tail|Seed Bomb|Wild Charge|Thunder Punch|Fire Punch|Ice Punch|Zen Headbutt|Dragon Claw|Outrage|Dual Chop|Drill Run|Dig|Bulldoze|Aerial Ace|Acrobatics|Bounce|Fly|Sky Attack|Knock Off|Foul Play|Payback|Play Rough|Return|Strength|Facade|Giga Impact',
+  elem: 'Flamethrower|Fire Blast|Heat Wave|Overheat|Surf|Scald|Thunderbolt|Thunder|Volt Switch|Charge Beam|Ice Beam|Blizzard|Icy Wind|Frost Breath|Energy Ball|Giga Drain|Grass Knot|Solar Beam|Psychic|Psyshock|Shadow Ball|Sludge Bomb|Sludge Wave|Dark Pulse|Snarl|Dragon Pulse|Flash Cannon|Earth Power|Signal Beam|Moonblast|Dazzling Gleam|Focus Blast|Hyper Voice|Hyper Beam',
+  tact: 'Swords Dance|Calm Mind|Bulk Up|Work Up|Hone Claws|Rock Polish|Iron Defense|Thunder Wave|Toxic|Will-O-Wisp|Reflect|Light Screen|Safeguard|Stealth Rock|Taunt|Torment|Substitute|Protect|Roost|Synthesis|Rest|Heal Bell|Pain Split|Rain Dance|Sunny Day|Sandstorm|Hail|Roar|Tailwind|Trick Room|Gravity|Magic Coat',
+  master: 'Fire Pledge|Water Pledge|Grass Pledge|Volt Tackle|Blast Burn|Hydro Cannon|Frenzy Plant|Draco Meteor'
+};
+/* De sjeldne: symbolet som åpner dem (1 bronse … 4 diamant, FACSYM), og prisen når de er åpne. */
+const TUTNEED = { 'Fire Pledge': 1, 'Water Pledge': 1, 'Grass Pledge': 1, 'Volt Tackle': 1, 'Blast Burn': 2, 'Hydro Cannon': 2, 'Frenzy Plant': 2, 'Draco Meteor': 3 };
+const TUTP = { 'Fire Pledge': 1500, 'Water Pledge': 1500, 'Grass Pledge': 1500, 'Volt Tackle': 2500, 'Blast Burn': 3000, 'Hydro Cannon': 3000, 'Frenzy Plant': 3000, 'Draco Meteor': 4000 };
+const TUTOFF = 0.7, TUTFREE = 4;
+let _tut = null;
+function tutData() {
+  if (_tut) return _tut;
+  const by = {}, of = {};
+  for (const T of TUTORS) { by[T.k] = TUTL[T.k].split('|').map(mvIx).filter(x => x >= 0 && !DEADMV.has(x) && !!(window.TUTMV && TUTMV[x])); by[T.k].forEach(x => { of[x] = T.k; }); }
+  return (_tut = { by, of, foe: {} });
+}
+const tutOn = () => !jOn() || has('tutor');
+const tutList = k => tutData().by[k] || [], tutOf = x => tutData().of[x] || '', tutBy = k => TUTORS.find(T => T.k === k);
+/* Kan arten lære angrepet av en lærer? TUTMV[angrep] = én bit per art (1–649), seks biter per tegn. */
+const TUTB64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+function tutCan(id, x) { const s = window.TUTMV && TUTMV[x]; if (!s || !tutOf(x)) return false; const i = id - 1, c = TUTB64.indexOf(s[Math.floor(i / 6)]); return c >= 0 && !!(c >> (i % 6) & 1); }
+const tutNeed = x => TUTNEED[MOVES[x][0]] || 0;
+const tutOpen = x => !tutNeed(x) || (S.fac.sym || 0) >= tutNeed(x) || !!(S.tut && S.tut.r && S.tut.r[x]);
+function tutUnlock(x) { if (!tutNeed(x)) return false; S.tut = S.tut || {}; (S.tut.r = S.tut.r || {})[x] = 1; return true; }
+/* Ukens tilbud: én av de tre vanlige lærerne tar TUTOFF av prisen. Uka skifter mandag, likt for alle. */
+const tutWeekN = () => Math.floor((Date.parse((S.lad.day || dayKey()) + 'T12:00:00Z') / 864e5 + 3) / 7);
+const tutWeek = () => ['power', 'elem', 'tact'][tutWeekN() % 3];
+function tutBase(x) { const m = MOVES[x], n = m[0]; if (TUTP[n]) return TUTP[n]; if (!m[4]) return 400; const p = m[2] || (n === 'Return' ? 100 : 80); return p > 100 ? 1500 : p >= 85 ? 800 : 300; }
+function tutPrice(x) { const k = tutOf(x); if (k === 'master') return (S.fac.sym || 0) >= TUTFREE ? 0 : tutBase(x); return Math.round(tutBase(x) * (k === tutWeek() ? TUTOFF : 1) / 10) * 10; }
+/* Har den angrepet alt (kan velge det i angrepsvalget)? */
+const tutHas = (m, x) => m.mv.includes(x) || movesAt(m.id, m.lv).includes(x) || extraMoves(m).includes(x);
+/* Det lærerne kan lære akkurat denne, som den ikke har: [angrep …] i lærernes rekkefølge. */
+const tutFor = m => TUTORS.reduce((a, T) => a.concat(tutList(T.k).filter(x => tutCan(m.id, x) && !tutHas(m, x))), []);
+/* Hvem av dine som kan lære angrepet og ikke har det: laget først, så boksen (sterkest først). */
+function tutWho(x) { const p = S.party.map(monBy).filter(Boolean), ok = m => tutCan(m.id, x) && !tutHas(m, x); return { team: p.filter(ok), box: S.mons.filter(m => !S.party.includes(m.u) && ok(m)).sort((a, b) => b.lv - a.lv || a.u - b.u) }; }
+/* Hvorfor en lærer ikke kan lære bort x til m akkurat nå ('' = det går). */
+function tutWhy(m, x) {
+  if (!m || !tutOn() || !tutCan(m.id, x)) return 'cannot';
+  if (tutHas(m, x)) return 'has';
+  if (!tutOpen(x)) return 'symbol';
+  if (locked()) return 'locked';
+  if (S.coins < tutPrice(x)) return 'coins';
+  return '';
+}
+function tutTeach(m, x) {
+  if (tutWhy(m, x)) return false;
+  S.coins -= tutPrice(x); (m.tm = m.tm || []).push(x); if (m.mv.length < 4) m.mv.push(x);
+  save(); return true;
+}
+/* Det en topptrener kan ha lært artene sine (foeMoves med q = 3): alt de tre vanlige lærerne kan lære arten. */
+function tutFoe(id) { const T = tutData(); return T.foe[id] || (T.foe[id] = tutList('power').concat(tutList('elem'), tutList('tact')).filter(x => tutCan(id, x))); }
+/* EGG-ANGREP. lineRoot (game.js) = første form i utviklingslinja. eggMove trekker ett for den som klekkes (−1 = linja har ingen). */
+const eggPool = id => (window.EGGMV && EGGMV[lineRoot(id)]) || [];
+function eggMove(id) { const l = eggPool(id); return l.length ? l[rnd(l.length)] : -1; }
+function eggGive(m) { const x = eggMove(m.id); if (x < 0) return -1; m.em = [x]; if (!m.mv.includes(x)) { if (m.mv.length < 4) m.mv.push(x); else m.mv[0] = x; } return x; }
+/* Arvingen når m forlater deg: en annen i samme linje som mangler angrepet. Helst en på laget, så den med høyest nivå. */
+function eggHeir(m) {
+  if (!m || !(m.em || []).length) return null;
+  const r = lineRoot(m.id), l = S.mons.filter(o => o !== m && lineRoot(o.id) === r && m.em.some(x => !(o.em || []).includes(x)));
+  return l.sort((a, b) => (S.party.includes(b.u) - S.party.includes(a.u)) || b.lv - a.lv || a.u - b.u)[0] || null;
+}
+function eggPass(m) { const h = eggHeir(m); if (!h) return null; const mv = m.em.filter(x => !(h.em || []).includes(x)); h.em = (h.em || []).concat(mv); return { to: h, mv }; }
 const dkMoves = () => legSet(150, 1);
 /* Den mørke tar plassen til en Mewtwo du eier: det er den samme Pokémonen (nivå, XP, kallenavn og det den holder står), men mørk, og alltid med de
    beste verdiene: IV 31 i alt, naturen Timid (DKNAT) og EV fullt ut i Sp. Atk og Speed (DKEV). Angrepene blir de fire den mørke bruker. */

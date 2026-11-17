@@ -493,6 +493,18 @@ button.mvc[aria-pressed="false"]{opacity:.62}
 .tipc{display:flex;align-items:center;gap:10px;padding:10px 10px 10px 14px;border-radius:18px;background:var(--accsoft);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--acc) 30%,transparent)}
 .tipc>.icn{font-size:18px;color:var(--acc);flex:none}.tipc p{flex:1;color:var(--ink);margin:0}
 /* Låsen under et løp (steg 1b.7): en rolig linje der noe er låst. */
+/* Lærerne (steg 1b.8): kortene i Shop, arkene og merkene på angrepene. */
+.tut{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:14px 12px 14px 14px;box-shadow:inset 3px 0 0 var(--c)}
+.tut>.icn{color:var(--ink3);flex:none}.tut .sp{display:flex;flex-direction:column;gap:3px;min-width:0}
+.tut-i{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 18%,transparent);color:var(--c);font-size:22px}.tut-i.big{width:54px;height:54px;font-size:26px}
+.tut-n{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.tut-n b{font-size:17px;font-weight:500}.tut-n small{font-size:12.5px;color:var(--ink2)}
+.tut-q{font-style:italic;font-size:13.5px;color:var(--ink);line-height:1.35}.tut-q.big{font-size:15px;margin:10px 0 6px}
+.tut-m{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.tut-w{padding:8px 10px;border-radius:10px;background:var(--card2)}
+.tut-p{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex:none;white-space:nowrap}.tut-p small{font-size:11px;color:var(--ink2)}
+.tut-l{display:flex;align-items:center;gap:6px;color:var(--c)}.tut-l .icn{font-size:15px}.tut-b{align-self:center;margin-left:8px;white-space:nowrap}
+.mvr-g{font-style:normal;font-size:10.5px;font-weight:500;letter-spacing:.03em;text-transform:uppercase;margin-left:7px;padding:1px 6px;border-radius:999px;background:var(--soft);color:var(--ink2);vertical-align:1px}
+.eggm{font-style:normal;color:var(--acc)}.pill.eggp{font-size:11px}.jp-cap{font-size:46px;color:var(--acc);display:grid}
+.seg.s5>button{padding-left:4px;padding-right:4px;font-size:13.5px}
 .lockn{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:18px;background:var(--card2);box-shadow:inset 0 0 0 1px var(--line)}.lockn>.icn{font-size:18px;color:var(--ink2);flex:none}.lockn p{flex:1;margin:0}
 /* Team */
 .tctl{display:flex;align-items:center;justify-content:space-between;gap:10px}

@@ -217,7 +217,7 @@ function cry(id, delay = 0, vol = 0.45) {
    SND gir lyden for hver handling (ellers tap). Trykket spilles etter handlingen: har handlingen selv spilt en lyd (SNDP settes i out()),
    faller trykklyden bort, så ingenting blir dobbelt. En handling kan si fra selv med snd('warn') eller snd('') (stille).
    OWN = handlinger som skal være stille når de ikke spiller noe med en gang (kampen, kastet og filmene har sine egne lyder litt etter). */
-const OWN = new Set(['evpick', 'mgive', 'triv', 'trev', 'start', 'throw', 'buy', 'buy10', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'evolve', 'sestart', 'sound', 'hunt', 'cries', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'buse', 'btypes', 'honyes', 'clkagain', 'help', 'tour', 'tourend', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats', 'achget', 'achall', 'sbxsnd', 'held', 'heldgive', 'heldoff', 'heldshop', 'heldbuy', 'form', 'tswp', 'tswgo', 'pkrel', 'early', 'bforfeit', 'bmega', 'berry', 'showfilm']);
+const OWN = new Set(['evpick', 'mgive', 'triv', 'trev', 'start', 'throw', 'buy', 'buy10', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'evolve', 'sestart', 'sound', 'hunt', 'cries', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'buse', 'btypes', 'honyes', 'clkagain', 'help', 'tour', 'tourend', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats', 'achget', 'achall', 'sbxsnd', 'held', 'heldgive', 'heldoff', 'heldshop', 'heldbuy', 'form', 'tswp', 'tswgo', 'pkrel', 'early', 'bforfeit', 'bmega', 'berry', 'showfilm', 'tutteach', 'tutlearn']);
 const SND = {
   /* Faner og sider */
   tab: 'tab', lagv: 'tab', dexr: 'tab', sbxtab: 'tab', shopt: 'tab', pknext: 'tab', tourgo: 'tab', toshop: 'tab', bteam: 'tab', sbxsounds: 'tab',
@@ -229,7 +229,7 @@ const SND = {
   /* Et ark eller en meny åpnes */
   mon: 'open', sinfo: 'open', pinfo: 'open', pkskip: 'open', pkpick: 'open', sbxpick: 'open', sbxtools: 'open', jprev: 'open', sbxfac: 'open', sbxlgo: 'open', sbxcup: 'open', sbxfinal: 'open', sbxagain: 'open',
   spec: 'open', plan: 'open', sync: 'open', backup: 'open', seadd: 'open', avatar: 'open', avall: 'open', ach: 'open', today: 'open', sopen: 'open', minfo: 'open', pset: 'open', badge: 'open',
-  train: 'open', cmpw: 'open', tsw: 'open', tswc: 'open', mstat: 'open', mvpick: 'open', mlearn: 'open', nick: 'open', exam: 'open', work: 'open', tourhub: 'open',
+  train: 'open', cmpw: 'open', tsw: 'open', tswc: 'open', mstat: 'open', mvpick: 'open', mlearn: 'open', tutor: 'open', tutmv: 'open', tutmore: 'open', nick: 'open', exam: 'open', work: 'open', tourhub: 'open',
   lab: 'open', binfo: 'open', bbag: 'open', bfightm: 'open', bswitch: 'open', bpause: 'open', bpre: 'open', blearn: 'open', tpick: 'open', packlab: 'open', sbxopen: 'open',
   /* Lukk, tilbake, nei takk */
   close: 'close', home: 'close', later: 'close', sedel: 'close', skip: 'close', syncoff: 'close', pkdone: 'close', btyback: 'close', stback: 'close', trback: 'close', tswb: 'close', mback: 'close',
@@ -325,14 +325,16 @@ function giftSheet() {
    journeyCard: hva som er åpnet, og hva som kommer (med et hint om neste studiedag). jReveal: arket for det som er nytt (ett om gangen, etter
    «Done for today»). jAfter: det som hører til rett etter en økt eller en kamp (forklaringen av raid, shinyen, angrepstypene), og ellers jReveal.
    Tekstene går gjennom tl (norsk eller engelsk, S.lang). */
-const JIC = { battles: 'sword', shop: 'bag', shiny: 'spark', nature: 'star', train: 'gym', held: 'gift', size: 'scale' };
+const JIC = { battles: 'sword', shop: 'bag', shiny: 'spark', nature: 'star', train: 'gym', held: 'gift', size: 'scale', tutor: 'cap' };
 const jNext = () => JOURNEY.find(f => !has(f[0]));
+/* Studiedager til neste steg åpnes (lærerne kommer på dag 9, to dager etter størrelsene). */
+const jGap = f => Math.max(1, f[1] - (S.jd || 0));
 function journeyCard() {
   if (!jOn() || !S.started) return '';
   const next = jNext();
   return `<div class="card jrn"><div class="row" style="justify-content:space-between"><b>${tl('Your journey')}</b><span class="pill tn">${tl('Study day {d}', { d: S.jd || 0 })}</span></div>
     <div class="jrn-t">${JOURNEY.map(f => { const on = has(f[0]), nx = next && next[0] === f[0]; return `<span class="jt${on ? ' on' : ''}${nx ? ' nx' : ''}"><i>${on ? icn(JIC[f[0]]) : '?'}</i><small>${on ? tl(JSHORT[f[0]]) : nx ? tl('Next') : ''}</small></span>`; }).join('')}</div>
-    <p class="sm">${next ? tl('Next study day ({min} min): {hint}', { min: OPENMIN, hint: tl(JHINT[next[0]]) }) : tl('Everything is open. The rest is yours to find.')}</p></div>`;
+    <p class="sm">${next ? (jGap(next) > 1 ? tl('In {n} study days: {hint}', { n: jGap(next), hint: tl(JHINT[next[0]]) }) : tl('Next study day ({min} min): {hint}', { min: OPENMIN, hint: tl(JHINT[next[0]]) })) : tl('Everything is open. The rest is yours to find.')}</p></div>`;
 }
 /* To av samme art på nivå 50: født med full potensial og en nature som hjelper, mot født svak med en nature som trekker ned. */
 function jNature() {
@@ -360,12 +362,13 @@ function jPic(k, o) {
   if (k === 'held') return `<div class="jp-held">${spr(pid, { ani: 1, s: '88px' })}<span class="jp-it">${heldEl('sitrus', '40px')}</span></div>`;
   if (k === 'size') return `<div class="jp-size">${[0, 1, 2, 3].map(z => `<span class="z${z}">${spr(pid, { ani: 1, s: '56px' })}<small>${SZN[z]}</small><b class="tn">${z === 1 ? 'HP' : (SZHP[z] > 1 ? '+' : '−') + Math.abs(Math.round((SZHP[z] - 1) * 100)) + ' %'}</b></span>`).join('')}</div>`;
   if (k === 'raid') return '<span class="raid-sp qm hqm tr-raid"><i>?</i></span>';
+  if (k === 'tutor') return `<div class="jp-row">${spr(pid, { ani: 1, s: '84px' })}<span class="jp-cap">${icn('cap')}</span></div>`;
   if (k === 'incense') return `<div class="jp-inc">${itPic('glint', '56px')}${icn('spark')}</div>`;
   return '';
 }
 const jOk = () => `<button type="button" class="btn wide gold" data-a="jok" style="margin-top:14px">${tl('Got it')}</button>`;
 /* Hintet nederst i et ark: hva som kommer neste studiedag (ingenting når reisen er ferdig). */
-const jTease = () => { const n = jNext(); return n ? `<p class="jtease">${icn('clock')}<span>${tl('Next study day: {hint}', { hint: tl(JHINT[n[0]]) })}</span></p>` : ''; };
+const jTease = () => { const n = jNext(); return n ? `<p class="jtease">${icn('clock')}<span>${jGap(n) > 1 ? tl('In {n} study days: {hint}', { n: jGap(n), hint: tl(JHINT[n[0]]) }) : tl('Next study day: {hint}', { hint: tl(JHINT[n[0]]) })}</span></p>` : ''; };
 const jCard = o => `<div class="jsh"><div class="jsh-pic">${o.pic || ''}</div><div class="jsh-k">${o.k}</div><h2>${o.n}</h2><p class="jsh-t">${o.t}</p>${o.x || ''}${(o.g || []).map(x => `<p class="jsh-g">${icn('gift')}<span>${x}</span></p>`).join('')}${o.tease === false ? '' : jTease()}${o.acts || jOk()}</div>`;
 /* Tre slags angrep (vises første gang et nytt angrep læres etter dag 4). */
 const jMoveTypes = () => `<div class="jmv"><div><span class="mcat ph"></span><span><b>Physical</b><span class="sm">${tl('Contact moves. They use Attack against Defense.')}</span></span></div><div><span class="mcat spc"></span><span><b>Special</b><span class="sm">${tl('Energy from a distance. They use Sp. Atk against Sp. Def.')}</span></span></div><div><span class="mcat stt"></span><span><b>Status</b><span class="sm">${tl('No damage. They change stats, the weather or the foe.')}</span></span></div></div>`;
@@ -695,7 +698,7 @@ function boxView(head) {
 function dupView(head) {
   const G = dupGroups(), du = dupes(), val = du.reduce((s, m) => s + sellValue(m), 0);
   const row = (m, g) => { const why = dupWhy(m), keep = why ? '' : dupKeep(m, g), sz = szOn() ? szOf(m) : 1;
-    return `<div class="dr${why ? ' pr' : keep ? ' kp' : ' sl'}"><button type="button" class="dr-m" data-a="mon" data-u="${m.u}" aria-label="${esc(mName(m))}, level ${m.lv}">${spr(m.id, { it: m.item, sh: m.sh, mega: m.mega, s: '44px', lazy: 1 })}<span class="sp"><span class="dr-n tn"><b>Lv ${m.lv}</b>${sz !== 1 ? szTag(m) : ''}${potOn() ? `<span class="sm">${NAT[m.nat]}</span>` : ''}</span><span class="dr-s tn">${potOn() ? starRow(m) : ''}<span>${nb(pwOf(m))} power</span></span></span></button>
+    return `<div class="dr${why ? ' pr' : keep ? ' kp' : ' sl'}"><button type="button" class="dr-m" data-a="mon" data-u="${m.u}" aria-label="${esc(mName(m))}, level ${m.lv}">${spr(m.id, { it: m.item, sh: m.sh, mega: m.mega, s: '44px', lazy: 1 })}<span class="sp"><span class="dr-n tn"><b>Lv ${m.lv}</b>${sz !== 1 ? szTag(m) : ''}${potOn() ? `<span class="sm">${NAT[m.nat]}</span>` : ''}${(m.em || []).length ? `<span class="pill eggp">Egg: ${esc(MOVES[m.em[0]][0])}</span>` : ''}</span><span class="dr-s tn">${potOn() ? starRow(m) : ''}<span>${nb(pwOf(m))} power</span></span></span></button>
       ${why ? `<span class="pill dr-w">${why}</span>` : `<button type="button" class="dr-t" data-a="dupt" data-u="${m.u}" aria-pressed="${!!keep}" aria-label="${keep ? 'Stays: ' + keep + '. Tap to sell it with the rest' : 'Sells for ' + sellValue(m) + ' coins. Tap to keep it'}"><b>${keep ? 'Stays' : 'Sells'}</b><small class="tn">${keep ? keep : coinEl(sellValue(m))}</small></button>`}</div>`; };
   if (!G.length) return `${head}<div class="card"><p class="sm" style="text-align:center">${tl('No duplicates right now. When you catch a species you already have, it shows up here.')}</p></div>`;
   /* Artene der noe selges, står først. */
@@ -704,7 +707,8 @@ function dupView(head) {
     <p class="sm">${tl('Of each species the biggest and the one born with the most stars stay. Level does not count: it can be trained. Tap Stays or Sells to change one.')}</p>
     ${du.length ? `<button type="button" class="btn wide gold" data-a="selldupes">Sell ${du.length} for ${coinEl(val)}</button>` : `<p class="sm tn" style="text-align:center">${tl('Nothing is marked to be sold.')}</p>`}
     <div class="stack">${GG.map(g => `<div class="card dg"><div class="dg-h"><b>${esc(D(g.id)[0])}</b><span class="sm tn">× ${g.list.length}</span>${tierEl(g.id)}</div>${g.list.map(m => row(m, g)).join('')}</div>`).join('')}</div>
-    <p class="sm">${tl('The team, shinies, favourites and trained ones are never sold from here. The ones that stay sell for more if you ever sell them from their own card.')}</p>`;
+    <p class="sm">${tl('The team, shinies, favourites and trained ones are never sold from here. The ones that stay sell for more if you ever sell them from their own card.')}</p>
+    ${S.mons.some(m => (m.em || []).length) ? `<p class="sm">${tl('An egg move is never lost: when one that knows it is sold, another of the same family learns it.')}</p>` : ''}`;
 }
 /* Sekskanten: hver akse viser staten målt mot en sterk art (base 130) på samme nivå. */
 /* Base stats, vist som på pokemondb.net: tallet og en farget stolpe for hver verdi, og summen nederst. Fargen følger verdien (rød under 30, oransje
@@ -855,13 +859,13 @@ function cmpSheet(a, b) {
 }
 
 /* ---------- Kortet til en Pokémon ---------- */
-const mvTile = (x, m, on) => { const i = mvInfo(x, m); return `<button type="button" class="mvt${i.dead ? ' dead' : ''}" data-a="mvinfo" data-k="${x}" data-u="${m.u}" aria-pressed="${on ? 'true' : 'false'}" style="--c:var(--t${i.ty})">${tyIc(i.ty)}<span class="sp"><b>${esc(i.n)}</b><small class="tn">${mcat(i.cls)}${i.cls ? i.pw : 'Status'}</small></span></button>`; };
+const mvTile = (x, m, on) => { const i = mvInfo(x, m); return `<button type="button" class="mvt${i.dead ? ' dead' : ''}" data-a="mvinfo" data-k="${x}" data-u="${m.u}" aria-pressed="${on ? 'true' : 'false'}" style="--c:var(--t${i.ty})">${tyIc(i.ty)}<span class="sp"><b>${esc(i.n)}</b><small class="tn">${mcat(i.cls)}${i.cls ? i.pw : 'Status'}${(m.em || []).includes(x) ? ' · <i class="eggm">Egg move</i>' : ''}</small></span></button>`; };
 /* Forklaringen til ett angrep: den samme overalt (kortet, angrepsvalget, kampen). */
 const mvxEl = (x, m) => { const i = mvInfo(x, m); return `<div class="mvx" style="--c:var(--t${i.ty})"><div class="mvx-h"><b>${esc(i.n)}</b>${tyChip(i.ty)}<span class="mvx-c">${mcat(i.cls)}${CLS[i.cls]}</span></div><div class="mvx-n tn">${i.cls ? `<span>Power <b>${i.pw}</b></span>` : ''}${i.acc ? `<span>${i.acc === 'never misses' ? 'Never misses' : 'Accuracy <b>' + i.acc + '</b>'}</span>` : ''}<span>PP <b>${i.pp}</b></span></div>${i.txt ? `<p class="sm">${esc(i.txt)}</p>` : ''}</div>`; };
 /* En rad med et angrep og forklaringen: i angrepsvalget (o.act = 'mvtog', o.on), i «wants to learn» (o.act = 'lforget') og i «Learns later» (o.lv). */
 function mvRow(x, m, o) {
   o = o || {}; const i = mvInfo(x, m), tag = o.act ? `button type="button" data-a="${o.act}" data-k="${x}"${o.on != null ? ` aria-pressed="${!!o.on}"` : ''}` : 'div';
-  return `<${tag} class="mvr${o.lv ? ' lt' : ''}${i.dead ? ' dead' : ''}" style="--c:var(--t${i.ty})">${tyIc(i.ty)}<span class="sp"><span class="mvr-n"><b>${esc(i.n)}</b><small class="tn">${mcat(i.cls)}${i.cls ? i.pw : 'Status'}${i.acc && i.acc !== 'never misses' && i.acc !== '100 %' ? ' · ' + i.acc : ''}</small></span><small class="mvr-t">${esc(i.txt)}</small></span>${o.lv ? `<span class="pill tn">Lv ${o.lv}</span>` : o.on != null ? `<span class="mvr-c">${o.on ? icn('check') : ''}</span>` : o.x || ''}</${o.act ? 'button' : 'div'}>`;
+  return `<${tag} class="mvr${o.lv ? ' lt' : ''}${i.dead ? ' dead' : ''}" style="--c:var(--t${i.ty})">${tyIc(i.ty)}<span class="sp"><span class="mvr-n"><b>${esc(i.n)}${o.tag ? `<i class="mvr-g">${o.tag}</i>` : ''}</b><small class="tn">${mcat(i.cls)}${i.cls ? i.pw : 'Status'}${i.acc && i.acc !== 'never misses' && i.acc !== '100 %' ? ' · ' + i.acc : ''}</small></span><small class="mvr-t">${esc(i.txt)}</small></span>${o.lv ? `<span class="pill tn">Lv ${o.lv}</span>` : o.on != null ? `<span class="mvr-c">${o.on ? icn('check') : ''}</span>` : o.x || ''}</${o.act ? 'button' : 'div'}>`;
 }
 /* Formene (ønske 19): en rad med formene arten har. Den som krever noe, sier hva. */
 function formCard(m) {
@@ -996,11 +1000,14 @@ function trainSheet(m) {
 function movePick(m, re) {
   const sel = U.mvsel, at = movesAt(m.id, m.lv).concat(extraMoves(m)).filter((x, i, a) => a.indexOf(x) === i), known = m.mv.concat(at.filter(x => !m.mv.includes(x)).reverse()).filter(x => !DEADMV.has(x) || m.mv.includes(x)), l = LEARN[m.id - 1], later = [];
   for (let i = 0; i < l.length; i += 2) if (l[i] > m.lv && !known.includes(l[i + 1]) && !DEADMV.has(l[i + 1]) && !later.some(x => x[1] === l[i + 1])) later.push([l[i], l[i + 1]]);
-  const row = (x, lv) => mvRow(x, m, lv ? { lv } : { act: 'mvtog', on: sel.includes(x) });
+  const own = movesAt(m.id, m.lv), tag = x => (m.em || []).includes(x) ? 'Egg' : (m.tm || []).includes(x) ? 'Tutor' : !own.includes(x) && preMoves(m.id, m.lv).includes(x) ? 'Earlier form' : '';
+  const row = (x, lv) => mvRow(x, m, lv ? { lv } : { act: 'mvtog', on: sel.includes(x), tag: tag(x) });
+  const more = tutOn() ? tutFor(m).length : 0;
   const html = `<div class="row" style="justify-content:space-between"><h2 class="h" style="margin:0">Moves for ${esc(mName(m))}</h2><span class="pill tn" id="mvn">${sel.length} of 4</span></div>
     ${known.filter(x => !DEADMV.has(x)).length > 4 ? `<button type="button" class="btn ${know() === 0 || (jOn() && know() < 2) ? 'pri' : ''} wide sug" data-a="mvsug" data-u="${m.u}">${icn('spark')}Suggest four</button>${jOn() ? `<p class="sm" style="margin-top:-6px">${tl('Not sure? This picks its strongest moves in its own type, one for cover and one tactical.')}</p>` : ''}` : ''}
     <div class="mvls">${known.map(x => row(x, 0)).join('')}</div>
     <p class="err" id="mv-err" role="alert"></p>
+    ${more ? `<button type="button" class="btn wide rowb" data-a="tutmore" data-u="${m.u}"><span>${icn('cap')} More moves</span><span class="sm tn">${more} from the tutors</span></button>` : ''}
     ${later.length ? `<details class="hfold mvlt"${U.mvlt ? ' open' : ''}><summary><b>Learns later</b><span class="sm tn">${later.length} · next at level ${later[0][0]}</span></summary><div class="mvls">${later.map(([lv, x]) => row(x, lv)).join('')}</div></details>` : `<p class="sm">${tl('It has learned every move it gets by level.')}</p>`}
     <div class="row mv-f"><button type="button" class="btn sp nf" data-a="mback" data-u="${m.u}">Cancel</button><button type="button" class="btn pri sp" data-a="mvsave" data-u="${m.u}">Save moves</button></div>`;
   re ? reSheet(html) : openSheet(html);
@@ -1076,18 +1083,67 @@ function packSheet(k) {
     <div class="acts pka"><button type="button" class="btn gold" data-a="pack" data-k="${k}"${can ? '' : ' disabled'}>${free ? 'Open · free' : `Open · ${nb(P.p)}`}</button><button type="button" class="btn" data-a="pack" data-k="${k}" data-n="10"${can10 ? '' : ' disabled'}>Open 10 · ${nb(p10)}</button><button type="button" class="btn nf" data-a="close">Close</button></div>`);
 }
 VIEW.butikk = () => {
-  const tab = SHOPTABS.some(t => t[0] === U.shop) ? U.shop : 'packs', l = tlv(), full = S.pend.length > PACKMAX;
+  const tabs = tutOn() ? SHOPTABS.concat([['tutors', 'Tutors']]) : SHOPTABS, tab = tabs.some(t => t[0] === U.shop) ? U.shop : 'packs', l = tlv(), full = S.pend.length > PACKMAX;
   let body = '';
   if (tab === 'packs') body = `<div class="packs">${Object.keys(PACKS).map(k => { const P = PACKS[k], free = !!(S.fpk && S.fpk[k] > 0), lock = !free && P.lv && l < P.lv, can = (free || S.coins >= P.p) && !lock && !full;
       const ep = pkPct(packOdds(k).epic);
       return `<div class="pkb${can ? '' : ' off'}${free ? ' free' : ''}" style="--pc:${P.c}"><button type="button" class="pkb-m" data-a="pinfo" data-k="${k}" aria-label="${P.n}, ${free ? 'free' : lock ? 'opens at trainer level ' + P.lv : nb(P.p) + ' coins'}. ${ep} chance of an epic. See what is inside"><span class="pk-ic"><i></i></span><b>${P.n}</b><span class="pk-p tn">${free ? `${icn('gift')}Free` : lock ? `${icn('lock')}Level ${P.lv}` : coinEl(P.p)}</span><span class="pk-o tn"><b>${ep}</b> epic</span></button></div>`; }).join('')}</div>
     <p class="sm" style="text-align:center">${full ? 'Catch some of the encounters that are waiting before you open more packs.' : tl('Three encounters in every pack. Tap a pack to see your odds, and open one or ten.')}</p>`;
+  else if (tab === 'tutors') body = `<p class="sm">${tl('Tutors teach moves a Pokémon never learns by level. Pick a move, see who on your team can learn it, and teach it with one tap.')}</p>${lockEl()}<div class="stack">${TUTORS.map(tutCard).join('')}</div>
+    <p class="sm">${tl('An evolved Pokémon can also pick the moves its earlier forms learned, and one hatched from an egg knows an egg move. Both are free: open its card in Team and tap Change.')}</p>`;
   else body = SHOPGRP[tab].map(name => { const ks = SHELF.find(s => s[0] === name)[1]; return `${SHOPGRP[tab].length > 1 ? `<div class="lab sh">${name}</div>` : ''}<div class="card slist">${ks.map(shopRow).join('')}</div>`; }).join('');
   if (tab === 'shiny') body = `<button type="button" class="card odds" data-a="sinfo" data-k="glint" aria-label="Your shiny odds right now"><span class="sm">Your shiny odds now</span><b class="tn">1 in ${nb(Math.round(1 / Math.min(SHINYCAP, shinyOdds())))}</b>${shinyBoost() > 1 ? `<span class="pill on tn">×${shinyBoost()} incense</span>` : ''}</button>` + body;
   if (tab === 'items' && has('held')) body += `<div class="lab sh">To hold in battle</div><button type="button" class="card srow-l" data-a="heldshop"><span class="ic">${heldEl('oran', '30px')}</span><span class="sp"><b>Berries, plates and gear</b><span class="sm tn">own ${Object.keys(HELD).reduce((a, k) => a + heldTotal(k), 0)}</span></span>${icn('chev')}</button>`;
   return `<div class="row" style="justify-content:space-between"><h1 class="big">Shop</h1>${coinEl(S.coins)}</div>
-    <div class="seg">${SHOPTABS.map(([k, n]) => `<button type="button" data-a="shopt" data-k="${k}" aria-pressed="${tab === k}">${n}${k === 'packs' && S.fpk && Object.keys(S.fpk).length ? '<i class="dot"></i>' : ''}</button>`).join('')}</div>${body}`;
+    <div class="seg${tabs.length > 4 ? ' s5' : ''}">${tabs.map(([k, n]) => `<button type="button" data-a="shopt" data-k="${k}" aria-pressed="${tab === k}">${n}${k === 'packs' && S.fpk && Object.keys(S.fpk).length ? '<i class="dot"></i>' : ''}</button>`).join('')}</div>${body}`;
 };
+/* ---------- LÆRERNE (steg 1b.8; reglene står over extraMoves i league.js) ----------
+   Fanen «Tutors» i Shop: ett kort per lærer (tutCard). Arket til en lærer (tutorSheet) viser angrepene hans med hva de gjør, prisen og hvor
+   mange på laget som kan lære dem; de laget har bruk for, står først. Arket til et angrep (tutMoveSheet) viser forklaringen og hvem som kan
+   lære det, med én knapp per Pokémon. Fra angrepsvalget på kortet åpner «More moves» det lærerne har til akkurat den (tutMonSheet). */
+const tutTeam = x => S.party.map(monBy).filter(Boolean).filter(m => tutCan(m.id, x) && !tutHas(m, x)).length;
+const tutCost = x => !tutOpen(x) ? `<span class="pill lk">${icn('lock')}${FACSYM[tutNeed(x)]} Symbol</span>` : tutPrice(x) ? coinEl(tutPrice(x)) : '<b class="au">Free</b>';
+function tutCard(T) {
+  const l = tutList(T.k), n = l.filter(x => tutTeam(x) > 0).length, sym = S.fac.sym || 0, open = l.filter(tutOpen).length;
+  const tag = T.k === 'master' ? (sym >= TUTFREE ? '<span class="pill on">Free for you</span>' : open ? `<span class="pill on tn">${open} of ${l.length} open</span>` : `<span class="pill lk">${icn('lock')}Bronze Symbol</span>`) : T.k === tutWeek() ? `<span class="pill on tn">This week −${Math.round((1 - TUTOFF) * 100)} %</span>` : '';
+  return `<button type="button" class="card tut" data-a="tutor" data-k="${T.k}" style="--c:${T.c}" aria-label="${T.n}, ${T.t}. ${l.length} moves"><span class="tut-i">${icn(T.ic)}</span><span class="sp"><span class="tut-n"><b>${T.n}</b><small>${T.t}</small></span><i class="tut-q">“${T.q}”</i><span class="tut-m sm tn">${l.length} moves · ${n} new for your team${tag}</span></span>${icn('chev')}</button>`;
+}
+function tutorSheet(k, re) {
+  const T = tutBy(k); if (!T) return; U.tut = { k };
+  const l = tutList(k), mine = l.filter(x => tutTeam(x) > 0), rest = l.filter(x => !mine.includes(x)), sym = S.fac.sym || 0;
+  const row = x => { const n = tutTeam(x); return mvRow(x, null, { act: 'tutmv', x: `<span class="tut-p">${tutCost(x)}<small class="tn">${n ? n + ' on your team' : ''}</small></span>` }); };
+  const note = k === 'master' ? `<p class="sm tut-w">${sym >= TUTFREE ? tl('You hold the Diamond Symbol. Everything here is free.') : tl('Bronze opens the Pledge moves and Volt Tackle, Silver the three ultimate starter moves, Gold opens Draco Meteor, and with Diamond it is all free.')}</p>` : k === tutWeek() ? `<p class="sm tut-w">${tl('This week {n} takes {p} % off every move.', { n: T.n, p: Math.round((1 - TUTOFF) * 100) })}</p>` : '';
+  const html = `<div class="shead it tuth" style="--c:${T.c}"><span class="tut-i big">${icn(T.ic)}</span><div class="sp"><div class="pn">${T.n}</div><div class="sm tn">${T.t}</div></div>${coinEl(S.coins)}</div>
+    <p class="tut-q big">“${T.q}”</p><p class="sm">${T.d}</p>${note}${lockEl()}
+    ${mine.length ? `<div class="lab">For your team</div><div class="mvls">${mine.map(row).join('')}</div>` : `<p class="sm tn">${tl('Nothing here that your team can learn and does not already have.')}</p>`}
+    ${rest.length ? `<details class="hfold"${U.tutall || !mine.length ? ' open' : ''}><summary><b>${mine.length ? 'Every other move' : 'All moves'}</b><span class="sm tn">${rest.length}</span></summary><div class="mvls">${rest.map(row).join('')}</div></details>` : ''}
+    <button type="button" class="btn wide nf" data-a="close" style="margin-top:12px">Close</button>`;
+  re ? reSheet(html) : openSheet(html);
+  const dt = $('#sheet .hfold'); if (dt) dt.addEventListener('toggle', () => { U.tutall = dt.open; });
+}
+function tutMoveSheet(x, re) {
+  const k = tutOf(x), T = tutBy(k); if (!T) return; U.tut = { k, x };
+  const W = tutWho(x), open = tutOpen(x), p = tutPrice(x), can = open && S.coins >= p && !lockMsg();
+  const row = m => `<div class="mr" style="--tc:var(--t${mTypes(m)[0]})"><span class="mr-m">${spr(m.id, { it: m.item, sh: m.sh, mega: m.mega, s: '46px', lazy: 1 })}<span class="sp"><span class="mr-n"><b>${esc(mName(m))}${gs(m)}</b></span><span class="tc-s tn">${mTyIcs(m)}<span>Lv ${m.lv}</span></span></span></span><button type="button" class="btn sm2 pri tut-b" data-a="tutteach" data-u="${m.u}" data-k="${x}"${can ? '' : ' disabled'} aria-label="Teach ${esc(MOVES[x][0])} to ${esc(mName(m))}${p ? ' for ' + nb(p) + ' coins' : ''}">Teach${p ? ' · ' + nb(p) : ''}</button></div>`;
+  const why = !open ? tl('{n} teaches this one when you hold the {s} Symbol from the Battle Frontier.', { n: T.n, s: FACSYM[tutNeed(x)] }) : S.coins < p ? tl('You need {n} more coins.', { n: nb(p - S.coins) }) : '';
+  const html = `<div class="row" style="justify-content:space-between"><div class="sm tn">${T.n} · ${T.t}</div>${coinEl(S.coins)}</div>
+    ${mvxEl(x, null)}${why ? `<p class="sm au">${why}</p>` : ''}${lockEl()}
+    <div class="lab">${tl('On your team')}</div>${W.team.length ? `<div class="card mrl">${W.team.map(row).join('')}</div>` : `<p class="sm tn">${tl('No one on your team can learn it, or they know it already.')}</p>`}
+    ${W.box.length ? `<details class="hfold"${U.tutbox ? ' open' : ''}><summary><b>In the box</b><span class="sm tn">${W.box.length}</span></summary><div class="card mrl">${W.box.slice(0, 40).map(row).join('')}</div></details>` : ''}
+    <button type="button" class="btn wide nf" data-a="tutor" data-k="${k}" style="margin-top:12px">Back to ${T.n}</button>`;
+  re ? reSheet(html) : openSheet(html);
+  const dt = $('#sheet .hfold'); if (dt) dt.addEventListener('toggle', () => { U.tutbox = dt.open; });
+}
+/* «More moves» fra angrepsvalget: det hver lærer har til akkurat denne. Ett trykk på et angrep lærer det bort. */
+function tutMonSheet(m, re) {
+  const l = tutFor(m);
+  const row = x => mvRow(x, m, { act: 'tutlearn', x: `<span class="tut-p">${tutCost(x)}</span>` });
+  const html = `<div class="row" style="justify-content:space-between"><h2 class="h" style="margin:0">More moves for ${esc(mName(m))}</h2>${coinEl(S.coins)}</div>
+    <p class="sm">${tl('Tap a move to have the tutor teach it. It is then among the moves this Pokémon can choose from.')}</p>${lockEl()}<p class="err" id="mv-err" role="alert"></p>
+    ${TUTORS.map(T => { const ms = l.filter(x => tutOf(x) === T.k); return ms.length ? `<div class="lab tut-l" style="--c:${T.c}">${icn(T.ic)}${T.n} · ${T.t}</div><div class="mvls" data-u="${m.u}">${ms.map(row).join('')}</div>` : ''; }).join('')}
+    <button type="button" class="btn wide nf" data-a="mvpick2" data-u="${m.u}" style="margin-top:12px">Back to its moves</button>`;
+  re ? reSheet(html) : openSheet(html);
+}
 
 /* ---------- Profil: trenerkortet, eksamensperioden, statistikken og innstillingene ----------
    Siden er kort: trenerkortet, eksamensperioden som merker, fire tall med de ti siste ukene, og en liste med rader. Hver rad åpner et ark
@@ -1488,7 +1544,7 @@ function endTimer() {
 function countUp(el, to) { const t0 = performance.now(); (function f(t) { const k = Math.min(1, (t - t0) / 900); el.textContent = '+' + nb(to * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(f); })(t0); }
 function showReward(R) {
   const news = []; U.jmv = U.jmv || R.ups.some(x => (x.learned || []).length);
-  R.hatch.forEach(x => { const m = monBy(x.u); if (m) news.push(`<div>${spr(m.id, { it: m.item, sh: m.sh, mega: m.mega })}<span><b>Egg hatched: ${esc(D(m.id)[0])}</b><br><span class="sm">${x.isNew ? 'New to your collection' : 'You already have it'}${m.sh ? ' · shiny' : ''}</span></span></div>`); });
+  R.hatch.forEach(x => { const m = monBy(x.u); if (m) news.push(`<div>${spr(m.id, { it: m.item, sh: m.sh, mega: m.mega })}<span><b>Egg hatched: ${esc(D(m.id)[0])}</b><br><span class="sm">${x.isNew ? 'New to your collection' : 'You already have it'}${m.sh ? ' · shiny' : ''}${x.em >= 0 && MOVES[x.em] ? ' · knows the egg move <b>' + esc(MOVES[x.em][0]) + '</b>' : ''}</span></span></div>`); });
   R.ups.forEach(x => { const m = monBy(x.u); if (m) news.push(`<div>${spr(m.id, { it: m.item, sh: m.sh, mega: m.mega })}<span><b>${esc(mName(m))} level ${x.l0} → ${x.l1}</b>${x.evo ? '<br><span class="sm" style="color:var(--gold)">Ready to evolve</span>' : ''}${(x.learned || []).length ? `<br><span class="sm">Learned ${esc(x.learned.join(', '))}</span>` : ''}${(x.avail || []).length ? `<br><span class="sm">New move to pick: ${esc(x.avail.join(', '))}</span>` : ''}</span></div>`); });
   if (R.sm1 != null && R.sm1 !== R.sm0) news.push(`<div><span class="mulic">×</span><span><b>Battle bonus ×${R.sm0.toFixed(1)} → ×${R.sm1.toFixed(1)}</b><br><span class="sm">${R.sm1 >= goalTop() ? 'You reached your goal: this is the top for today.' : `It peaks at ×${goalTop().toFixed(1)} when you reach ${hm(goalMin())}.`}</span></span></div>`);
   R.gifts.forEach(g => news.push(`<div><span class="grass"><i></i><i></i><i></i><i></i></span><span>${esc(g)}</span></div>`));
@@ -1738,11 +1794,19 @@ const A = {
   trev: el => { const m = monBy(U.tru); if (!m) return; const i = U.tri, n = buyEv(m, i, +el.dataset.n); if (n) { sfx.coin(); render(); trainSheet(m); } },
   trclr: el => { const m = monBy(U.tru); if (!m) return; const i = U.tri; if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = `Tap again: remove ${m.ev[i]}`; return; } clearEv(m, i); render(); trainSheet(m); toast(`${SN[i]} training removed. The points are free again.`); },
   evolve: el => { const m = monBy(+el.dataset.u), from = m.id; if (evolve(m, +el.dataset.k)) { render(); evoShow(m, from); } },
-  sell: el => { const m = monBy(+el.dataset.u); if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.innerHTML = 'Tap again to sell'; return; } const v = sell(m); save(); sfx.sell(); closeSheet(); render(); toast(`Sold for ${nb(v)} coins.`); },
-  selldupes: el => { const du = dupes(); if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = `Tap again to sell ${du.length}`; return; } let v = 0; du.forEach(m => { v += sell(m); }); save(); sfx.sell(); render(); toast(`${du.length} sold for ${nb(v)} coins.`); },
+  sell: el => { const m = monBy(+el.dataset.u); if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.innerHTML = 'Tap again to sell'; return; } const v = sell(m), ps = SOLDPASS; save(); sfx.sell(); closeSheet(); render(); toast(`Sold for ${nb(v)} coins.${ps ? ` ${mName(ps.to)} learned ${ps.mv.map(x => MOVES[x][0]).join(' and ')} from it.` : ''}`); },
+  selldupes: el => { const du = dupes(); if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = `Tap again to sell ${du.length}`; return; } let v = 0, ps = 0; du.forEach(m => { v += sell(m); if (SOLDPASS) ps++; }); save(); sfx.sell(); render(); toast(`${du.length} sold for ${nb(v)} coins.${ps ? ' Their egg moves were passed on to the ones that stay.' : ''}`); },
   buy: el => { const k = el.dataset.k; if (buy(k)) { (k === 'egg' ? sfx.egg : sfx.coin)(); render(); if (el.dataset.s) itemSheet(k); toast(BOUGHT[k] || `${SHOP[k].n} bought.`); } },
   buy10: el => { const k = el.dataset.k; if (buyN(k, 10)) { sfx.coin(); setTimeout(sfx.coin, 90); render(); if (el.dataset.s) itemSheet(k); toast(`10 × ${SHOP[k].n} bought.`); } },
   shopt: el => { U.shop = el.dataset.k; render(); },
+  tutor: el => tutorSheet(el.dataset.k),
+  tutmv: el => tutMoveSheet(+el.dataset.k),
+  tutteach: el => { const m = monBy(+el.dataset.u), x = +el.dataset.k; if (!m || !tutTeach(m, x)) return snd('warn'); sfx.learn(); render(); tutMoveSheet(x, 1); toast(`${mName(m)} learned ${MOVES[x][0]}.${m.mv.includes(x) ? '' : ' Pick it under Moves, Change on its card.'}`); },
+  tutmore: el => { const m = monBy(+el.dataset.u); if (m) tutMonSheet(m); },
+  tutlearn: el => { const box = el.closest('[data-u]'), m = monBy(box ? +box.dataset.u : 0), x = +el.dataset.k; if (!m) return; const why = tutWhy(m, x);
+    if (why) { const e = $('#mv-err'); if (e) e.textContent = why === 'coins' ? `You need ${nb(tutPrice(x) - S.coins)} more coins.` : why === 'symbol' ? `This one opens with the ${FACSYM[tutNeed(x)]} Symbol from the Battle Frontier.` : why === 'locked' ? lockMsg() : 'It cannot learn that one.'; return snd('warn'); }
+    tutTeach(m, x); sfx.learn(); if (U.mvu !== m.u || !U.mvsel) { U.mvsel = m.mv.slice(); U.mvu = m.u; } if (!U.mvsel.includes(x) && U.mvsel.length < 4) U.mvsel.push(x); render(); movePick(m); toast(`${mName(m)} learned ${MOVES[x][0]}.`); },
+  mvpick2: el => { const m = monBy(+el.dataset.u); if (!m) return; if (U.mvu !== m.u || !U.mvsel) { U.mvsel = m.mv.slice(); U.mvu = m.u; } movePick(m); },
   sinfo: el => itemSheet(el.dataset.k),
   pinfo: el => packSheet(el.dataset.k),
   pack: el => { closeSheet(); const k = el.dataset.k, out = openPacks(k, Math.max(1, +el.dataset.n || 1)); if (!out) return toast(S.pend.length > PACKMAX ? 'Catch some of your waiting encounters first.' : 'Not enough coins.'); sfx.coin(); packShow(k, out); },

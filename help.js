@@ -79,6 +79,7 @@ const HELP = [
     ${hRow(hSym('Lv', 'var(--sage)'), 'Levels', 'Study and League battles give XP. A higher level means higher stats and new moves.')}
     ${hRow(hSym('⇪', 'var(--violet)'), 'Evolution', 'When a Pokémon is ready, its card says so. Open it under Team and press Evolve. Some need an Evolution Stone from the Shop.')}
     ${hRow(hSym('4', 'var(--red)'), 'Four moves', 'A Pokémon knows four moves in battle. You choose which four on its card, among everything it has learned.')}
+    ${typeof tutOn === 'function' && tutOn() ? hRow(hSym('+', 'var(--sage)'), 'More moves', 'An evolved Pokémon can also pick what its earlier forms learned. The tutors in the Shop teach moves it never learns by level, and a Pokémon hatched from an egg knows an egg move.') : ''}
     ${hRow(hSym('▦', 'var(--ink2)'), 'The Box', 'Everything else you have caught, region by region. Sort it by rarity, power, level, number or newest. The Duplicates tab beside it lists every species you have more than one of: the biggest and the one born with most stars stay, and one tap changes who stays and who is sold.')}
     ${hH('Types')}
     ${hP('Every move and every Pokémon has a type. A move that is <b>super effective</b> does double damage, and one that is not very effective does half. Water beats Fire, Fire beats Grass, Grass beats Water, and so on. In battle the move menu shows how each move will hit.')}

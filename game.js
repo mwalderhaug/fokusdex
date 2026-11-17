@@ -641,6 +641,19 @@ const LNO = {
   'Size': 'Størrelse',
   'Some Pokémon are born Small, Large or Giant. Size moves HP a little, and it can never be trained, so a Giant is one to keep.': 'Noen Pokémon er født Small, Large eller Giant. Størrelsen flytter HP litt, og den kan aldri trenes, så en Giant er en å beholde.',
   'Not all of them are the same size.': 'Ikke alle er like store.',
+  // Steg 1b.8: lærerne
+  'Move Tutors': 'Lærerne', 'Tutors': 'Lærere', 'Someone who can teach your team new moves.': 'Noen som kan lære laget ditt nye angrep.', 'In {n} study days: {hint}': 'Om {n} studiedager: {hint}',
+  'Four tutors now teach in the Shop. For coins they teach your Pokémon moves it never learns by level: a strong one in its own type, or cover for what it cannot hit.': 'Fire lærere holder nå til i Shop. For mynter lærer de Pokémonene dine angrep de aldri lærer med nivå: et sterkt i egen type, eller dekning mot det de ikke biter på.',
+  'Tutors teach moves a Pokémon never learns by level. Pick a move, see who on your team can learn it, and teach it with one tap.': 'Lærerne lærer bort angrep en Pokémon aldri lærer med nivå. Velg et angrep, se hvem på laget som kan lære det, og lær det bort med ett trykk.',
+  'An evolved Pokémon can also pick the moves its earlier forms learned, and one hatched from an egg knows an egg move. Both are free: open its card in Team and tap Change.': 'En utviklet Pokémon kan også velge angrepene de tidligere formene lærte, og en som er klekket av et egg, kan et egg-angrep. Begge deler er gratis: åpne kortet i Team og trykk Change.',
+  'You hold the Diamond Symbol. Everything here is free.': 'Du har diamantsymbolet. Alt her er gratis.',
+  'Bronze opens the Pledge moves and Volt Tackle, Silver the three ultimate starter moves, Gold opens Draco Meteor, and with Diamond it is all free.': 'Bronse åpner Pledge-angrepene og Volt Tackle, sølv de tre ultimate-angrepene til starterne, gull åpner Draco Meteor, og med diamant er alt gratis.',
+  'This week {n} takes {p} % off every move.': 'Denne uka tar {n} {p} % av prisen på alle angrep.',
+  'Nothing here that your team can learn and does not already have.': 'Ingenting her som laget ditt kan lære og ikke alt har.',
+  '{n} teaches this one when you hold the {s} Symbol from the Battle Frontier.': '{n} lærer bort dette når du har {s}-symbolet fra Battle Frontier.',
+  'You need {n} more coins.': 'Du mangler {n} mynter.', 'On your team': 'På laget ditt', 'No one on your team can learn it, or they know it already.': 'Ingen på laget kan lære det, eller de kan det alt.',
+  'Tap a move to have the tutor teach it. It is then among the moves this Pokémon can choose from.': 'Trykk på et angrep for å la læreren lære det bort. Da er det blant angrepene denne Pokémonen kan velge mellom.',
+  'An egg move is never lost: when one that knows it is sold, another of the same family learns it.': 'Et egg-angrep går aldri tapt: når en som kan det, selges, lærer en annen i samme familie det.',
   'Power {n}': 'Styrke {n}',
   'A nature lifts one stat by 10 % and lowers another. You see both on its card.': 'En natur løfter én verdi med 10 % og senker en annen. Du ser begge på kortet.',
   'New in the Shop': 'Nytt i Shop',
@@ -738,10 +751,11 @@ const JOURNEY = [['battles', 1, 'Battles', 'Your team can fight when the day is 
   ['nature', 4, 'Potential', 'Two of the same Pokémon are not equally strong. The stars show what each was born with, so keep the ones with many.'],
   ['train', 5, 'Training', 'Open a Pokémon in Team and tap Train. Coins raise the stats you choose, and your partner trains a little while you study.'],
   ['held', 6, 'Held items', 'A Pokémon can hold one item in battle: a berry, a plate or gear. Give it on its card in Team.'],
-  ['size', 7, 'Size', 'Some Pokémon are born Small, Large or Giant. Size moves HP a little, and it can never be trained, so a Giant is one to keep.']];
+  ['size', 7, 'Size', 'Some Pokémon are born Small, Large or Giant. Size moves HP a little, and it can never be trained, so a Giant is one to keep.'],
+  ['tutor', 9, 'Move Tutors', 'Four tutors now teach in the Shop. For coins they teach your Pokémon moves it never learns by level: a strong one in its own type, or cover for what it cannot hit.']];
 /* Korte navn til rutene på kortet, og hintet om hva som kommer neste studiedag. */
-const JSHORT = { battles: 'Battles', shop: 'Shop', shiny: 'Shiny', nature: 'Stars', train: 'Training', held: 'Items', size: 'Size' };
-const JHINT = { battles: 'Your team gets to fight.', shop: 'Somewhere to spend your coins.', shiny: 'Something rare in the grass.', nature: 'Why two of the same are not equal.', train: 'A way to make your team stronger.', held: 'Something for your team to carry.', size: 'Not all of them are the same size.' };
+const JSHORT = { battles: 'Battles', shop: 'Shop', shiny: 'Shiny', nature: 'Stars', train: 'Training', held: 'Items', size: 'Size', tutor: 'Tutors' };
+const JHINT = { battles: 'Your team gets to fight.', shop: 'Somewhere to spend your coins.', shiny: 'Something rare in the grass.', nature: 'Why two of the same are not equal.', train: 'A way to make your team stronger.', held: 'Something for your team to carry.', size: 'Not all of them are the same size.', tutor: 'Someone who can teach your team new moves.' };
 const FEATS = JOURNEY, JFREE = { shop: { pk: 'poke', great: 10 }, shiny: { pk: 'great' }, train: { pk: 'ultra' } }, JLAST = JOURNEY[JOURNEY.length - 1][1];
 /* Den garanterte shinyen på dag 3: en svak art fra områdene dine (den skal vise hva en shiny er, ikke bære laget). */
 const JSHINY = [19, 161, 263, 399, 504];
@@ -1307,7 +1321,7 @@ function grant(fag, real, full, plan, re) {
   }
   if (S.eggs.length) {
     const e = S.eggs[0]; e.got += real;
-    if (e.got >= e.need) { S.eggs.shift(); const en = genEnc({ egg: 1 }); const isNew = !S.caught[en.id]; const m = addMon(en.id, 1, en.sh, 1, en.g); R.hatch.push({ u: m.u, isNew }); }
+    if (e.got >= e.need) { S.eggs.shift(); const en = genEnc({ egg: 1 }); const isNew = !S.caught[en.id]; const m = addMon(en.id, 1, en.sh, 1, en.g), em = typeof eggGive === 'function' ? eggGive(m) : -1; R.hatch.push({ u: m.u, isNew, em }); }
   }
   const encs = [];
   let n = Math.floor(okReal / 20) + (full && planned >= 25 && okReal >= planned ? 1 : 0), luck = Math.min(1.5, planned / 60);
@@ -1438,9 +1452,11 @@ const PKSELL = 0.3;
 /* Salgsverdien følger sjeldenheten, ikke nivået: før vokste den med nivået (og ville Pokémon følger laget ditt), så salg av duplikater ble den
    største inntektskilden sent i spillet. */
 const sellValue = m => Math.round(SELL[tierOf(m.id)] * (m.sh ? 5 : 1) * (m.pk ? PKSELL : 1) * qualM(m));
+let SOLDPASS = null;
 function sell(m) {
+  SOLDPASS = null;
   if (S.mons.length <= 1 || (S.party.includes(m.u) && locked())) return 0;
-  const v = sellValue(m); unbond(m); dropHeld(m);
+  const v = sellValue(m); unbond(m); dropHeld(m); if (typeof eggPass === 'function') SOLDPASS = eggPass(m);
   S.mons = S.mons.filter(x => x !== m); S.party = S.party.filter(u => u !== m.u);
   if (!S.party.length && S.mons.length) S.party.push(S.mons[0].u);
   S.coins += v; return v;
