@@ -961,10 +961,11 @@ function pwtStart() {
   P.day = S.lad.day; P.run = { day: S.lad.day, wd: CUPS.indexOf(c), lv, flv: Math.max(5, Math.round(lv * (1 + diff().rel))), n: pwtSize(), opp, r: 0, foe: null }; save();
 }
 /* Motstanderen i runden som venter: hele laget (esset sist), trukket én gang, så det du ser på forhånd, er det de velger blant.
+   Bare esset har vært hos lærerne her (steg 1b.8): de stiller med tre, og esset er alltid med, så lærerangrepene veier tyngre enn i ligaen.
    (Et lag på tre fra en cup som var i gang før steg 1b.3, trekkes på nytt.) */
 function pwtFoe() {
   const R = pwtRun(), c = CUPS[R.wd], [k, i] = R.opp[R.r], d = POOL[k][i], st = diffSt(TCL[k]);
-  if (!R.foe || R.foe.length < Math.min(6, d[4].length)) { R.foe = bossTeam(d, 6, R.flv || R.lv, st, true); save(); }
+  if (!R.foe || R.foe.length < Math.min(6, d[4].length)) { R.foe = bossTeam(d, 6, R.flv || R.lv, Object.assign({}, st, { tut: Math.min(1, st.tut || 0) }), true); save(); }
   return { c, k, st, team: R.foe, tr: trainerOf(k, i, { skill: st.sk, sc: 'pwt' }) };
 }
 /* MOTSTANDERENS VALG I BLINDE: hvilke n av laget som stiller (plasser i team, i den rekkefølgen de sendes ut: lederen først, esset sist).
