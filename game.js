@@ -566,6 +566,8 @@ function migrate11() {
    tl(tekst, verdier): den engelske teksten er nøkkelen, LNO[tekst] den norske; {navn} byttes med verdier.navn. Mangler en oversettelse, står den engelske. */
 const LNO = {
   // Steg 1c.6: radar-gresset og kjedene
+  // Steg 1d: ekspedisjonen (resten av tekstene står i week.js og weekui.js)
+  'Locked during your expedition.': 'Låst under ekspedisjonen.', 'It opens when the expedition is over.': 'Det åpnes når ekspedisjonen er over.',
   'One patch moves like your chain. Step in there to meet the same Pokémon again. Any other patch ends the chain.': 'Én tue rører seg som kjeden din. Gå inn der for å møte den samme Pokémonen igjen. En annen tue avslutter kjeden.',
   'Step into a patch that moves. A sparkle means a shiny is in there.': 'Gå inn i en tue som rører seg. Glitter betyr at det er en shiny der.',
   'Resting: it needs a waiting encounter as common as itself.': 'Hviler: den trenger et møte som venter, like vanlig som den selv.',
@@ -1117,6 +1119,7 @@ function carry(p) {
   if (p.mode && p.mode.day && (!S.mode || ge(p.mode.day, S.mode.day))) S.mode = p.mode;
   if (p.evt && p.evt.day && (!S.evt || ge(p.evt.day, S.evt.day))) S.evt = p.evt;
   if (p.raid && S.raid && p.raid.id === S.raid.id && !!p.raid.dk === !!S.raid.dk && (p.raid.at || '') === (S.raid.at || '')) { S.raid.tries = Math.max(S.raid.tries || 0, p.raid.tries || 0); if (ge(p.raid.day, S.raid.day)) S.raid.day = p.raid.day || ''; if (p.raid.seen) S.raid.seen = 1; }
+  if (p.wk && (p.wk.w == null ? -1 : p.wk.w) > (S.wk && S.wk.w != null ? S.wk.w : -1)) { const sy = (S.wk && S.wk.sym) || {}; S.wk = p.wk; S.wk.sym = S.wk.sym || {}; for (const k in sy) S.wk.sym[k] = Math.max(S.wk.sym[k] || 0, sy[k]); }
   if (p.tmax > (S.tmax || 0)) S.tmax = p.tmax;
   if (p.fair && (!S.fair || p.fair.n > S.fair.n)) S.fair = p.fair;
   if (p.hon && (!S.hon || ge(p.hon.d, S.hon.d))) S.hon = p.hon;

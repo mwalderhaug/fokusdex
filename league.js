@@ -208,7 +208,7 @@ const facLost = () => !!S.fac.lost && S.fac.lost === (S.lad.day || dayKey()) && 
 const facOpen = () => !!S.lad.day && !dayStop() && !facLost() && modeOn('factory');
 /* Dagens bonus: datoen avgjør hvilken av de tre modusene som gir ekstra, likt for alle som spiller. Bonusen er DAYCOIN ganger mynter
    (i tillegg litt mer XP i ligaen og litt mer flaks i Frontier, som før). */
-const MODES = ['league', 'factory', 'pwt'], MODEN = { league: 'Trainer League', factory: 'Battle Frontier', pwt: 'World Tournament' }, DAYCOIN = 1.5;
+const MODES = ['league', 'factory', 'pwt'], MODEN = { league: 'Trainer League', factory: 'Battle Frontier', pwt: 'World Tournament', week: 'Expedition' }, DAYCOIN = 1.5;
 function dayBoost() {
   /* Dagene går i bolker på tre, og i hver bolk har hver modus bonusen én gang, i en rekkefølge som skifter fra bolk til bolk.
      (Før fulgte den en enkel sum av datoen, og da ble bonusen stående på samme modus i opptil åtte dager.) */
@@ -227,8 +227,9 @@ const modeSt = () => { const d = S.lad.day; if (d && (!S.mode || S.mode.day !== 
 const modeOn = k => !!S.lad.day && (MODESN >= MODES.length || modeSt().ks.includes(k));
 const modePicks = () => !S.lad.day || MODESN >= MODES.length ? 0 : Math.max(0, MODESN - modeSt().ks.length);
 function modePick(k) {
-  const M = modeSt(); if (!S.lad.day || !MODES.includes(k) || M.ks.includes(k) || M.ks.length >= MODESN) return false;
-  M.ks.push(k); evRoll(k); stamp(); save(); return true;
+  /* Ekspedisjonen (week.js) er et fjerde valg på dager den står åpen. Den har ingen special event: uka er lik for alle. */
+  const M = modeSt(), wk = k === 'week' && typeof wkOffer === 'function' && !!wkOffer(); if (!S.lad.day || !(MODES.includes(k) || wk) || M.ks.includes(k) || M.ks.length >= MODESN) return false;
+  M.ks.push(k); if (!wk) evRoll(k); stamp(); save(); return true;
 }
 /* Myntgangeren i en modus akkurat nå: studiebonusen, dagens event og dagens bonusmodus. */
 const smFor = k => Math.round(studyMult() * evCoin() * (dayBoost().mode === k ? DAYCOIN : 1) * 10) / 10;
@@ -261,24 +262,27 @@ function liveEnd() { if (SBX) { delete S.live; return; } if (S.live) { delete S.
    tilbyr), byttet en boss tilbyr, og fangst (den nye går i boksen mens laget er låst). Raid låser ikke, og Sandbox er unntatt. */
 function lockMark(mode) {
   const d = S.lad.day || dayKey();
-  if (mode === 'league') S.lad.lk = d; else if (mode === 'fac' && S.fac.run) S.fac.run.lk = d; else if (mode === 'pwt' && S.pwt && S.pwt.run) S.pwt.run.lk = d;
+  if (mode === 'league') S.lad.lk = d; else if (mode === 'fac' && S.fac.run) S.fac.run.lk = d; else if (mode === 'pwt' && S.pwt && S.pwt.run) S.pwt.run.lk = d; else if (mode === 'wk' && S.wk && S.wk.run) S.wk.run.lk = d;
 }
 function runLock() {
   if (SBX || SIMRUN) return '';
   const lm = S.live && S.live.m;
   if (lm === 'league' || lm === 'pwt') return lm;
   if (lm === 'fac') return 'factory';
+  if (lm === 'wk') return 'week';
   const d = S.lad.day; if (!d || dayShut()) return '';
   if (S.lad.lk === d && !ladLost() && !ladDone()) return 'league';
   if (S.fac.run && S.fac.run.lk === d) return 'factory';
   const P = S.pwt && S.pwt.run; if (P && P.lk && P.day === d) return 'pwt';
+  if (S.wk && S.wk.run && S.wk.run.lk === d) return 'week';
   return '';
 }
 /* Én linje til spilleren: hva som låser, og når det åpnes igjen. full = 1: også hva som er låst (banneret i Team og under Settings). */
 const LOCKTXT = {
   league: ['Locked during your League lap.', 'It opens when the lap is won or lost.'],
   factory: ['Locked during your Frontier run.', 'It opens when the run is over.'],
-  pwt: ['Locked during the cup.', 'It opens when you are out or have won it.']
+  pwt: ['Locked during the cup.', 'It opens when you are out or have won it.'],
+  week: ['Locked during your expedition.', 'It opens when the expedition is over.']
 };
 function lockMsg(full) {
   const k = runLock(); if (!k) return '';
@@ -300,6 +304,7 @@ function liveLoss() {
   } else if (L.m === 'fac') {
     const R = S.fac.run, n = used(S.fac.tries); if (R) S.fac.best = Math.max(S.fac.best || 0, R.streak || 0); S.fac.tries = { d, n }; if (n >= facLives()) S.fac.lost = d; S.fac.run = null; what = 'Frontier run';
   } else if (L.m === 'pwt') { pwt().run = null; what = 'cup';
+  } else if (L.m === 'wk') { if (typeof wkEnd === 'function') wkEnd('lost'); what = 'expedition battle';
   } else if (L.m === 'raid') {
     const R = S.raid; what = 'raid';
     if (R) { R.day = dayKey(); R.tries = (R.tries || 0) + 1; R.told = 1; if (R.tries >= raidTries(R)) raidGone(); }
@@ -1226,7 +1231,7 @@ const pwtOpen = () => !!S.lad.day && !dayStop() && modeOn('pwt') && (!!pwtRun() 
 /* ---------- Kampdagen er ferdig ----------
    modeDone(k) = modusen har ikke mer å gi denne kampdagen. Når dagen er ferdig (dayDone), viser raidet seg hvis et venter (raidUnhide).
    En kampdag fra i går kan spilles helt til en ny økt starter. Er den ferdig, går forsiden tilbake til vanlig (se ladderCard). */
-const modeDone = k => k === 'league' ? ladLost() || ladDone() : k === 'factory' ? facLost() : pwt().day === S.lad.day && !pwtRun() && !pwtXb();
+const modeDone = k => k === 'week' ? wkDone() : k === 'league' ? ladLost() || ladDone() : k === 'factory' ? facLost() : pwt().day === S.lad.day && !pwtRun() && !pwtXb();
 const dayDone = () => !!S.lad.day && (dayShut() || (MODESN < MODES.length ? modeSt().ks.length >= MODESN && modeSt().ks.every(modeDone) : MODES.every(modeDone)));
 const dayOld = () => !!S.lad.day && S.lad.day !== dayKey();
 /* «Not today»: ingen kamper denne kampdagen. Kan ikke gjøres om. */
@@ -1317,7 +1322,7 @@ function finishPwt(B) {
    ikke simulere igjen den kampdagen, S.lad.simno: da må du slåss selv eller la være). Hvem du møtte, sies ikke: det ville røpet dem. */
 const SIMPAY = 0.4, SIMCAP = { league: 8, factory: 10, pwt: 3 };
 let SIMRUN = 0;
-const simMode = () => { const ks = modeSt().ks.filter(k => !modeDone(k)); return ks.length === 1 ? ks[0] : ''; };
+const simMode = () => { const ks = modeSt().ks.filter(k => !modeDone(k)); return ks.length === 1 && ks[0] !== 'week' ? ks[0] : ''; };
 const simCan = () => !!S.lad.day && !S.live && !dayStop() && S.lad.simno !== S.lad.day && !!simMode() && S.party.map(monBy).filter(Boolean).length > 0;
 /* Valget til den som spiller for deg. */
 function autoMove(B) {
