@@ -941,11 +941,13 @@ const pwt = () => S.pwt || (S.pwt = { day: '', run: null, won: 0, cups: {} });
 const cupNow = () => (SBX && SBX.cup != null && CUPS[SBX.cup]) || CUPS[new Date((S.lad.day || dayKey()) + 'T12:00:00').getDay()] || CUPS[1];
 /* Cupen som er i gang. Den gjelder bare dagen den ble startet. */
 const pwtRun = () => { const P = pwt(); if (P.run && P.run.day !== S.lad.day) { P.run = null; } return P.run; };
-const pwtOpen = () => !!S.lad.day && !dayStop() && modeOn('pwt') && (!!pwtRun() || pwt().day !== S.lad.day);
+/* Ekstra forsøk i cupen i dag, gitt i lagringen (S.pwt.xb = { d, n }; Jazz 17.11, bare eieren). carry rører det ikke. */
+const pwtXb = () => { const x = S.pwt && S.pwt.xb, d = S.lad.day || dayKey(); return x && x.d === d ? Math.max(0, x.n | 0) : 0; };
+const pwtOpen = () => !!S.lad.day && !dayStop() && modeOn('pwt') && (!!pwtRun() || pwt().day !== S.lad.day || pwtXb() > 0);
 /* ---------- Kampdagen er ferdig ----------
    modeDone(k) = modusen har ikke mer å gi denne kampdagen. Når dagen er ferdig (dayDone), viser raidet seg hvis et venter (raidUnhide).
    En kampdag fra i går kan spilles helt til en ny økt starter. Er den ferdig, går forsiden tilbake til vanlig (se ladderCard). */
-const modeDone = k => k === 'league' ? ladLost() || ladDone() : k === 'factory' ? facLost() : pwt().day === S.lad.day && !pwtRun();
+const modeDone = k => k === 'league' ? ladLost() || ladDone() : k === 'factory' ? facLost() : pwt().day === S.lad.day && !pwtRun() && !pwtXb();
 const dayDone = () => !!S.lad.day && (dayShut() || (MODESN < MODES.length ? modeSt().ks.length >= MODESN && modeSt().ks.every(modeDone) : MODES.every(modeDone)));
 const dayOld = () => !!S.lad.day && S.lad.day !== dayKey();
 /* «Not today»: ingen kamper denne kampdagen. Kan ikke gjøres om. */
@@ -958,6 +960,7 @@ function pwtStart() {
   c.rounds.forEach(([k, re]) => { let l = POOL[k].map((_, i) => i).filter(i => (!re || re.test(POOL[k][i][5] || '')) && !opp.some(o => o[0] === k && o[1] === i)); if (!l.length) l = POOL[k].map((_, i) => i); opp.push([k, l[rnd(l.length)]]); });
   const lv = pwtLv();
   /* Motstanderne følger vanskelighetsgraden slik som i ligaen: litt lavere nivå på Easy og Normal, likt på Hard. */
+  if (P.day === S.lad.day && pwtXb() > 0) P.xb.n--;
   P.day = S.lad.day; P.run = { day: S.lad.day, wd: CUPS.indexOf(c), lv, flv: Math.max(5, Math.round(lv * (1 + diff().rel))), n: pwtSize(), opp, r: 0, foe: null }; save();
 }
 /* Motstanderen i runden som venter: hele laget (esset sist), trukket én gang, så det du ser på forhånd, er det de velger blant.
@@ -1002,7 +1005,12 @@ function finishPwt(B) {
   const P = pwt(), R = pwtRun(), win = B.over === 'win', res = { mode: 'pwt', win, ups: [], items: [], encs: [], coins: 0, trade: null, perks: [], note: '', r: B.r, cup: B.cup, done: false };
   if (!R) return res;
   const c = CUPS[R.wd];
-  if (!win) { P.run = null; res.note = `You are out of the ${c.n}. A new cup opens after your next day of focus.`; raidUnhide(); save(); return res; }
+  if (!win) {
+    P.run = null;
+    res.note = pwtXb() > 0 ? `You are out of the ${c.n}, but you have one more try today: enter the cup again.`
+      : `You are out of the ${c.n}. A new cup opens after your next day of focus.`;
+    raidUnhide(); save(); return res;
+  }
   res.coins = Math.round(PWTCOIN[R.r] * c.f * B.sm * (B.dc || 1) * purseM()); S.coins += res.coins; ringAward(clsI(B.k), res); rarePrize(clsI(B.k), res); evPerk(res);
   modeXp(res, R.n, PWTXP * [1, 1.3, 1.7][Math.min(2, R.r)] * Math.sqrt(c.f), xpMult() * diff().xp * (dayBoost().mode === 'pwt' ? dayBoost().xp : 1));
   R.r++; R.foe = null;
