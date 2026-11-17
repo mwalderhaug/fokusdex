@@ -1301,7 +1301,8 @@ async function playOne(B, e) {
   else if (e.t === 'send') {
     const team = teamOf(side), b = team[e.i], wild = side === 'foe' && !!B.tr.wild, ace = wild || (side === 'foe' && B.tr.boss && team.length > 1 && e.i === team.length - 1), big = ace && B.tr.int >= 4;
     BT.v[side] = { i: e.i, hp: e.hp, st: e.st };
-    if (big && !wild) { music(''); await say(`${B.tr.n} is down to the last Pokémon…`); }
+    /* Esset kan komme før det er sist (steg 1b.2): da sier teksten det som er sant. */
+    if (big && !wild) { music(''); await say(team.some((x, j) => j !== e.i && x.hp > 0) ? `${B.tr.n} is not saving the best for last…` : `${B.tr.n} is down to the last Pokémon…`); }
     if (BT.B !== B || !sp.isConnected) return;
     if (!wild) await typeOut(e.txt);
     if (BT.B !== B || !sp.isConnected || !$('#b-' + side)) return;

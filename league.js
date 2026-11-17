@@ -777,8 +777,9 @@ function facFoe() {
 }
 function facInfo(f) {
   const R = S.fac.run;
-  if (f.boss) return trainerOf(f.k, f.i, { skill: (f.sk || 1) * diff().sk, fr: 1, arena: 'hall', int: f.k === 'brain' ? 3 : TCL[f.k].i - 1 });
-  return trainerOf('trainer', f.ci, { ty: f.hint, skill: facSk(R.round, R.w) * diff().sk, fr: 1, arena: 'factory', v: 0, int: R.w >= 2 ? 1 : 0 });
+  /* iq 0: ingen taktikk i Battle Frontier ennå (aiIq i battle.js). Steg 1b.6 setter den når styrken gjennom løpet er lagt om. */
+  if (f.boss) return trainerOf(f.k, f.i, { skill: (f.sk || 1) * diff().sk, iq: 0, fr: 1, arena: 'hall', int: f.k === 'brain' ? 3 : TCL[f.k].i - 1 });
+  return trainerOf('trainer', f.ci, { ty: f.hint, skill: facSk(R.round, R.w) * diff().sk, iq: 0, fr: 1, arena: 'factory', v: 0, int: R.w >= 2 ? 1 : 0 });
 }
 function facBattle() {
   const R = S.fac.run, f = facFoe();
@@ -1240,7 +1241,8 @@ const raidMega = R => R.dk || R.id === 150 ? 0 : megaOpts(R.id)[0] || 0;
 const legStone = id => id === 382 ? 'the Blue Orb' : id === 383 ? 'the Red Orb' : `${D(id)[0]}'s Mega Stone`;
 function legTr(id, dk) {
   const L = dk ? DARK : LEG[id], d = D(id);
-  return { n: dk ? L.n : d[0], img: '', title: raidTitle(id, dk), ty: d[1], kind: 'legend', ci: 10, cn: 'Legendary raid', skill: 1, boss: true, ultra: true, gold: L.t === 4, int: 8,
+  /* iq 0: de ville har ingen taktikk ennå (aiIq i battle.js). Steg 1b.4 setter den sammen med settene deres. */
+  return { n: dk ? L.n : d[0], img: '', title: raidTitle(id, dk), ty: d[1], kind: 'legend', ci: 10, cn: 'Legendary raid', skill: 1, iq: 0, boss: true, ultra: true, gold: L.t === 4, int: 8,
     sc: L.sc, th: L.th, cc: L.cc, arena: 'hall', v: 0, mre: L.mre, wild: 1, leg: id, dk: dk ? 1 : 0, lt: L.t, lbg: L.bg, sig: L.sig };
 }
 /* En legendarisk i raid slår aldri ut seg selv: Explosion, Final Gambit, Memento og lignende byttes ut med det beste den ellers kan. */

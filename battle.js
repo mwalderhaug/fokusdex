@@ -790,7 +790,7 @@ function estDmg(B, u, t, m) {
 }
 const bestDmg = (B, u, t) => u.mv.reduce((best, x) => x.pp > 0 ? Math.max(best, estDmg(B, u, t, MOVES[x.i])) : best, 0);
 /* Poeng for et statusangrep: hvor nyttig er det akkurat nå? */
-function aiStatus(B, u, t, m) {
+function aiStatus(B, u, t, m, iq) {
   const V = u.v, tv = t.v, sdU = B.sd.foe, sdT = B.sd.me, n = m[0], low = u.hp < u.max * 0.45, safe = bestDmg(B, t, u) < u.hp * 0.5;
   const bench = B.me.filter(x => x.hp > 0).length - 1;
   switch (n) {
@@ -847,25 +847,104 @@ function aiStatus(B, u, t, m) {
   if (m[6] === 5) return tv.conf ? 0 : 24;
   if (m[12].length) {
     const own = m[17] === 1, cur = (own ? u : t).sg[m[12][0][0] - 1];
-    if (own) return cur >= 2 ? 0 : safe && u.hp > u.max * 0.55 ? 40 : 7;
+    if (own) {
+      if (cur >= 2) return 0;
+      /* Oppbygging når det er trygt (taktikk): motstanderen gjør lite skade eller kan ikke røre seg. Bare det som gjør den farligere. */
+      if (iq > 0 && u.hp > u.max * 0.5 && m[12].some(s => s[1] > 0 && (s[0] === 2 || s[0] === 4 || s[0] === 6))) {
+        const idle = t.status === 'slp' || t.status === 'frz' || !!tv.rech, vs = bestDmg(B, t, u) / u.hp;
+        if (idle || vs < 0.34) return 40 + iq * (idle || vs < 0.2 ? 45 : 30);
+      }
+      return safe && u.hp > u.max * 0.55 ? 40 : 7;
+    }
     return cur <= -2 || tv.sub || sdT.mist || B.turn > 8 ? 0 : 16;
   }
   return 0;
 }
+/* ---------- Taktikk (steg 1b.2) ----------
+   iq (0–1) er hvor mye taktikk treneren har. Den leses av skill: ingenting til og med 0,7 (alle på Easy og de vanlige trenerne), halvparten hos en
+   mester på Normal og alt hos en mester på Hard. Battle Frontier og de ville i raid setter den selv (tr.iq). Det iq gir, er klokere valg, aldri
+   mer styrke:
+     bytte      raskere, også når kampen én mot én er tapt, og inn kommer den som tåler angrepet spilleren ventes å bruke (aiSwitch)
+     esset      kan komme før det er sist når det er det klart beste svaret etter en besvimelse (aiNext; aldri først: det står sist på laget)
+     oppbygging når det er trygt: motstanderen gjør lite skade eller kan ikke røre seg (aiStatus)
+     raskt      et raskt angrep når den ellers ikke rekker å slå
+     dekning    et angrep mot den som ventes inn, når spilleren pleier å bytte (aiSpot, aiCover og B.hab)
+   Med iq 0 velger treneren nøyaktig som før. */
+const aiIq = B => B.tr.iq != null ? B.tr.iq : Math.max(0, Math.min(1, ((B.tr.skill || 0) - 0.7) / 0.3));
+/* Slår t før u denne runden (farten, uten å regne med raske angrep)? */
+const aiSlow = (B, u, t) => (spdB(B, t) > spdB(B, u)) !== !!B.troom;
+/* STEDET DER DET FRISTER Å BYTTE: det samme som der treneren selv ville byttet (aiSwitch). Den som står inne hos spilleren, er truet hardt av
+   trenerens sterkeste angrep (minst 55 % av HP-en) og slår svakt tilbake (under halvparten av trenerens HP). Gir { k: det opplagte angrepet,
+   a: andelen det tar av den som står inne, i: den på benken som tåler det klart best (−1 = ingen), b: andelen den tar }, eller null ellers. Treneren kjenner bare dem spilleren har vist fram i kampen (seen).
+   Brukes av aiCover, og av runTurn, som teller hvor ofte spilleren faktisk bytter her (B.hab). */
+function aiSpot(B) {
+  const u = B.foe[B.b], t = B.me[B.a];
+  if (!u || !t || u.hp <= 0 || t.hp <= 0 || u.v.lock || u.v.rech || t.v.lock || t.v.rech || stuck(B, 'me')) return null;
+  let k = -1, d = 0;
+  u.mv.forEach((x, j) => { if (x.pp <= 0) return; const e = estDmg(B, u, t, MOVES[x.i]); if (e > d) { d = e; k = j; } });
+  if (k < 0 || d < t.hp * 0.55 || bestDmg(B, t, u) >= u.hp * 0.5) return null;
+  const m = MOVES[u.mv[k].i], a = d / t.hp; let i = -1, b = 9;
+  B.me.forEach((c, j) => { if (j === B.a || c.hp <= 0 || !c.seen) return; const e = estDmg(B, u, c, m) / c.hp; if (e < b) { b = e; i = j; } });
+  return i >= 0 && b <= 0.3 && b <= a * 0.45 ? { k, a, i, b } : { k, a, i: -1, b: 0 };
+}
+/* DEKNING: spilleren pleier å bytte når den som står inne er truet. B.hab teller det i denne kampen (n ganger truet, sw ganger byttet), og
+   h er troen på et bytte nå. Før spilleren har byttet én gang, skjer ingenting. Siden sikter treneren noen ganger på den som ventes inn, med
+   angrepet som treffer den hardest, i stedet for det opplagte. hs er troen der de to valgene er like gode (regnet av skaden i de fire utfallene): over den lønner
+   dekningen seg. Sjansen stiger jevnt rundt hs, så valget aldri er sikkert: mot en som aldri bytter, nesten aldri; mot en som alltid bytter,
+   som oftest. Finnes det ikke noe angrep som biter på den som ventes inn, bygger treneren seg heller opp. ok = angrepene som kan brukes
+   ([plass, poeng], det beste først). Gir plassen til angrepet, eller −1. */
+function aiCover(B, iq, ok) {
+  const sp = aiSpot(B); if (!sp || sp.i < 0 || ok[0][0] !== sp.k) return -1;
+  const H = B.hab; if (!H || !H.sw) return -1;
+  const u = B.foe[B.b], t = B.me[B.a], c = B.me[sp.i], h = (H.sw + 0.5) / (H.n + 4);
+  let k2 = -1, d = 0, up = -1;
+  for (const [k] of ok) {
+    const m = MOVES[u.mv[k].i];
+    if (m[4] === 0) { if (up < 0 && m[17] === 1 && m[12].some(s => s[1] > 0 && (s[0] === 2 || s[0] === 4 || s[0] === 6) && u.sg[s[0] - 1] < 2)) up = k; continue; }
+    if (k === sp.k) continue;
+    const e = estDmg(B, u, c, m) / c.hp; if (e > d) { d = e; k2 = k; }
+  }
+  d = Math.min(1, d);
+  if (k2 < 0 || d < sp.b + 0.2 || d < 0.25) return up >= 0 && u.hp > u.max * 0.5 && Math.random() < iq * Math.max(0, Math.min(0.6, (h - 0.45) * 2.5)) ? up : -1;
+  const a = Math.min(1, sp.a), cs = Math.min(1, estDmg(B, u, t, MOVES[u.mv[k2].i]) / t.hp), hs = (a - cs) / Math.max(0.01, (a - cs) + (d - sp.b));
+  return Math.random() < iq * Math.max(0, Math.min(0.85, 0.5 + (h - hs) * 2.5)) ? k2 : -1;
+}
+/* BYTTE: hvem på benken treneren bytter til nå, eller −1. Uten taktikk som før: bare når den som står inne er sjanseløs (truet hardt, slår svakt)
+   og en annen står klart bedre mot alt motstanderen har. Med taktikk også når kampen én mot én er tapt (motstanderen slår den ut først), og den
+   som kommer inn, velges etter angrepet spilleren ventes å bruke, det sterkeste mot den som står inne: det er det den nye får i fanget.
+   Esset byttes ikke inn mens det holdes igjen (det står ikke i bench): det kommer tidlig bare etter en besvimelse (aiNext). */
+function aiSwitch(B, bench, iq) {
+  const u = B.foe[B.b], t = B.me[B.a], threat = bestDmg(B, t, u) / u.hp, mine = bestDmg(B, u, t) / t.hp;
+  if (u.hp <= u.max * 0.25) return -1;
+  let go = threat >= 0.55 && mine < 0.5;
+  if (!go && iq >= 0.3 && threat >= 0.34 && mine < 0.67) { const nt = Math.ceil(1 / threat), nm = Math.ceil(1 / Math.max(mine, 0.01)); go = nt < nm || (nt === nm && aiSlow(B, u, t)); }
+  if (!go) return -1;
+  let pm = null, pd = 0;
+  if (iq > 0) for (const x of t.mv) { if (x.pp <= 0) continue; const d = estDmg(B, t, u, MOVES[x.i]); if (d > pd) { pd = d; pm = MOVES[x.i]; } }
+  let best = -1, bs = 0;
+  for (const i of bench) {
+    const c = B.foe[i], inc = bestDmg(B, t, c) / c.hp, out = bestDmg(B, c, t) / t.hp; let sc = out - inc * 1.2, ok = inc < 0.34;
+    if (pm) {
+      /* Den nye tar det ventede angrepet på vei inn, og må så klare seg mot det beste spilleren har mot den. */
+      const first = estDmg(B, t, c, pm) / c.hp, left = Math.max(0.05, 1 - first), nt = Math.ceil(left / Math.max(inc, 0.01)), nm = Math.ceil(1 / Math.max(out, 0.01));
+      ok = first < 0.34 && (inc < 0.34 || nm < nt || (nm === nt && !aiSlow(B, c, t))); sc -= first * 0.6;
+    }
+    if (ok && (out > mine + 0.15 || inc < threat * 0.4) && (best < 0 || sc > bs)) { best = i; bs = sc; }
+  }
+  return best;
+}
 /* Gir { t: 'move', k } eller { t: 'switch', i }. skill (0–1) styrer hvor ofte det beste velges, og om treneren bytter ut. */
 function aiAct(B) {
-  const u = B.foe[B.b], t = B.me[B.a], V = u.v, sk = B.tr.skill;
+  const u = B.foe[B.b], t = B.me[B.a], V = u.v, sk = B.tr.skill, iq = aiIq(B);
   if (V.rech || V.lock) return { t: 'move', k: V.lock ? V.lock.k : 0 };
+  /* Esset holdes igjen så lenge flere enn to står. */
   const bench = B.foe.map((x, i) => i).filter(i => i !== B.b && B.foe[i].hp > 0 && !(B.tr.boss && i === B.foe.length - 1 && B.foe.filter(x => x.hp > 0).length > 2));
-  /* Bytte: når motstanderen truer hardt, treneren ikke kan slå tilbake, og noen på benken står klart bedre. */
-  if (bench.length && sk >= 0.6 && !stuck(B, 'foe') && B.turn - B.aiSw > 2 && t.hp > 0) {
-    const threat = bestDmg(B, t, u) / u.hp, mine = bestDmg(B, u, t) / t.hp;
-    if (threat >= 0.55 && mine < 0.5 && u.hp > u.max * 0.25) {
-      let best = -1, bs = 0;
-      for (const i of bench) { const c = B.foe[i], inc = bestDmg(B, t, c) / c.hp, out = bestDmg(B, c, t) / t.hp, sc = out - inc * 1.2; if (inc < 0.34 && (out > mine + 0.15 || inc < threat * 0.4) && (best < 0 || sc > bs)) { best = i; bs = sc; } }
-      if (best >= 0 && Math.random() < sk - 0.25) return { t: 'switch', i: best };
-    }
+  if (bench.length && sk >= 0.6 && !stuck(B, 'foe') && B.turn - B.aiSw > (iq >= 0.5 ? 1 : 2) && t.hp > 0) {
+    const i = aiSwitch(B, bench, iq);
+    if (i >= 0 && Math.random() < sk - 0.25) return { t: 'switch', i };
   }
+  /* Slår motstanderen den ut før den rekker å slå, er det bare et raskt angrep som kommer fram. */
+  const late = iq > 0 && aiSlow(B, u, t) && bestDmg(B, t, u) >= u.hp;
   const opts = [];
   u.mv.forEach((x, k) => {
     if (x.pp <= 0 || (V.dis && V.dis.k === k) || (V.enc && V.enc.k !== k) || (V.torm && V.last === k && u.mv.length > 1) || (t.v.imprison && t.mv.some(y => y.i === x.i))) return;
@@ -873,27 +952,40 @@ function aiAct(B) {
     if (m[4] > 0) {
       const d = estDmg(B, u, t, m);
       sc = Math.min(100, d / t.hp * 100) + (d >= t.hp ? 30 + (m[5] > 0 ? 12 : 0) : 0);
+      if (late && d > 0) sc = m[5] > 0 ? sc + 45 * iq : sc * (1 - 0.6 * iq);
       if (t.v.away) sc = 1;
       if (BOOM.has(m[0]) || m[0] === 'Final Gambit') sc = u.hp < u.max * 0.25 ? sc * 0.8 : sc * 0.12;
       if (m[9] < 0 && u.hp < u.max * 0.2) sc *= 0.8;
-    } else sc = V.taunt || DEADMV.has(x.i) ? 0 : aiStatus(B, u, t, m);
+    } else sc = V.taunt || DEADMV.has(x.i) ? 0 : aiStatus(B, u, t, m, iq);
     opts.push([k, sc * (0.9 + Math.random() * 0.2)]);
   });
   if (!opts.length) return { t: 'move', k: -1 };
   opts.sort((a, b) => b[1] - a[1]);
+  if (iq > 0 && opts.length > 1) { const k = aiCover(B, iq, opts); if (k >= 0) return { t: 'move', k }; }
   if (Math.random() < sk || opts.length === 1) return { t: 'move', k: opts[0][0] };
   const ok = opts.filter(x => x[1] > 0), pool = ok.length ? ok : opts, tot = pool.reduce((a, x) => a + x[1] * x[1] + 1, 0);
   let r = Math.random() * tot;
   for (const x of pool) { r -= x[1] * x[1] + 1; if (r <= 0) return { t: 'move', k: x[0] }; }
   return { t: 'move', k: pool[0][0] };
 }
-/* Hvem sendes inn etter en besvimelse: dyktige trenere velger den som står best mot din Pokémon, og bosser sparer esset til slutt. */
+/* Hvem sendes inn etter en besvimelse: dyktige trenere velger den som står best mot din Pokémon, og bosser sparer esset til slutt. Med taktikk
+   teller det også hvem som slår først (en som er raskere og slår ut din, er best; en som blir slått ut før den rekker å slå, er verst).
+   ESSET FØR DET ER SIST (iq fra 0,5): bare når den beste av de andre står dårlig (tar mer enn den gir) og esset er klart bedre (ACEM), og
+   også da bare noen ganger (ACEP ganger iq), så det aldri er sikkert når det kommer. */
+const ACEM = 0.6, ACEP = 0.6;
 function aiNext(B) {
-  const alive = B.foe.map((x, i) => i).filter(i => B.foe[i].hp > 0), t = B.me[B.a];
+  const alive = B.foe.map((x, i) => i).filter(i => B.foe[i].hp > 0), t = B.me[B.a], iq = aiIq(B);
   if (alive.length < 2 || B.tr.skill < 0.6 || t.hp <= 0) return alive[0];
-  const c = B.tr.boss ? alive.filter(i => i !== B.foe.length - 1) : alive;
-  let best = c[0], bs = -9;
-  for (const i of c) { const f = B.foe[i], sc = bestDmg(B, f, t) / t.hp - bestDmg(B, t, f) / f.hp + Math.random() * 0.25; if (sc > bs) { bs = sc; best = i; } }
+  const ace = B.tr.boss ? B.foe.length - 1 : -1;
+  const val = i => {
+    const f = B.foe[i], out = bestDmg(B, f, t) / t.hp, inc = bestDmg(B, t, f) / f.hp; let sc = out - inc + Math.random() * 0.25;
+    if (iq > 0) { const slow = aiSlow(B, f, t); if (out >= 1 && !slow) sc += 0.4 * iq; else if (inc >= 1 && slow) sc -= 0.4 * iq; }
+    return sc;
+  };
+  let best = -1, bs = -9;
+  for (const i of alive) { if (i === ace) continue; const sc = val(i); if (sc > bs) { bs = sc; best = i; } }
+  if (best < 0) return alive[0];
+  if (iq >= 0.5 && alive.includes(ace) && bs < 0 && val(ace) - bs >= ACEM && Math.random() < ACEP * iq) return ace;
   return best;
 }
 
@@ -943,7 +1035,11 @@ function runQueue(B, q, ev) {
 }
 function runTurn(B, a) {
   const ev = []; B.turn++; GRAV = B.grav || 0; WILD = !!B.tr.wild;
+  B.me[B.a].seen = 1;
   const fa = aiAct(B);
+  /* Vanen til spilleren (til aiCover): hvor ofte den bytter ut en som er truet. Telles når treneren ser en på benken som tåler angrepet,
+     og når spilleren faktisk bytter. */
+  if (aiIq(B) > 0) { const sp = aiSpot(B); if (sp && (sp.i >= 0 || a.t === 'switch')) { const H = B.hab || (B.hab = { n: 0, sw: 0 }); H.n++; if (a.t === 'switch') H.sw++; } }
   /* Hva hver side har tenkt å gjøre denne runden: angrepets nummer, -1 for Struggle og -2 for alt annet (bytte, gjenstand). */
   const idx = (b, k) => k >= 0 && b.mv[k] ? b.mv[b.v.enc ? b.v.enc.k : k].i : -1;
   B.intent = { me: a.t === 'move' ? idx(B.me[B.a], a.k) : -2, foe: fa.t === 'move' ? idx(B.foe[B.b], fa.k) : -2 }; B.moved = { me: 0, foe: 0 }; B.pivot = null; B.rest = null;
