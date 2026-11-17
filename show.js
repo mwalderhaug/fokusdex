@@ -409,14 +409,14 @@ const sbxF = () => U.sbf || (U.sbf = { r: 1, boss: 0, mega: 0, top: 0 });
 function sbxFacPeek(r) {
   const [a, b] = FACBST(r), up = dayBoost().mode === 'factory' ? 1.5 : 1, p = facTopP(r, up), sk = diff().sk, s0 = facSk(r, 0) * sk, s1 = facSk(r, FACN - 2) * sk;
   const pc = x => Math.round(x * 100), m = (n, f, v) => `<span>${n}</span><span class="bar gold"><i style="width:${pc(Math.max(0.05, Math.min(1, f)))}%"></i></span><b class="tn">${v}</b>`;
-  return `<div class="sbxm">${m('Rentals', Math.min(4, r) / 4, `base stats ${a}–${b}`)}${m('Top boss', p / 0.6, `${pc(p)} %`)}${m('Trainers', (s0 + s1) / 2 / 0.95, `skill ${pc(s0) === pc(s1) ? pc(s0) : pc(s0) + '–' + pc(s1)} %`)}</div>
-    <p class="sm tn">${r >= 4 ? 'From round 4 the rentals and the bosses are as strong as they get. Later rounds bring more top bosses and sharper trainers.' : 'Rentals and bosses get stronger every round until round 4.'}${up > 1 ? ' Frontier bonus today: top bosses 1.5× as often.' : ''}</p>`;
+  return `<div class="sbxm">${m('Rentals', (a - 400) / 125, `base stats ${a}–${b}`)}${m('Top boss', p / 0.6, `${pc(p)} %`)}${m('Trainers', (s0 + s1) / 2 / 0.95, `skill ${pc(s0) === pc(s1) ? pc(s0) : pc(s0) + '–' + pc(s1)} %`)}</div>
+    <p class="sm tn">Boss: ${facBossOf(r).brain ? 'the Frontier Brain of the run' : 'a ' + facBossOf(r).k.map(k => TCL[k].n).join(', ')}${facBossOf(r).sym ? ' · ' + FACSYM[facBossOf(r).sym] + ' Symbol' : ''}. Opponents get stronger with every battle, and the run ends when round ${FACEND} is cleared.${up > 1 ? ' Frontier bonus today: top bosses 1.5× as often.' : ''}</p>`;
 }
 function sbxFacCard() {
   const f = sbxF(), R = SBX && !SBX.jp ? S.fac.run : null;
   return `<div class="card stack sbxfc" id="sbxfc"><div class="row" style="justify-content:space-between"><b class="h">Battle Frontier</b>${R ? `<span class="pill tn">In the copy · round ${R.round}</span>` : ''}</div>
-    <p class="sm">Start in any round. The run then goes on, round after round, until you lose.</p>
-    <div class="sbxr" role="group" aria-label="Start in round">${[1, 2, 3, 4, 5, 6, 7, 8].map(r => `<button type="button" data-a="sbxr" data-k="${r}" aria-pressed="${f.r === r}">${r}</button>`).join('')}</div>
+    <p class="sm">Start in any round. The run then goes on, round after round, until you lose or round ${FACEND} is cleared.</p>
+    <div class="sbxr" role="group" aria-label="Start in round">${[1, 2, 3, 4, 5, 6].map(r => `<button type="button" data-a="sbxr" data-k="${r}" aria-pressed="${f.r === r}">${r}</button>`).join('')}</div>
     ${sbxFacPeek(f.r)}
     <div class="chips sbxo">${SBXFO.map(([k, n]) => `<button type="button" class="chip" data-a="sbxo" data-k="${k}" aria-pressed="${!!f[k]}">${n}</button>`).join('')}</div>
     <button type="button" class="go gold" data-a="sbxfac" data-k="${f.r}">Start in round ${f.r}</button>

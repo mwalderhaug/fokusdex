@@ -191,12 +191,12 @@ const ladLost = () => !!S.lad.lost && S.lad.lost === (S.lad.day || dayKey());
 const ladDone = () => !!S.lad.lapd && S.lad.lapd === (S.lad.day || dayKey());
 /* Kampene åpnes først når dagen har OPENMIN minutter fokus (før holdt det å starte og stoppe en økt). openNeed = minutter som mangler. */
 const openNeed = () => Math.max(0, OPENMIN - todayMin());
-/* Forsøk per dag: i ligaen avslutter et tap hele runden (LIVES; Easy tåler ett tap), Frontier tåler tre løp (FACLIVES; to før 16.11, tre til Frontier er fikset i steg 1b og 1c), turneringen er én cup og
+/* Forsøk per dag: i ligaen avslutter et tap hele runden (LIVES; Easy tåler ett tap), Frontier tåler to løp (FACLIVES; tre fra 16.11 til steg 1b.6, mens den var for tung tidlig), turneringen er én cup og
    raidet ett forsøk. Taper du i ligaen, starter du på kamp 1 neste ligadag: det er ingen omkamp mot den som slo deg. */
 /* Veska: så mange gjenstander kan brukes per kamp. Ellers kunne nok Revive vinne enhver kamp. */
 const BAGN = 3, bagN = () => diff().bag;
 const LIVES = 1, ladFails = () => { const t = S.lad.tries, d = S.lad.day || dayKey(); return t && t.d === d ? t.n : 0; };
-const FACLIVES = 3, facFails = () => { const t = S.fac.tries, d = S.lad.day || dayKey(); return t && t.d === d ? t.n : 0; };
+const FACLIVES = 2, facFails = () => { const t = S.fac.tries, d = S.lad.day || dayKey(); return t && t.d === d ? t.n : 0; };
 /* Kampdagen kan også stenges uten kamper: «Not today» (S.lad.skip) eller en godtatt simulering (S.lad.simd). Mens en simulering venter på svar
    (simPending), står kampene stille. dayDone = alt som kan spilles denne kampdagen, er spilt, simulert eller hoppet over. */
 const dayShut = () => !!S.lad.day && (S.lad.skip === S.lad.day || S.lad.simd === S.lad.day);
@@ -680,17 +680,42 @@ function doTrade(x, mine) {
 }
 
 /* ---------- Battle Frontier ---------- */
-/* Alt i Battle Frontier er på nivå 50, så alle stiller likt. En runde er FACN kamper: fire vanlige trenere og en boss. For hver runde blir
-   leie-Pokémonene og motstanderne sterkere (høyere samlet styrke), ikke høyere i nivå. Internt heter modusen fortsatt «fac».
-   LEIEPOOLEN (FACBST = laveste og høyeste samlede styrke per runde): bunnen er løftet så de helt svake er borte, og toppen holdt nede så ingen
-   bærer laget alene. Innenfor spennet trekkes de midterste oftest (facW), og blant de sju er det aldri mer enn to med samme hovedtype,
-   så det alltid er noe nytt å prøve. Motstanderne ligger tettere opp mot det du leier enn før (FACD). */
-const FACLV = 50, FACN = 5, FACROUND = r => 200 + 100 * Math.min(4, r - 1);
-const FACBST = r => [[430, 525], [455, 545], [475, 570], [495, 600]][Math.min(3, r - 1)];
-const FACD = [-55, -35, -15, 0];
+/* Alt i Battle Frontier er på nivå 50, så alle stiller likt. En runde er FACN kamper: fire vanlige trenere og en boss. Internt heter modusen «fac».
+   ET LØP (steg 1b.6, Jazz 17.11) er høyst FACEND runder (30 kamper) og slutter når runde 6 er klar: «Frontier conquered». Et tap avslutter det før.
+   STYRKEN STIGER GJENNOM HELE LØPET og går aldri ned: hver vanlige trener er sterkere enn den forrige, også over rundegrensene (FACFOE = midten av
+   den samlede styrken laget deres trekkes rundt, for hver av de fire i hver runde). Før startet hver runde 55 under leiepoolen, så den første
+   treneren i en ny runde var svakere enn den siste i runden før. Runde 1 og 2 er lettere enn før og de senere tyngre: et godt lag skal klare de
+   to første, og så blir det hardt. Trenerne velger også bedre for hver kamp (facSk), og fra runde 3 får de taktikk (facIq, aiIq i battle.js).
+   LEIEPOOLEN (FACBST = laveste og høyeste samlede styrke per runde) blir bedre for hver runde, også i runde 5 og 6. Innenfor spennet trekkes de
+   midterste oftest (facW), og blant de sju er det aldri mer enn to med samme hovedtype.
+   BOSSENE (FACBOSS), en for hver runde: en leder, admin eller rival med tre Pokémon i runde 1 · runde 2 gir BRONSE · i runde 3 møter du løpets Frontier Brain
+   (R.brain) og vinner SØLV · i runde 4 den samme, sterkere, for GULL · runde 5 er en av de fire store eller en rival på sitt beste · og i
+   runde 6 står Brain der for tredje gang, med alt, for DIAMANT. En sjelden toppboss (klasse 7–9, bedre belønning) kan ta plassen i runde 2 og 5
+   (FACTOP). Symbolene (S.fac.sym: 0–4, det høyeste du har vunnet) er medaljer under Profile, med premie første gang (ACH «fsym» i game.js).
+   MYNTENE flater ut etter runde 4 (seieren og rundepremien), så et langt løp ikke gir urimelig mye. */
+const FACLV = 50, FACN = 5, FACEND = 6, FACROUND = r => 200 + 100 * Math.min(3, r - 1);
+const FACBST = r => [[430, 525], [455, 545], [475, 570], [505, 600], [530, 600], [540, 600]][Math.max(0, Math.min(FACEND, r) - 1)];
+const FACFOE = [[400, 413, 426, 439], [445, 455, 465, 475], [480, 486, 492, 498], [500, 503, 506, 509], [510, 512, 514, 516], [517, 519, 521, 523]];
+/* Hvor langt over eller under leiepoolen trener w (0–3) i runde r ligger. */
+const facD = (r, w) => { const [a, b] = FACBST(r); return FACFOE[Math.max(0, Math.min(FACEND, r) - 1)][Math.max(0, Math.min(3, w))] - (a + b) / 2; };
+const FACBOSS = [
+  { k: ['gym', 'eviladmin', 'rival'], mons: 3, iv: 10, ev: 0, q: 1, slack: 0, sk: 0.8, iq: 0 },
+  { k: ['gym', 'eviladmin', 'e4', 'rival'], iv: 14, ev: 4, q: 2, slack: 6, sk: 0.82, iq: 0.2, sym: 1 },
+  { brain: 1, iv: 16, ev: 12, q: 2, slack: 14, sk: 0.86, iq: 0.4, sym: 2 },
+  { brain: 1, iv: 18, ev: 14, q: 2, slack: 99, sk: 0.87, iq: 0.45, sym: 3 },
+  { k: ['e4', 'rival', 'eviladmin'], iv: 24, ev: 16, q: 2, slack: 99, sk: 0.96, iq: 0.8 },
+  { brain: 1, iv: 31, ev: 16, q: 2, slack: 99, sk: 1, iq: 1, sym: 4 }
+];
+const FACSYM = ['', 'Bronze', 'Silver', 'Gold', 'Diamond'], FACTOP = [0, 0.12, 0, 0, 0.2, 0];
+const facBossOf = r => FACBOSS[Math.max(0, Math.min(FACEND, r) - 1)];
 /* Sjansen for at bossen i runde r er en toppboss (klasse 7–9; up = 1.5 på Frontier-bonusdagen), og hvor ofte en vanlig trener velger det beste
    angrepet (w = 0–3: hvilken trener i runden). Egne navn fordi sandkassa viser dem (sbxFacPeek i show.js). */
-const facTopP = (r, up = 1) => Math.min(0.6, (0.12 + 0.06 * (r - 1)) * up), facSk = (r, w) => Math.min(0.95, 0.3 + 0.1 * r + 0.08 * w);
+const facTopP = (r, up = 1) => Math.min(0.6, (FACTOP[Math.max(0, Math.min(FACEND, r) - 1)] || 0) * up), facSk = (r, w) => Math.min(0.95, 0.3 + 0.1 * r + 0.08 * w);
+/* Taktikken i Frontier: ingen i runde 1 og 2, så litt mer for hver runde og kamp. Vanskelighetsgraden teller som ellers (Easy ingen, Normal halvparten). */
+const facIq = (r, w) => r < 3 ? 0 : Math.min(0.5, 0.15 * (r - 2) + 0.03 * w), facIqD = () => Math.max(0, Math.min(1, (diff().sk - 0.7) / 0.3));
+/* IV-grunnlaget (før tilfeldigheten, 6 til 19 på toppen): leie-Pokémon (d = 0) får 4 mer per runde hele veien. Trenerne (d < 0) får 4 per runde
+   og litt mindre jo lenger under leiepoolen de ligger, til runde 3 (−11 → 7); etter det 8, 9 og 10, så det aldri går ned. */
+const facIvB = (r, d) => d < 0 && r > 3 ? 4 + r : 4 * r + Math.round(d / 5);
 const facW = (s, a, b) => { const m = (a + b) / 2, h = (b - a) / 2 || 1; return 0.35 + 0.65 * (1 - Math.abs(s - m) / h); };
 /* Hvor sterk en leie-Pokémon er, i stjerner (1–5), og ballen den ligger i før den åpnes. Mega er alltid fem. */
 const facStars = m => { if (m.mega) return 5; const s = bstSum(m.id); return s < 455 ? 1 : s < 485 ? 2 : s < 515 ? 3 : s < 545 ? 4 : 5; };
@@ -712,11 +737,11 @@ function facMon(r, used, d, tys) {
   if (!pool.length) return facMon(r, used, d, null);
   let x = Math.random() * tot, id = pool[pool.length - 1][0]; for (const [i, w] of pool) { x -= w; if (x <= 0) { id = i; break; } }
   used.add(id); if (tys) tys[D(id)[1]] = (tys[D(id)[1]] || 0) + 1;
-  return { id, lv: FACLV, sh: 0, iv: Array.from({ length: 6 }, () => Math.max(0, Math.min(31, 4 * r + Math.round(d / 5) + 6 + rnd(14)))), ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: foeMoves(id, FACLV, 1) };
+  return { id, lv: FACLV, sh: 0, iv: Array.from({ length: 6 }, () => Math.max(0, Math.min(31, facIvB(r, d) + 6 + rnd(14)))), ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: foeMoves(id, FACLV, 1) };
 }
-/* Leie-Pokémon er alltid fullt utviklet. En sjelden gang (MEGAP) er én av de sju en Mega. Den trekkes blant alle Mega-former som ikke er legendariske,
-   og de svakeste kommer klart oftest: Mawile og Beedrill mange ganger så ofte som Garchomp og Salamence. */
-const MEGAP = 0.09;
+/* Leie-Pokémon er alltid fullt utviklet. En sjelden gang (MEGAP for runden; i runde 6 alltid) er én av de sju en Mega. Den trekkes blant alle Mega-former
+   som ikke er legendariske, og de svakeste kommer klart oftest: Mawile og Beedrill mange ganger så ofte som Garchomp og Salamence. */
+const MEGAP = [0.09, 0.09, 0.12, 0.35, 0.7, 1], facMegaP = r => MEGAP[Math.max(0, Math.min(MEGAP.length, r) - 1)];
 function megaPick(used) {
   const c = MEGA.map((g, k) => k).filter(k => !isLeg(MEGA[k][0]) && MEGA[k][1] !== 'Primal' && !used.has(MEGA[k][0])), w = c.map(k => Math.pow(Math.max(40, 760 - megaBst(k)), 2.2));
   let r = Math.random() * w.reduce((a, b) => a + b, 0);
@@ -743,13 +768,12 @@ function facStar(r, used, tys) {
 function facOffer(r, mg) {
   const used = new Set(), tys = {}, l = Array.from({ length: 6 }, () => facMon(r, used, 0, tys)), si = rnd(7);
   l.splice(si, 0, facStar(r, used, tys) || facMon(r, used, 0, tys));
-  if (mg || Math.random() < MEGAP) { const k = megaPick(used), g = MEGA[k], i = (si + 1 + rnd(6)) % 7; l[i] = { id: g[0], mega: k + 1, lv: FACLV, sh: 0, iv: l[i].iv, ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: foeMoves(g[0], FACLV, 1) }; }
+  if (mg || Math.random() < facMegaP(r)) { const k = megaPick(used), g = MEGA[k], i = (si + 1 + rnd(6)) % 7; l[i] = { id: g[0], mega: k + 1, lv: FACLV, sh: 0, iv: l[i].iv, ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: foeMoves(g[0], FACLV, 1) }; }
   return l;
 }
-function facStart() { S.fac.run = { round: 1, w: 0, streak: 0, offer: facOffer(1), open: 0, team: null, foe: null }; save(); }
+function facStart() { S.fac.run = { round: 1, w: 0, streak: 0, offer: facOffer(1), open: 0, team: null, foe: null, brain: rnd(POOL.brain.length) }; save(); }
 function facPick(idx) { const R = S.fac.run; R.team = idx.map(i => R.offer[i]); R.offer = null; R.foe = null; save(); }
-/* Neste motstander. Den sjuende i hver runde er bossen: oftest en Frontier Brain eller en boss fra klasse 2 til 6,
-   og en sjelden gang en toppboss (klasse 7 til 9), som gir mye bedre belønning. Sjansen for toppboss øker med rundene. */
+/* Neste motstander. Den femte i hver runde er bossen (FACBOSS). */
 function facFoe() {
   const R = S.fac.run;
   /* Et løp fra før runden ble kortere: står du lenger enn den nye runden rekker, er det bossen som venter. */
@@ -758,17 +782,16 @@ function facFoe() {
   const boss = R.w === FACN - 1, used = new Set(R.team.map(m => m.id)), cnt = {};
   let f;
   if (boss) {
-    /* R.top: toppboss hver gang (bare fra sandkassa). */
-    const up = dayBoost().mode === 'factory' ? 1.5 : 1, ultra = !!R.top || Math.random() < facTopP(R.round, up);
-    const k = ultra ? pickUltra(R.round - 1) : Math.random() < 0.5 ? 'brain' : ['gym', 'eviladmin', 'e4', 'rival'][rnd(4)], i = rnd(POOL[k].length);
-    /* Bossen vokser med rundene: i første runde er laget dårligere oppdrettet og de som utvikler seg sent, står i en tidligere form.
-       De sjeldne (u = 1 til 3 for klasse 7 til 9) ligger alltid et hakk eller mer over, så de sjeldneste er vanskeligst også her. */
-    const r = Math.min(4, R.round), u = ultra ? TCL[k].i - 6 : 0;
-    const st = { iv: Math.min(31, (u ? 10 + 4 * u : k === 'brain' ? 0 : 4) + 6 * r), ev: (u ? 8 + 8 * u : 0) + 8 * (r - 1), q: k === 'brain' && r < 3 ? 1 : 2, slack: u >= 3 ? 99 : [0, 6, 14, 99][Math.min(3, r - 1 + u)], mg: TCL[k].i >= 8 };
+    /* R.top: toppboss hver gang (bare fra sandkassa). Et løp fra før steg 1b.6 har ingen Brain ennå: den trekkes her. */
+    const r = Math.max(1, Math.min(FACEND, R.round)), T = facBossOf(r), up = dayBoost().mode === 'factory' ? 1.5 : 1, ultra = !!R.top || (!T.brain && Math.random() < facTopP(r, up));
+    if (R.brain == null || !POOL.brain[R.brain]) R.brain = rnd(POOL.brain.length);
+    const k = ultra ? pickUltra(r - 1) : T.brain ? 'brain' : T.k[rnd(T.k.length)], i = k === 'brain' ? R.brain : rnd(POOL[k].length), u = ultra ? TCL[k].i - 6 : 0;
+    /* De sjeldne (u = 1 til 3 for klasse 7 til 9) ligger alltid et hakk eller mer over rundens boss, så de sjeldneste er vanskeligst også her. */
+    const st = { iv: Math.min(31, T.iv + (u ? 4 + 4 * u : 0)), ev: T.ev + 8 * u, q: u ? 2 : T.q, slack: u >= 3 ? 99 : Math.max(T.slack, u ? [6, 14, 99][u - 1] : 0), mg: TCL[k].i >= 8 };
     const dd = diff(); st.iv = Math.round(st.iv * dd.iv); st.ev = Math.round(st.ev * dd.ev);
-    f = { boss: 1, k, i, sk: Math.min(1, [0.76, 0.86, 0.94, 1][r - 1] - (k === 'brain' ? 0.06 : 0) + 0.06 * u), team: bossTeam(POOL[k][i], 4, FACLV, st, true), hint: POOL[k][i][3] };
+    f = { boss: 1, k, i, sk: Math.min(1, T.sk + 0.06 * u), iq: Math.min(1, T.iq + 0.15 * u), sym: T.sym || 0, team: bossTeam(POOL[k][i], u ? 4 : T.mons || 4, FACLV, st, true), hint: POOL[k][i][3] };
   } else {
-    const d = FACD[Math.min(FACD.length - 1, R.w)], team = Array.from({ length: 4 }, () => facMon(R.round, used, d));
+    const rr = Math.max(1, Math.min(FACEND, R.round)), d = facD(rr, R.w), team = Array.from({ length: 4 }, () => facMon(rr, used, d));
     team.forEach(m => { const t = D(m.id)[1]; cnt[t] = (cnt[t] || 0) + 1; });
     f = { ci: rnd(POOL.trainer.length), team, hint: +Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0] };
   }
@@ -777,23 +800,24 @@ function facFoe() {
 }
 function facInfo(f) {
   const R = S.fac.run;
-  /* iq 0: ingen taktikk i Battle Frontier ennå (aiIq i battle.js). Steg 1b.6 setter den når styrken gjennom løpet er lagt om. */
-  if (f.boss) return trainerOf(f.k, f.i, { skill: (f.sk || 1) * diff().sk, iq: 0, fr: 1, arena: 'hall', int: f.k === 'brain' ? 3 : TCL[f.k].i - 1 });
-  return trainerOf('trainer', f.ci, { ty: f.hint, skill: facSk(R.round, R.w) * diff().sk, iq: 0, fr: 1, arena: 'factory', v: 0, int: R.w >= 2 ? 1 : 0 });
+  /* Taktikken stiger gjennom løpet (facIq for trenerne, FACBOSS for bossene) og følger vanskelighetsgraden (facIqD). */
+  if (f.boss) return trainerOf(f.k, f.i, { skill: (f.sk || 1) * diff().sk, iq: (f.iq || 0) * facIqD(), fr: 1, arena: 'hall', int: f.k === 'brain' ? 3 : TCL[f.k].i - 1 });
+  return trainerOf('trainer', f.ci, { ty: f.hint, skill: facSk(R.round, R.w) * diff().sk, iq: facIq(R.round, R.w) * facIqD(), fr: 1, arena: 'factory', v: 0, int: R.w >= 2 ? 1 : 0 });
 }
 function facBattle() {
   const R = S.fac.run, f = facFoe();
   return evApply(mkBattle(R.team, f.team, facInfo(f), { mode: 'fac', round: R.round, w: R.w, k: f.boss ? f.k : 'trainer', sm: smFor('factory'), dc: diff().coin, boost: dayBoost() }));
 }
 /* Frontier gir gjenstander, møter, mynter og XP til ditt eget lag (det ser på og lærer, se modeXp). Et tap avslutter løpet; etter FACLIVES tap er
-   Frontier stengt for dagen. En ferdig runde (FACN seire) gir en egen myntpremie. */
+   Frontier stengt for dagen. En ferdig runde (FACN seire) gir en egen myntpremie, og symbolet til bossen (res.sym: første gang du vinner det).
+   Er runde FACEND klar, er løpet vunnet (res.done) og Frontier ferdig for dagen. */
 function finishFactory(B) {
   const R = S.fac.run, win = B.over === 'win', res = { mode: 'fac', win, ups: [], items: [], encs: [], coins: 0, round: R.round, w: R.w, swap: null, roundDone: false, streak: R.streak, perks: [], note: '' };
   if (!win) { const d = S.lad.day || dayKey(), n = facFails() + 1; S.fac.best = Math.max(S.fac.best || 0, R.streak); S.fac.tries = { d, n }; if (n >= facLives()) S.fac.lost = d; res.left = Math.max(0, facLives() - n); S.fac.run = null; raidUnhide(); save(); return res; }
   const sm = B.sm, bm = B.boost.mode === 'factory' ? B.boost.m : 1, r = R.round, roll = p => Math.random() < p * bm;
   const give = (it, n) => { if (it === 'candy') n = candyRoll(n); if (n > 0) { S.items[it] = (S.items[it] || 0) + n; res.items.push(`${n} × ${SHOP[it].n}`); } };
   R.w++; R.streak++; res.w = R.w; res.streak = R.streak; S.fac.best = Math.max(S.fac.best || 0, R.streak);
-  res.coins = Math.round(FACCOIN * (30 + 12 * R.w + 15 * (r - 1)) * sm * (B.dc || 1) * purseM()) + B.pay; S.coins += res.coins; evPerk(res);
+  res.coins = Math.round(FACCOIN * (30 + 12 * R.w + 15 * Math.min(3, r - 1)) * sm * (B.dc || 1) * purseM()) + B.pay; S.coins += res.coins; evPerk(res);
   modeXp(res, 4, FACXP * (R.w >= FACN ? 1.5 : 1) * (1 + 0.08 * Math.min(4, r - 1)), xpMult() * diff().xp * (B.boost.mode === 'factory' ? B.boost.xp : 1));
   if (roll(0.4)) give(r >= 3 ? 'ultra' : r >= 2 ? 'great' : 'poke', r >= 2 ? 1 : 2);
   if (R.w === 2) pushEnc(res, genEnc({ min: 1, luck: 1 }));
@@ -808,7 +832,10 @@ function finishFactory(B) {
     /* Sjelden boss: klassens egen belønning på toppen, som i ligaen. */
     { const bonus = Math.round(FACROUND(r) * sm * (B.dc || 1)); res.coins += bonus; S.coins += bonus; res.perks.push(`Round ${r} cleared: ${bonus.toLocaleString('en-US')} coins on top.`); }
     if (B.tr.ultra) { const c = B.tr.ci, extra = Math.round([600, 1000, 2000][c - 7] * sm * (B.dc || 1)); res.coins += extra; S.coins += extra; rareLoot(c, res, give, [B.tr.ty]); ringAward(c, res); rarePrize(c, res); res.note = `${B.tr.cn}: extra rewards.`; }
-    res.roundDone = true; raidRoll(RAIDWIN); raidUnhide(); S.fac.keep = R.team.map(x => ({ id: x.id, sh: x.sh || 0, iv: (x.iv || []).slice(), nat: x.nat || 0 })); res.keep = 1; R.round++; R.w = 0; R.team = null; R.offer = facOffer(R.round); R.open = 0;
+    { const sy = facBossOf(r).sym || 0; if (sy > (S.fac.sym || 0)) { S.fac.sym = sy; res.sym = sy; res.perks.push(`You earned the ${FACSYM[sy]} Symbol. Its prize waits under Profile, Badges.`); } }
+    res.roundDone = true; raidRoll(RAIDWIN); raidUnhide(); S.fac.keep = R.team.map(x => ({ id: x.id, sh: x.sh || 0, iv: (x.iv || []).slice(), nat: x.nat || 0 })); res.keep = 1;
+    if (r >= FACEND) { const d = S.lad.day || dayKey(); res.done = 1; res.note = 'Frontier conquered.'; S.fac.tries = { d, n: Math.max(facFails(), facLives()) }; S.fac.lost = d; S.fac.run = null; save(); return res; }
+    R.round++; R.w = 0; R.team = null; R.offer = facOffer(R.round); R.open = 0;
   } else res.swap = B.foe.map(f => f.src);
   R.foe = null;
   save();
