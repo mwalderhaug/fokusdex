@@ -2515,3 +2515,53 @@ button.pkm{cursor:pointer}
 .rul-x:first-of-type{border-top:0}
 .rul-x p{margin:0;color:var(--ink2)}
 .rul-x .btn{align-self:stretch}
+
+/* ---------- v81: arkene har en topplinje som står fast (håndtak + lukkeknapp) og kan dras ned ---------- */
+.sheet{padding-top:0;overscroll-behavior:none}
+.sh-top{position:sticky;top:0;z-index:6;flex:none;height:36px;margin:0 -22px -8px;display:flex;align-items:center;justify-content:center;background:var(--panel);border-radius:30px 30px 0 0;box-shadow:inset 0 1px 0 0 var(--hi);touch-action:none;-webkit-user-select:none;user-select:none}
+.sh-top .grab{width:40px;height:5px;border-radius:3px;opacity:.75}
+.sh-x{position:absolute;right:20px;top:4px;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ink2);background:var(--soft)}
+.sh-x .icn{font-size:14px;stroke-width:2.4}
+.sh-x:active{transform:scale(.92)}
+/* Innholdet toner ut under topplinja når arket er rullet. */
+.sh-top::after{content:'';position:absolute;left:0;right:0;top:100%;height:9px;background:linear-gradient(var(--panel),transparent);pointer-events:none}
+/* Kortet: hjertet står under lukkeknappen, i samme kolonne. */
+.mc-h .mc-f{right:-1px}
+
+/* ---------- v81: størrelsen er tydeligere på kortet ---------- */
+.szt .icn{font-size:11px;margin-right:3px;stroke-width:2.4}
+.szt.big{height:21px;padding:0 9px 0 7px;font-size:11.5px;border-radius:11px}
+.szt.big.sz0{color:var(--ink);background:color-mix(in srgb,var(--ink3) 30%,transparent)}
+.szt.big.sz2{background:color-mix(in srgb,var(--blue) 24%,transparent)}
+.mc-z{margin-top:-6px}
+.mc-z b{display:inline-flex;align-items:center;gap:4px}.mc-z b .icn{font-size:12px;color:var(--ink2)}
+.mc-z .zp{color:var(--ink2);font-size:12px}
+
+/* ---------- v81: treningstipset som bilde (den du trener, i tre trinn) ---------- */
+.trp{display:flex;flex-direction:column;gap:8px}
+.trp-h{font-size:12px;color:var(--ink2);text-align:center}.trp-h b{color:var(--ink);font-weight:650}
+.trp-s{display:flex;align-items:flex-end;justify-content:center;gap:8px;padding:2px 0 0}
+.trp-c{flex:1 1 0;max-width:112px;min-width:0;display:flex;flex-direction:column;align-items:center}
+.trp-c em{font-style:normal;font-size:11.5px;font-weight:750;height:15px;line-height:15px;color:var(--ink3)}
+.trp-c.e em{color:var(--tc)}.trp-c.h em{color:var(--gold)}
+.trp-c>b{font-size:20px;font-weight:650;line-height:1.1;color:var(--ink)}
+.trp-c .spr{margin:2px 0 -3px}
+.trp-b{display:flex;flex-direction:column-reverse;width:82%;border-radius:10px 10px 4px 4px;overflow:hidden;gap:2px}
+.trp-b u{display:block;min-height:0;text-decoration:none;background:color-mix(in srgb,var(--ink) 11%,transparent)}
+.trp-b u.iv{background:var(--gold)}.trp-b u.ev{background:var(--tc)}
+.trp-c small{margin-top:6px;font-size:11.5px;font-weight:650;line-height:1.2;color:var(--ink);text-align:center}
+.trp-c small.s{margin-top:1px;font-size:10.5px;font-weight:500;color:var(--ink2)}
+.trp-l{display:flex;gap:8px;align-items:baseline;margin:0;font-size:12.5px;line-height:1.4;color:var(--ink2)}.trp-l b{color:var(--ink)}
+.trp-l i{flex:none;width:9px;height:9px;border-radius:3px;transform:translateY(0.5px)}.trp-l i.iv{background:var(--gold)}.trp-l i.ev{background:var(--tc)}
+
+/* ---------- v81: de første kampene peker på motstanderens HP-boks: den kan trykkes (typene og svakhetene) ---------- */
+#bhint{display:block;margin-top:calc(var(--u)*2.5);font-family:var(--dsf);font-weight:var(--fw);font-size:calc(var(--u)*10*var(--fz));line-height:calc(var(--u)*11);color:#ffe9a6}
+#bhint .tyq{display:inline-block;vertical-align:calc(var(--u)*.6);margin-right:calc(var(--u)*3);font-style:normal;font-size:calc(var(--u)*8*var(--fz,1));line-height:calc(var(--u)*8);width:calc(var(--u)*8);height:calc(var(--u)*8);border-radius:50%;text-align:center;color:#101114;background:#ffd75e;text-shadow:none}
+@keyframes tyq{0%,100%{box-shadow:0 0 0 calc(var(--u,1.5px)*.8) rgba(8,8,14,.8),0 0 0 0 rgba(255,215,94,0)}50%{box-shadow:0 0 0 calc(var(--u,1.5px)*.8) rgba(8,8,14,.8),0 0 0 calc(var(--u,1.5px)*3.5) rgba(255,215,94,.45)}}
+#ov.tyhint .hpb.foe .tyb i.tyq{background:#ffd75e;animation:tyq 1.4s ease-in-out infinite}
+@keyframes hpglow{0%,100%{filter:brightness(1) drop-shadow(0 0 0 rgba(255,215,94,0))}50%{filter:brightness(1.16) drop-shadow(0 0 calc(var(--u,1.5px)*3) rgba(255,215,94,.95))}}
+#ov.tyhint .hpb.foe{animation:hpglow 1.4s ease-in-out infinite}
+/* Pila: en gul lapp med spiss mot boksen, som dulter mot den. */
+@keyframes btap{0%,100%{transform:translate(calc(var(--u,1.5px)*5),-50%)}50%{transform:translate(calc(var(--u,1.5px)*1),-50%)}}
+.btap{position:absolute;z-index:7;transform:translate(calc(var(--u,1.5px)*5),-50%);display:flex;align-items:center;padding:calc(var(--u,1.5px)*2) calc(var(--u,1.5px)*4) calc(var(--u,1.5px)*2) calc(var(--u,1.5px)*3);border-radius:calc(var(--u,1.5px)*2.5);background:#ffd75e;color:#15161b;font-family:var(--dsf,var(--pix));font-weight:var(--fw,800);font-size:calc(var(--u,1.5px)*10*var(--fz,1));line-height:calc(var(--u,1.5px)*10);letter-spacing:.06em;text-shadow:none;box-shadow:0 0 0 calc(var(--u,1.5px)*1) #15161b,0 calc(var(--u,1.5px)*2) 0 calc(var(--u,1.5px)*1) rgba(0,0,0,.35);animation:btap .9s ease-in-out infinite;-webkit-tap-highlight-color:transparent}
+.btap i{position:absolute;right:100%;top:50%;margin-top:calc(var(--u,1.5px)*-4);border:calc(var(--u,1.5px)*4) solid transparent;border-right-color:#ffd75e;border-left-width:0;filter:drop-shadow(calc(var(--u,1.5px)*-1) 0 0 #15161b)}

@@ -571,6 +571,15 @@ const LNO = {
   'Light or dark, and new colours: Profile → Appearance.': 'Lys eller mørk, og nye farger: Profile → Appearance.',
   'In battle: tap an HP box for weaknesses, and hold a move to read it.': 'I kamp: trykk på en HP-boks for svakheter, og hold på et angrep for å lese om det.',
   'Some adjustments to rarity and sounds, and bug fixes.': 'Noen justeringer av sjeldenhet og lyd, og feilrettinger.',
+  '{p}: {s} at Lv 100': '{p}: {s} på nivå 100',
+  'As born': 'Slik den ble født',
+  'Trained': 'Ferdig trent',
+  'Hyper trained': 'Med Hyper Training',
+  'IV {a} of 31': 'IV {a} av 31',
+  '{n} EVs': '{n} EV',
+  'IV counts as 31': 'IV teller som 31',
+  '<b>IV</b> · born with it, 0 to 31. Hyper Training (from Lv {l}) counts it as 31.': '<b>IV</b> · født med det, 0 til 31. Hyper Training (fra nivå {l}) regner det som 31.',
+  '<b>EV</b> · from training: {a} per stat, {b} in all, so two stats can be maxed.': '<b>EV</b> · fra trening: {a} per verdi, {b} til sammen, så to verdier kan fylles helt.',
   'Exam period: Profile → Badges. Your badges count down to your exams, and subjects no longer need planned hours.': 'Eksamensperiode: Profile → Badges. Merkene teller ned til eksamen, og fagene trenger ikke lenger planlagte timer.',
   'Work days: Profile → Settings → Advanced options.': 'Arbeidsdager: Profile → Settings → Advanced options.',
   'Other activities now give encounters every 20 minutes, and the bell in a session mutes the encounter sound.': 'Andre aktiviteter gir nå møter hvert 20. minutt, og bjella i en økt slår av lyden for møter.',
@@ -590,6 +599,11 @@ const LNO = {
   'Battle speed, music and forfeit are in the Pause menu during a battle.': 'Kampfart, musikk og å gi opp ligger i pausemenyen under en kamp.',
   'How hard each type of move hits it': 'Hvor hardt hver angrepstype treffer den',
   'How hard each type of move hits your Pokémon': 'Hvor hardt hver angrepstype treffer din Pokémon',
+  'Tap the foe\'s HP box to see its weaknesses': 'Trykk på motstanderens HP-boks: se svakhetene',
+  'Sheets close with a swipe down, or with the ✕ in the corner.': 'Arkene lukkes med et sveip ned, eller med ✕ i hjørnet.',
+  'Battles point out where to tap to see what the foe is weak to.': 'Kampene viser hvor du trykker for å se hva motstanderen er svak mot.',
+  'Size and training are easier to read on a Pokémon\'s card.': 'Størrelse og trening er lettere å lese på kortet til en Pokémon.',
+  'Bug fixes.': 'Feilrettinger.',
   'Every other type: normal damage': 'Alle andre typer: vanlig skade',
   '{b} is immune to {a} moves.': '{b} er immun mot {a}-angrep.',
   '{a} moves cannot reach it right now.': '{a}-angrep når den ikke akkurat nå.',
@@ -779,7 +793,7 @@ function jFriend() {
 const has = k => !!(S.ulk && S.ulk[k]);
 /* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
    Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
-const WNV = 74, WN = ['A tidier look on every page.', 'Light or dark, and new colours: Profile → Appearance.', 'In battle: tap an HP box for weaknesses, and hold a move to read it.', 'Some adjustments to rarity and sounds, and bug fixes.'];
+const WNV = 75, WN = ['Sheets close with a swipe down, or with the ✕ in the corner.', 'Battles point out where to tap to see what the foe is weak to.', 'Size and training are easier to read on a Pokémon\'s card.', 'Bug fixes.'];
 /* Første linje for dem som går reisen (whatsNew i ui.js). */
 const WNJ = 'Your journey: new things now open one study day at a time. See the card on the Focus page.';
 function featCheck() { S.ulk = S.ulk || {}; if (!jOn()) return 0; let ch = 0; for (const [k, d] of JOURNEY) if (!S.ulk[k] && (S.jd || 0) >= d) { S.ulk[k] = 1; ch = 1; } return ch; }

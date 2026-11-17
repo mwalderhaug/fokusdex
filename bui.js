@@ -822,7 +822,7 @@ function paintBox(side) {
   const cur = teamOf(side)[BT.v[side].i], th = tyBadge(cur) + (isMega(cur) ? `<span class="mgt">${megaOf(cur)[1] === 'Primal' ? 'Primal' : 'Mega'}</span>` : '') + (cur.evb && cur.evb !== 'surge' ? '<span class="evt">Event</span>' : '');
   /* Dine egne merker står på den nederste skjermen (drawMenu setter dem inn, og de oppdateres her når en ny kommer ut). Motstanderens står oppå boksen dens. */
   if (side === 'me') { BT.tyme = th; const o0 = el.querySelector('.tyb'); if (o0) o0.remove(); const m = $('#bty-me'); if (m && m.dataset.h !== th) { m.dataset.h = th; m.innerHTML = th; } }
-  else { const thq = th + (S.hty === 0 ? '' : '<i class="tyq">?</i>'); let tb = el.querySelector('.tyb'); if (!tb) { tb = document.createElement('div'); tb.className = 'tyb'; el.appendChild(tb); } if (tb.dataset.h !== thq) { tb.dataset.h = thq; tb.innerHTML = thq; } }
+  else { const thq = th + tyQ(); let tb = el.querySelector('.tyb'); if (!tb) { tb = document.createElement('div'); tb.className = 'tyb'; el.appendChild(tb); } if (tb.dataset.h !== thq) { tb.dataset.h = thq; tb.innerHTML = thq; } }
   if (!el.dataset.a) { el.dataset.a = 'btypes'; el.dataset.s = side; el.setAttribute('role', 'button'); el.setAttribute('aria-label', side === 'me' ? 'What hits your Pokémon hard' : 'What hits the foe hard'); }
   el.hidden = false;
 }
@@ -997,8 +997,27 @@ function partyPanel(b, i, act, ok, cur) {
     <span class="ic">${spr(b.id, { sh: b.sh, mega: b.mega })}</span><b class="nm">${esc(b.short || b.name)}${gs(b)}${isMega(b) ? ' <u>M</u>' : ''}</b><span class="plv tn">Lv${b.lv}</span>${b.status ? `<i class="st st-${b.status}">${STAG[b.status]}</i>` : ''}
     <span class="hpl"><em>HP</em><span><i style="width:${(f * 100).toFixed(1)}%;background:${hpCol(f)}"></i></span></span><span class="hpn tn">${b.hp <= 0 ? 'FNT' : b.hp + '/' + b.max}</span></button>`;
 }
+/* «?» ved typemerkene: boksen kan trykkes. Borte når Type tags er slått av. */
+const tyQ = () => S.hty === 0 ? '' : '<i class="tyq">?</i>';
+/* Hintet om at motstanderens HP-boks kan trykkes (v81, Jazz: «gjør det tydelig i starten at man skal trykke på der»). De første kampene,
+   hver gang du skal velge: en gul «TAP»-pil står ved boksen og peker på den, boksen lyser, «?» pulserer, og i tekstboksen står det hva
+   trykket gir. Det gir seg når panelet er åpnet to ganger (S.tip.bty), eller etter åtte kamper (S.tip.btyn). */
+const tyHintOn = () => { const t = S.tip || {}; return S.hty !== 0 && (t.bty || 0) < 2 && ((t.btyn || 0) < 8 || BT.hintB === BT.B); };
+function tyHint() {
+  const bx = $('#btext'), B = BT.B, h = $('#bhint'), root = $('#ov'), box = $('#b-foe'), tp = $('#btap'); if (!bx) return;
+  const on = !!(B && !B.over && !BT.busy && !B.need && box && !box.hidden && (!BT.menu || BT.menu === 'main' || BT.menu === 'moves') && tyHintOn());
+  if (on && !h) { bx.insertAdjacentHTML('beforeend', `<small id="bhint"><em class="tyq">?</em>${tl('Tap the foe\'s HP box to see its weaknesses')}</small>`); if (BT.hintB !== B) { BT.hintB = B; const t = S.tip || (S.tip = {}); t.btyn = (t.btyn || 0) + 1; } }
+  else if (!on && h) h.remove();
+  /* Pila står rett til høyre for boksen, midt på høyden, og peker på den. Et trykk på pila er et trykk på boksen. */
+  if (on) { const par = box.parentElement, r = box.getBoundingClientRect(), p = par.getBoundingClientRect(), t = tp || par.appendChild(Object.assign(document.createElement('button'), { type: 'button', id: 'btap', className: 'btap', innerHTML: '<i></i>TAP' }));
+    if (!tp) { t.dataset.a = 'btypes'; t.dataset.s = 'foe'; t.setAttribute('aria-label', 'What hits the foe hard'); }
+    t.style.left = Math.round(r.right - p.left) + 'px'; t.style.top = Math.round(r.top - p.top + r.height / 2) + 'px'; }
+  else if (tp) tp.remove();
+  if (root) root.classList.toggle('tyhint', on);
+}
 function drawMenu() {
   const el = $('#bmenu'); if (!el) return;
+  tyHint();
   /* Demoen «Mewtwo → Dark» i Sandbox: mens du står mot den vanlige Mewtwo, kan du hoppe rett til forvandlingen. */
   { const B0 = BT.B, ar = $('#arena'), on = !!(B0 && !B0.over && !BT.busy && B0.mode === 'lab' && B0.raid && B0.tr && B0.tr.leg === 150 && !B0.tr.dk), b = $('#dkskip');
     if (on && ar && !b) ar.insertAdjacentHTML('beforeend', '<button type="button" id="dkskip" class="dkskip" data-a="dkskip">Skip to Dark Mewtwo ›</button>'); else if (!on && b) b.remove(); }
@@ -1916,7 +1935,7 @@ const BA = {
   /* Typehjelpen (steg 1.8): «i» slår forklaringen av og på, USE bruker angrepet derfra, og en HP-boks viser hva som treffer hardt. */
   binfo: () => { if (BT.busy || !BT.B || BT.B.over) return; BT.info = BT.info ? 0 : 1; BT.ik = -1; snd(BT.info ? 'open' : 'close'); drawMenu(); },
   buse: el => { if (BT.busy || !BT.B || BT.B.over || !moveOk(BT.B, +el.dataset.k)) return; BA.bmove(el, true); },
-  btypes: el => { const B = BT.B; if (!B || B.over) return; if (BT.busy) { if (BT.tap) BT.tap(); return; } if (BT.menu === 'types' && BT.tside === el.dataset.s) return BA.btyback(); if (BT.menu !== 'types') BT.tprev = BT.menu; BT.tside = el.dataset.s === 'me' ? 'me' : 'foe'; BT.menu = 'types'; sfx.open(); drawMenu(); },
+  btypes: el => { const B = BT.B; if (!B || B.over) return; if (BT.busy) { if (BT.tap) BT.tap(); return; } if (BT.menu === 'types' && BT.tside === el.dataset.s) return BA.btyback(); if (BT.menu !== 'types') BT.tprev = BT.menu; BT.tside = el.dataset.s === 'me' ? 'me' : 'foe'; BT.menu = 'types'; { const t = S.tip || (S.tip = {}); if ((t.bty || 0) < 2) { t.bty = (t.bty || 0) + 1; save(); } } sfx.open(); drawMenu(); },
   btyback: () => { BT.menu = BT.tprev && BT.tprev !== 'types' ? BT.tprev : 'main'; BT.tprev = ''; drawMenu(); },
   bmega: () => { if (BT.busy || !BT.B || !canMega(BT.B, 'me')) return; BT.mega = BT.mega ? 0 : 1; if (BT.mega) BSFX.megaArm(); else sfx.chip(); drawMenu(); },
   bsw: el => { if (BT.busy) return; const B = BT.B, i = +el.dataset.k; BT.menu = 'main'; playEv(B.need ? sendIn(B, i) : runTurn(B, { t: 'switch', i })); },

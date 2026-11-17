@@ -247,15 +247,15 @@ function helpOpen(k, more) {
   if (T) U.hmore = more ? k : '';
   const tile = t => `<button type="button" class="htile" data-a="help" data-k="${t.k}"><span class="hic">${t.ic()}</span><b>${HSHORT[t.k] || t.n}</b></button>`;
   const html = T
-    ? `<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="help" data-k="${par && helpOk(par) ? par : ''}">‹ ${par && helpOk(par) ? HSHORT[par] : 'All topics'}</button><button type="button" class="hq" data-a="close" aria-label="Close">${icn('x')}</button></div>
+    ? `<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="help" data-k="${par && helpOk(par) ? par : ''}">‹ ${par && helpOk(par) ? HSHORT[par] : 'All topics'}</button></div>
        <div class="hlead"><div class="hl-pic">${L ? L.pic() : T.ic()}</div><h2 class="h">${T.n}</h2><p class="hl-t">${L ? tl(L.t, L.v ? L.v() : null) : T.s}</p></div>
        ${subs.length ? `<div class="hmore" style="justify-content:center">${subs.map(s => hLink(s, HSHORT[s])).join('')}</div>` : ''}
        ${U.hmore === k ? `<div class="hbody">${T.body()}</div>` : `<button type="button" class="rs-more" data-a="helpmore" data-k="${k}" aria-expanded="false"><span>More</span>${icn('down')}</button>`}`
-    : `<div class="row" style="justify-content:space-between"><h2 class="h" style="font-size:22px;margin:0">Questions</h2><button type="button" class="hq" data-a="close" aria-label="Close">${icn('x')}</button></div>
+    : `<div class="row" style="justify-content:space-between"><h2 class="h" style="font-size:22px;margin:0">Questions</h2></div>
        ${HGRP.map(([g, ks]) => { const l = ks.map(x => HELP.find(t => t.k === x)).filter(t => t && helpOk(t.k)); return l.length ? `<section class="hgrp"><h3 class="lab">${tl(g)}</h3><div class="hgrid3">${l.map(tile).join('')}</div></section>` : ''; }).join('')}
        <div class="hfoot"><button type="button" class="chip" data-a="tour">Start guide</button><button type="button" class="chip" data-a="show">Show the game</button><button type="button" class="chip" data-a="rules">Rules and rewards</button></div>`;
   const sh = document.querySelector('#sheet .sheet.helpsh');
-  if (sh) { sh.innerHTML = `<span class="grab"></span>${html}`; if (!more) sh.scrollTop = 0; }
+  if (sh) { sh.innerHTML = SHTOP + html; if (!more) sh.scrollTop = 0; }
   else { openSheet(html); const s = document.querySelector('#sheet .sheet'); if (s) s.classList.add('helpsh'); }
   if (!S.hseen) { S.hseen = 1; save(true); const b = document.querySelector('.helpb'); if (b) b.classList.remove('new'); }
 }
@@ -295,10 +295,25 @@ function tourEnd(hub) { if (S.tour !== TOURV) { S.tour = TOURV; save(true); } cl
 
 /* ---------- Første gang Train åpnes: hva potensial og treningspoeng er. Kan hentes fram igjen med spørsmålstegnet der. ---------- */
 const trainTipOn = () => !(S.tip && S.tip.train) || U.trhelp;
-function trainTip() {
+/* Bildet i tipset (v81, Jazz 17.11: «vis med praktisk eksempel på forskjell i steg med bilder i stedet for så mye tekst»): den Pokémonen
+   du trener, i tre trinn på nivå 100: som den ble født, ferdig trent, og med Hyper Training. Hver søyle er delt i det nivået gir (grå), det den
+   ble født med (IV, gull) og det treningen gir (EV, typefargen): de samme fargene som radene under. Er den født med 31, er det to trinn.
+   Søylene starter ikke på null (cut): ellers blir trinnene for små til å se. Tallene over er de ekte. Eksempelet følger verdien som er valgt under. */
+function trainPic(m, i) {
+  if (m.id === 292 && i === 0) i = 1;
+  const mk = f => { const c = { id: m.id, lv: 100, mega: m.mega, nat: m.nat, iv: m.iv.slice(), ev: [0, 0, 0, 0, 0, 0], ht: [0, 0, 0, 0, 0, 0] }; f(c); return statsOf(c)[i]; };
+  const s0 = mk(c => { c.iv[i] = 0; }), s1 = mk(() => {}), s2 = mk(c => { c.ev[i] = EVMAX; }), s3 = mk(c => { c.ev[i] = EVMAX; c.ht[i] = 1; }), top = Math.max(s3, 1), cut = Math.round(s0 * 0.62);
+  const col = (v, iv, ev, lab, sub, d, cls) => `<div class="trp-c${cls ? ' ' + cls : ''}"><em class="tn">${d ? '+' + d : ''}</em><b class="tn">${v}</b>${spr(m.id, { sh: m.sh, mega: m.mega, s: '40px' })}<i class="trp-b" style="height:${Math.max(10, Math.round((v - cut) / Math.max(1, top - cut) * 78))}px"><u style="flex:${Math.max(1, v - iv - ev - cut)}"></u><u class="iv" style="flex:${iv}"></u><u class="ev" style="flex:${ev}"></u></i><small>${lab}</small><small class="s">${sub}</small></div>`;
+  return `<div class="trp" role="img" aria-label="${esc(mName(m))}, ${SN[i]} at level 100: ${s1} as born, ${s2} fully trained${s3 > s2 ? `, ${s3} with Hyper Training` : ''}">
+    <div class="trp-h">${tl('{p}: {s} at Lv 100', { p: esc(mName(m)), s: `<b>${SN[i]}</b>` })}</div>
+    <div class="trp-s">${col(s1, s1 - s0, 0, tl('As born'), tl('IV {a} of 31', { a: m.iv[i] }))}${col(s2, s1 - s0, s2 - s1, tl('Trained'), tl('{n} EVs', { n: EVMAX }), s2 - s1, 'e')}${s3 > s2 ? col(s3, s3 - s2 + s1 - s0, s2 - s1, tl('Hyper trained'), tl('IV counts as 31'), s3 - s2, 'h') : ''}</div>
+    <p class="trp-l"><i class="iv"></i><span>${tl('<b>IV</b> · born with it, 0 to 31. Hyper Training (from Lv {l}) counts it as 31.', { l: HTLV })}</span></p>
+    <p class="trp-l"><i class="ev"></i><span>${tl('<b>EV</b> · from training: {a} per stat, {b} in all, so two stats can be maxed.', { a: EVMAX, b: EVTOT })}</span></p></div>`;
+}
+function trainTip(m, i) {
   if (!trainTipOn()) return '';
-  return `<div class="card2 trtip"><div class="row" style="justify-content:space-between"><b>How training works</b>${hq('train', 'More about training')}</div>${helpTrain()}
-    <p class="sm">Tap a stat below to train it. A good first choice is Speed, and the attack stat it uses.</p><button type="button" class="btn sm2 wide" data-a="trtipok">Got it</button></div>`;
+  return `<div class="card2 trtip"><div class="row" style="justify-content:space-between"><b>How training works</b>${hq('train', 'More about training')}</div>${m ? trainPic(m, i == null ? 0 : i) : helpTrain()}
+    <p class="sm">${m ? 'Tap a stat below to see it here. Start with Speed and the attack stat it uses.' : 'Tap a stat below to train it. A good first choice is Speed, and the attack stat it uses.'}</p><button type="button" class="btn sm2 wide" data-a="trtipok">Got it</button></div>`;
 }
 
 const HA = {
