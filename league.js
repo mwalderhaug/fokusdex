@@ -25,7 +25,7 @@ const TCL = {
   rival: { i: 6, n: 'Rival', mons: 6, rel: 0.985, sk: 0.93, iv: 19, ev: 22, q: 2, tut: 1, coin: 500, xp: 1.6, slack: 8 },
   evilboss: { i: 7, n: 'Evil Leader', mons: 6, rel: 0.99, sk: 0.96, iv: 20, ev: 28, q: 2, tut: 1, coin: 750, xp: 1.75, slack: 12 },
   champ: { i: 8, n: 'Champion', mons: 6, rel: 1, sk: 1, iv: 28, ev: 56, q: 2, tut: 2, coin: 1100, xp: 1.9, slack: 16 },
-  supreme: { i: 9, n: 'Supreme Boss', mons: 6, rel: 1.01, sk: 1, iv: 31, ev: 60, q: 2, tut: 3, coin: 2000, xp: 2.2, slack: 30 }
+  supreme: { i: 9, n: 'Supreme Boss', mons: 6, rel: 1.01, sk: 1, iv: 31, ev: 60, q: 2, tut: 4, coin: 2000, xp: 2.2, slack: 30 }
 };
 /* Vanskelighetsgrad (S.diff): 0 Easy, 1 Normal, 2 Hard. Tallene i klassetabellen over er Hard, slik spillet var før valget kom.
    lives = forsøk i ligaen per dag (Easy tåler ett tap, slik Battle Frontier alltid har gjort). coin/xp/candy = belønningen: mynter, XP og sjansen
@@ -437,7 +437,7 @@ function fitForm(id, lv, slack) { while (stageOf(id) > 0 && lv < reqLv(id) - sla
 function foeMoves(id, lv, q) {
   let all = movesAt(id, lv + (q >= 2 ? 8 : 0));
   /* q = 3 (toppene i ligaen og turneringen, steg 1b.8): også det formene før lærte, og det lærerne kan lære arten. */
-  if (q >= 3) all = all.concat(preMoves(id, lv), tutFoe(id)).filter((x, i, a) => a.indexOf(x) === i);
+  if (q >= 3) all = all.concat(preMoves(id, lv), tutFoe(id, lv)).filter((x, i, a) => a.indexOf(x) === i);
   all = all.filter(x => !DEADMV.has(x));
   if (!q || all.length <= 4) return defaultMoves(id, lv);
   const d = D(id), st = BST[id - 1], phys = st[1] >= st[3];
@@ -534,9 +534,10 @@ function regTeam(theme, n, base, st, flat) {
    (ligaen lagrer det sammen med treneren som venter); ellers trekkes det nå. late = så mange av de faste som sendes ut rett før esset. */
 function bossTeam(d, n, base, st, flat, pre) {
   const src = (pre && pre.length ? pre : drawTeam(d)).slice(0, Math.max(2, n)), lt = Math.min((d[6] || {}).late || 0, src.length - 2), ids = src.slice(1 + lt).concat(src.slice(1, 1 + lt), src[0]);
-  /* st.tut (steg 1b.8) = så mange som har vært hos lærerne: esset, og så de som sendes ut rett før det. De får q = 3 i foeMoves. */
-  const tq = st.tut ? Object.assign({}, st, { q: 3 }) : st;
-  const team = ids.map((id, k) => { const ace = k === ids.length - 1, lv = flat ? base : Math.max(3, Math.min(100, base + (ace ? 1 : -1 - rnd(2)))); return foeMon(fitForm(id, lv, st.slack || 0), lv, k >= ids.length - (st.tut || 0) ? tq : st); });
+  /* st.tut (steg 1b.8) = så mange som har vært hos lærerne: esset, og så de som sendes ut rett før det. De får q = 3 i foeMoves.
+     Bare når du selv har lærerne (tutOn): en ny spiller møter dem ikke før studiedag 9 på reisen. */
+  const tn = tutOn() ? st.tut || 0 : 0, tq = tn ? Object.assign({}, st, { q: 3 }) : st;
+  const team = ids.map((id, k) => { const ace = k === ids.length - 1, lv = flat ? base : Math.max(3, Math.min(100, base + (ace ? 1 : -1 - rnd(2)))); return foeMon(fitForm(id, lv, st.slack || 0), lv, k >= ids.length - tn ? tq : st); });
   /* Mega: Champion og Supreme Boss (klasse 8 og 9) bærer Mega Ring på Normal og Hard. Esset får steinen hvis arten har en Mega-form, ellers den
      sterkeste av de andre som har det. Den mega-utvikler seg første gang den angriper. */
   if (megaCls(st)) {
@@ -1439,7 +1440,7 @@ const TUTL = {
 /* De sjeldne: symbolet som åpner dem (1 bronse … 4 diamant, FACSYM), og prisen når de er åpne. */
 const TUTNEED = { 'Fire Pledge': 1, 'Water Pledge': 1, 'Grass Pledge': 1, 'Volt Tackle': 1, 'Blast Burn': 2, 'Hydro Cannon': 2, 'Frenzy Plant': 2, 'Draco Meteor': 3 };
 const TUTP = { 'Fire Pledge': 1500, 'Water Pledge': 1500, 'Grass Pledge': 1500, 'Volt Tackle': 2500, 'Blast Burn': 3000, 'Hydro Cannon': 3000, 'Frenzy Plant': 3000, 'Draco Meteor': 4000 };
-const TUTOFF = 0.7, TUTFREE = 4;
+const TUTOFF = 0.7, TUTFREE = 4, TUTLV = [30, 50];
 let _tut = null;
 function tutData() {
   if (_tut) return _tut;
@@ -1481,7 +1482,11 @@ function tutTeach(m, x) {
   save(); return true;
 }
 /* Det en topptrener kan ha lært artene sine (foeMoves med q = 3): alt de tre vanlige lærerne kan lære arten. */
-function tutFoe(id) { const T = tutData(); return T.foe[id] || (T.foe[id] = tutList('power').concat(tutList('elem'), tutList('tact')).filter(x => tutCan(id, x))); }
+function tutFoe(id, lv) {
+  const T = tutData(), l = T.foe[id] || (T.foe[id] = tutList('power').concat(tutList('elem'), tutList('tact')).filter(x => tutCan(id, x)));
+  /* En motstander på lavt nivå har ikke de største angrepene ennå: de dyreste (1 500) fra nivå TUTLV[1], de midterste (800) fra TUTLV[0]. */
+  return lv == null || lv >= TUTLV[1] ? l : l.filter(x => tutBase(x) <= (lv >= TUTLV[0] ? 800 : 400));
+}
 /* EGG-ANGREP. lineRoot (game.js) = første form i utviklingslinja. eggMove trekker ett for den som klekkes (−1 = linja har ingen). */
 const eggPool = id => (window.EGGMV && EGGMV[lineRoot(id)]) || [];
 function eggMove(id) { const l = eggPool(id); return l.length ? l[rnd(l.length)] : -1; }
