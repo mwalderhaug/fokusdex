@@ -204,7 +204,7 @@ const HEV = { surge: 'Three of your Pokémon that have a Mega form start every b
 /* De tre modusene, kort. (Hentes fra reglene, så teksten følger med når de endres.) */
 function helpModes() {
   return hRow('<span class="ficon hfi">L</span>', 'Trainer League', `Your own team, ${LAPN} battles a lap. A trainer first, then the class rises as you go, and a Champion waits at the end. You never see who is next before the intro. Every win gives the whole team XP, and bosses give Rare Candy and items. One loss ends the lap, and the next lap starts from battle 1. One lap a day.`)
-    + hRow('<span class="ficon hfi">F</span>', 'Battle Frontier', `You rent Pokémon instead of using your own, and everything is Lv ${FACLV}. ${FACN} battles a round. You win coins, items and encounters, and your own team gets XP for every win. Clear a round, and you keep one of your four rentals. ${FACLIVES} runs a day.`)
+    + hRow('<span class="ficon hfi">F</span>', 'Battle Frontier', `You rent Pokémon instead of using your own, and everything is Lv ${FACLV}. ${FACN} battles a round, ${FACEND} rounds, and every trainer is stronger than the one before. The bosses hand out Symbols, and the Diamond Symbol in round ${FACEND} ends the run. You win coins, items and encounters, and your own team gets XP for every win. Clear a round, and you keep one of your four rentals. ${FACLIVES} runs a day.`)
     + hRow('<span class="ficon hfi">W</span>', 'World Tournament', `A knockout cup, three rounds, three on three, and a new cup each weekday. You see each other's whole team, and both pick three in secret. Coins and XP for every round, and a pack of encounters for the winner.`);
 }
 /* IV og EV. Brukes både i hubben og første gang Train åpnes. */
