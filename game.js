@@ -274,8 +274,11 @@ MEGA.push([645, 'Therian', 4, 2, [89, 145, 90, 105, 80, 91], 10021, 1, 13]);
 MEGA.push([646, 'Black', 15, 14, [125, 170, 100, 120, 90, 95], 10022, 1, 33]);
 MEGA.push([646, 'White', 15, 14, [125, 120, 90, 170, 100, 95], 10023, 1, 36]);
 MEGA.push([647, 'Resolute', 10, 1, [91, 72, 90, 129, 90, 108], 10024, 1, 14]);
+/* Meloetta bytter til Pirouette Forme i kampen når den bruker Relic Song (formTo i battle.js), og er alltid i Aria Forme ellers: den velges ikke på kortet. */
+MEGA.push([648, 'Pirouette', 0, 1, [100, 128, 90, 77, 77, 128], 10018, 1, 6]);
+const PIROU = MEGA.length;
 /* Former som ikke er Mega: de teller ikke som Mega Evolution, og navnet står som det er. */
-const FORMS = new Set(['Origin', 'Defense', 'Attack', 'Speed', 'Sky', 'Therian', 'Black', 'White', 'Resolute']);
+const FORMS = new Set(['Origin', 'Defense', 'Attack', 'Speed', 'Sky', 'Therian', 'Black', 'White', 'Resolute', 'Pirouette']);
 /* Navnet på grunnformen til artene som har former, og det en form krever (som i spillene: Kyurem smelter sammen med Zekrom eller Reshiram). */
 const FORM0 = { 386: 'Normal', 487: 'Altered', 492: 'Land', 641: 'Incarnate', 642: 'Incarnate', 645: 'Incarnate', 646: 'Kyurem', 647: 'Ordinary' };
 const FORMNEED = { Black: 644, White: 643 };
@@ -290,7 +293,14 @@ function formOpts(m) {
   return [[0, FORM0[m.id], '']].concat(out.sort((a, b) => a[1] < b[1] ? -1 : 1));
 }
 const formName = m => { const g = megaOf(m); return g && FORMS.has(g[1]) ? g[1] : FORM0[m.id] && !m.mega ? FORM0[m.id] : ''; };
-function setForm(m, k) { const o = formOpts(m).find(x => x[0] === k); if (!o || o[2] || (m.mega || 0) === k) return false; m.mega = k; save(); return true; }
+/* KYUREM (som i spillene): smelter den sammen, blir Glaciate til Freeze Shock (Black) eller Ice Burn (White) og Scary Face til Fusion Bolt eller
+   Fusion Flare, og tilbake igjen når den skilles. */
+const KYU = { '': ['Glaciate', 'Scary Face'], Black: ['Freeze Shock', 'Fusion Bolt'], White: ['Ice Burn', 'Fusion Flare'] };
+function kyuMoves(m, from, to) {
+  const a = KYU[from] || KYU[''], b = KYU[to] || KYU[''], ix = n => MOVES.findIndex(x => x[0] === n);
+  a.forEach((n, i) => { const p = m.mv.indexOf(ix(n)), q = ix(b[i]); if (p >= 0 && q >= 0) { if (m.mv.includes(q)) m.mv.splice(p, 1); else m.mv[p] = q; } });
+}
+function setForm(m, k) { const o = formOpts(m).find(x => x[0] === k); if (!o || o[2] || (m.mega || 0) === k) return false; const f0 = formName(m); m.mega = k; if (m.id === 646) kyuMoves(m, f0, formName(m)); save(); return true; }
 const isMega = m => { const g = megaOf(m); return !!g && !FORMS.has(g[1]); };
 /* Mega Evolution i kamp. megaOpts = formene en art har (plass i MEGA + 1; Charizard og Mewtwo har to). En egen Pokémon kan mega-utvikle seg når
    du har Mega Ring (S.ring, fra den første Champion du slår) og den har fått en Mega Stone (m.ms = formen; S.items.mstone er steinene du har).

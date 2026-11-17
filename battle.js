@@ -11,10 +11,11 @@ const TCH = { normal: '/rock steel/ghost', fighting: 'normal rock steel ice dark
 const CH = TYPES.map(t => { const row = TYPES.map(() => 1); TCH[t].split('/').forEach((l, k) => l.split(' ').filter(Boolean).forEach(x => { row[TYPES.indexOf(x)] = [2, 0.5, 0][k]; })); return row; });
 /* GRAV settes for hver runde: under Gravity treffer Ground-angrep også de som flyr eller svever. */
 let GRAV = 0;
-const typeEff = (t, b) => {
+const typeEff = (t, b, o) => {
   const V = b.v || {}, gr = GRAV || V.smack;
   if (t === 4 && !gr && (V.mag || V.tele)) return 0;
-  const one = x => { const c = CH[t][x]; if (c) return c; return (t === 4 && x === 2 && gr) || (V.fore === 1 && x === 7 && (t === 0 || t === 1)) || (V.fore === 2 && x === 16 && t === 13) ? 1 : 0; };
+  /* o = { scrappy, wind }: Scrappy lar Normal og Fighting treffe Ghost, og i de sterke vindene (Delta Stream) er Flying ikke svak mot noe. */
+  const one = x => { const c = CH[t][x]; if (c) return o && o.wind && x === 2 && c === 2 ? 1 : c; return (t === 4 && x === 2 && gr) || ((V.fore === 1 || (o && o.scrappy)) && x === 7 && (t === 0 || t === 1)) || (V.fore === 2 && x === 16 && t === 13) ? 1 : 0; };
   /* Roost: flygetypen er borte resten av runden (en ren Flying-type står da uten type). */
   const ty = V.roost ? b.ty.map(x => x === 2 ? -1 : x) : b.ty;
   return (ty[0] >= 0 ? one(ty[0]) : 1) * (ty[1] >= 0 && ty[1] !== ty[0] ? one(ty[1]) : 1);
@@ -69,19 +70,21 @@ const VPOW = { 'Flail': hpPow, 'Reversal': hpPow, 'Low Kick': wPow, 'Grass Knot'
 /* Beat Up: ett slag fra hver på laget som er frisk (brukeren selv slår alltid). Styrken følger den som slår: 5 + base Attack / 10, altså rundt 10–20 per slag. */
 const beatUp = (B, u) => (B.me.includes(u) ? B.me : B.foe).filter(b => b === u || (b.hp > 0 && !b.status)).map(b => 5 + Math.floor(BST[b.id - 1][1] / 10));
 /* Antall treff. Angrep med 2–5 treff: en tredel hver for 2 og 3, en sjettedel hver for 4 og 5. avg = forventet antall (til vurderinger). */
-const hitsFor = (B, u, m, avg) => m[0] === 'Beat Up' ? beatUp(B, u).length : !m[13] ? 1 : m[13] === m[14] ? m[13] : avg ? 3 : [2, 2, 3, 3, 4, 5][rnd(6)];
+const hitsFor = (B, u, m, avg) => m[0] === 'Beat Up' ? beatUp(B, u).length : !m[13] ? 1 : m[13] === m[14] ? m[13] : ab(u) === 'skilllink' ? m[14] : avg ? 3 : [2, 2, 3, 3, 4, 5][rnd(6)];
 /* Angrep som skifter type: Hidden Power følger brukerens IV-er, Weather Ball følger været. Gir en kopi av angrepet med riktig type. */
 const hpType = iv => 1 + Math.floor(((iv[0] & 1) + 2 * (iv[1] & 1) + 4 * (iv[2] & 1) + 8 * (iv[5] & 1) + 16 * (iv[3] & 1) + 32 * (iv[4] & 1)) * 15 / 63);
 const WXT = { sun: 9, rain: 10, sand: 5, hail: 14 };
 function mvEff(B, u, m) {
   let ty = m[1];
   if (m[0] === 'Hidden Power' && u && u.src && u.src.iv) ty = hpType(u.src.iv);
+  else if (m[0] === 'Weather Ball' && u && ab(u) === 'megasol') ty = 9;
   else if (m[0] === 'Weather Ball' && B && WXT[B.wx.k] != null) ty = WXT[B.wx.k];
   else if (m[0] === 'Judgment' && u && u.src && plateTy(u.src) >= 0) ty = plateTy(u.src);
   else if (m[0] === 'Techno Blast' && u && u.src && u.src.drive != null) ty = u.src.drive;
-  if (ty === m[1]) return m;
+  if (ty === m[1]) { const at = ty === 0 && m[4] > 0 && m !== STRUGGLE && u && !NOATE.has(m[0]) ? ATE[ab(u)] : null; if (at == null) return m; const c = m.slice(); c[1] = at; c[19] = 1.2; return c; }
   const c = m.slice(); c[1] = ty; return c;
 }
+const ATE = { aerilate: 2, pixilate: 17, refrigerate: 14, dragonize: 15 }, NOATE = new Set(['Hidden Power', 'Weather Ball', 'Judgment', 'Techno Blast', 'Natural Gift']);
 /* Unike statusangrep som retter seg mot motstanderen (resten virker på brukeren eller banen). */
 const FOEU = new Set(['Psycho Shift', 'Transform', 'Mimic', 'Sketch', 'Guard Split', 'Power Split', 'Telekinesis', 'Taunt', 'Encore', 'Disable', 'Mean Look', 'Block', 'Spider Web', 'Lock-On', 'Mind Reader', 'Spite', 'Soak', 'Pain Split', 'Psych Up', 'Memento', 'Power Swap', 'Guard Swap', 'Heart Swap', 'Reflect Type', 'Defog']);
 
@@ -175,17 +178,23 @@ let WILD = false;
 const nmOf = (s, b) => s === 'foe' ? `${WILD ? 'The wild' : "The foe's"} ${b.name}` : b.name;
 const lc = s => s.replace(/^The (foe|wild)/, 'the $1');
 const sideOf = (B, b) => B.me.includes(b) ? 'me' : 'foe';
-const spdB = (B, b) => b.st[5] * stgM(b.sg[5]) * (b.status === 'par' ? 0.5 : 1) * (B.sd[sideOf(B, b)].tail ? 2 : 1) * (b.v.slow ? 0.5 : 1);
+const spdB = (B, b) => b.st[5] * stgM(b.sg[5]) * (b.status === 'par' ? 0.5 : 1) * (B.sd[sideOf(B, b)].tail ? 2 : 1) * (b.v.slow ? 0.5 : 1) * (B.wx.k === 'rain' && ab(b) === 'swiftswim' ? 2 : 1);
 const boosts = b => b.sg.reduce((a, c) => a + Math.max(0, c), 0);
 
 /* ---------- Abilities ----------
    Et utvalg av egenskapene fra spillene (generasjon 5): de som merkes i kampen og sier fra når de virker. Hver art har høyst én.
    ABD: egenskap → artene som har den. Hendelsen { t: 'abil', side, n, s } viser egenskapen på skjermen sammen med teksten s. */
-const ABD = 'intimidate:23,24,58,59,128,130,209,210,234,237,262,284,373,397,398,403,404,405,507,508,551,552,553|pressure:142,144,145,146,150,243,244,245,249,250,356,359,386,416,442,461,477,483,484,487,646|drizzle:382|drought:383|sandstream:248,449,450|snowwarning:459,460|airlock:384|cloudnine:54,55|moldbreaker:408,409,610,611,612|teravolt:644|turboblaze:643|download:137,233,474,649|slowstart:486|levitate:92,93,94,109,110,200,201,329,330,337,338,343,344,355,358,380,381,429,433,436,437,455,479,480,481,482,488,602,603,604,615,635|voltabsorb:135,170,171|waterabsorb:60,61,62,131,134,186,194,195,226,458,556,592,593|dryskin:453,454|flashfire:37,38,77,78,136,228,229,485,607,608,609,631|lightningrod:104,105,111,112,464,522,523|motordrive:466|stormdrain:422,423,456,457|sapsipper:585,586,626|wonderguard:292|static:25,26,100,101,125,172,179,180,181,239,309,310,587,618|flamebody:126,218,219,240,467,636,637|poisonpoint:29,30,31,32,33,34,117,211,315,406,407,543,544,545|effectspore:46,47,285,286,590,591|roughskin:318,319,621|ironbarbs:597,598|justified:638,639,640,647|sturdy:74,75,76,81,82,95,185,204,205,208,213,227,232,299,304,305,306,410,411,438,462,476,524,525,526,539,557,558,564,565|clearbody:72,73,374,375,376,377,378,379|whitesmoke:324|hypercutter:98,99,127,207,303,328,341,342,472|speedboost:193,291,469|shedskin:11,14,147,148,247,266,268,336,401,412,559,560,588|baddreams:491|hugepower:183,184,298|purepower:307,308';
+const ABD = 'intimidate:23,24,58,59,128,130,209,210,234,237,262,284,373,397,398,403,404,405,507,508,551,552,553|pressure:142,144,145,146,150,243,244,245,249,250,356,359,386,416,442,461,477,483,484,487,646|drizzle:382|drought:383|sandstream:248,449,450|snowwarning:459,460|airlock:384|cloudnine:54,55|moldbreaker:408,409,610,611,612|teravolt:644|turboblaze:643|download:137,233,474,649|slowstart:486|levitate:92,93,94,109,110,200,201,329,330,337,338,343,344,355,358,380,381,429,433,436,437,455,479,480,481,482,488,602,603,604,615,635|voltabsorb:135,170,171|waterabsorb:60,61,62,131,134,186,194,195,226,458,556,592,593|dryskin:453,454|flashfire:37,38,77,78,136,228,229,485,607,608,609,631|lightningrod:104,105,111,112,464,522,523|motordrive:466|stormdrain:422,423,456,457|sapsipper:585,586,626|wonderguard:292|static:25,26,100,101,125,172,179,180,181,239,309,310,587,618|flamebody:126,218,219,240,467,636,637|poisonpoint:29,30,31,32,33,34,117,211,315,406,407,543,544,545|effectspore:46,47,285,286,590,591|roughskin:318,319,621|ironbarbs:597,598|justified:638,639,640,647|sturdy:74,75,76,81,82,95,185,204,205,208,213,227,232,299,304,305,306,410,411,438,462,476,524,525,526,539,557,558,564,565|clearbody:72,73,374,375,376,377,378,379|whitesmoke:324|hypercutter:98,99,127,207,303,328,341,342,472|speedboost:193,291,469|shedskin:11,14,147,148,247,266,268,336,401,412,559,560,588|baddreams:491|hugepower:183,184,298|purepower:307,308|prankster:641,642|sandforce:645|serenegrace:648|naturalcure:251,492';
 const ABN = { intimidate: 'Intimidate', pressure: 'Pressure', drizzle: 'Drizzle', drought: 'Drought', sandstream: 'Sand Stream', snowwarning: 'Snow Warning', airlock: 'Air Lock', cloudnine: 'Cloud Nine', moldbreaker: 'Mold Breaker', teravolt: 'Teravolt', turboblaze: 'Turboblaze',
   download: 'Download', slowstart: 'Slow Start', levitate: 'Levitate', voltabsorb: 'Volt Absorb', waterabsorb: 'Water Absorb', dryskin: 'Dry Skin', flashfire: 'Flash Fire', lightningrod: 'Lightning Rod', motordrive: 'Motor Drive', stormdrain: 'Storm Drain', sapsipper: 'Sap Sipper',
   wonderguard: 'Wonder Guard', static: 'Static', flamebody: 'Flame Body', poisonpoint: 'Poison Point', effectspore: 'Effect Spore', roughskin: 'Rough Skin', ironbarbs: 'Iron Barbs', justified: 'Justified', sturdy: 'Sturdy', clearbody: 'Clear Body', whitesmoke: 'White Smoke',
-  hypercutter: 'Hyper Cutter', speedboost: 'Speed Boost', shedskin: 'Shed Skin', baddreams: 'Bad Dreams', hugepower: 'Huge Power', purepower: 'Pure Power' };
+  hypercutter: 'Hyper Cutter', speedboost: 'Speed Boost', shedskin: 'Shed Skin', baddreams: 'Bad Dreams', hugepower: 'Huge Power', purepower: 'Pure Power',
+  /* steg 1b.5: evnene til Mega-formene og formene */
+  thickfat: 'Thick Fat', toughclaws: 'Tough Claws', megalauncher: 'Mega Launcher', adaptability: 'Adaptability', noguard: 'No Guard', trace: 'Trace', shellarmor: 'Shell Armor', shadowtag: 'Shadow Tag', parentalbond: 'Parental Bond',
+  aerilate: 'Aerilate', pixilate: 'Pixilate', refrigerate: 'Refrigerate', dragonize: 'Dragonize', steadfast: 'Steadfast', insomnia: 'Insomnia', sandforce: 'Sand Force', technician: 'Technician', skilllink: 'Skill Link', solarpower: 'Solar Power',
+  swiftswim: 'Swift Swim', magicbounce: 'Magic Bounce', filter: 'Filter', strongjaw: 'Strong Jaw', sheerforce: 'Sheer Force', prankster: 'Prankster', primordialsea: 'Primordial Sea', desolateland: 'Desolate Land', deltastream: 'Delta Stream',
+  scrappy: 'Scrappy', innerfocus: 'Inner Focus', healer: 'Healer', serenegrace: 'Serene Grace', regenerator: 'Regenerator', naturalcure: 'Natural Cure', multiscale: 'Multiscale', innardsout: 'Innards Out', megasol: 'Mega Sol', stalwart: 'Stalwart',
+  sharpness: 'Sharpness', contrary: 'Contrary', piercingdrill: 'Piercing Drill', infiltrator: 'Infiltrator', unseenfist: 'Unseen Fist', electricsurge: 'Electric Surge' };
 /* Kort forklaring til lagskjermen og Pokédexen. */
 const ABTXT = { intimidate: "Lowers the foe's Attack when it enters.", pressure: 'Moves used on it cost 2 PP.', drizzle: 'Makes it rain when it enters.', drought: 'Turns the sunlight harsh when it enters.', sandstream: 'Whips up a sandstorm when it enters.', snowwarning: 'Makes it hail when it enters.',
   airlock: 'Clears the weather, and no weather can start.', cloudnine: 'Clears the weather, and no weather can start.', moldbreaker: "Its moves ignore the foe's Ability.", teravolt: "Its moves ignore the foe's Ability.", turboblaze: "Its moves ignore the foe's Ability.",
@@ -193,16 +202,36 @@ const ABTXT = { intimidate: "Lowers the foe's Attack when it enters.", pressure:
   flashfire: 'Fire moves cannot hurt it, and power up its own.', lightningrod: 'Electric moves raise its Sp. Atk instead.', motordrive: 'Electric moves raise its Speed instead.', stormdrain: 'Water moves raise its Sp. Atk instead.', sapsipper: 'Grass moves raise its Attack instead.',
   wonderguard: 'Only super effective moves hit it.', static: 'Touching it may paralyze.', flamebody: 'Touching it may burn.', poisonpoint: 'Touching it may poison.', effectspore: 'Touching it may poison, paralyze or put to sleep.', roughskin: 'Hurts whoever touches it.', ironbarbs: 'Hurts whoever touches it.',
   justified: 'Dark moves raise its Attack.', sturdy: 'Survives any single hit from full HP.', clearbody: 'The foe cannot lower its stats.', whitesmoke: 'The foe cannot lower its stats.', hypercutter: 'The foe cannot lower its Attack.', speedboost: 'Speed rises every turn.', shedskin: 'May shed a status condition each turn.',
-  baddreams: 'Hurts a sleeping foe every turn.', hugepower: 'Doubles its Attack.', purepower: 'Doubles its Attack.' };
+  baddreams: 'Hurts a sleeping foe every turn.', hugepower: 'Doubles its Attack.', purepower: 'Doubles its Attack.',
+  thickfat: 'Fire and Ice moves do half damage to it.', toughclaws: 'Its contact moves hit 30 % harder.', megalauncher: 'Its pulse and aura moves hit 50 % harder.', adaptability: 'Moves of its own type hit even harder.',
+  noguard: "No move misses, its own or the foe's.", trace: "Copies the foe's Ability when it enters.", shellarmor: 'Cannot be struck by critical hits.', shadowtag: 'The foe cannot switch out (Ghost types can).',
+  parentalbond: 'Its moves hit twice, the second time at a quarter strength.', aerilate: 'Normal moves become Flying and hit 20 % harder.', pixilate: 'Normal moves become Fairy and hit 20 % harder.',
+  refrigerate: 'Normal moves become Ice and hit 20 % harder.', dragonize: 'Normal moves become Dragon and hit 20 % harder.', steadfast: 'Speed rises each time it flinches.', insomnia: 'Cannot fall asleep.',
+  sandforce: 'Rock, Ground and Steel moves hit 30 % harder in a sandstorm.', technician: 'Its weaker moves hit 50 % harder.', skilllink: 'Multi-hit moves always hit five times.',
+  solarpower: 'In harsh sunlight Sp. Atk rises, but it loses HP each turn.', swiftswim: 'Doubles its Speed in rain.', magicbounce: 'Sends status moves back at the user.', filter: 'Super effective moves do a quarter less damage to it.',
+  strongjaw: 'Its biting moves hit 50 % harder.', sheerforce: 'Moves lose their extra effects but hit 30 % harder.', prankster: 'Its status moves go first (Dark types are immune to them).',
+  primordialsea: 'Heavy rain while it is in battle: Fire moves fail.', desolateland: 'Extremely harsh sunlight while it is in battle: Water moves fail.', deltastream: 'Strong winds while it is in battle: Flying types lose their weaknesses.',
+  scrappy: 'Its Normal and Fighting moves hit Ghost types.', innerfocus: 'Cannot be made to flinch.', healer: 'May cure an ally of its status (no effect in single battles).', serenegrace: "Doubles the chance of its moves' extra effects.",
+  regenerator: 'Heals a third of its HP when it switches out.', naturalcure: 'Its status is cured when it switches out.', multiscale: 'Takes half damage at full HP.', innardsout: 'When knocked out, it hurts the attacker by the HP it had left.',
+  megasol: 'Its moves act as if the sunlight were harsh.', stalwart: 'Its moves cannot be drawn away (no effect in single battles).', sharpness: 'Its slicing moves hit 50 % harder.', contrary: 'Its stat changes are reversed.',
+  piercingdrill: 'Its contact moves pierce Protect at a quarter strength.', infiltrator: "Its moves ignore the foe's screens and Safeguard.", unseenfist: 'Its contact moves hit through Protect.', electricsurge: 'Electric Terrain when it enters: stronger Electric moves, and no sleep on the ground.' };
 const ABOF = {}; ABD.split('|').forEach(r => { const q = r.split(':'); q[1].split(',').forEach(id => { ABOF[+id] = q[0]; }); });
 /* Egenskapen til en art (til visning), og til en Pokémon i kamp (den som har forvandlet seg med Transform, har ingen). */
 /* Giratina i Origin Forme har Levitate i stedet for Pressure. */
-/* MEGA-FORMENE HAR SIN EGEN EGENSKAP der spillene gir dem en av dem motoren kjenner (art:form). '' = den mister artens egenskap (Mega Gengar svever ikke,
-     Mega Aggron har ikke Sturdy). Former som ikke står her (de fra Legends: Z-A og de som får en egenskap motoren ikke har), beholder artens. */
-/* (steg 1.6) Formene til de legendariske står her med egenskapen de har i spillene, der motoren kjenner den. */
-const MEGAAB = { '642:Therian': 'voltabsorb', '645:Therian': 'intimidate', '646:Black': 'teravolt', '646:White': 'turboblaze', '492:Sky': '', '641:Therian': '', '6:Y': 'drought', '94:': '', '127:': '', '130:': 'moldbreaker', '142:': '', '150:X': '', '150:Y': '', '181:': 'moldbreaker', '208:': '', '229:': '', '254:': 'lightningrod', '257:': 'speedboost', '303:': 'hugepower', '306:': '', '310:': 'intimidate', '319:': '', '359:': '', '373:': '', '376:': '' };
-const abilityOf = (id, mega) => { if (id === 487 && mega === ORIGIN) return 'levitate'; const g = mega ? MEGA[mega - 1] : null, k = g ? id + ':' + g[1] : ''; return g && k in MEGAAB ? MEGAAB[k] : ABOF[id] || ''; };
-const ab = b => b && !b.tf ? abilityOf(b.id, b.mega) : '';
+/* MEGA-FORMENE OG FORMENE HAR EGENSKAPEN FRA SPILLENE (steg 1b.5; art:form). De nye Mega-formene fra Legends: Z-A har egenskapen Pokémon Champions
+   ga dem (april 2026). Tre står ikke her og beholder artens: Mega Lucario Z og Mega Eelektross (egenskapene deres er nye og ikke beskrevet godt nok
+   til å lages ennå), og Mega Heatran og Mega Darkrai (finnes ikke i Champions). Mega Tyranitar, Medicham, Abomasnow, Latias og Latios har artens. */
+const MEGAAB = { '642:Therian': 'voltabsorb', '645:Therian': 'intimidate', '646:Black': 'teravolt', '646:White': 'turboblaze', '492:Sky': 'serenegrace', '641:Therian': 'regenerator',
+  '3:': 'thickfat', '6:X': 'toughclaws', '6:Y': 'drought', '9:': 'megalauncher', '15:': 'adaptability', '18:': 'noguard', '26:X': 'electricsurge', '26:Y': 'noguard', '36:': 'magicbounce', '65:': 'trace', '71:': 'innardsout', '80:': 'shellarmor',
+  '94:': 'shadowtag', '115:': 'parentalbond', '121:': 'hugepower', '127:': 'aerilate', '130:': 'moldbreaker', '142:': 'toughclaws', '149:': 'multiscale', '150:X': 'steadfast', '150:Y': 'insomnia', '154:': 'megasol', '160:': 'dragonize',
+  '181:': 'moldbreaker', '208:': 'sandforce', '212:': 'technician', '214:': 'skilllink', '227:': 'stalwart', '229:': 'solarpower', '254:': 'lightningrod', '257:': 'speedboost', '260:': 'swiftswim', '282:': 'pixilate', '302:': 'magicbounce',
+  '303:': 'hugepower', '306:': 'filter', '310:': 'intimidate', '319:': 'strongjaw', '323:': 'sheerforce', '334:': 'pixilate', '354:': 'prankster', '358:': 'levitate', '359:': 'magicbounce', '359:Z': 'sharpness', '362:': 'refrigerate',
+  '373:': 'aerilate', '376:': 'toughclaws', '382:Primal': 'primordialsea', '383:Primal': 'desolateland', '384:': 'deltastream', '398:': 'contrary', '428:': 'scrappy', '445:': 'sandforce', '445:Z': 'levitate', '448:': 'adaptability',
+  '475:': 'innerfocus', '478:': 'snowwarning', '500:': 'moldbreaker', '530:': 'piercingdrill', '531:': 'healer', '545:': 'shellarmor', '560:': 'intimidate', '609:': 'infiltrator', '623:': 'unseenfist' };
+const _abc = {};
+const abilityOf = (id, mega) => { const k = id * 256 + (mega || 0); if (_abc[k] !== undefined) return _abc[k]; if (id === 487 && mega === ORIGIN) return (_abc[k] = 'levitate'); const g = mega ? MEGA[mega - 1] : null, f = g ? id + ':' + g[1] : ''; return (_abc[k] = g && f in MEGAAB ? MEGAAB[f] : ABOF[id] || ''); };
+/* Trace: egenskapen den har kopiert, til den byttes ut (v.trc). */
+const ab = b => b && !b.tf ? (b.v && b.v.trc) || abilityOf(b.id, b.mega) : '';
 const mold = b => { const a = ab(b); return a === 'moldbreaker' || a === 'teravolt' || a === 'turboblaze'; };
 const airOn = B => [act(B, 'me'), act(B, 'foe')].some(b => b && b.hp > 0 && (ab(b) === 'airlock' || ab(b) === 'cloudnine'));
 const abSay = (ev, s, b, txt) => ev.push({ t: 'abil', side: s, n: ABN[ab(b)], s: txt || `${nmOf(s, b)}'s ${ABN[ab(b)]}!` });
@@ -234,15 +263,56 @@ function abBlock(B, o, t, a, ev) {
 function abEntry(B, s, ev) {
   const b = act(B, s), o = opp(s), f = act(B, o), a = b.hp > 0 ? ab(b) : '', N = nmOf(s, b), WXA = { drizzle: 'rain', drought: 'sun', sandstream: 'sand', snowwarning: 'hail' };
   if (!a) return;
+  /* Trace kopierer egenskapen til motstanderen, og den nye virker med en gang. */
+  if (a === 'trace') { const fa = f.hp > 0 ? ab(f) : ''; if (fa && fa !== 'trace' && !PRW[fa]) { b.v.trc = fa; abSay(ev, s, b, `${N} traced ${lc(nmOf(o, f))}'s ${ABN[fa]}!`); abEntry(B, s, ev); } return; }
+  if (PRW[a]) { if (!(B.wx.pr && B.wx.k === PRW[a][0])) { B.wx = { k: PRW[a][0], n: 999, pr: 1 }; abSay(ev, s, b); ev.push({ t: 'wx', k: PRW[a][0] === 'wind' ? '' : PRW[a][0] }, { t: 'msg', s: PRW[a][1] }); } return; }
+  if (a === 'electricsurge') { if (!B.terr) { B.terr = 5; abSay(ev, s, b); ev.push({ t: 'msg', s: 'An electric current ran across the battlefield!' }); } return; }
   if (a === 'intimidate') { if (f.hp > 0) { abSay(ev, s, b); changeStats(B, o, [[2, -1]], ev, true); } }
   else if (a === 'pressure') abSay(ev, s, b, `${N} is exerting its Pressure!`);
   else if (a === 'moldbreaker') abSay(ev, s, b, `${N} breaks the mold!`);
   else if (a === 'teravolt') abSay(ev, s, b, `${N} is radiating a bursting aura!`);
   else if (a === 'turboblaze') abSay(ev, s, b, `${N} is radiating a blazing aura!`);
-  else if (WXA[a]) { if (B.wx.k !== WXA[a] && !airOn(B)) { B.wx = { k: WXA[a], n: B.raid && s === 'foe' ? 999 : 5 }; abSay(ev, s, b); ev.push({ t: 'wx', k: WXA[a] }, { t: 'msg', s: WXTXT[WXA[a]][0] }); } }
-  else if (a === 'airlock' || a === 'cloudnine') { abSay(ev, s, b); if (B.wx.k) { B.wx = { k: '', n: 0 }; ev.push({ t: 'wx', k: '' }); } ev.push({ t: 'msg', s: 'The effects of the weather disappeared.' }); }
+  else if (WXA[a]) { if (B.wx.k !== WXA[a] && !airOn(B) && !B.wx.pr) { B.wx = { k: WXA[a], n: B.raid && s === 'foe' ? 999 : 5 }; abSay(ev, s, b); ev.push({ t: 'wx', k: WXA[a] }, { t: 'msg', s: WXTXT[WXA[a]][0] }); } }
+  else if (a === 'airlock' || a === 'cloudnine') { abSay(ev, s, b); if (B.wx.k && !B.wx.pr) { B.wx = { k: '', n: 0 }; ev.push({ t: 'wx', k: '' }); } ev.push({ t: 'msg', s: 'The effects of the weather disappeared.' }); }
   else if (a === 'download') { if (f.hp > 0) { abSay(ev, s, b); changeStats(B, s, [[f.st[2] * stgM(f.sg[2]) < f.st[4] * stgM(f.sg[4]) ? 2 : 4, 1]], ev); } }
   else if (a === 'slowstart') { b.v.slow = 5; abSay(ev, s, b, `${N} can't get it going!`); }
+}
+/* URVÆRET (steg 1b.5): Primordial Sea, Desolate Land og Delta Stream gir et vær som varer så lenge den som kom med det, står inne (B.wx.pr), og som
+   ikke kan byttes ut av vanlig vær. I det tunge regnet slår Fire-angrep feil, i det sterke sollyset Water-angrep, og i de sterke vindene
+   ('wind') er Flying ikke svak mot noe (typeEff). wxCheck avslutter det når ingen av de to som står inne, holder det oppe lenger. */
+const PRW = { primordialsea: ['rain', 'A heavy rain began to fall!', 'The heavy rain has lifted!'], desolateland: ['sun', 'The sunlight turned extremely harsh!', 'The extremely harsh sunlight faded.'], deltastream: ['wind', 'Mysterious strong winds are protecting Flying-type Pokémon!', 'The mysterious strong winds have dissipated!'] };
+function wxCheck(B, ev) {
+  if (!B.wx.pr) return; const k = B.wx.k;
+  for (const s of ['me', 'foe']) { const b = act(B, s), a = b && b.hp > 0 ? ab(b) : ''; if (PRW[a] && PRW[a][0] === k) return; }
+  B.wx = { k: '', n: 0 }; ev.push({ t: 'wx', k: '' }, { t: 'msg', s: Object.values(PRW).find(x => x[0] === k)[2] });
+}
+/* Står den på bakken (til Electric Terrain)? */
+const grounded = b => !!GRAV || !(b.ty.includes(2) || ab(b) === 'levitate' || b.v.mag || b.v.tele);
+/* Det som teller som berøring, pulsangrep, bitt og kutt (Tough Claws, Mega Launcher, Strong Jaw, Sharpness), og angrep med en tilleggsvirkning (Sheer Force). */
+const contact = m => m[4] === 1 && !NOCON.has(m[0]);
+const PULSE = new Set(['Aura Sphere', 'Dark Pulse', 'Dragon Pulse', 'Water Pulse']), BITE = new Set(['Bite', 'Crunch', 'Fire Fang', 'Ice Fang', 'Thunder Fang', 'Poison Fang', 'Hyper Fang']);
+const SLICE = new Set(['Razor Leaf', 'Slash', 'Fury Cutter', 'Air Cutter', 'Aerial Ace', 'Leaf Blade', 'Night Slash', 'Air Slash', 'X-Scissor', 'Psycho Cut', 'Cross Poison', 'Sacred Sword', 'Secret Sword', 'Razor Shell']);
+const hasSec = m => m[4] > 0 && ((m[7] > 0 && m[7] <= 6) || m[15] > 0 || (m[6] === 6 && m[12].length > 0) || (m[6] === 7 && m[12].some(s => s[1] > 0)));
+/* Det egenskapen til den som slår, legger på skaden (ua = egenskapen). */
+function abPow(B, u, m, ua) {
+  const x = m[19] || 1;
+  if (ua === 'toughclaws') return contact(m) ? x * 1.3 : x;
+  if (ua === 'megalauncher') return PULSE.has(m[0]) ? x * 1.5 : x;
+  if (ua === 'strongjaw') return BITE.has(m[0]) ? x * 1.5 : x;
+  if (ua === 'sharpness') return SLICE.has(m[0]) ? x * 1.5 : x;
+  if (ua === 'sheerforce') return hasSec(m) ? x * 1.3 : x;
+  if (ua === 'sandforce') return B.wx.k === 'sand' && (m[1] === 5 || m[1] === 4 || m[1] === 8) ? x * 1.3 : x;
+  return x;
+}
+/* Typetreffet slik det blir i kampen: med Scrappy hos den som slår, og i de sterke vindene. */
+const effX = (B, u, t, ty) => typeEff(ty, t, { scrappy: !!u && ab(u) === 'scrappy', wind: !!B && !!B.wx && B.wx.k === 'wind' });
+/* Bytter form midt i kampen (Meloetta med Relic Song, og når den blir rasende i et raid). k = plassen i MEGA + 1, eller 0 for grunnformen. */
+function formTo(B, s, b, k, ev) {
+  if (!b || b.hp <= 0 || b.tf || (b.mega || 0) === k) return false;
+  const src2 = Object.assign({}, b.src, { mega: k }), st = statsOf(src2), ty = mTypes(src2), put = o => { o.st = [o.st[0]].concat(st.slice(1)); o.ty = ty.slice(); };
+  put(b); if (b.orig) put(b.orig); b.mega = k;
+  if (ev) ev.push({ t: 'mega', side: s, id: b.id, mega: k, sh: b.sh, forme: 1, txt: `${nmOf(s, b)} is changing its shape!` }, { t: 'msg', s: `${nmOf(s, b)} changed to its ${k ? MEGA[k - 1][1] : 'Aria'} Forme!` });
+  return true;
 }
 /* Egenskapene til de to som står inne når kampen starter, den raskeste først. */
 function startAbil(B) { const ev = []; GRAV = B.grav || 0; WILD = !!B.tr.wild; for (const s of spdB(B, act(B, 'me')) >= spdB(B, act(B, 'foe')) ? ['me', 'foe'] : ['foe', 'me']) abEntry(B, s, ev); settle(B, ev); return ev; }
@@ -260,11 +330,12 @@ function powOf(B, u, t, m, ord) {
   let p = VPOW[n] ? VPOW[n](u, t, B) : m[2] || 60;
   if (n === 'Eruption' || n === 'Water Spout') p = Math.max(1, Math.floor(p * u.hp / u.max));
   if (n === 'Stored Power') p = 20 + 20 * boosts(u);
+  if (n === 'Weather Ball' && !B.wx.k && ab(u) === 'megasol') p *= 2;
   if ((n === 'Facade' && u.status) || (n === 'Hex' && t.status) || (n === 'Venoshock' && t.status === 'psn') || (n === 'Brine' && t.hp <= t.max / 2) || (n === 'Wake-Up Slap' && t.status === 'slp') || (n === 'Smelling Salts' && t.status === 'par')
     || (n === 'Payback' && ord === 1) || ((n === 'Revenge' || n === 'Avalanche') && u.v.hit) || (n === 'Acrobatics' && !u.item) || (n === 'Weather Ball' && B.wx.k) || (n === 'Assurance' && t.v.hit) || (n === 'Retaliate' && B.sd[sideOf(B, u)].fell === B.turn - 1)) p *= 2;
   if ((m[1] === 12 && u.v.charge) || (ROLL.has(n) && u.v.curl)) p *= 2;
   if (u.v.mefirst) p = Math.floor(p * 1.5);
-  if (n === 'Solar Beam' && B.wx.k && B.wx.k !== 'sun') p = Math.floor(p / 2);
+  if (n === 'Solar Beam' && B.wx.k && B.wx.k !== 'sun' && B.wx.k !== 'wind' && ab(u) !== 'megasol') p = Math.floor(p / 2);
   if (ROLL.has(n)) p *= Math.pow(2, Math.min(4, u.v.roll || 0));
   /* Fury Cutter dobles for hvert treff på rad (40, 80, 160). Echoed Voice øker med 40 om gangen opp til 200. */
   if (CHAIN.has(n)) p = n === 'Echoed Voice' ? Math.min(200, p * (1 + (u.v.chain || 0))) : Math.min(160, p * Math.pow(2, u.v.chain || 0));
@@ -276,30 +347,38 @@ function powOf(B, u, t, m, ord) {
 }
 function dmgOf(B, u, t, m, pow, crit, roll) {
   const phys = m[4] === 1, n = m[0], ai = phys ? 1 : 3, d0 = phys || n === 'Psyshock' || n === 'Psystrike' || n === 'Secret Sword' ? 2 : 4, di = B.wroom ? 6 - d0 : d0, raw = n === 'Chip Away' || n === 'Sacred Sword';
-  const au = n === 'Foul Play' ? t : u;
+  const au = n === 'Foul Play' ? t : u, ua = ab(u), ta = mold(u) ? '' : ab(t), eff = effX(B, u, t, m[1]);
+  if (ua === 'technician' && pow <= 60) pow *= 1.5;
   let a = au.st[ai] * (crit && au.sg[ai] < 0 ? 1 : stgM(au.sg[ai])), d = t.st[di] * ((crit && t.sg[di] > 0) || raw ? 1 : stgM(t.sg[di]));
-  if (phys && n !== 'Foul Play') { if (u.v.slow) a *= 0.5; const ua = ab(u); if (ua === 'hugepower' || ua === 'purepower') a *= 2; }
+  if (phys && n !== 'Foul Play') { if (u.v.slow) a *= 0.5; if (ua === 'hugepower' || ua === 'purepower') a *= 2; }
+  if (!phys && ua === 'solarpower' && B.wx.k === 'sun') a *= 1.5;
+  if (ta === 'thickfat' && (m[1] === 9 || m[1] === 14)) a *= 0.5;
   if (B.wx.k === 'sand' && di === 4 && t.ty.includes(5)) d *= 1.5;
   const uh = hi(B, u), th = hi(B, t);
   if (th && th.evio && (EVO[t.id] || []).length) d *= 1.5;
   const base = Math.floor(Math.floor((Math.floor(2 * u.lv / 5) + 2) * pow * a / d) / 50) + 2;
-  let mod = (crit ? 1.5 : 1) * (roll ? 0.85 + Math.random() * 0.15 : 0.925) * (u.ty.includes(m[1]) ? 1.5 : 1) * typeEff(m[1], t) * (phys && u.status === 'brn' && n !== 'Facade' ? 0.5 : 1);
+  let mod = (crit ? 1.5 : 1) * (roll ? 0.85 + Math.random() * 0.15 : 0.925) * (u.ty.includes(m[1]) ? (ua === 'adaptability' ? 2 : 1.5) : 1) * eff * (phys && u.status === 'brn' && n !== 'Facade' ? 0.5 : 1) * abPow(B, u, m, ua);
+  if (ta === 'filter' && eff > 1) mod *= 0.75;
+  if (ta === 'multiscale' && t.hp >= t.max) mod *= 0.5;
+  if (B.terr && m[1] === 12 && grounded(u)) mod *= 1.3;
   if (u.v.ff && m[1] === 9) mod *= 1.5;
-  if (uh) mod *= (uh.ty === m[1] ? PLATEX : 1) * (uh.lo ? 1.3 : 1) * (uh.belt && typeEff(m[1], t) > 1 ? 1.2 : 1) * (uh.band && phys ? 1.1 : 1) * (uh.glass && !phys ? 1.1 : 1);
-  if (B.wx.k === 'rain') mod *= m[1] === 10 ? 1.5 : m[1] === 9 ? 0.5 : 1;
-  if (B.wx.k === 'sun') mod *= m[1] === 9 ? 1.5 : m[1] === 10 ? 0.5 : 1;
+  if (uh) mod *= (uh.ty === m[1] ? PLATEX : 1) * (uh.lo ? 1.3 : 1) * (uh.belt && eff > 1 ? 1.2 : 1) * (uh.band && phys ? 1.1 : 1) * (uh.glass && !phys ? 1.1 : 1);
+  /* Mega Sol: dens egne angrep regnes som i sterkt sollys, uansett vær. */
+  if (B.wx.k === 'rain' && ua !== 'megasol') mod *= m[1] === 10 ? 1.5 : m[1] === 9 ? 0.5 : 1;
+  if (B.wx.k === 'sun' || ua === 'megasol') mod *= m[1] === 9 ? 1.5 : m[1] === 10 ? 0.5 : 1;
   const sd = B.sd[sideOf(B, t)];
-  if (!crit && n !== 'Brick Break' && ((phys && sd.ref) || (!phys && sd.ls))) mod *= 0.5;
+  if (!crit && n !== 'Brick Break' && ua !== 'infiltrator' && ((phys && sd.ref) || (!phys && sd.ls))) mod *= 0.5;
   if ((m[1] === 12 && B.mud) || (m[1] === 9 && B.wsp)) mod *= 0.33;
   return Math.max(1, Math.floor(base * mod));
 }
-const ailOk = (b, st) => !!st && !b.status && !((st === 'par' && b.ty.includes(12)) || (st === 'brn' && b.ty.includes(9)) || (st === 'psn' && (b.ty.includes(3) || b.ty.includes(8))) || (st === 'frz' && b.ty.includes(14)));
+const ailOk = (b, st) => !!st && !b.status && !(st === 'slp' && ab(b) === 'insomnia') && !((st === 'par' && b.ty.includes(12)) || (st === 'brn' && b.ty.includes(9)) || (st === 'psn' && (b.ty.includes(3) || b.ty.includes(8))) || (st === 'frz' && b.ty.includes(14)));
 /* Gir siden s en tilstand. loud = si fra når det ikke virker (statusangrep). bad = kraftig forgiftet. */
 function applyAil(B, s, id, ev, loud, bad) {
   const b = act(B, s), N = nmOf(s, b), no = x => { if (loud) ev.push({ t: 'msg', s: x || 'But it failed!' }); return false; };
   if (b.hp <= 0) return false;
   if (b.v.sub) return no();
-  if (B.sd[s].safe) return no(`${N} is protected by Safeguard!`);
+  if (B.sd[s].safe && ab(act(B, opp(s))) !== 'infiltrator') return no(`${N} is protected by Safeguard!`);
+  if (id === 2 && B.terr && grounded(b)) return no(`${N} is protected by the Electric Terrain!`);
   if (id === 6) { if (b.v.conf) return no(); b.v.conf = 2 + rnd(4); ev.push({ t: 'status', side: s, st: b.status, fx: 'conf' }, { t: 'msg', s: `${N} became confused!` }); lumCheck(B, s, ev); return true; }
   const st = AIL[id];
   if (!st) return no();
@@ -312,8 +391,9 @@ function applyAil(B, s, id, ev, loud, bad) {
 function changeStats(B, s, list, ev, byFoe) {
   const b = act(B, s), N = nmOf(s, b);
   if (b.hp <= 0) return;
-  for (const [id, d] of list) {
-    const i = id - 1;
+  const con = ab(b) === 'contrary';
+  for (const [id, d0] of list) {
+    const i = id - 1, d = con ? -d0 : d0;
     if (d < 0 && byFoe && (B.sd[s].mist || b.v.sub)) { ev.push({ t: 'msg', s: b.v.sub ? 'But it failed!' : `${N} is protected by the mist!` }); return; }
     if (d < 0 && byFoe && !mold(act(B, opp(s)))) { const a = ab(b); if (a === 'clearbody' || a === 'whitesmoke' || (a === 'hypercutter' && i === 1)) { abSay(ev, s, b, `${N}'s ${ABN[a]} prevents ${a === 'hypercutter' ? 'Attack' : 'stat'} loss!`); if (a === 'hypercutter') continue; return; } }
     const v = clampS(b.sg[i] + d);
@@ -344,11 +424,19 @@ function sendOut(B, s, i, ev, txt) {
 const keep = b => { if (!b.orig) b.orig = { st: b.st.slice(), ty: b.ty.slice(), mv: b.mv }; };
 const unform = b => { if (b.orig) { b.st = b.orig.st; b.ty = b.orig.ty; b.mv = b.orig.mv; b.orig = null; b.tf = 0; } };
 /* Sitter denne fast? Feller og Mean Look holder bare så lenge den som satte dem, står inne. */
-const stuck = (B, s) => { const V = act(B, s).v, f = act(B, opp(s)); return !!((V.trap && (!V.trapBy || V.trapBy === f)) || (V.nosw && (V.nosw === 1 || V.nosw === f)) || V.ingrain); };
+const stuck = (B, s) => { const b = act(B, s), V = b.v, f = act(B, opp(s)); return !!((V.trap && (!V.trapBy || V.trapBy === f)) || (V.nosw && (V.nosw === 1 || V.nosw === f)) || V.ingrain || (f.hp > 0 && b.hp > 0 && ab(f) === 'shadowtag' && ab(b) !== 'shadowtag' && !b.ty.includes(7))); };
+/* Det som skjer med den som forlater kampen: Regenerator og Natural Cure, og Meloetta går tilbake til Aria Forme. */
+function leave(B, old) {
+  const a = old.hp > 0 ? ab(old) : '';
+  if (a === 'regenerator' && old.hp < old.max) old.hp = Math.min(old.max, old.hp + Math.floor(old.max / 3));
+  if (a === 'naturalcure' && old.status) { old.status = ''; old.tox = 0; old.slp = 0; }
+  if (old.id === 648 && old.mega && old.hp > 0) formTo(B, '', old, 0, null);
+  old.v = {}; old.sg = Z8();
+}
 function swapTo(B, s, i, ev) {
   const old = act(B, s);
   if (old.hp > 0) ev.push({ t: 'recall', side: s, txt: s === 'me' ? `${old.name}, come back!` : `${B.tr.n} withdrew ${old.name}!` });
-  old.v = {}; old.sg = Z8();
+  leave(B, old);
   sendOut(B, s, i, ev);
 }
 /* Roar, Whirlwind, Dragon Tail: en tilfeldig annen på laget dras inn. */
@@ -357,20 +445,20 @@ function forceOut(B, s, ev, quiet) {
   if (!c.length || arr[cur].v.ingrain) { if (!quiet) ev.push({ t: 'msg', s: 'But it failed!' }); return; }
   const i = c[rnd(c.length)];
   ev.push({ t: 'recall', side: s, txt: '' });
-  arr[cur].v = {}; arr[cur].sg = Z8();
+  leave(B, arr[cur]);
   sendOut(B, s, i, ev, `${nmOf(s, arr[i])} was dragged out!`);
 }
 
 /* Statusangrep med egne regler. c = { B, s, o, u, t, V, N, ev, say, m, wasProt }. */
 const fail = c => c.say('But it failed!');
 const guard = (c, key, txt) => { if (c.wasProt && Math.random() < 0.5) return fail(c); c.V[key] = 1; c.V.lastProt = 1; c.say(`${c.N} ${txt}`); };
-const weather = (c, k) => { if (c.B.wx.k === k || airOn(c.B)) return fail(c); c.B.wx = { k, n: 5 }; c.ev.push({ t: 'wx', k }); c.say(WXTXT[k][0]); };
+const weather = (c, k) => { if (c.B.wx.k === k || airOn(c.B) || c.B.wx.pr) return fail(c); c.B.wx = { k, n: 5 }; c.ev.push({ t: 'wx', k }); c.say(WXTXT[k][0]); };
 const sideUp = (c, key, n, txt) => { const sd = c.B.sd[c.s]; if (sd[key]) return fail(c); sd[key] = n; c.say(`${c.s === 'me' ? 'Your team' : "The foe's team"} ${txt}`); };
 const hazard = (c, key, max, txt) => { const sd = c.B.sd[c.o]; if (sd[key] >= max) return fail(c); sd[key]++; c.say(`${txt} ${c.s === 'me' ? "the foe's team" : 'your team'}!`); };
 const swapSg = (c, idx) => { for (const i of idx) { const x = c.u.sg[i]; c.u.sg[i] = c.t.sg[i]; c.t.sg[i] = x; } c.say(`${c.N} switched stat changes with its target!`); };
 const UM = {
   'Protect': c => guard(c, 'prot', 'protected itself!'), 'Detect': c => guard(c, 'prot', 'protected itself!'), 'Endure': c => guard(c, 'endure', 'braced itself!'),
-  'Rest': c => { const u = c.u; if (u.hp >= u.max) return fail(c); u.hp = u.max; u.status = 'slp'; u.tox = 0; u.slp = 2; c.ev.push({ t: 'heal', side: c.s, hp: u.hp }, { t: 'status', side: c.s, st: 'slp', fx: 'slp' }); c.say(`${c.N} slept and became healthy!`); },
+  'Rest': c => { const u = c.u; if (u.hp >= u.max || ab(u) === 'insomnia' || (c.B.terr && grounded(u))) return fail(c); u.hp = u.max; u.status = 'slp'; u.tox = 0; u.slp = 2; c.ev.push({ t: 'heal', side: c.s, hp: u.hp }, { t: 'status', side: c.s, st: 'slp', fx: 'slp' }); c.say(`${c.N} slept and became healthy!`); },
   'Rain Dance': c => weather(c, 'rain'), 'Sunny Day': c => weather(c, 'sun'), 'Sandstorm': c => weather(c, 'sand'), 'Hail': c => weather(c, 'hail'),
   'Reflect': c => sideUp(c, 'ref', 5, 'became stronger against physical moves!'), 'Light Screen': c => sideUp(c, 'ls', 5, 'became stronger against special moves!'), 'Safeguard': c => sideUp(c, 'safe', 5, 'became cloaked in a mystical veil!'),
   'Mist': c => sideUp(c, 'mist', 5, 'became shrouded in mist!'), 'Tailwind': c => sideUp(c, 'tail', 4, 'has the wind at its back!'), 'Lucky Chant': c => sideUp(c, 'lucky', 5, 'is shielded from critical hits!'),
@@ -440,28 +528,8 @@ Object.assign(UM, {
 UM['Sketch'] = UM['Mimic']; UM['Lunar Dance'] = UM['Healing Wish'];
 UM['Aromatherapy'] = UM['Heal Bell']; UM['Block'] = UM['Spider Web'] = UM['Mean Look']; UM['Mind Reader'] = UM['Lock-On'];
 /* Tilstander utover de fem vanlige (tilstandsnummeret fra dataene). */
-/* EGENSKAPEN KORTET VISER (steg 1.6, ønske 3 og 19). Mega-formene og formene har i spillene ofte en egenskap motoren ikke har ennå (den lages i
-   steg 1b.5). ABX = navnet og en linje om hver av dem, FORMAB = hvilken form som har hvilken (art:form). abShow gir det kortet skal vise:
-   { n, d, live }, der live = 1 betyr at den virker i kampene nå. Når motoren får en av dem (ABN), blir den live av seg selv. */
-const ABX = { thickfat: ['Thick Fat', 'Fire and Ice moves do half damage to it.'], toughclaws: ['Tough Claws', 'Its contact moves hit 30 % harder.'], megalauncher: ['Mega Launcher', 'Its pulse and aura moves hit 50 % harder.'],
-  adaptability: ['Adaptability', 'Moves of its own type hit even harder.'], noguard: ['No Guard', 'No move misses, its own or the foe\'s.'], trace: ['Trace', "Copies the foe's Ability when it enters."], shellarmor: ['Shell Armor', 'Cannot be struck by critical hits.'],
-  shadowtag: ['Shadow Tag', 'The foe cannot switch out.'], parentalbond: ['Parental Bond', 'Its moves hit twice, the second time weaker.'], aerilate: ['Aerilate', 'Normal moves become Flying and hit harder.'], steadfast: ['Steadfast', 'Speed rises each time it flinches.'],
-  insomnia: ['Insomnia', 'Cannot fall asleep.'], sandforce: ['Sand Force', 'Rock, Ground and Steel moves hit harder in a sandstorm.'], technician: ['Technician', 'Its weaker moves hit 50 % harder.'], skilllink: ['Skill Link', 'Multi-hit moves always hit five times.'],
-  solarpower: ['Solar Power', 'In harsh sunlight Sp. Atk rises, but it loses HP each turn.'], swiftswim: ['Swift Swim', 'Doubles its Speed in rain.'], pixilate: ['Pixilate', 'Normal moves become Fairy and hit harder.'], magicbounce: ['Magic Bounce', 'Sends status moves back at the user.'],
-  filter: ['Filter', 'Super effective moves do less damage to it.'], strongjaw: ['Strong Jaw', 'Its biting moves hit 50 % harder.'], sheerforce: ['Sheer Force', 'Moves lose their extra effects but hit harder.'], prankster: ['Prankster', 'Its status moves go first.'],
-  refrigerate: ['Refrigerate', 'Normal moves become Ice and hit harder.'], primordialsea: ['Primordial Sea', 'Brings heavy rain: Fire moves fail.'], desolateland: ['Desolate Land', 'Brings extremely harsh sunlight: Water moves fail.'],
-  deltastream: ['Delta Stream', 'Strong winds shield Flying types from their weaknesses.'], scrappy: ['Scrappy', 'Its Normal and Fighting moves hit Ghost types.'], innerfocus: ['Inner Focus', 'Cannot be made to flinch.'], healer: ['Healer', 'May cure an ally of its status.'],
-  serenegrace: ['Serene Grace', "Doubles the chance of its moves' extra effects."], regenerator: ['Regenerator', 'Heals a third of its HP when it switches out.'] };
-const FORMAB = { '3:': 'thickfat', '6:X': 'toughclaws', '9:': 'megalauncher', '15:': 'adaptability', '18:': 'noguard', '65:': 'trace', '80:': 'shellarmor', '94:': 'shadowtag', '115:': 'parentalbond', '127:': 'aerilate', '142:': 'toughclaws',
-  '150:X': 'steadfast', '150:Y': 'insomnia', '208:': 'sandforce', '212:': 'technician', '214:': 'skilllink', '229:': 'solarpower', '260:': 'swiftswim', '282:': 'pixilate', '302:': 'magicbounce', '306:': 'filter', '319:': 'strongjaw', '323:': 'sheerforce',
-  '334:': 'pixilate', '354:': 'prankster', '359:': 'magicbounce', '362:': 'refrigerate', '373:': 'aerilate', '376:': 'toughclaws', '382:Primal': 'primordialsea', '383:Primal': 'desolateland', '384:': 'deltastream', '428:': 'scrappy', '445:': 'sandforce',
-  '448:': 'adaptability', '475:': 'innerfocus', '531:': 'healer', '492:Sky': 'serenegrace', '641:Therian': 'regenerator' };
-function abShow(id, mega) {
-  const g = mega ? MEGA[mega - 1] : null, x = g ? FORMAB[id + ':' + g[1]] : '';
-  if (x && ABN[x]) return { n: ABN[x], d: ABTXT[x], live: 1 };
-  if (x && ABX[x]) return { n: ABX[x][0], d: ABX[x][1], live: 0 };
-  const a = abilityOf(id, mega); return a ? { n: ABN[a], d: ABTXT[a], live: 1 } : null;
-}
+/* EGENSKAPEN KORTET VISER (steg 1.6, ønske 3 og 19): { n, d, live }. Siden steg 1b.5 virker alle i kampene (live er alltid 1; feltet står for kortets skyld). */
+function abShow(id, mega) { const a = abilityOf(id, mega); return a && ABN[a] ? { n: ABN[a], d: ABTXT[a], live: 1 } : null; }
 /* Attract virker bare mellom en hann og en hunn (ikke på dem uten kjønn). */
 const canLove = (u, t) => u.g < 2 && t.g < 2 && u.g !== t.g;
 const AILX = {
@@ -493,7 +561,7 @@ function useMove(B, s, k, ev, ord) {
     else { u.status = ''; V.night = 0; ev.push({ t: 'status', side: s, st: '' }); say(`${N} woke up!`); }
   }
   if (u.status === 'frz') { const pre = k >= 0 && u.mv[k] ? MOVES[u.mv[k].i][0] : ''; if (!DEFROST.has(pre) && Math.random() < 0.8) { say(`${N} is frozen solid!`); return stop(); } u.status = ''; ev.push({ t: 'status', side: s, st: '' }); say(`${N} thawed out!`); }
-  if (V.fl) { V.fl = 0; say(`${N} flinched!`); return stop(); }
+  if (V.fl) { V.fl = 0; say(`${N} flinched!`); if (ab(u) === 'steadfast' && u.sg[5] < 6) { abSay(ev, s, u); changeStats(B, s, [[6, 1]], ev); } return stop(); }
   if (V.conf) {
     V.conf--;
     if (!V.conf) say(`${N} snapped out of its confusion!`);
@@ -521,7 +589,7 @@ function useMove(B, s, k, ev, ord) {
   V.last = k; if (k >= 0) (V.used || (V.used = {}))[k] = 1;
   V.rage = m[0] === 'Rage' ? 1 : 0;
   /* Første runde av et to-runders angrep. I sterkt sollys lader Solar Beam ferdig med en gang. */
-  if (CHARGE[m[0]] && !(cont && V.lock.kind === 'charge') && !(m[0] === 'Solar Beam' && B.wx.k === 'sun')) {
+  if (CHARGE[m[0]] && !(cont && V.lock.kind === 'charge') && !(m[0] === 'Solar Beam' && (B.wx.k === 'sun' || ab(u) === 'megasol'))) {
     ev.push({ t: 'anim', side: s, mi, self: 1, charge: 1 }); say(`${N} ${CHARGE[m[0]][0]}`); V.lock = { k, kind: 'charge' };
     if (CHARGE[m[0]][1]) { V.away = 1; ev.push({ t: 'vanish', side: s, on: 1 }); }
     if (m[0] === 'Skull Bash') changeStats(B, s, [[3, 1]], ev);
@@ -554,6 +622,9 @@ function useMove(B, s, k, ev, ord) {
   m = mvEff(B, u, m);
   if (m[0] === 'Techno Blast' && u.src.drive != null && !u.drv) { u.drv = 1; say(`${N}'s Drive charged it with ${TYN[m[1]]} power!`); }
   const atFoe = m[4] > 0 || m[0] === 'Heal Pulse' || (m[17] !== 1 && ![3, 10, 11].includes(m[6]) && (m[6] !== 13 || FOEU.has(m[0])) && !UM_SELF.has(m[0]));
+  const ua = ab(u), tab = mold(u) ? '' : ab(t);
+  if (m[4] > 0 && B.wx.pr && ((B.wx.k === 'rain' && m[1] === 9) || (B.wx.k === 'sun' && m[1] === 10))) { say(B.wx.k === 'rain' ? 'The Fire-type attack fizzled out in the heavy rain!' : 'The Water-type attack evaporated in the harsh sunlight!'); return stop(); }
+  let pierce = 1;
   if (m[0] === 'Dream Eater' && t.status !== 'slp') { say('But it failed!'); return stop(); }
   if (m[0] === 'Snore' && u.status !== 'slp') { say('But it failed!'); return stop(); }
   if (m[0] === 'Fake Out' && V.t) { say('But it failed!'); return stop(); }
@@ -564,9 +635,9 @@ function useMove(B, s, k, ev, ord) {
   if (m[0] === 'Focus Punch' && V.hit) { say(`${N} lost its focus and couldn't move!`); return stop(); }
   if (atFoe) {
     if (t.hp <= 0) { say('But there was no target…'); return stop(); }
-    if (t.v.prot && m[0] !== 'Feint' && m[0] !== 'Shadow Force') { say(`${nmOf(o, t)} protected itself!`); return stop(); }
+    if (t.v.prot && m[0] !== 'Feint' && m[0] !== 'Shadow Force') { const pa = m[4] > 0 && contact(m) ? ua : ''; if (pa === 'piercingdrill') pierce = 0.25; else if (pa !== 'unseenfist') { say(`${nmOf(o, t)} protected itself!`); return stop(); } }
     let hit = true;
-    if (V.lockon || (t.v.tele && m[6] !== 9) || (STOMP.has(m[0]) && t.v.mini && !t.v.away)) hit = true;
+    if (V.lockon || (t.v.tele && m[6] !== 9) || (STOMP.has(m[0]) && t.v.mini && !t.v.away) || (m[6] !== 9 && (ua === 'noguard' || ab(t) === 'noguard'))) hit = true;
     else if (t.v.away && !reaches(m, t)) hit = false;
     else if (m[6] === 9) hit = !t.big && !(ab(t) === 'sturdy' && !mold(u)) && u.lv >= t.lv && Math.random() < (30 + u.lv - t.lv) / 100;
     /* Thunder og Hurricane treffer alltid i regn, og bare annenhver gang i sol. Blizzard treffer alltid i hagl. */
@@ -579,7 +650,7 @@ function useMove(B, s, k, ev, ord) {
     }
   }
   if (m[4] > 0) {
-    const fixed = FIXED[m[0]], te = m === STRUGGLE ? 1 : typeEff(m[1], t), e = fixed ? 1 : te;
+    const fixed = FIXED[m[0]], te = m === STRUGGLE ? 1 : effX(B, u, t, m[1]), e = fixed ? 1 : te;
     if (t.big && BIGNO.has(m[0])) { say(`${nmOf(o, t)} is far too strong for that!`); return stop(); }
     if (te === 0) { say(`It doesn't affect ${lc(nmOf(o, t))}…`); return stop(); }
     if (m !== STRUGGLE) { const imm = abImm(u, t, m); if (imm) { abBlock(B, o, t, imm, ev); return stop(); } }
@@ -589,15 +660,20 @@ function useMove(B, s, k, ev, ord) {
     V.cm = CHAIN.has(m[0]) ? m[0] : '';
     ev.push({ t: 'anim', side: s, mi, self: 0, roll: V.roll || 0, ty: m[1] });
     const bu = m[0] === 'Beat Up' ? beatUp(B, u) : null, hits = hitsFor(B, u, m), cs = Math.min(3, m[16] + (V.focus ? 2 : 0) + ((hi(B, u) || {}).scope ? 1 : 0));
-    let total = 0, n = 0, crit = false, sub = false, held = false, sturdy = false, sash = false, weak = '';
-    for (; n < hits && t.hp > 0 && u.hp > 0; n++) {
+    /* Parental Bond: angrep med ett slag slår to ganger, det andre med en firedel. sec = tilleggsvirkningene: borte med Sheer Force, dobbelt så ofte med Serene Grace. */
+    const pb = ua === 'parentalbond' && hits === 1 && !fixed && m[6] !== 9 && m !== STRUGGLE, sec = ua === 'sheerforce' && hasSec(m) ? 0 : ua === 'serenegrace' ? 2 : 1;
+    let total = 0, n = 0, crit = false, sub = false, held = false, sturdy = false, sash = false, weak = '', hp0 = t.hp;
+    for (; n < (pb ? 2 : hits) && t.hp > 0 && u.hp > 0; n++) {
       /* Kritisk treff: 1 av 24 til vanlig, 1 av 8 for angrep med høy sjanse, og halvparten eller alltid over det. Skaden er × 1,5. */
-      crit = !fixed && m[6] !== 9 && m !== STRUGGLE && !B.sd[o].lucky && Math.random() < [1 / 24, 1 / 8, 1 / 2, 1][cs];
+      crit = !fixed && m[6] !== 9 && m !== STRUGGLE && !B.sd[o].lucky && tab !== 'shellarmor' && Math.random() < [1 / 24, 1 / 8, 1 / 2, 1][cs];
       /* Beat Up har én styrke per lagkamerat, og Triple Kick slår hardere for hvert spark (10, 20, 30). */
       const pw = bu ? bu[n] : m[0] === 'Triple Kick' ? 10 * (n + 1) : 0;
       let d = m[6] === 9 ? t.hp : fixed ? fixed(u, t, B) : m === STRUGGLE ? Math.max(1, Math.floor(dmgOf(B, u, t, m, 50, false, true) / (u.ty.includes(0) ? 1.5 : 1) / (typeEff(0, t) || 1))) : dmgOf(B, u, t, m, pw || powOf(B, u, t, m, ord), crit, true);
       if (fixed && d <= 0) { say('But it failed!'); return stop(); }
-      if (t.v.sub) {
+      if (pb && n === 1) d = Math.max(1, Math.floor(d * 0.25));
+      if (pierce < 1) d = Math.max(1, Math.floor(d * pierce));
+      hp0 = t.hp;
+      if (t.v.sub && ua !== 'infiltrator') {
         t.v.sub -= d; sub = true; ev.push({ t: 'hit', side: o, hp: t.hp, e, crit, sub: 1 });
         if (t.v.sub <= 0) { t.v.sub = 0; ev.push({ t: 'sub', side: o, on: 0 }); say(`${nmOf(o, t)}'s substitute faded!`); }
         continue;
@@ -616,12 +692,13 @@ function useMove(B, s, k, ev, ord) {
     if (m[0] === 'Spit Up') V.stock = 0;
     if (m[6] === 9) say("It's a one-hit KO!");
     else if (!fixed && m !== STRUGGLE) { if (e > 1) say("It's super effective!"); else if (e < 1) say("It's not very effective…"); }
-    if (hits > 1) say(`Hit ${n} time${n > 1 ? 's' : ''}!`);
+    if (hits > 1 || (pb && n > 1)) say(`Hit ${n} time${n > 1 ? 's' : ''}!`);
     if (held) say(`${nmOf(o, t)} endured the hit!`);
     if (sturdy) abSay(ev, o, t, `${nmOf(o, t)} endured the hit with Sturdy!`);
     if (weak) say(`The ${weak} weakened the damage to ${lc(nmOf(o, t))}!`);
     if (sash) say(`${nmOf(o, t)} hung on using its Focus Sash!`);
     if (total > 0 && !sub) abHit(B, s, o, u, t, m, ev);
+    if (t.hp <= 0 && total > 0 && tab === 'innardsout' && u.hp > 0) { abSay(ev, o, t); u.hp = Math.max(0, u.hp - Math.min(hp0, Math.floor(mx(u)))); ev.push({ t: 'hit', side: s, hp: u.hp, e: 1, quiet: 1 }, { t: 'msg', s: `${N} was hurt!` }); }
     if (t.status === 'frz' && (m[1] === 9 || m[0] === 'Scald') && t.hp > 0) { t.status = ''; ev.push({ t: 'status', side: o, st: '' }); say(`${nmOf(o, t)} thawed out!`); }
     /* Smack Down slår målet i bakken: Ground-angrep treffer det, og det mister svevingen. Den som var i lufta, kommer ned. */
     if (m[0] === 'Smack Down' && t.hp > 0 && (total > 0 || sub)) { const up = t.ty.includes(2) || t.v.mag || t.v.tele || t.v.away; t.v.smack = 1; t.v.mag = 0; t.v.tele = 0; if (t.v.away) { t.v.away = 0; t.v.lock = null; ev.push({ t: 'vanish', side: o, on: 0 }); } if (up) say(`${nmOf(o, t)} fell straight down!`); }
@@ -644,14 +721,14 @@ function useMove(B, s, k, ev, ord) {
     }
     if (RECHARGE.has(m[0]) && t.hp > 0) V.rech = 1;
     if (BOOM.has(m[0]) || m[0] === 'Final Gambit') { u.hp = 0; ev.push({ t: 'hit', side: s, hp: 0, e: 1, quiet: 1 }); }
-    if (u.hp > 0 && m[6] === 7 && m[12].length && Math.random() * 100 < (m[11] || 100)) changeStats(B, s, m[12], ev);
+    if (u.hp > 0 && m[6] === 7 && m[12].length && Math.random() * 100 < (m[11] || 100) * (m[12].some(x => x[1] > 0) ? sec : 1)) changeStats(B, s, m[12], ev);
     if (t.hp > 0 && !sub) {
-      if (m[7] > 0 && m[7] <= 6 && Math.random() * 100 < (m[8] || 100)) applyAil(B, o, m[7], ev, false, m[0] === 'Poison Fang');
+      if (m[7] > 0 && m[7] <= 6 && Math.random() * 100 < (m[8] || 100) * sec) applyAil(B, o, m[7], ev, false, m[0] === 'Poison Fang');
       if (m[0] === 'Tri Attack' && Math.random() < 0.2) applyAil(B, o, [1, 4, 3][rnd(3)], ev, false);
       if (m[0] === 'Secret Power' && Math.random() < 0.3) applyAil(B, o, 1, ev, false);
       if (m[7] === 8 && !t.v.trap) { t.v.trap = 4 + rnd(2); t.v.trapn = m[0]; t.v.trapBy = u; say(`${nmOf(o, t)} was trapped by ${m[0]}!`); }
-      if (m[6] === 6 && m[12].length && Math.random() * 100 < (m[11] || 100)) changeStats(B, o, m[12], ev, true);
-      if (m[15] && ord === 0 && Math.random() * 100 < m[15]) t.v.fl = 1;
+      if (m[6] === 6 && m[12].length && Math.random() * 100 < (m[11] || 100) * sec) changeStats(B, o, m[12], ev, true);
+      if (m[15] && ord === 0 && Math.random() * 100 < m[15] * sec && tab !== 'innerfocus') t.v.fl = 1;
       if ((m[0] === 'Wake-Up Slap' && t.status === 'slp') || (m[0] === 'Smelling Salts' && t.status === 'par')) { t.status = ''; ev.push({ t: 'status', side: o, st: '' }); }
       if (m[0] === 'Clear Smog') { t.sg = Z8(); say(`${nmOf(o, t)}'s stat changes were removed!`); }
       if (m[0] === 'Dragon Tail' || m[0] === 'Circle Throw') forceOut(B, o, ev, true);
@@ -666,6 +743,7 @@ function useMove(B, s, k, ev, ord) {
     }
     if (m[0] === 'Uproar' && u.hp > 0) { if (!cont) { V.lock = { k, kind: 'uproar', n: 2 }; say(`${N} caused an uproar!`); } else if (--V.lock.n <= 0) { V.lock = null; say(`${N} calmed down.`); } }
     if (t.hp <= 0 && t.v.grudge && slot && u.hp > 0 && !u.big) { slot.pp = 0; say(`${N}'s ${m[0]} lost all its PP due to the grudge!`); }
+    if (m[0] === 'Relic Song' && u.id === 648 && u.hp > 0 && total > 0) formTo(B, s, u, u.mega ? 0 : PIROU, ev);
     if (PIVOT.has(m[0]) && (total > 0 || sub) && u.hp > 0 && (s === 'me' ? B.me : B.foe).some(b => b !== u && b.hp > 0)) B.pivot = s;
     if (t.hp <= 0 && t.v.dbond && u.hp > 0 && !u.big) { u.hp = 0; ev.push({ t: 'hit', side: s, hp: 0, e: 1, quiet: 1 }); say(`${nmOf(o, t)} took its attacker down with it!`); }
     return;
@@ -673,6 +751,8 @@ function useMove(B, s, k, ev, ord) {
   /* Statusangrep */
   ev.push({ t: 'anim', side: s, mi, self: atFoe ? 0 : 1 });
   let c = { B, s, o, u, t, V, N, ev, say, m, wasProt };
+  if (atFoe && ua === 'prankster' && t.hp > 0 && t.ty.includes(16)) { say(`It doesn't affect ${lc(nmOf(o, t))}…`); return; }
+  if (t.hp > 0 && tab === 'magicbounce' && (atFoe ? !UM_SELF.has(m[0]) : HAZ.has(m[0]))) { abSay(ev, o, t, `${nmOf(o, t)} bounced the ${m[0]} back!`); c = { B, s: o, o: s, u: t, t: u, V: t.v, N: nmOf(o, t), ev, say, m, wasProt: 0 }; return statusMove(c); }
   if (atFoe && t.v.mcoat && !UM_SELF.has(m[0])) { say(`${N}'s ${m[0]} was bounced back by Magic Coat!`); c = { B, s: o, o: s, u: t, t: u, V: t.v, N: nmOf(o, t), ev, say, m, wasProt: 0 }; }
   else if (!atFoe && t.hp > 0 && t.v.snatch && (m[6] === 2 || m[6] === 3)) { t.v.snatch = 0; say(`${nmOf(o, t)} snatched ${lc(N)}'s move!`); c = { B, s: o, o: s, u: t, t: u, V: t.v, N: nmOf(o, t), ev, say, m, wasProt: 0 }; }
   return statusMove(c);
@@ -699,6 +779,7 @@ function statusMove(c) {
   else say('But nothing happened!');
 }
 /* Unike angrep som virker på brukeren eller banen, selv om dataene ikke sier «seg selv». */
+const HAZ = new Set(['Spikes', 'Toxic Spikes', 'Stealth Rock']);
 const UM_SELF = new Set(['Curse', 'Trick Room', 'Water Sport', 'Mud Sport', 'Haze', 'Wish', 'Heal Bell', 'Aromatherapy', 'Roar', 'Whirlwind', 'Spikes', 'Toxic Spikes', 'Stealth Rock']);
 
 /* Etter hvert angrep: hvem har besvimt, og er kampen over? Beseirede motstandere telles til XP-oppgjøret etter kampen. */
@@ -707,6 +788,7 @@ function settle(B, ev) {
     const b = act(B, s);
     if (b.hp <= 0 && !b.out) { b.out = 1; b.status = ''; ev.push({ t: 'faint', side: s }, { t: 'msg', s: `${nmOf(s, b)} fainted!` }); B.sd[s].fell = B.turn; if (s === 'foe') B.kos.push({ id: b.id, lv: b.lv }); }
   }
+  wxCheck(B, ev);
   if (B.over) return;
   if (!B.me.some(x => x.hp > 0)) B.over = 'loss';
   else if (!B.foe.some(x => x.hp > 0)) B.over = 'win';
@@ -719,10 +801,10 @@ function endTurn(B, ev) {
   const sides = spdB(B, act(B, 'me')) >= spdB(B, act(B, 'foe')) ? ['me', 'foe'] : ['foe', 'me'];
   if (B.wx.k) {
     const k = B.wx.k;
-    if (--B.wx.n <= 0) { B.wx = { k: '', n: 0 }; ev.push({ t: 'wx', k: '' }); say(WXTXT[k][1]); }
+    if (!B.wx.pr && --B.wx.n <= 0) { B.wx = { k: '', n: 0 }; ev.push({ t: 'wx', k: '' }); say(WXTXT[k][1]); }
     else if (k === 'sand' || k === 'hail') for (const s of sides) {
       const b = act(B, s); if (b.hp <= 0 || B.over || b.v.away) continue;
-      if (k === 'sand' ? !(b.ty.includes(5) || b.ty.includes(4) || b.ty.includes(8)) : !b.ty.includes(14)) hurt(s, b, mx(b) / 16, `${nmOf(s, b)} is ${k === 'sand' ? 'buffeted by the sandstorm' : 'pelted by hail'}!`);
+      if (k === 'sand' ? !(b.ty.includes(5) || b.ty.includes(4) || b.ty.includes(8) || ab(b) === 'sandforce') : !b.ty.includes(14)) hurt(s, b, mx(b) / 16, `${nmOf(s, b)} is ${k === 'sand' ? 'buffeted by the sandstorm' : 'pelted by hail'}!`);
     }
   }
   for (const s of sides) {
@@ -750,7 +832,7 @@ function endTurn(B, ev) {
     if (V.night && b.status === 'slp') { hurt(s, b, mx(b) / 4, `${N} is locked in a nightmare!`); if (b.hp <= 0) continue; }
     if (V.curse) { hurt(s, b, mx(b) / 4, `${N} is afflicted by the curse!`); if (b.hp <= 0) continue; }
     if (V.trap) { if (--V.trap <= 0) say(`${N} was freed from ${V.trapn}!`); else { hurt(s, b, mx(b) / 16, `${N} is hurt by ${V.trapn}!`); if (b.hp <= 0) continue; } }
-    if (V.yawn && --V.yawn <= 0 && ailOk(b, 'slp') && !sd.safe) { b.status = 'slp'; b.slp = 1 + rnd(3); ev.push({ t: 'status', side: s, st: 'slp', fx: 'slp' }); say(`${N} fell asleep!`); lumCheck(B, s, ev); }
+    if (V.yawn && --V.yawn <= 0 && ailOk(b, 'slp') && !sd.safe && !(B.terr && grounded(b))) { b.status = 'slp'; b.slp = 1 + rnd(3); ev.push({ t: 'status', side: s, st: 'slp', fx: 'slp' }); say(`${N} fell asleep!`); lumCheck(B, s, ev); }
     if (V.perish) { V.perish--; say(`${N}'s perish count fell to ${V.perish}!`); if (!V.perish) { b.hp = 0; ev.push({ t: 'hit', side: s, hp: 0, e: 1, quiet: 1 }); settle(B, ev); continue; } }
     if (V.taunt && --V.taunt <= 0) say(`${N}'s taunt wore off!`);
     if (V.enc && --V.enc.n <= 0) { V.enc = null; say(`${N}'s encore ended!`); }
@@ -761,6 +843,7 @@ function endTurn(B, ev) {
     const ba = ab(b);
     if (ba === 'speedboost' && b.sg[5] < 6) { abSay(ev, s, b); changeStats(B, s, [[6, 1]], ev); }
     else if (ba === 'shedskin' && b.status && Math.random() < 0.33) { b.status = ''; b.tox = 0; ev.push({ t: 'status', side: s, st: '' }); abSay(ev, s, b, `${N}'s Shed Skin cured its status!`); }
+    else if (ba === 'solarpower' && B.wx.k === 'sun') { abSay(ev, s, b); hurt(s, b, mx(b) / 8, `${N} is hurt by the sunlight!`); if (b.hp <= 0) continue; }
     else if (ba === 'baddreams' && f.hp > 0 && f.status === 'slp') { abSay(ev, s, b); hurt(o, f, f.max / 8, `${nmOf(o, f)} is tormented!`); }
     if (V.slow && --V.slow <= 0) say(`${N} finally got its act together!`);
     berryCheck(B, s, ev);
@@ -768,6 +851,7 @@ function endTurn(B, ev) {
   }
   for (const s of ['me', 'foe']) { const sd = B.sd[s]; for (const [k, x] of [['ref', 'Reflect'], ['ls', 'Light Screen'], ['safe', 'Safeguard'], ['mist', 'Mist'], ['tail', 'Tailwind'], ['lucky', 'Lucky Chant']]) if (sd[k] && --sd[k] <= 0 && !B.over) say(`${s === 'me' ? 'Your' : "The foe's"} ${x} wore off!`); }
   if (B.troom && --B.troom <= 0 && !B.over) say('The twisted dimensions returned to normal!');
+  if (B.terr && --B.terr <= 0 && !B.over) say('The electricity disappeared from the battlefield.');
   if (B.mud) B.mud--; if (B.wsp) B.wsp--;
   if (B.grav && --B.grav <= 0 && !B.over) say('Gravity returned to normal!');
   if (B.mroom && --B.mroom <= 0 && !B.over) say('Magic Room wore off, and held item effects returned to normal!');
@@ -779,16 +863,17 @@ function endTurn(B, ev) {
 
 /* ---------- Motstanderens valg ---------- */
 /* Treffsikkerheten slik været gjør den (som i useMove). */
-const accOf = (B, m) => !m[3] ? 1 : m[0] === 'Thunder' || m[0] === 'Hurricane' ? (B.wx.k === 'rain' ? 1 : B.wx.k === 'sun' ? 0.5 : m[3] / 100) : m[0] === 'Blizzard' && B.wx.k === 'hail' ? 1 : m[3] / 100;
+const accOf = (B, m, u, t) => !m[3] || (m[6] !== 9 && ((u && ab(u) === 'noguard') || (t && ab(t) === 'noguard'))) ? 1 : m[0] === 'Thunder' || m[0] === 'Hurricane' ? (B.wx.k === 'rain' ? 1 : B.wx.k === 'sun' ? 0.5 : m[3] / 100) : m[0] === 'Blizzard' && B.wx.k === 'hail' ? 1 : m[3] / 100;
 /* Forventet skade (i HP) for ett angrep og det beste angrepet u har mot t. */
 function estDmg(B, u, t, m) {
   if (m[4] === 0) return 0;
   m = mvEff(B, u, m);
-  if (FIXED[m[0]]) return typeEff(m[1], t) === 0 && m[0] !== 'Bide' ? 0 : FIXED[m[0]](u, t, B) || 0;
-  if (typeEff(m[1], t) === 0 || abImm(u, t, m)) return 0;
+  if (FIXED[m[0]]) return effX(B, u, t, m[1]) === 0 && m[0] !== 'Bide' ? 0 : FIXED[m[0]](u, t, B) || 0;
+  if (effX(B, u, t, m[1]) === 0 || abImm(u, t, m)) return 0;
+  if (B.wx.pr && ((B.wx.k === 'rain' && m[1] === 9) || (B.wx.k === 'sun' && m[1] === 10))) return 0;
   if (m[6] === 9) return u.lv >= t.lv && !t.big ? t.hp * 0.3 : 0;
-  let d = dmgOf(B, u, t, m, powOf(B, u, t, m, 1), false, false) * hitsFor(B, u, m, true) * accOf(B, m);
-  if ((CHARGE[m[0]] && !(m[0] === 'Solar Beam' && B.wx.k === 'sun')) || RECHARGE.has(m[0])) d *= 0.6;
+  let d = dmgOf(B, u, t, m, powOf(B, u, t, m, 1), false, false) * hitsFor(B, u, m, true) * accOf(B, m, u, t) * (ab(u) === 'parentalbond' && !m[13] && m[6] !== 9 ? 1.25 : 1);
+  if ((CHARGE[m[0]] && !(m[0] === 'Solar Beam' && (B.wx.k === 'sun' || ab(u) === 'megasol'))) || RECHARGE.has(m[0])) d *= 0.6;
   if (m[0] === 'Focus Punch') d *= 0.4;
   if ((m[0] === 'Dream Eater' && t.status !== 'slp') || (m[0] === 'Snore' && u.status !== 'slp') || (m[0] === 'Fake Out' && u.v.t)) d = 0;
   return d;
@@ -805,7 +890,7 @@ function aiTact(B, u, t, m, iq) {
   const n = m[0], V = u.v, tv = t.v, sdU = B.sd.foe;
   let im = null, id = 0;
   for (const x of t.mv) { if (x.pp <= 0) continue; const d = estDmg(B, t, u, MOVES[x.i]); if (d > id) { id = d; im = MOVES[x.i]; } }
-  const has = f => u.mv.some(x => x.pp > 0 && f(MOVES[x.i])), wx = k => B.wx.k === k || airOn(B), felt = id >= mx(u) * 0.08, pro = 50 + 14 * iq;
+  const has = f => u.mv.some(x => x.pp > 0 && f(MOVES[x.i])), wx = k => B.wx.k === k || airOn(B) || !!B.wx.pr, felt = id >= mx(u) * 0.08, pro = 50 + 14 * iq;
   switch (n) {
     case 'Reflect': case 'Light Screen': return sdU[n === 'Reflect' ? 'ref' : 'ls'] ? 0 : im && felt && (im[4] === 1) === (n === 'Reflect') ? pro - 4 : 6;
     case 'Rain Dance': return wx('rain') ? 0 : u.ty.includes(10) || has(x => x[0] === 'Thunder' || x[0] === 'Hurricane') ? pro : 6;
@@ -981,6 +1066,8 @@ function aiSwitch(B, bench, iq) {
   }
   return best;
 }
+/* Statusangrep som ikke kommer fram: mot Magic Bounce, og fra en med Prankster mot en Dark-type. */
+const aiBounced = (u, t, m) => { const foe = m[4] === 0 && m[17] !== 1 && ![3, 10, 11].includes(m[6]) && (m[6] !== 13 || FOEU.has(m[0])) && !UM_SELF.has(m[0]); return t.hp > 0 && ((!mold(u) && ab(t) === 'magicbounce' && (foe || HAZ.has(m[0]))) || (foe && ab(u) === 'prankster' && t.ty.includes(16))); };
 /* Gir { t: 'move', k } eller { t: 'switch', i }. skill (0–1) styrer hvor ofte det beste velges, og om treneren bytter ut. */
 function aiAct(B) {
   const u = B.foe[B.b], t = B.me[B.a], V = u.v, sk = B.tr.skill, iq = aiIq(B);
@@ -1009,7 +1096,7 @@ function aiAct(B) {
       if (t.v.away) sc = 1;
       if (BOOM.has(m[0]) || m[0] === 'Final Gambit') sc = u.hp < u.max * 0.25 ? sc * 0.8 : sc * 0.12;
       if (m[9] < 0 && u.hp < u.max * 0.2) sc *= 0.8;
-    } else sc = V.taunt || DEADMV.has(x.i) ? 0 : aiStatus(B, u, t, m, iq);
+    } else sc = V.taunt || DEADMV.has(x.i) || aiBounced(u, t, m) ? 0 : aiStatus(B, u, t, m, iq);
     opts.push([k, sc * (0.9 + Math.random() * 0.2)]);
   });
   if (!opts.length) return { t: 'move', k: -1 };
@@ -1111,7 +1198,7 @@ function runTurn(B, a) {
   if (a.t === 'move' && !purM) q.push(['me', a.k, B.me[B.a]]);
   if (fa.t === 'move' && !purF) q.push(['foe', fa.k, B.foe[B.b]]);
   if (q.length === 2) {
-    const pr = ([, k, b]) => k >= 0 && b.mv[k] ? MOVES[b.mv[k].i][5] : 0, pa = pr(q[0]), pb = pr(q[1]), sa = spdB(B, q[0][2]), sb = spdB(B, q[1][2]);
+    const pr = ([, k, b]) => k >= 0 && b.mv[k] ? MOVES[b.mv[k].i][5] + (MOVES[b.mv[k].i][4] === 0 && ab(b) === 'prankster' ? 1 : 0) : 0, pa = pr(q[0]), pb = pr(q[1]), sa = spdB(B, q[0][2]), sb = spdB(B, q[1][2]);
     const first = pa !== pb ? pa > pb : sa !== sb ? (sa > sb) !== !!B.troom : Math.random() < 0.5;
     if (!first) q.reverse();
   }

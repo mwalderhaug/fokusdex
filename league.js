@@ -1197,7 +1197,7 @@ function raidField(B, ev) {
   const N = nmOf('me', b), F = f.name;
   /* Deoxys åpner i Attack Forme, går i Defense Forme når to runder er gått, og tilbake i Attack Forme når den blir rasende. */
   if (f.id === DEOXYS && f.mega === DEOXA && !B.rage && B.turn >= DEOXT && f.hp > f.max / 2) raidForm(B, ev, DEOXD);
-  if (!B.rage && f.hp <= f.max / 2) { B.rage = 1; ev.push({ t: 'env', k: 'rage', s: `${F} is enraged!` }); if (!(f.id === DEOXYS && raidForm(B, ev, DEOXA)) && !megaEvolve(B, 'foe', ev, 'rage')) changeStats(B, 'foe', D0.up, ev); }
+  if (!B.rage && f.hp <= f.max / 2) { B.rage = 1; ev.push({ t: 'env', k: 'rage', s: `${F} is enraged!` }); if (!(f.id === DEOXYS && raidForm(B, ev, DEOXA)) && !(f.id === 648 && formTo(B, 'foe', f, PIROU, ev)) && !megaEvolve(B, 'foe', ev, 'rage')) changeStats(B, 'foe', D0.up, ev); }
   if (b.hp <= 0 || b.v.away) return;
   /* Arceus bytter plate: første gang når første runde er over, så hver ARCEV-te runde (hver ARCEV2-te når den er rasende). */
   if (f.id === ARCEUS && !B.tr.dk) { B.arc = (B.arc == null ? ARCEV : B.arc) + 1; if (B.arc > (B.rage ? ARCEV2 : ARCEV)) { B.arc = 1; arcPlate(B, ev); } }
@@ -1326,7 +1326,7 @@ const driveFor = party => { let best = DRIVES[0], bs = -1; for (const ty of DRIV
 /* Angrep en art kan velge i tillegg til nivålista: settet til en legendarisk (og hele utvalget til Mew). Lærerne og egg-angrepene (steg 1b.8) kommer hit. */
 function extraMoves(m) {
   if (!m || !LEGSET[m.id]) return [];
-  const l = (legSet(m.id, m.sh === 2) || []).concat(m.id === 151 ? MEWCOV.concat(MEWTAC).map(mvIx).filter(i => i >= 0) : []);
+  const l = (legSet(m.id, m.sh === 2) || []).concat(m.id === 151 ? MEWCOV.concat(MEWTAC).map(mvIx).filter(i => i >= 0) : [], m.id === 646 && KYU[formName(m)] ? KYU[formName(m)].map(mvIx).filter(i => i >= 0) : []);
   return l.filter((x, i) => l.indexOf(x) === i);
 }
 const dkMoves = () => legSet(150, 1);

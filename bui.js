@@ -760,7 +760,7 @@ function mvInfo(x, m) {
    effOf = hvor hardt angrepet treffer den som står ute; null når typen ikke sier noe (statusangrep, faste tall, ett-slags-KO). */
 function effOf(B, m) {
   const foe = B.foe[B.b]; if (!foe || foe.hp <= 0 || !m || m[4] == null) return null;
-  const e = typeEff(m[1], foe);
+  const e = effX(B, B.me[B.a], foe, m[1]);
   if (m[4] === 0) return m[0] === 'Thunder Wave' && e === 0 ? 0 : null;
   if (e === 0) return 0;
   if ((typeof FIXED !== 'undefined' && FIXED[m[0]]) || m[6] === 9) return null;
