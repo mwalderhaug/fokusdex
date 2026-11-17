@@ -223,7 +223,7 @@ function cry(id, delay = 0, vol = 0.45) {
    SND gir lyden for hver handling (ellers tap). Trykket spilles etter handlingen: har handlingen selv spilt en lyd (SNDP settes i out()),
    faller trykklyden bort, så ingenting blir dobbelt. En handling kan si fra selv med snd('warn') eller snd('') (stille).
    OWN = handlinger som skal være stille når de ikke spiller noe med en gang (kampen, kastet og filmene har sine egne lyder litt etter). */
-const OWN = new Set(['wkgo', 'wkdo', 'wkpick', 'evpick', 'mgive', 'triv', 'trev', 'start', 'throw', 'buy', 'buy10', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'evolve', 'sestart', 'sound', 'hunt', 'cries', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'buse', 'btypes', 'honyes', 'clkagain', 'help', 'tour', 'tourend', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats', 'achget', 'achall', 'sbxsnd', 'held', 'heldgive', 'heldoff', 'heldshop', 'heldbuy', 'form', 'tswp', 'tswgo', 'pkrel', 'early', 'bforfeit', 'bmega', 'berry', 'showfilm', 'tutteach', 'tutlearn']);
+const OWN = new Set(['wkgo', 'wkdo', 'wkpick', 'wkdoor', 'wkstop', 'wkcpb', 'wkbagu', 'wksnag', 'wkpun', 'wkchest', 'wkchall', 'wkmintok', 'wkcap', 'evpick', 'mgive', 'triv', 'trev', 'start', 'throw', 'buy', 'buy10', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'evolve', 'sestart', 'sound', 'hunt', 'cries', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'buse', 'btypes', 'honyes', 'clkagain', 'help', 'tour', 'tourend', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats', 'achget', 'achall', 'sbxsnd', 'held', 'heldgive', 'heldoff', 'heldshop', 'heldbuy', 'form', 'tswp', 'tswgo', 'pkrel', 'early', 'bforfeit', 'bmega', 'berry', 'showfilm', 'tutteach', 'tutlearn']);
 const SND = {
   /* Faner og sider */
   tab: 'tab', lagv: 'tab', dexr: 'tab', sbxtab: 'tab', shopt: 'tab', pknext: 'tab', tourgo: 'tab', toshop: 'tab', bteam: 'tab', sbxsounds: 'tab',
@@ -247,6 +247,7 @@ const SND = {
   bkcopy: 'saved', bkload: 'saved', bkold: 'saved',
   /* Ekspedisjonen (weekui.js) */
   wkinfo: 'open', wkopen: 'open', wknode: 'open', wkend: 'open', sbxwk: 'open', wklead: 'chip', sbxwky: 'chip', sbxwkt: 'chip',
+  wkrule: 'open', wkcp: 'open', wkcps: 'open', wkbag: 'open', wkbags: 'open', wkdepth: 'open', wksnags: 'open', wksym: 'open', wkitems: 'open', wkmint: 'open', wkmintp: 'chip', sbxwki: 'open', sbxwkp: 'open',
   /* Ellers */
   ball: 'ball', fav: 'fav', boinfo: 'warn'
 };
@@ -907,7 +908,7 @@ function monSheet(m, re) {
       <button type="button" class="mc-pw" data-a="mstat" data-u="${m.u}" aria-label="Power ${pwOf(m)}. See the numbers"><span class="pw tn"><b>${nb(pwOf(m))}</b><small>power</small></span><span class="sp">${potOn() ? `${starRow(m, 'lg')}<small>${now > born ? `Born ${JT[born - 1].toLowerCase()} · trained to ${now} stars` : `Born ${JT[born - 1].toLowerCase()}`}</small>` : ''}
         <span class="mtrs"><span class="mtr" role="img" aria-label="Level ${m.lv} of 100"><small>Level</small><i><b style="width:${m.lv}%"></b></i></span>${has('train') ? `<span class="mtr" role="img" aria-label="Training: ${evSum(m)} of ${EVTOT} EVs"><small>Training</small><i><b style="width:${Math.round(evSum(m) / EVTOT * 100)}%"></b></i></span>` : ''}</span></span>${icn('chev')}</button>
       ${hexEl(m)}
-      ${potOn() ? `<div class="mc-n"><b>${NAT[m.nat]}</b>${up !== dn ? `<span class="up">${icn('up')}${SN[up]}</span><span class="dn">${icn('dn')}${SN[dn]}</span>` : '<span>no stat up or down</span>'}</div>` : ''}${szLine(m)}
+      ${potOn() ? `<div class="mc-n"><b>${NAT[m.nat]}</b>${up !== dn ? `<span class="up">${icn('up')}${SN[up]}</span><span class="dn">${icn('dn')}${SN[dn]}</span>` : '<span>no stat up or down</span>'}</div>` : ''}${szLine(m)}${wkCardX(m)}
       ${sg ? `<div class="mc-x au">${icn('spark')}<span><b>Shiny</b> · ${nb(sg.sum)} more power than a regular ${esc(d[0])}</span></div>` : ''}
       ${ab ? `<div class="mc-x"><span><b>${ab.n}</b> · ${ab.d}${ab.live ? '' : ' <i class="nyet">Not in battles yet.</i>'}</span></div>` : ''}
       ${S.mons.length > 1 ? `<button type="button" class="btn sm2 wide mc-c" data-a="cmpw" data-u="${m.u}">${icn('scale')}Compare with another</button>` : ''}</div>
@@ -1008,7 +1009,7 @@ function trainSheet(m) {
     <div class="card2 trx"><div class="row" style="justify-content:space-between"><b>${SN[i]}</b><span class="sm tn" style="${natc(i)}">${st[i]}${up !== dn && i === up ? ' · nature +10 %' : up !== dn && i === dn ? ' · nature −10 %' : ''}</span></div>
       ${shed ? '<p class="sm">Shedinja always has 1 HP, so there is nothing to train here.</p>' : `<div class="trl"><span class="sm"><b>IV</b> <b class="tn">${m.iv[i]}</b> of 31${ht ? ' · counts as 31' : ''}<br>${ht || ivv >= 31 ? 'Nothing more to gain here.' : `Born with it. Hyper Training makes it count as 31: +${dIv} now, +${dIv100} at Lv 100.`}</span>${ivb}</div>
       <div class="sm"><b>EV</b> <b class="tn">${m.ev[i]}</b> of ${EVMAX} · ${VIT[i]}${dEv > 0 ? `<br>Room for ${room} more: +${dEv} now, +${dEv100} at Lv 100.` : ''}</div>${evb}`}</div>
-    <p class="sm">${trainCut() < 1 ? `<b style="color:var(--gold)">Training Camp: everything here costs ${Math.round((1 - trainCut()) * 100)} % less today.</b> ` : ''}<b class="tn">${free}</b> of ${EVTOT} EVs are free, enough to max two stats. Focus sessions give your partner 1 EV every two minutes.</p>
+    ${wkCapRow(m)}<p class="sm">${trainCut() < 1 ? `<b style="color:var(--gold)">Training Camp: everything here costs ${Math.round((1 - trainCut()) * 100)} % less today.</b> ` : ''}<b class="tn">${free}</b> of ${EVTOT} EVs are free, enough to max two stats. Focus sessions give your partner 1 EV every two minutes.</p>
     <button type="button" class="btn wide" data-a="trback">Back</button>`;
   const host = $('#trd');
   if (host && +host.dataset.u === m.u) { host.innerHTML = html; $('#trc').innerHTML = coinEl(S.coins); }
@@ -1237,6 +1238,7 @@ VIEW.profil = () => {
       <span class="bar"><i style="width:${pct}%;background:${R.c}"></i></span><span class="sm tn">${R.p} of ${achTotal()} medals${R.nn ? ` · ${R.next - R.p} to ${R.nn}` : ''}</span><span class="sm tn">Level ${l} · ${nb(S.xp - xa)} of ${nb(xb - xa)} XP</span></span></div>
     <div class="row"><button type="button" class="btn sp${as.open ? ' gold' : ''}" data-a="ach">${as.open ? `${as.open} reward${as.open > 1 ? 's' : ''} ready` : 'Achievements'}</button><button type="button" class="btn sp" data-a="avatar">${S.av ? 'Character' : 'Pick a character'}</button></div>
     ${hasS ? `<div class="card exc"><div class="row" style="justify-content:space-between"><b>Exam period</b><button type="button" class="pill${exOn ? ' on' : ''}" data-a="exam">${exOn ? 'until ' + dShort(examEnd()) : 'off · start'}</button></div><div class="bdgs">${badges}</div></div>` : ''}
+    ${wkSymCard()}
     <div class="card"><div class="pst"><div><b class="tn">${hm(hasS ? sp.subj : tot)}</b><span class="sm">${hasS ? 'Subjects' : 'Focus'}</span></div><div><b class="tn">${ses}</b><span class="sm">Sessions</span></div><div><b class="tn">${streak()}</b><span class="sm">Streak</span></div><div><b class="tn">${all}</b><span class="sm">Species</span></div></div>
       <div class="hm" role="img" aria-label="Focus the last ten weeks${hasS && sp.other ? `. Plus ${hm(sp.other)} of other things` : ''}">${heat}</div></div>
     <div class="card slist pset">${PSET.filter(x => x[0] !== 'admin' || isAdmin()).map(([k, n, ic]) => `<button type="button" class="srow-m prow" data-a="pset" data-k="${k}"><span class="ic">${icn(ic)}</span><span class="sp"><b>${n}</b></span><span class="sm tn">${psetNow(k)}</span>${icn('chev')}</button>`).join('')}</div>

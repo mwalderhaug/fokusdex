@@ -55,6 +55,8 @@ const SHOP = {
   radiant: { n: 'Radiant Incense', p: 18000, d: 'Shiny odds ×5 for 72 hours on new encounters while it burns · trainer level 24', lv: 24, img: 'full-incense', bc: '#e3c577', sb: [5, 72] },
   prism: { n: 'Prism Lure', p: 12000, d: 'The next legendary raid has a 1 in 5 chance of being shiny · trainer level 20', lv: 20, img: 'prism-scale', bc: '#b295e6' },
   candy: { n: 'Rare Candy', p: 150, d: 'One level up for one Pokémon', img: 'rare-candy', bc: '#7fa8e6' },
+  mint: { n: 'Mint', p: 0, d: 'Gives one Pokémon a new nature. Only found in the vault of the Expedition', ic: 'wkmint', wk: 1 },
+  gcap: { n: 'Gold Bottle Cap', p: 0, d: 'Hyper trains all six stats of one Pokémon at once. Only found in the vault of the Expedition', ic: 'wkcap', wk: 1 },
   mstone: { n: 'Mega Stone', p: 3000, d: 'Give it to one Pokémon that has a Mega form. It can then Mega Evolve once a battle', ic: 'gem', ring: 1 },
   stone: { n: 'Evolution Stone', p: 300, d: 'For those that do not evolve by level alone', ic: 'gem' },
   egg: { n: 'Egg', p: 250, d: 'Hatches after 120 focus minutes. Can be from any region', ic: 'egg' }

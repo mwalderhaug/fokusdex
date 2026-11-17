@@ -861,7 +861,7 @@ function paintBox(side) {
     if (!el.firstElementChild || el.firstElementChild.tagName !== 'CANVAS') { el.className = 'hpb pk ' + side + gold; el.innerHTML = `<canvas width="${(side === 'me' ? 113 : 104) + 2 * HUDM}" height="${(side === 'me' ? 33 : 28) + 2 * HUDM}"></canvas>`; }
     hudDraw(side);
   } else { el.className = 'hpb ' + side + gold; el.innerHTML = boxEl(side); }
-  const cur = teamOf(side)[BT.v[side].i], th = tyBadge(cur) + (isMega(cur) ? `<span class="mgt">${megaOf(cur)[1] === 'Primal' ? 'Primal' : 'Mega'}</span>` : '') + (cur.evb && cur.evb !== 'surge' ? '<span class="evt">Event</span>' : '');
+  const cur = teamOf(side)[BT.v[side].i], th = tyBadge(cur) + (isMega(cur) ? `<span class="mgt">${megaOf(cur)[1] === 'Primal' ? 'Primal' : 'Mega'}</span>` : '') + (cur.evb && cur.evb !== 'surge' ? '<span class="evt">Event</span>' : '') + (cur.shd ? '<span class="shdt">Shadow</span>' : '');
   /* Dine egne merker står på den nederste skjermen (drawMenu setter dem inn, og de oppdateres her når en ny kommer ut). Motstanderens står oppå boksen dens. */
   if (side === 'me') { BT.tyme = th; const o0 = el.querySelector('.tyb'); if (o0) o0.remove(); const m = $('#bty-me'); if (m && m.dataset.h !== th) { m.dataset.h = th; m.innerHTML = th; } }
   else { const thq = th + tyQ(); let tb = el.querySelector('.tyb'); if (!tb) { tb = document.createElement('div'); tb.className = 'tyb'; el.appendChild(tb); } if (tb.dataset.h !== thq) { tb.dataset.h = thq; tb.innerHTML = thq; } }
@@ -907,7 +907,7 @@ function camFit() {
 }
 function paintSprite(side, cls) {
   const b = teamOf(side)[BT.v[side].i], el = $('#s-' + side);
-  if (el) { el.className = 'bs ' + side + ' ' + (cls || ''); el.dataset.k = sprK(side, b).toFixed(3); el.style.setProperty('--k', el.dataset.k); el.innerHTML = spr(b.id, { ani: 1, sh: b.sh, back: side === 'me', mega: b.mega, it: b.src && b.src.item }); if (side === 'foe' && BT.B && BT.B.rage) el.classList.add('rage'); if (side === 'foe' && BT.B && BT.B.sin) { el.classList.add('sin'); dkEyes(el); } camFit(); }
+  if (el) { el.className = 'bs ' + side + ' ' + (cls || ''); el.dataset.k = sprK(side, b).toFixed(3); el.style.setProperty('--k', el.dataset.k); el.innerHTML = spr(b.id, { ani: 1, sh: b.sh, back: side === 'me', mega: b.mega, it: b.src && b.src.item }); el.dataset.shd = b.shd ? '1' : ''; if (side === 'foe' && BT.B && BT.B.rage) el.classList.add('rage'); if (side === 'foe' && BT.B && BT.B.sin) { el.classList.add('sin'); dkEyes(el); } camFit(); }
 }
 /* Mega Evolution på skjermen: lyset samler seg om Pokémonen mens den blir hvit, og når det slipper, står den nye formen der. Bildet, navnet og
    typene byttes i det lyset er på sitt sterkeste. */
@@ -1687,7 +1687,8 @@ function overview() {
       ${res.got ? `<div class="row" style="justify-content:space-between"><span>Traded for</span><b>${esc(res.got)}</b></div>` : ''}${caught ? `<div class="row" style="justify-content:space-between"><span>Caught</span><b>${esc(mName(caught))}${res.cau.isNew ? ' · new species' : ''}</b></div>` : ''}${res.note && !raid ? `<p class="sm">${esc(res.note)}</p>` : ''}${(res.perks || []).map(x => `<p class="sm" style="color:var(--gold)">${esc(x)}</p>`).join('')}</div>` : '';
   /* Byttetilbud (ligaen) og bytte av leie-Pokémon (Frontier). */
   let extra = '';
-  if (res.pz && res.pz.length) extra = pzCard(res);
+  if (res.snag) extra = wkSnagCard(res);
+  else if (res.pz && res.pz.length) extra = pzCard(res);
   else if (res.trade) {
     const tp = BT.tp;
     extra = `<div class="card stack"><b>${esc(tr.n)} offers a trade</b><p class="sm">${tp == null ? 'Pick one of these, then one from your team to give up. Or keep your team and get an extra encounter instead.' : `Who do you give up for ${esc(D(res.trade[tp].id)[0])}?`}</p>

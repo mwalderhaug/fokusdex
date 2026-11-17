@@ -2724,7 +2724,7 @@ button.rtf::before{content:"";position:absolute;left:10px;right:10px;bottom:6px;
 /* Raden på forsiden */
 .wks{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border:0;font:inherit;color:var(--ink);text-align:left;cursor:pointer}
 .wks .sp{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}.wks .sp b{font-size:15.5px;font-weight:600;letter-spacing:-.01em}.wks .sp .sm{line-height:1.3}
-.wks.go{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--gold) 70%,transparent)}
+.wks.on{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--gold) 70%,transparent)}
 .wkc .mode-h .wkemb{width:34px;height:34px;border-radius:11px}.wkc .mode-h .wkemb svg{width:19px;height:19px}
 .wkc .mode-t .wkl{margin-left:auto}
 /* Laget i løpet */
@@ -2803,3 +2803,77 @@ button.rtf::before{content:"";position:absolute;left:10px;right:10px;bottom:6px;
 .wkzp i svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
 .wkzp span.op{color:var(--ink2)}.wkzp span.on{color:var(--ink)}.wkzp span.on i{background:linear-gradient(#fff6d6,var(--gold));color:var(--goldink);box-shadow:0 0 10px color-mix(in srgb,var(--gold) 55%,transparent)}
 .wkend .gain{grid-template-columns:repeat(3,minmax(0,1fr))}
+
+/* ---------- Steg 1d.4 og 1d.5: ukestypenes regler, hvelvet, symbolene, Mints og Gold Bottle Cap ---------- */
+/* Regelkortet: i arket om ekspedisjonen (.wkrule) og som en smal rad over kartet (.wkrc). */
+.wkrule{display:flex;flex-direction:column;gap:3px;width:100%;padding:12px 14px;border:0;border-radius:16px;text-align:left;font:inherit;color:var(--ink);background:color-mix(in srgb,var(--wc) 12%,var(--card2));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--wc) 45%,transparent);cursor:pointer}
+.wkrule b{font-size:16px}.wkrule .sm{line-height:1.4}
+.wkrc{display:flex;align-items:center;gap:10px;width:100%;padding:8px 12px;border:0;border-radius:13px;background:var(--card);box-shadow:0 0 0 1px var(--line);color:var(--ink);font:inherit;cursor:pointer}
+.wkrc b{flex:1;text-align:right;font-size:14px;font-weight:600}.wkrc .icn{width:15px;height:15px;opacity:.6;flex:none}
+/* Raden under laget: Castle Points, Pyramid-veska, veien ut, Snag Ballene */
+.wktr{display:flex;align-items:center;gap:10px;width:100%;padding:8px 12px;border:0;border-radius:14px;background:var(--card);box-shadow:0 0 0 1px var(--line);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.wktr.stat{cursor:default}.wktr .sp{display:flex;flex-direction:column;min-width:0;flex:1}.wktr b{font-size:14px;font-weight:600}.wktr .icn{width:15px;height:15px;opacity:.6;flex:none}
+.wkcpi{flex:none;min-width:34px;height:34px;padding:0 7px;border-radius:11px;display:grid;place-items:center;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink);background:color-mix(in srgb,var(--tc,var(--wc,var(--gold))) 22%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tc,var(--wc,var(--gold))) 55%,transparent)}
+.wkcpi.lg{min-width:46px;height:46px;font-size:19px;border-radius:14px}
+.wkopt.cp{flex-direction:row;align-items:center;gap:10px}.wkopt.cp .sp{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}.wkopt:disabled{opacity:.42;cursor:default}
+.wklu button:disabled{opacity:.42;cursor:default}
+/* Kartet: lukkede dører og mørke rom, hintet i Pike, typen i Hall, Shadow-auraen */
+.wkn.k-hid{color:#8d87a3;background:#191524;box-shadow:0 0 0 1.5px rgba(255,255,255,.14)}
+.wkn.hint::after{content:"";position:absolute;right:-2px;top:-2px;width:11px;height:11px;border-radius:50%;background:var(--tc,var(--wc));box-shadow:0 0 8px var(--tc,var(--wc))}
+.wkn.shd::before{content:"";position:absolute;inset:-8px;border-radius:50%;background:radial-gradient(circle,transparent 56%,rgba(176,107,255,.6) 70%,transparent 80%);pointer-events:none;animation:wkaur 2.6s ease-in-out infinite}
+.wkn.big.shd{overflow:visible}
+.wkty{position:absolute;left:50%;top:100%;transform:translate(-50%,3px);font-style:normal;font-size:9px;line-height:1.5;padding:0 6px;border-radius:99px;color:var(--tyink,#17130f);white-space:nowrap;pointer-events:none}
+.wkn.big .wkty{display:none}
+.wkmap.dark{background:radial-gradient(90% 22% at 50% 100%,color-mix(in srgb,var(--tc) 12%,#0a0810),transparent 70%),#07060b}
+@keyframes wkaur{50%{opacity:.45;transform:scale(1.08)}}
+/* Shadow-Pokémon: i arkene (.wksh), og i kampen (.bs.shd og merket ved navnet) */
+.wksh{flex:none;display:inline-grid;place-items:center;border-radius:50%;background:radial-gradient(circle,rgba(160,90,255,.5),transparent 70%)}
+.wksh .sprb{filter:drop-shadow(0 0 4px #b06bff) brightness(.8) saturate(.75)}
+.wkshl{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border:0;border-radius:16px;background:var(--card2);box-shadow:0 0 0 1px var(--line);color:var(--ink);font:inherit;text-align:left}
+.wkshl .sp{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}button.wkshl{cursor:pointer}.wkshl .icn{width:16px;height:16px;opacity:.6;flex:none}
+.wkhg{display:inline-flex;gap:5px;flex:none}.wkhg i{width:10px;height:10px;border-radius:50%;background:#6a2bd9;box-shadow:0 0 6px rgba(160,90,255,.7)}
+.wkhg i.on{background:var(--gold);box-shadow:0 0 6px color-mix(in srgb,var(--gold) 70%,transparent)}
+.wksc{box-shadow:0 0 0 1.5px rgba(176,107,255,.6)}
+.bs[data-shd="1"]{background:radial-gradient(closest-side,rgba(150,70,255,.5),rgba(90,30,200,.24) 55%,transparent 76%)}
+.bs[data-shd="1"] img{filter:brightness(.76) saturate(.62) drop-shadow(0 0 3px #c58bff) drop-shadow(0 0 12px #7a3cf0);animation:wkshb 2.4s ease-in-out infinite}
+@keyframes wkshb{50%{filter:brightness(.86) saturate(.7) drop-shadow(0 0 6px #d3a4ff) drop-shadow(0 0 20px #8a4cff)}}
+.tyb span.shdt{background:#6a2bd9;color:#fff;text-shadow:none}
+.mc-n.wkpu b{color:#b98cff}
+/* Brettet i Arcade */
+.wkbd{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.wkbt{display:grid;place-items:center;min-height:54px;padding:4px;border-radius:12px;background:var(--card2);box-shadow:inset 0 0 0 1px var(--line);text-align:center;font-size:11.5px;line-height:1.2;color:var(--ink2);transition:transform .08s ease}
+.wkbt b{font-weight:600}.wkbt.g2{box-shadow:inset 0 0 0 1.5px rgba(111,208,138,.75)}.wkbt.g0{box-shadow:inset 0 0 0 1.5px rgba(239,122,106,.75)}
+.wkbt.cur,.wkbd.set .wkbt.on{background:var(--gold);color:var(--goldink);transform:scale(1.06)}.wkbd.set .wkbt{opacity:.38}.wkbd.set .wkbt.on{opacity:1}
+/* Veien ut av ormehullet */
+.wkex>div.cur{font-weight:600}.wkex>div.cur i{box-shadow:0 0 0 2.5px var(--wc)}
+/* Hvelvet: én kiste per billett. --m er metallet. */
+.wkvault{display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:20px;background:var(--card);box-shadow:0 0 0 1px var(--line)}
+.wkvault p{margin:0}
+.wkchs{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px}
+.wkch{--m:#c08a5a;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:96px;padding:10px 6px;border:0;border-radius:16px;background:color-mix(in srgb,var(--m) 12%,var(--card));box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--m) 55%,transparent);color:var(--ink);font:inherit;text-align:center}
+.wkch.m1{--m:#cfd5e2}.wkch.m2{--m:#f0c987}
+button.wkch{cursor:pointer}button.wkch:active{transform:scale(.96)}
+.wkcb{position:relative;display:block;width:46px;height:34px;border-radius:7px 7px 5px 5px;background:linear-gradient(var(--m) 0 38%,color-mix(in srgb,var(--m) 55%,#000) 38% 45%,color-mix(in srgb,var(--m) 80%,#000) 45%);box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.28),0 3px 9px rgba(0,0,0,.35)}
+.wkcb::after{content:"";position:absolute;left:50%;top:30%;width:9px;height:11px;margin-left:-4.5px;border-radius:2px 2px 4px 4px;background:#2a2109;box-shadow:0 0 0 1.5px color-mix(in srgb,var(--m) 60%,#fff)}
+button.wkch .wkcb{animation:wkbob 2.4s ease-in-out infinite}
+.wkch.open .rs-it{flex-direction:column;gap:3px;min-height:0;padding:0;background:none;box-shadow:none;color:var(--ink)}.wkch.open .rs-nm{font-size:12px;line-height:1.25}
+.wkch.open .coin{font-size:12.5px}
+.wkch.pop{animation:wkpop .45s cubic-bezier(.2,1.4,.4,1)}
+.wkch.mini{min-height:0;width:38px;height:38px;padding:0;border-radius:12px;flex:none}.wkch.mini .wkcb{width:24px;height:18px;animation:none}.wkch.mini .wkcb::after{width:5px;height:6px;margin-left:-2.5px}
+@keyframes wkbob{50%{transform:translateY(-3px)}}@keyframes wkpop{0%{transform:scale(.7);opacity:.2}}
+/* Symbolene i Profile */
+.wksyg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:10px}
+.wksym{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;border:0;background:none;color:var(--ink2);font:inherit;cursor:pointer}.wksym small{font-size:10.5px}
+.wksym svg{width:40px;height:44px}.wksym .hx{fill:none;stroke:var(--ink3);stroke-width:1.4;stroke-dasharray:3 3;opacity:.6}.wksym .gl{fill:none;stroke:var(--ink3);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;opacity:.55}
+.wksym.s1 .hx{fill:#cfd5e2;stroke:#8f97a8;stroke-dasharray:none;opacity:1}.wksym.s1 .gl{stroke:#333a48;opacity:1}
+.wksym.s2 .hx{fill:#f0c987;stroke:#b8862a;stroke-dasharray:none;opacity:1;filter:drop-shadow(0 0 5px rgba(240,201,135,.6))}.wksym.s2 .gl{stroke:#3a2a09;opacity:1}
+.wksym.s1,.wksym.s2{color:var(--ink)}span.wksym{cursor:default;padding:0;flex:none}.wksym.lg svg{width:52px;height:57px}
+.wksymr{display:flex;align-items:center;gap:12px}.wksymr p{margin:0}
+.wkinv{display:flex;align-items:center;gap:14px;width:100%;margin-top:10px;padding:9px 12px;border:0;border-radius:12px;background:var(--card2);color:var(--ink);font:inherit;cursor:pointer}
+.wkinv span{display:flex;align-items:center;gap:6px;font-size:13px}.wkinv .icn{margin-left:auto;width:16px;height:16px;opacity:.6}
+/* Mint og Gold Bottle Cap: tegnet i kode (SHOP.ic) */
+.wkmint{display:inline-block;flex:none;width:18px;height:18px;border-radius:2px 13px 2px 13px;background:linear-gradient(135deg,#c9efd2,#5fbf8f);box-shadow:inset 0 0 0 1px rgba(0,0,0,.16);transform:rotate(-8deg)}
+.wkcap{display:inline-block;flex:none;width:19px;height:19px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff3c4,#f0c35a 55%,#b8862a);box-shadow:inset 0 0 0 2px rgba(120,80,10,.32),0 0 0 1.5px #b8862a}
+.wkmb{display:inline-flex;align-items:center;gap:7px;margin-top:6px}.wkmc{flex-wrap:wrap}.wkmc small{opacity:.7}
+.wkcr .trl .sm{display:block}.wkcr .wkcap{vertical-align:-3px;margin-right:6px}
+@media (prefers-reduced-motion:reduce){.wkn.shd::before,.bs[data-shd="1"] img,button.wkch .wkcb,.wkch.pop{animation:none}}

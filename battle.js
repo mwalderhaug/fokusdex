@@ -345,6 +345,8 @@ function powOf(B, u, t, m, ord) {
   if ((STOMP.has(n) && t.v.mini) || (AWAY2.has(n) && reaches(m, t))) p *= 2;
   return p;
 }
+/* En Shadow-Pokémon (b.shd, ekspedisjonens Shadow Snag-uke) slår SHDX hardere. Ellers er den som artsfrendene sine. */
+const SHDX = 1.2;
 function dmgOf(B, u, t, m, pow, crit, roll) {
   const phys = m[4] === 1, n = m[0], ai = phys ? 1 : 3, d0 = phys || n === 'Psyshock' || n === 'Psystrike' || n === 'Secret Sword' ? 2 : 4, di = B.wroom ? 6 - d0 : d0, raw = n === 'Chip Away' || n === 'Sacred Sword';
   const au = n === 'Foul Play' ? t : u, ua = ab(u), ta = mold(u) ? '' : ab(t), eff = effX(B, u, t, m[1]);
@@ -357,7 +359,7 @@ function dmgOf(B, u, t, m, pow, crit, roll) {
   const uh = hi(B, u), th = hi(B, t);
   if (th && th.evio && (EVO[t.id] || []).length) d *= 1.5;
   const base = Math.floor(Math.floor((Math.floor(2 * u.lv / 5) + 2) * pow * a / d) / 50) + 2;
-  let mod = (crit ? 1.5 : 1) * (roll ? 0.85 + Math.random() * 0.15 : 0.925) * (u.ty.includes(m[1]) ? (ua === 'adaptability' ? 2 : 1.5) : 1) * eff * (phys && u.status === 'brn' && n !== 'Facade' ? 0.5 : 1) * abPow(B, u, m, ua);
+  let mod = (u.shd ? SHDX : 1) * (crit ? 1.5 : 1) * (roll ? 0.85 + Math.random() * 0.15 : 0.925) * (u.ty.includes(m[1]) ? (ua === 'adaptability' ? 2 : 1.5) : 1) * eff * (phys && u.status === 'brn' && n !== 'Facade' ? 0.5 : 1) * abPow(B, u, m, ua);
   if (ta === 'filter' && eff > 1) mod *= 0.75;
   if (ta === 'multiscale' && t.hp >= t.max) mod *= 0.5;
   if (B.terr && m[1] === 12 && grounded(u)) mod *= 1.3;
@@ -1074,7 +1076,7 @@ function aiAct(B) {
   if (V.rech || V.lock) return { t: 'move', k: V.lock ? V.lock.k : 0 };
   /* Esset holdes igjen så lenge flere enn to står. */
   const bench = B.foe.map((x, i) => i).filter(i => i !== B.b && B.foe[i].hp > 0 && !(B.tr.boss && i === B.foe.length - 1 && B.foe.filter(x => x.hp > 0).length > 2));
-  if (bench.length && sk >= 0.6 && !stuck(B, 'foe') && B.turn - B.aiSw > (iq >= 0.5 ? 1 : 2) && t.hp > 0) {
+  if (bench.length && sk >= 0.6 && !B.nosw && !stuck(B, 'foe') && B.turn - B.aiSw > (iq >= 0.5 ? 1 : 2) && t.hp > 0) {
     const i = aiSwitch(B, bench, iq);
     if (i >= 0 && Math.random() < sk - 0.25) return { t: 'switch', i };
   }
@@ -1132,7 +1134,7 @@ function aiNext(B) {
 /* ---------- Runden ---------- */
 /* Det spilleren kan gjøre akkurat nå. Skjermen bruker disse til å tegne menyen. */
 const autoAct = B => { const V = B.me[B.a].v; return V.rech || V.lock ? { t: 'move', k: V.lock ? V.lock.k : 0 } : null; };
-const canSwitch = B => { const b = B.me[B.a], V = b.v; return b.hp <= 0 || !(stuck(B, 'me') || V.lock || V.rech); };
+const canSwitch = B => { const b = B.me[B.a], V = b.v; return b.hp <= 0 || !(B.nosw || stuck(B, 'me') || V.lock || V.rech); };
 const moveOk = (B, k) => { const b = B.me[B.a], V = b.v, x = b.mv[k]; const f = B.foe[B.b], m = x ? MOVES[x.i] : null; return !!x && x.pp > 0 && !(V.dis && V.dis.k === k) && !(V.taunt && m[4] === 0) && (!V.enc || V.enc.k === k) && !(V.torm && V.last === k && b.mv.length > 1) && !(V.hblock && (m[6] === 3 || m[6] === 8 || HEALS.has(m[0]))) && !(f.hp > 0 && f.v.imprison && f.mv.some(y => y.i === x.i)); };
 /* Én runde. a = { t: 'move', k } (k = -1 er Struggle) eller { t: 'switch', i }. */
 /* Veska: gjenstander fra butikken brukt i kamp. Å bruke en koster turen din, akkurat som et bytte.

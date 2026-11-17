@@ -10,7 +10,9 @@
    Internt heter modusen «week» (dagens modus) og «wk» (kampen, B.mode). S.wk = { on, bw, bank, w, run, sym, last, n }:
      on    = modusen er åpnet (studiedag WKDAY er nådd)            bw, bank = billettene som er spart: bank gjelder til og med uke bw
      w     = uka det siste løpet ble startet i (ett løp per uke)    run      = løpet som er i gang (se wkBegin), ellers null
-     sym   = symboler per anlegg (1 sølv, 2 gull)                   last     = det forrige løpet (til resultatkortet), n = antall løp */
+     sym   = symboler per anlegg (1 sølv, 2 gull)                   last     = det forrige løpet (til resultatkortet), n = antall løp
+     vault = hvelvet som venter etter løpet (wkVault)               snag     = Shadow-fangstene som renses (wkPure), so = tilbudet om å snappe
+     pun   = de som nettopp er renset (til arket), rs = uka regelkortet sist ble vist */
 
 /* ---------- Uka og billettene ---------- */
 const WKDAY = 10, WKMAX = 5, WKWKND = 0.05;
@@ -62,6 +64,7 @@ function wkOffer() {
 /* Det forsiden viser: uka som gjelder nå (lørdag står forrige ukes løp åpent til det er spilt), billettene, og hva som skjer når. */
 function wkNow() {
   if (!wkOn()) return null;
+  wkPure();
   const W = wkSettle(), today = dayKey(), cur = wkIdx(today), dow = wkDow(today), o = wkOffer();
   let r = dow === 0 && W.w !== cur - 1 && wkTix(cur - 1) > 0 ? cur - 1 : cur;
   if (o) r = o.r;
@@ -73,20 +76,42 @@ function wkNow() {
 /* ---------- Ukestypene ----------
    En runde er seks uker: fire anlegg, Ultra Wormhole og Shadow Snag. Hvert anlegg har sin Frontier Brain (navnet i POOL.brain) og sitt eget
    sølv- og gullsymbol. x = de to som kommer i tillegg til de fire i POOL.brain: den første i sølvkampen (fem i alt), begge i gullkampen (seks;
-   mest hentet fra lagene de har i spillene: Brandon med fuglene, Palmer med Heatran og Cresselia). WKEPOCH = uka med fredag 20.11.2026, den første i rundgangen. Reglene som skiller typene, kommer i steg 1d.4:
-   til da går alle på grunnkartet (fac = et anlegg med Brain; de to andre har en annen boss til slutt). */
+   mest hentet fra lagene de har i spillene: Brandon med fuglene, Palmer med Heatran og Cresselia). WKEPOCH = uka med fredag 20.11.2026, den første i rundgangen.
+   HVER TYPE HAR ÉN REGEL (steg 1d.4; rule = navnet, rd = regelkortet, og et flagg som koden leser). Alle går på det samme grunnkartet:
+     door  Pike: rommene er lukkede dører, med ett hint per rad (M.hint). stat: gift, brann og lammelse følger med fra rom til rom.
+     board Arcade: brettet før hver kamp (wkBoard, wkSpin). Flere billetter gir flere gode ruter.
+     deep  Wormhole: premien ved utgangen stiger for hver sone (WKEXIT), og møtene er oftere shiny jo dypere du er. Et tap koster ett trinn.
+     dark  Pyramid: du ser bare radene lyset når (wkSees), og finner bær og Revive som bare gjelder i løpet (R.x.bag, wkUse).
+     cp    Castle: ingen kilder (nosp); seire gir Castle Points (R.x.cp) som brukes på kartet (WKCP, wkBuy). Resten blir mynter.
+     snag  Shadow: noen trenere har en Shadow-Pokémon (nd.sh). Slår du dem, kan du snappe den (wkSnag); den renses av studiedager (wkPure).
+     open  Dome: alle lagene vises. crowd: en seier uten at noen blir slått ut, gir mer.   types Hall: kartet viser typen til hver trener.
+     nosw  Arena: ingen bytter i kampen (B.nosw).   zrest/rest/nosp Tower: flere trenere og ingen kilder, men full heling etter hver sone.
+   fac = et anlegg med Brain og symboler; de to andre har sine egne bosser (boss), romnavn (nn, nd) og sonenavn (zn). */
 const WKT = {
-  pike: { n: 'Battle Pike', brain: 'Lucy', x: [213, 24], c: '#c9a3ff', fac: 1 },
-  arcade: { n: 'Battle Arcade', brain: 'Dahlia', x: [308, 145], c: '#ff9f6b', fac: 1 },
-  worm: { n: 'Ultra Wormhole', c: '#9fd9ff', boss: 'champ' },
-  pyramid: { n: 'Battle Pyramid', brain: 'Brandon', x: [144, 146], c: '#e0b36a', fac: 1 },
-  castle: { n: 'Battle Castle', brain: 'Darach', x: [244, 282], c: '#8fb6ff', fac: 1 },
-  shadow: { n: 'Shadow Snag', c: '#c58bff', boss: 'evilboss' },
-  dome: { n: 'Battle Dome', brain: 'Tucker', x: [380, 59], c: '#ffd27a', fac: 1 },
-  hall: { n: 'Battle Hall', brain: 'Argenta', x: [149, 445], c: '#d7c8a8', fac: 1 },
-  arena: { n: 'Battle Arena', brain: 'Greta', x: [292, 68], c: '#f08a8a', fac: 1 },
-  tower: { n: 'Battle Tower', brain: 'Palmer', x: [485, 488], c: '#b7c4ff', fac: 1 }
+  pike: { n: 'Battle Pike', brain: 'Lucy', x: [213, 24], c: '#c9a3ff', fac: 1, door: 1, stat: 1, rule: 'Closed doors',
+    rd: 'You cannot see what is in a room before you open its door, but in every row the guard whispers what hides behind one of them. Poison, burns and paralysis stay with your team until a spring or the end of a zone.' },
+  arcade: { n: 'Battle Arcade', brain: 'Dahlia', x: [308, 145], c: '#ff9f6b', fac: 1, board: 1, rule: 'The game board',
+    rd: 'Before every battle a board spins, and you stop it yourself. The square you land on changes that battle: weather, berries for your team, a burn on the opponent, or something that hits you. More tickets put more good squares on the board, never more bad ones.' },
+  worm: { n: 'Ultra Wormhole', c: '#9fd9ff', boss: 'champ', deep: 1, rule: 'Deeper and deeper', zn: ['', 'The rift', 'Ultra Space', 'The deep', 'The abyss', 'The far end'],
+    nn: { gt: 'The rift keeper', bs: 'A Champion, lost in here', bg: 'The one at the bottom' }, nd: { gt: 'The rift closes behind whoever loses. Win to go deeper.', bs: 'A Champion who fell through long ago, and stayed.', bg: 'Another Champion, with everything they have. Nobody has been deeper.' },
+    rd: 'There is no Frontier Brain in here: the map goes down. Every zone you clear lifts the prize that waits at the way out, and the deeper you are, the likelier it is that what you meet is shiny. Walk out when you like and the prize is yours. Fall, and you get the one a step below.' },
+  pyramid: { n: 'Battle Pyramid', brain: 'Brandon', x: [144, 146], c: '#e0b36a', fac: 1, dark: 1, rule: 'In the dark',
+    rd: 'The map lies in darkness. You see one row ahead, and one more for every two trainers you beat. In the dark there are berries and Revives that only work in here: use them on the map, between the rooms.' },
+  castle: { n: 'Battle Castle', brain: 'Darach', x: [244, 282], c: '#8fb6ff', fac: 1, cp: 1, nosp: 'ev', rule: 'Castle Points',
+    rd: 'There are no springs here. Every win gives Castle Points, more the healthier your team is, and you spend them on the map: heal, revive, or learn who waits ahead. Points you save turn into coins at the end.' },
+  shadow: { n: 'Shadow Snag', c: '#c58bff', boss: 'evilboss', snag: 1, rule: 'Snag Balls', zn: ['', 'The outskirts', 'The hideout', 'The leader', 'The inner lab', 'The sealed room'],
+    nn: { gt: 'The lookout', bs: 'The leader', bg: 'The leader, cornered' }, nd: { gt: 'The outskirts end here. Beat the lookout to get into the hideout.', bs: 'The one who gave the orders.', bg: 'The same leader with everything they have, and the rarest Shadow Pokémon of all.' },
+    rd: 'Some trainers have a Shadow Pokémon: a rare species with a dark aura that hits harder. Beat them and you may snag it. You have one Snag Ball, two with four tickets, so choose who. Three study days lift the shadow, and then it is yours.' },
+  dome: { n: 'Battle Dome', brain: 'Tucker', x: [380, 59], c: '#ffd27a', fac: 1, open: 1, crowd: 0.25, rule: 'Open brackets',
+    rd: 'Everyone sees everyone: every team on the map is shown before you step in. The crowd loves a clean win: beat a trainer without losing a Pokémon, and the battle pays a quarter more.' },
+  hall: { n: 'Battle Hall', brain: 'Argenta', x: [149, 445], c: '#d7c8a8', fac: 1, types: 1, rule: 'Type by type',
+    rd: 'Every trainer in the Hall swears by one type, and the map shows which. Choose the path your team likes best.' },
+  arena: { n: 'Battle Arena', brain: 'Greta', x: [292, 68], c: '#f08a8a', fac: 1, nosw: 1, rule: 'No way out',
+    rd: 'In the Arena nobody is called back: neither you nor the opponent can switch during a battle. Only a faint, or a move that switches on its own, changes who is out. Choose who leads with care.' },
+  tower: { n: 'Battle Tower', brain: 'Palmer', x: [485, 488], c: '#b7c4ff', fac: 1, nosp: 'tr', zrest: 1, rest: 0.25, rule: 'The long climb',
+    rd: 'No springs and no shortcuts: more trainers than anywhere else. In return your team catches its breath after every win, and is fully healed each time a zone is cleared.' }
 };
+const wkZn = (ty, z) => ((WKT[ty] || {}).zn || WKZN)[z] || WKZN[z];
 const WKROT = ['pike', 'arcade', 'worm', 'pyramid', 'castle', 'shadow', 'dome', 'hall', 'worm', 'arena', 'tower', 'shadow'], WKEPOCH = 2967;
 const wkType = w => { const sb = wkSbx(); return sb && WKT[sb.ty] && w === wkIdx(dayKey()) ? sb.ty : WKROT[(((w - WKEPOCH) % WKROT.length) + WKROT.length) % WKROT.length]; };
 
@@ -121,10 +146,20 @@ const WKROWS = [
 ];
 const WKZN = ['', 'Outer halls', 'Inner halls', 'The Brain', 'Gold road', 'Sealed room'];
 const WKFIGHT = new Set(['tr', 'ac', 'gt', 'el', 'bs', 'bg']), WKCLOSE = { gt: 1, el: 2, bs: 3, bg: 4, sr: 5 };
+/* Pyramid: sjansen for et bær og for en Revive i et rom, og det de gjør (andel HP). Shadow: artene som kan være Shadow, etter hvor sjeldne de er
+   (grunnformer; i kampen er de utviklet etter nivået): sjeldne i utkanten, episke hos essene, de pseudo-legendariske hos lederen, og fuglene,
+   hundene og Lugia fra XD hos lederen i gullkampen. */
+const WKFIND = [0.4, 0.18], WKBERRY = 0.35, WKREVIVE = 0.5, WKBAG0 = { berry: 2, revive: 1 }, WKSHLEG = [144, 145, 146, 243, 244, 245, 249];
+let WKSHP = null;
+function wkShPool() {
+  if (WKSHP) return WKSHP; const a = [[], []];
+  for (let id = 1; id <= 649; id++) { const d = D(id); if (isLeg(id) || stageOf(id) || (d[6] & 4) || PSEUDO.includes(id)) continue; const t = tierOf(id); if (t === 2) a[0].push(id); else if (t === 3) a[1].push(id); }
+  return (WKSHP = [a[0].length ? a[0] : [133], a[1].length ? a[1] : [131], PSEUDO, WKSHLEG]);
+}
 let WKC = { k: '', m: null };
 function wkMap(w, ty) {
   const key = w + ':' + ty; if (WKC.k === key) return WKC.m;
-  const seed = wkSeed(w, ty), rng = wkRng(seed), rows = [], nodes = [], evs = [];
+  const seed = wkSeed(w, ty), rng = wkRng(seed), rows = [], nodes = [], evs = [], T = WKT[ty], hint = [];
   const pick = P => { const ks = Object.keys(P); let x = rng() * ks.reduce((s, k) => s + P[k], 0); for (const k of ks) { x -= P[k]; if (x <= 0) return k; } return ks[ks.length - 1]; };
   WKROWS.forEach((sp, r) => {
     const n = Array.isArray(sp.n) ? sp.n[0] + Math.floor(rng() * (sp.n[1] - sp.n[0] + 1)) : sp.n, pool = Object.assign({}, sp.k), ks = [];
@@ -132,6 +167,8 @@ function wkMap(w, ty) {
     while (ks.length < n) { const k = pick(Object.keys(pool).length ? pool : sp.k); ks.push(k); if (Object.keys(sp.k).length > 1) delete pool[k]; }
     for (let i = ks.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)), t = ks[i]; ks[i] = ks[j]; ks[j] = t; }
     const xs = n === 1 ? [0.5] : n === 2 ? [0.3, 0.7] : [0.18, 0.5, 0.82];
+    if (T.nosp) for (let i = 0; i < ks.length; i++) if (ks[i] === 'sp') ks[i] = T.nosp;
+    hint.push(n > 1 ? Math.floor(rng() * n) : -1);
     rows.push(ks.map((k, c) => { const nd = { id: nodes.length, r, c, z: sp.z, k, x: xs[c] + (n > 1 ? (rng() - 0.5) * 0.07 : 0), dy: n > 1 ? (rng() - 0.5) * 0.3 : 0, s: wkHash(seed, nodes.length + 1), to: [] }; nodes.push(nd); return nd; }));
   });
   for (let r = 0; r < rows.length - 1; r++) {
@@ -145,7 +182,15 @@ function wkMap(w, ty) {
   }
   /* Hendelsene: hver hendelsesnode får sin egen, uten gjentak før alle som passer sonen, er brukt. */
   nodes.filter(n => n.k === 'ev').forEach(n => { let l = Object.keys(WKEV).filter(k => (WKEV[k].z || 1) <= n.z && !evs.includes(k)); if (!l.length) l = Object.keys(WKEV).filter(k => (WKEV[k].z || 1) <= n.z); n.e = l[Math.floor(rng() * l.length)]; evs.push(n.e); });
-  WKC = { k: key, m: { w, ty, seed, rows, nodes } };
+  /* Pyramid: det som ligger i mørket (f = 'berry' eller 'revive'), i rom som ikke avslutter en sone. */
+  if (T.dark) nodes.forEach(n => { const x = rng(); if (!WKCLOSE[n.k]) n.f = x < WKFIND[0] ? 'berry' : x < WKFIND[0] + WKFIND[1] ? 'revive' : ''; });
+  /* Shadow: én trener i første rad, esset i de indre hallene, lederen (sølv og gull) og esset på gullveien har en Shadow-Pokémon (sh = arten). */
+  if (T.snag) {
+    const P = wkShPool(), at = (r, k) => rows[r].filter(n => n.k === k), one = l => l[Math.floor(rng() * l.length)], used = [];
+    const put = (n, l) => { if (!n) return; const f = l.filter(x => !used.includes(x)); n.sh = one(f.length ? f : l); used.push(n.sh); };
+    put(one(rows[0]), P[0]); put(at(4, 'ac')[0], P[1]); put(at(7, 'bs')[0], P[2]); put(at(8, 'ac')[0], P[1]); put(at(10, 'bg')[0], P[3]);
+  }
+  WKC = { k: key, m: { w, ty, seed, rows, nodes, hint } };
   return WKC.m;
 }
 
@@ -170,17 +215,21 @@ function wkFoeSt(k) {
   return Object.assign({}, st, { i: k === 'bg' ? 8 : 5, mons: Math.max(2, st.mons + (d.mons || 0)), sk: st.sk * d.sk, iq: st.iq * (typeof facIqD === 'function' ? facIqD() : 1), iv: Math.round(st.iv * d.iv), ev: Math.round(st.ev * d.ev), q: Math.min(st.q, d.q), tut: Math.max(0, (st.tut || 0) + (d.tut || 0)), slack: Math.round(st.slack * d.slack), mg: 0 });
 }
 /* Bossen i en uke uten Frontier Brain (til 1d.4 gir de to typene sine egne): trekkes fra uka. */
-function wkBoss(M) {
+function wkBoss(M, nk) {
   const T = WKT[M.ty];
   if (T.brain) { const i = POOL.brain.findIndex(d => d[0] === T.brain); return ['brain', i < 0 ? 0 : i]; }
-  const k = T.boss || 'champ'; return [k, wkHash(M.seed, 77) % POOL[k].length];
+  const k = T.boss || 'champ', n = POOL[k].length, i = wkHash(M.seed, 77) % n;
+  /* Wormhole: to forskjellige mestere. Shadow: den samme lederen to ganger, som Brain. */
+  return [k, nk === 'bg' && T.deep && n > 1 ? (i + 1 + wkHash(M.seed, 78) % (n - 1)) % n : i];
 }
+/* Shadow-Pokémonen i kampen: arten utviklet så langt nivået tillater, med merket shd (bmon i kampen leser det: mørk aura og hardere slag). */
+function wkShMon(sp, lv, st) { let id = sp; for (let nx = EVO[id]; nx && nx.length; nx = EVO[id]) { const to = nx[rnd(nx.length)]; if (lv < reqLv(to)) break; id = to; } return Object.assign(rentSet(foeMon(id, lv, st)), { shd: 1 }); }
 /* Motstanderen i en node: { st, tr, team, hint }. Likt for alle samme uke (frøet til noden), på nivået flv. */
 function wkFoe(M, nd, flv) {
   const st = wkFoeSt(nd.k); flv = Math.max(3, Math.round(flv * st.rel));
-  return wkSeeded(nd.s, () => {
+  const f = wkSeeded(nd.s, () => {
     if (nd.k === 'bs' || nd.k === 'bg') {
-      const [k, i] = wkBoss(M), d0 = POOL[k][i], x = WKT[M.ty].x, d = x ? Object.assign(d0.slice(), { 4: d0[4].concat(x) }) : d0;
+      const [k, i] = wkBoss(M, nd.k), d0 = POOL[k][i], x = WKT[M.ty].x, d = x ? Object.assign(d0.slice(), { 4: d0[4].concat(x) }) : d0;
       const team = bossTeam(d, st.mons, flv, st, true).map(rentSet);
       return { st, k, team, hint: d[3], tr: trainerOf(k, i, { skill: st.sk, iq: st.iq, fr: k === 'brain' ? 1 : 0, arena: 'hall', int: nd.k === 'bg' ? 5 : 3, wk: nd.k, film: '', sp: 0 }) };
     }
@@ -195,6 +244,22 @@ function wkFoe(M, nd, flv) {
     const hint = +Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0];
     return { st, k: 'trainer', team, hint, tr: trainerOf('trainer', ci, Object.assign({ ty: hint, skill: st.sk, iq: st.iq, fr: 1, arena: nd.k === 'tr' ? d[3] : 'hall', v: 0, int: nd.k === 'tr' ? 1 : 2, wk: nd.k }, nd.k === 'gt' ? { n: 'Gatekeeper', cn: 'Gatekeeper' } : nd.k === 'ac' ? { cn: 'Ace' } : null)) };
   });
+  /* Shadow-uka: Shadow-Pokémonen tar plassen rett før esset (den siste hos en vanlig trener). */
+  if (nd.sh) { const i = Math.max(0, f.team.length - (nd.k === 'bs' || nd.k === 'bg' || nd.k === 'el' ? 2 : 1)); f.team[i] = wkSeeded(wkHash(nd.s, 9), () => wkShMon(nd.sh, flv, st)); f.shi = i; }
+  return f;
+}
+/* Typen hver kamp på kartet går i (Hall viser den på kartet). Mellomlagret per kart og nivå. */
+let WKH = { k: '', h: null };
+function wkHints(M, flv) { const key = M.w + ':' + M.ty + ':' + flv; if (WKH.k !== key) { const h = {}; M.nodes.forEach(n => { if (WKFIGHT.has(n.k)) h[n.id] = wkFoe(M, n, flv).hint; }); WKH = { k: key, h }; } return WKH.h; }
+/* Hva du ser av et rom før du har vært der: 2 = alt · 1 = at det er et rom (en lukket dør, et omriss i mørket) · 0 = ingenting (bare Pyramid).
+   Kampene som avslutter en sone, ser du alltid. Pike: hintet i raden er åpent. Pyramid: lyset når WKLIGHT rader, og én til for hver WKLIGHTW seier. */
+const WKLIGHT = 1, WKLIGHTW = 2;
+const wkLight = R => WKLIGHT + Math.floor(((R && R.got.wins) || 0) / WKLIGHTW);
+function wkSees(V, nd) {
+  if (WKCLOSE[nd.k] || V.path.includes(nd.id)) return 2;
+  if (V.T.door) return V.M.hint[nd.r] === nd.c ? 2 : 1;
+  if (V.T.dark) { const row = V.at < 0 ? -1 : V.M.nodes[V.at].r, L = wkLight(V.R); return nd.r <= row + L ? 2 : nd.r <= row + L + 1 ? 1 : 0; }
+  return 2;
 }
 
 /* ---------- Løpet ----------
@@ -210,11 +275,14 @@ const WKREST = 0.1, WKSPRING = 1, WKZREST = 0.5;
 const wkParty = () => S.party.map(monBy).filter(Boolean);
 const wkHp = (R, u) => (R.hp[u] || (R.hp[u] = { h: 1, pp: {} }));
 /* Laget slik det står i løpet: [{ m, h }], h = andelen HP (0 = slått ut). Uten løp er alle friske. */
-const wkTeam = R => wkParty().map(m => ({ m, h: R && R.hp[m.u] ? R.hp[m.u].h : 1 }));
-function wkHeal(R, f, who) { for (const m of who || wkParty()) { const c = wkHp(R, m.u); if (f >= 1) { c.h = 1; c.pp = {}; } else if (c.h > 0) c.h = Math.min(1, c.h + f); } }
+const wkTeam = R => wkParty().map(m => ({ m, h: R && R.hp[m.u] ? R.hp[m.u].h : 1, s: (R && R.hp[m.u] && R.hp[m.u].s) || '' }));
+function wkHeal(R, f, who) { for (const m of who || wkParty()) { const c = wkHp(R, m.u); if (f >= 1) { c.h = 1; c.pp = {}; c.s = ''; } else if (c.h > 0) c.h = Math.min(1, c.h + f); } }
+/* Det ukestypen holder styr på i løpet (R.x): Castle Points, Pyramid-veska, Snag Ballene, og ruta brettet stoppet på (arc). */
+const wkX = (ty, t) => { const T = WKT[ty]; return T.cp ? { cp: WKCP0 } : T.dark ? { bag: Object.assign({}, WKBAG0) } : T.snag ? { balls: t >= WKBALL2 ? 2 : 1 } : {}; };
 /* Alt skjermen trenger, enten løpet er i gang eller bare kan startes: uka, typen, billettene, kartet, hvor du står og hvor du kan gå. */
 function wkView() {
   const W = wkSt(), o = wkOffer(), R = W.run && (!o || o.run || o.sbx) ? W.run : null; if (!R && !o) return null;
+  if (R && !R.x) R.x = wkX(R.ty, R.t);
   const w = R ? R.w : o.r, ty = R ? R.ty : wkType(w), t = R ? R.t : o.tix, M = wkMap(w, ty), at = R ? R.at : -1, pend = R ? R.pend || '' : '';
   const reach = pend ? [] : (at < 0 ? M.rows[0] : M.nodes[at].to.map(i => M.nodes[i])).filter(n => n.z <= t).map(n => n.id);
   return { W, R, w, ty, T: WKT[ty], t, M, at, pend, reach, path: R ? R.path : [], stars: R ? R.st : wkStars(w) };
@@ -225,6 +293,7 @@ function wkBegin() {
   const o = wkOffer(); if (!o || !modeOn('week')) return null;
   const lv = Math.max(5, Math.round(leagueLv()));
   W.run = { w: o.r, ty: wkType(o.r), t: o.tix, st: o.sbx ? 0 : wkStars(o.r), lv, flv: Math.max(5, Math.min(100, Math.round(lv * (1 + diff().rel)))), at: -1, path: [], pend: '', hp: {}, got: { coins: 0, wins: 0, items: [], encs: 0 }, ms: 0, used: {}, d: S.lad.day || dayKey() };
+  W.run.x = wkX(W.run.ty, W.run.t); W.so = null;
   if (!o.sbx) { W.w = o.r; if (W.bw >= o.r) W.bank = 0; }
   W.n = (W.n || 0) + 1; stamp(); save();
   return W.run;
@@ -233,12 +302,12 @@ function wkBegin() {
 function wkEnter(id) {
   const V = wkView(); if (!V || !V.reach.includes(id)) return null;
   const R = wkBegin(); if (!R) return null;
-  const nd = V.M.nodes[id]; R.at = id; R.path.push(id); R.pend = nd.k; stamp(); save();
+  const nd = V.M.nodes[id]; R.at = id; R.path.push(id); R.pend = nd.k; wkSt().so = null; stamp(); save();
   return nd;
 }
 /* Noden er ferdig: sonen er klar hvis det var den siste kampen i den, og løpet er over når ingenting mer er åpent med billettene dine. */
 function wkAfter(R, nd) {
-  R.pend = ''; if (WKCLOSE[nd.k]) { R.ms = Math.max(R.ms, WKCLOSE[nd.k]); for (const m of wkParty()) { const c = wkHp(R, m.u); c.h = Math.min(1, c.h + WKZREST); c.pp = {}; } }
+  R.pend = ''; if (WKCLOSE[nd.k]) { R.ms = Math.max(R.ms, WKCLOSE[nd.k]); const z = WKT[R.ty].zrest || WKZREST; for (const m of wkParty()) { const c = wkHp(R, m.u); c.h = Math.min(1, c.h + z); c.pp = {}; c.s = ''; } }
   const M = wkMap(R.w, R.ty);
   return nd.to.some(i => M.nodes[i].z <= R.t) ? null : wkEnd('won');
 }
@@ -246,8 +315,18 @@ function wkAfter(R, nd) {
    Det løpet ga underveis, er ditt uansett. Et anlegg gir sølvsymbolet når Brain er slått, og gullsymbolet etter gullkampen. */
 function wkEnd(how) {
   const W = wkSt(), R = W.run; if (!R) return null;
+  const T = WKT[R.ty], X = R.x || {};
+  /* Castle: poengene som er spart, blir mynter. */
+  let cp = 0, cpc = 0; if (T.cp && X.cp > 0) { cp = X.cp; cpc = wkCoins(R, cp * WKCPC); S.coins += cpc; R.got.coins += cpc; }
   const out = { w: R.w, ty: R.ty, t: R.t, ms: R.ms, how, wins: R.got.wins, coins: R.got.coins, steps: R.path.length, d: dayKey() };
-  if (WKT[R.ty].fac && R.ms >= 3) { const s = R.ms >= 4 ? 2 : 1; if ((W.sym[R.ty] || 0) < s) { W.sym[R.ty] = s; out.sym = s; } }
+  if (cp) { out.cp = cp; out.cpc = cpc; }
+  if (R.got.snag) out.snag = R.got.snag.slice();
+  if (T.fac && R.ms >= 3) { const s = R.ms >= 4 ? 2 : 1; out.got = s; if ((W.sym[R.ty] || 0) < s) { W.sym[R.ty] = s; out.sym = s; } }
+  /* Wormhole: premien ved utgangen er trinnet du nådde. Et tap koster ett trinn. */
+  if (T.deep) { const st = Math.max(0, Math.min(5, R.ms) - (how === 'lost' ? 1 : 0)); out.exit = st; if (st) { const e = wkExitEnc(st); S.pend.push(e); trimPend(30); out.xe = { id: e.id, sh: e.sh || 0 }; } }
+  /* Hvelvet: én kiste per billett, metallet etter hvor langt du kom. Står et gammelt hvelv igjen, åpnes det først. */
+  while (W.vault && W.vault.open.length < W.vault.n) if (!wkChest()) break;
+  W.vault = { w: R.w, ty: R.ty, n: R.t, m: R.ms >= 4 ? 2 : R.ms >= 3 ? 1 : 0, cm: wkCoins(R, 1000) / 1000, open: [] };
   W.last = out; W.run = null; if (typeof raidUnhide === 'function') raidUnhide(); stamp(); save();
   return out;
 }
@@ -262,15 +341,25 @@ const wkSm = () => smFor('week');
 function wkBattle(id, lead) {
   const V = wkView(); if (!V) return null;
   const pending = V.R && V.R.pend && V.R.at === id, nd = pending ? V.M.nodes[id] : wkEnter(id); if (!nd || !WKFIGHT.has(nd.k)) return null;
-  const R = wkSt().run, f = wkFoe(V.M, nd, R.flv), alive = m => wkHp(R, m.u).h > 0, party = wkParty();
+  const R = wkSt().run, T = WKT[R.ty], X = R.x || (R.x = {}), f = wkFoe(V.M, nd, R.flv), alive = m => wkHp(R, m.u).h > 0, party = wkParty();
+  const arc = T.board && X.arc && X.arc.id === id ? X.arc : null, ak = arc ? arc.k : '';
+  if (ak === 'berry' && !arc.u) { wkHeal(R, WKARCB); arc.u = 1; }
   party.sort((a, b) => (alive(b) - alive(a)) || ((b.u === lead) - (a.u === lead)));
-  const B = mkBattle(party, f.team, f.tr, { mode: 'wk', tag: `${WKT[R.ty].n} · ${WKZN[nd.z]}`, st: f.st, k: f.k, nk: nd.k, nid: nd.id, zone: nd.z, bag: 0, xm: xpMult() * diff().xp, sm: wkSm(), dc: diff().coin, boost: { mode: '', m: 1, xp: 1 } });
-  for (const b of B.me) { const c = R.hp[b.src.u]; if (!c) continue; b.hp = c.h <= 0 ? 0 : Math.max(1, Math.round(b.max * c.h)); if (b.hp <= 0) b.out = 1; for (const m of b.mv) if (c.pp[m.i] != null) m.pp = Math.max(0, Math.min(m.max, c.pp[m.i])); }
+  const B = mkBattle(party, f.team, f.tr, { mode: 'wk', tag: `${T.n} · ${wkZn(R.ty, nd.z)}`, st: f.st, k: f.k, nk: nd.k, nid: nd.id, zone: nd.z, bag: 0, xm: xpMult() * diff().xp, sm: wkSm(), dc: diff().coin, boost: { mode: '', m: 1, xp: 1 }, nosw: T.nosw ? 1 : 0, cm: ak === 'coin' ? WKARCC : 1, arc: ak });
+  for (const b of B.me) { const c = R.hp[b.src.u]; if (!c) continue; b.hp = c.h <= 0 ? 0 : Math.max(1, Math.round(b.max * c.h)); if (b.hp <= 0) b.out = 1; for (const m of b.mv) if (c.pp[m.i] != null) m.pp = Math.max(0, Math.min(m.max, c.pp[m.i])); if (T.stat && c.s && b.hp > 0) b.status = c.s; }
+  B.ko0 = B.me.filter(b => b.hp <= 0).length;
+  for (const b of B.foe) if (b.src.shd) b.shd = 1;
+  /* Ruta fra brettet (Arcade): gjelder denne ene kampen. Den som er immun mot en tilstand, slipper. */
+  const me = B.me[0], fo = B.foe[0], sick = (b, k, imm) => { if (b && b.hp > 0 && !b.status && !imm.some(t => b.ty.includes(t))) b.status = k; };
+  if (ak === 'par') sick(fo, 'par', [12]); else if (ak === 'brn') sick(fo, 'brn', [9]); else if (ak === 'mypsn') sick(me, 'psn', [3, 8]);
+  else if (ak === 'low') for (const b of B.foe) b.hp = Math.max(1, Math.round(b.max * WKARCL)); else if (ak === 'up') me.sg[5] = 1; else if (ak === 'foeup') fo.sg[5] = 1;
+  else if (WXT[ak] != null) B.wx = { k: ak, n: 8 }; else if (ak === 'tr') B.troom = 6;
   return B;
 }
 /* Det laget har igjen etter kampen. En som er forvandlet (Transform), har lånte angrep: da står PP-en som den var. */
 function wkKeep(B, R, win) {
-  for (const b of B.me) { const u = b.src && b.src.u; if (!u) continue; const c = wkHp(R, u); c.h = b.hp > 0 ? Math.max(0.01, Math.min(1, b.hp / b.max)) : 0; if (!b.tf) for (const m of b.mv) if (b.src.mv.includes(m.i)) c.pp[m.i] = m.pp; if (win && c.h > 0) c.h = Math.min(1, c.h + WKREST); }
+  const T = WKT[R.ty];
+  for (const b of B.me) { const u = b.src && b.src.u; if (!u) continue; const c = wkHp(R, u); c.h = b.hp > 0 ? Math.max(0.01, Math.min(1, b.hp / b.max)) : 0; if (!b.tf) for (const m of b.mv) if (b.src.mv.includes(m.i)) c.pp[m.i] = m.pp; if (win && c.h > 0) c.h = Math.min(1, c.h + (T.rest || WKREST)); if (T.stat) c.s = b.hp > 0 && WKSTAT[b.status] ? WKSTAT[b.status] : ''; }
 }
 /* Det en seier gir (første utgave: steg 1d.5 måler og setter premiene). Mynter etter hvem det var, ganger studiebonusen og stjernene. */
 const WKLOOT = {
@@ -285,12 +374,19 @@ const wkCoins = (R, base, sm) => Math.round(base * (sm || wkSm()) * diff().coin 
 function finishWeek(B) {
   const W = wkSt(), R = W.run, win = B.over === 'win', res = { mode: 'wk', win, ups: [], items: [], encs: [], coins: 0, trade: null, perks: [], note: '', kind: B.k, nk: B.nk };
   if (!R) return res;
-  const M = wkMap(R.w, R.ty), nd = M.nodes[B.nid];
+  const M = wkMap(R.w, R.ty), nd = M.nodes[B.nid], T = WKT[R.ty], X = R.x || (R.x = {});
   grantXp(B, res); wkKeep(B, R, win);
   if (!win) { res.at = R.path.length; res.end = wkEnd('lost'); return res; }
   const give = (it, n) => { if (it === 'candy') n = candyRoll(n); if (n > 0 && SHOP[it]) { S.items[it] = (S.items[it] || 0) + n; res.items.push(`${n} × ${SHOP[it].n}`); } };
-  res.coins = wkCoins(R, B.st.coin, B.sm) + (B.pay || 0); S.coins += res.coins;
-  (WKLOOT[nd.k] || WKLOOT.tr)(give, o => pushEnc(res, genEnc(o)));
+  const clean = B.me.filter(b => b.hp <= 0).length === (B.ko0 || 0);
+  res.coins = Math.round(wkCoins(R, B.st.coin, B.sm) * (B.cm || 1) * (T.crowd && clean ? 1 + T.crowd : 1)) + (B.pay || 0); S.coins += res.coins;
+  (WKLOOT[nd.k] || WKLOOT.tr)(give, o => pushEnc(res, genEnc(T.deep ? Object.assign({ shm: 1 + nd.z }, o) : o)));
+  if (B.cm > 1) res.perks.push('The board: this battle paid half as much again.');
+  if (T.crowd && clean) res.perks.push(`A clean win. The crowd pays ${Math.round(T.crowd * 100)} % more.`);
+  if (T.cp) { const l = wkTeam(R), cp = WKCPW[0] + Math.round(WKCPW[1] * l.reduce((a, x) => a + x.h, 0) / Math.max(1, l.length)) + (WKCPK[nd.k] || 0); X.cp = (X.cp || 0) + cp; res.cp = cp; res.perks.push(`You earned ${cp} Castle Points.`); }
+  if (T.dark) wkFind(R, nd, res.perks);
+  /* Shadow: kampen er vunnet, og Shadow-Pokémonen kan snappes hvis du har en ball igjen. Tilbudet står til du går inn i neste rom. */
+  if (nd.sh && X.balls > 0) { const sb = B.foe.find(b => b.shd); if (sb) { W.so = { id: sb.id, nid: nd.id, w: R.w }; res.snag = { id: sb.id, balls: X.balls }; } }
   if (R.st) res.perks.push(`Weekend study in exam season: ${Math.round(WKWKND * R.st * 100)} % more coins.`);
   R.got.wins++; R.got.coins += res.coins; R.got.encs += res.encs.length; res.items.forEach(x => R.got.items.push(x));
   res.zone = WKCLOSE[nd.k] || 0; res.end = wkAfter(R, nd);
@@ -318,19 +414,19 @@ function wkDo(id, i) {
   const R = wkSt().run, out = { nd, t: '', l: [], coins: 0, items: [], encs: [] };
   const give = (it, n) => { if (it === 'candy') n = Math.max(1, candyRoll(n)); if (n > 0 && SHOP[it]) { S.items[it] = (S.items[it] || 0) + n; out.items.push(`${n} × ${SHOP[it].n}`); R.got.items.push(`${n} × ${SHOP[it].n}`); } };
   const coins = base => { const c = wkCoins(R, base); S.coins += c; out.coins += c; R.got.coins += c; };
-  const enc = o => { const e = genEnc(o); S.pend.push(e); trimPend(30); out.encs.push(e); R.got.encs++; };
+  const T = WKT[R.ty], enc = o => { const e = genEnc(T.deep ? Object.assign({ shm: 1 + nd.z }, o) : o); S.pend.push(e); trimPend(30); out.encs.push(e); R.got.encs++; };
   const alive = wkParty().filter(m => wkHp(R, m.u).h > 0);
   if (nd.k === 'sp') { wkHeal(R, WKSPRING); out.t = 'The spring'; out.l.push(tl('Your whole team is healed, and those that had fainted are back on their feet.')); }
   else if (nd.k === 'tz') { const z = WKTZ[nd.z] || WKTZ[1]; coins(z[0]); z.slice(1).forEach(x => give(x[0], x[1])); out.t = 'Treasure'; }
   else if (nd.k === 'en') { enc({ min: nd.z >= 3 ? 3 : 2, luck: 1.5 + 0.25 * nd.z }); out.t = 'A rare encounter'; out.l.push(tl('It slips away into your grass. Meet it there after the expedition.')); }
-  else if (nd.k === 'sr') { coins(WKTZ[5][0]); WKTZ[5].slice(1).forEach(x => give(x[0], x[1])); enc({ ids: PSEUDO }); if (Math.random() < 0.3) { const e = legEnc(); S.pend.push(e); out.encs.push(e); R.got.encs++; } out.t = 'The sealed room'; out.l.push(tl('The seal breaks. Nobody has been in here for a very long time.')); }
+  else if (nd.k === 'sr') { coins(WKTZ[5][0]); WKTZ[5].slice(1).forEach(x => give(x[0], x[1])); enc({ ids: PSEUDO }); if (!T.deep && Math.random() < 0.3) { const e = legEnc(); S.pend.push(e); out.encs.push(e); R.got.encs++; } out.t = 'The sealed room'; out.l.push(tl('The seal breaks. Nobody has been in here for a very long time.')); }
   else if (nd.k === 'ev') {
     const E = WKEV[nd.e] || WKEV.berry; out.t = E.n; out.ev = nd.e;
     if (i == null) return out;
     const o = E.o[i]; if (!o) return null;
     const k = o[2];
     if (k === 'share') { wkHeal(R, 0.25); out.l.push(tl('Everyone still standing recovers a quarter of their HP.')); }
-    else if (k === 'one') { const m = alive.slice().sort((a, b) => wkHp(R, a.u).h - wkHp(R, b.u).h)[0]; if (m) { wkHp(R, m.u).h = 1; out.l.push(tl('{n} eats until it is full of life again.', { n: mName(m) })); } }
+    else if (k === 'one') { const m = alive.slice().sort((a, b) => wkHp(R, a.u).h - wkHp(R, b.u).h)[0]; if (m) { wkHp(R, m.u).h = 1; wkHp(R, m.u).s = ''; out.l.push(tl('{n} eats until it is full of life again.', { n: mName(m) })); } }
     else if (k === 'rest') { wkHeal(R, 1 / 3); out.l.push(tl('Everyone still standing recovers a third of their HP.')); }
     else if (k === 'train') { const res = { ups: [] }; modeXp(res, 3, 1.2, xpMult() * diff().xp); out.ups = res.ups; out.l.push(tl('Your team trains until the fire burns low. Everyone gets XP.')); }
     else if (k === 'offer') { alive.forEach(m => { const c = wkHp(R, m.u); c.h = Math.max(0.01, c.h - 0.2); }); enc({ min: 3, luck: 2 }); out.l.push(tl('The shrine hums. Something rare has come to your grass.')); }
@@ -343,9 +439,125 @@ function wkDo(id, i) {
       if (x >= 0) { tutUnlock(x); out.l.push(tl('The tutors in the Shop can now teach {mv}.', { mv: MOVES[x][0] })); } else { coins(500); out.l.push(tl('You already know every secret the tutor has. They pay you for listening anyway.')); } }
     else if (k === 'thanks') { coins(250); out.l.push(tl('They press a few coins into your hand.')); }
   }
+  if (T.dark) { const l = []; wkFind(R, nd, l); l.forEach(x => out.l.push(tl(x))); }
   out.end = wkAfter(R, nd); stamp(); save();
   return out;
 }
+
+/* ---------- Ukestypenes egne ting (steg 1d.4) ---------- */
+/* PIKE: tilstandene som følger med fra rom til rom (søvn og frost slipper, som ellers). */
+const WKSTAT = { psn: 'psn', tox: 'psn', par: 'par', brn: 'brn' };
+/* ARCADE: brettet har åtte ruter. g = 1 god for deg · 0 verken eller · −1 treffer deg. Med t billetter er det 1 + t gode (høyst seks), alltid to
+   dårlige, og resten nøytrale. Brettet er likt for alle (frøet til rommet); hvor det stopper, er ditt. Ruta gjelder den ene kampen. */
+const WKARCB = 0.15, WKARCC = 1.5, WKARCL = 0.8;
+const WKARC = {
+  berry: { g: 1, n: 'Berries', d: 'Your team recovers a little HP before the battle.' }, par: { g: 1, n: 'Static', d: "The opponent's lead starts paralysed." },
+  brn: { g: 1, n: 'Embers', d: "The opponent's lead starts with a burn." }, low: { g: 1, n: 'Weary', d: "The opponent's team starts at four fifths of its HP." },
+  coin: { g: 1, n: 'Jackpot', d: 'This battle pays half as much again.' }, up: { g: 1, n: 'Tailwind', d: 'Your lead starts with its Speed raised.' },
+  sun: { g: 0, n: 'Sun', d: 'The battle starts in harsh sunlight.' }, rain: { g: 0, n: 'Rain', d: 'The battle starts in rain.' }, sand: { g: 0, n: 'Sandstorm', d: 'The battle starts in a sandstorm.' },
+  hail: { g: 0, n: 'Hail', d: 'The battle starts in hail.' }, tr: { g: 0, n: 'Trick Room', d: 'The slow move first for the first rounds.' }, none: { g: 0, n: 'Blank', d: 'Nothing happens. An ordinary battle.' },
+  mypsn: { g: -1, n: 'Spikes', d: 'Your lead starts poisoned.' }, foeup: { g: -1, n: 'Headwind', d: "The opponent's lead starts with its Speed raised." }
+};
+function wkBoard(R, nd) {
+  return wkSeeded(wkHash(nd.s, 31), () => {
+    const sh = l => { l = l.slice(); for (let i = l.length - 1; i > 0; i--) { const j = rnd(i + 1), t = l[i]; l[i] = l[j]; l[j] = t; } return l; };
+    const all = Object.keys(WKARC), of = g => sh(all.filter(k => WKARC[k].g === g)), good = Math.min(6, 1 + R.t);
+    return sh(of(1).slice(0, good).concat(of(0).slice(0, 6 - good), of(-1).slice(0, 2)));
+  });
+}
+/* Brettet er stoppet på rute i. Rommet må være det du står i (en kamp), og hvert rom har ett spinn. */
+function wkSpin(id, i) {
+  const R = wkSt().run; if (!R || !WKT[R.ty].board || R.at !== id || !R.pend || !WKFIGHT.has(R.pend)) return null;
+  const X = R.x || (R.x = {}); if (X.arc && X.arc.id === id) return X.arc.k;
+  const bd = wkBoard(R, wkMap(R.w, R.ty).nodes[id]); X.arc = { id, k: bd[((Math.floor(i) % bd.length) + bd.length) % bd.length] }; stamp(); save();
+  return X.arc.k;
+}
+/* CASTLE: du starter med WKCP0 poeng. En seier gir WKCPW[0] + WKCPW[1] × (snittet av HP-en laget har igjen) + litt for de store (WKCPK).
+   WKCP = det poengene kan brukes på (u: 1 = en som står, 2 = en som er slått ut). Det som er spart til slutt, blir WKCPC mynter per poeng (wkEnd). */
+const WKCP0 = 12, WKCPW = [8, 16], WKCPK = { ac: 4, gt: 4, el: 8, bs: 12, bg: 16 }, WKCPC = 4;
+const WKCP = {
+  one: { c: 12, n: 'Heal one', d: 'One Pokémon gets all its HP and PP back.', u: 1 }, rev: { c: 16, n: 'Revive one', d: 'One that has fainted is back with half its HP.', u: 2 },
+  all: { c: 22, n: 'Heal the team', d: 'Everyone still standing recovers a third of their HP.' }, see: { c: 6, n: 'Ask the valet', d: 'You see the team of the next trainer you must beat.' }
+};
+/* Den neste kampen du må vinne (den som avslutter sonen du er i, eller en senere). */
+const wkNextGate = (M, row) => M.nodes.find(n => n.r > row && WKCLOSE[n.k] && WKFIGHT.has(n.k)) || null;
+function wkBuy(k, u) {
+  const R = wkSt().run, it = WKCP[k]; if (!R || R.pend || !WKT[R.ty].cp || !it || !((R.x.cp || 0) >= it.c)) return false;
+  if (it.u && !S.party.includes(u)) return false;
+  const c = it.u ? wkHp(R, u) : null;
+  if (k === 'one') { if (c.h <= 0 || (c.h >= 1 && !Object.keys(c.pp).length)) return false; c.h = 1; c.pp = {}; c.s = ''; }
+  else if (k === 'rev') { if (c.h > 0) return false; c.h = 0.5; }
+  else if (k === 'all') { if (!wkParty().some(m => { const x = wkHp(R, m.u); return x.h > 0 && x.h < 1; })) return false; wkHeal(R, 1 / 3); }
+  else if (k === 'see') { const g = wkNextGate(wkMap(R.w, R.ty), R.at < 0 ? -1 : wkMap(R.w, R.ty).nodes[R.at].r); if (!g || R.sc === g.id) return false; R.sc = g.id; }
+  R.x.cp -= it.c; stamp(); save(); return true;
+}
+/* PYRAMID: veska som bare gjelder i løpet. Et bær gir WKBERRY av HP-en til en som står, en Revive reiser en som er slått ut med WKREVIVE. */
+function wkFind(R, nd, lines) { if (!nd.f || !R.x || !R.x.bag) return; R.x.bag[nd.f] = (R.x.bag[nd.f] || 0) + 1; lines.push(nd.f === 'berry' ? 'You found a Sitrus Berry in the dark. It is in your Pyramid Bag.' : 'You found a Revive in the dark. It is in your Pyramid Bag.'); }
+function wkUse(k, u) {
+  const R = wkSt().run; if (!R || R.pend || !R.x || !R.x.bag || !(R.x.bag[k] > 0) || !S.party.includes(u)) return false;
+  const c = wkHp(R, u);
+  if (k === 'berry') { if (c.h <= 0 || c.h >= 1) return false; c.h = Math.min(1, c.h + WKBERRY); } else if (k === 'revive') { if (c.h > 0) return false; c.h = WKREVIVE; } else return false;
+  R.x.bag[k]--; stamp(); save(); return true;
+}
+/* WORMHOLE: premien ved utgangen, ett trinn per sone som er klar (shm = shiny-sjansen ganget opp). Trinn 4 er en legendarisk annenhver gang. */
+const WKEXIT = [null, { min: 2, luck: 2, shm: 2 }, { min: 3, luck: 2, shm: 3 }, { ids: PSEUDO, shm: 5 }, { ids: PSEUDO, shm: 8, leg: 0.5 }, { ids: PSEUDO, shm: 8, leg: 1 }];
+const WKEXITN = ['Nothing yet', 'A rare Pokémon', 'An epic Pokémon', 'A pseudo-legendary Pokémon', 'A pseudo-legendary, or a legendary', 'A legendary Pokémon'];
+function wkExitEnc(st) { const o = WKEXIT[st]; return o.leg && Math.random() < o.leg ? legEnc(o.shm) : genEnc(o.ids ? { ids: o.ids, shm: o.shm } : o); }
+/* SHADOW SNAG: én ball, to fra WKBALL2 billetter. wkSnag tar imot tilbudet (S.wk.so): fangsten er formen du kan ha på ditt nivå, og den venter i
+   S.wk.snag til WKPURE studiedager ETTER dagen den ble snappet har løftet skyggen (wkPure). Da blir den en vanlig Pokémon med merket pu og
+   medfødte verdier på minst WKPUREIV. Ingen Shadow-form på laget, og ingenting å holde styr på imens (Jazz 16.11). */
+const WKBALL2 = 4, WKPURE = 3, WKPUREIV = 15;
+const wkSnagForm = id => { let x = id; while (reqLv(x) > refLv() && D(x)[4]) x = D(x)[4]; return x; };
+function wkSnag() {
+  const W = wkSt(), o = W.so, R = W.run; if (!o) return null;
+  if (R && R.w === o.w) { if (!(R.x && R.x.balls > 0)) return null; R.x.balls--; }
+  const e = genEnc({ ids: [wkSnagForm(o.id)] }), s = { id: e.id, lv: e.lv, sh: e.sh || 0, g: e.g, d: dayKey() };
+  (W.snag = W.snag || []).push(s); W.so = null;
+  if (R && R.w === o.w) (R.got.snag = R.got.snag || []).push(s.id); else if (W.last && W.last.w === o.w) (W.last.snag = W.last.snag || []).push(s.id);
+  stamp(); save(); return s;
+}
+const wkPureLeft = s => { const d0 = wkDn(s.d); let n = 0; for (const k in S.log || {}) if (wkStudied(k) && wkDn(k) > d0) n++; return Math.max(0, WKPURE - n); };
+function wkPure() {
+  const W = S.wk; if (!W || !W.snag || !W.snag.length) return 0; let n = 0;
+  W.snag = W.snag.filter(s => { if (wkPureLeft(s) > 0) return true; const m = addMon(s.id, s.lv, s.sh, 0, s.g); if (!m.sh) m.iv = m.iv.map(v => Math.max(v, WKPUREIV)); m.pu = 1; (W.pun = W.pun || []).push(m.u); n++; return false; });
+  if (n) { stamp(); save(); } return n;
+}
+
+/* ---------- Hvelvet, Mints og Gold Bottle Cap (steg 1d.5) ----------
+   HVELVET (P1, valgt 17.11): når løpet er over, venter én kiste per billett. Studiene gir antallet, spillet gir metallet: bronse, sølv når
+   bossen i sone 3 er slått (Frontier Brain), gull etter gullkampen. Hver kiste har litt mynter (coin, ganger studiebonusen og vanskelighetsgraden
+   fra løpet, som kampene: de store myntene ligger i selve løpet) og én ting
+   trukket etter vektene i p. sure = det et sølv- eller gullhvelv alltid har minst én av. Du går aldri tomhendt: også et løp som ender i
+   første rom, gir kistene sine i bronse. Mints og Gold Bottle Cap finnes bare her, og i alle ukestypene (Jazz 16.11).
+   candy = Rare Candy (antallet etter metallet), balls = Ultra Balls, enc = et sjeldent møte, pseudo = en pseudo-legendarisk i gresset,
+   tutor = et sjeldent angrep åpnes hos lærerne (er alle åpne: Rare Candy). */
+const WKVN = ['Bronze', 'Silver', 'Gold'], WKVCANDY = [1, 2, 3];
+const WKV = [
+  { coin: [70, 130], p: { candy: 30, balls: 24, enc: 26, stone: 12, mint: 8 } },
+  { coin: [130, 210], p: { mint: 22, candy: 22, enc: 22, tutor: 14, mstone: 10, gcap: 6, stone: 4 }, sure: ['mint'] },
+  { coin: [220, 340], p: { candy: 21, mint: 20, gcap: 15, tutor: 14, mstone: 12, pseudo: 10, enc: 8 }, sure: ['gcap', 'mint'] }
+];
+const wkVaultLeft = () => { const v = S.wk && S.wk.vault; return v ? Math.max(0, v.n - v.open.length) : 0; };
+function wkChest() {
+  const W = wkSt(), v = W.vault; if (!v || v.open.length >= v.n) return null;
+  const C = WKV[v.m] || WKV[0], left = v.n - v.open.length, need = (C.sure || []).filter(k => !v.open.some(o => o.k === k));
+  let k = need.length >= left ? need[0] : (() => { const ks = Object.keys(C.p); let x = Math.random() * ks.reduce((a, q) => a + C.p[q], 0); for (const q of ks) { x -= C.p[q]; if (x <= 0) return q; } return ks[0]; })();
+  const o = { k, coins: Math.round((C.coin[0] + Math.random() * (C.coin[1] - C.coin[0])) * (v.cm || 1) / 10) * 10, items: [] };
+  const give = (it, n) => { if (n > 0 && SHOP[it]) { S.items[it] = (S.items[it] || 0) + n; o.items.push(`${n} × ${SHOP[it].n}`); } };
+  const enc = q => { const e = genEnc(q); S.pend.push(e); trimPend(30); o.enc = { id: e.id, sh: e.sh || 0 }; };
+  if (k === 'tutor') { const l = Object.keys(TUTNEED).map(mvIx).filter(x => x >= 0 && !tutOpen(x)); if (l.length) { const x = l[rnd(l.length)]; tutUnlock(x); o.mv = MOVES[x][0]; } else k = o.k = 'candy'; }
+  if (k === 'candy') give('candy', Math.max(1, candyRoll(WKVCANDY[v.m])));
+  else if (k === 'balls') give('ultra', 3); else if (k === 'stone') give('stone', 1); else if (k === 'mstone') give('mstone', 1);
+  else if (k === 'mint') give('mint', 1); else if (k === 'gcap') give('gcap', 1);
+  else if (k === 'enc') enc({ min: v.m ? 3 : 2, luck: 2 }); else if (k === 'pseudo') enc({ ids: PSEUDO });
+  S.coins += o.coins; v.open.push(o); stamp(); save();
+  return o;
+}
+/* MINT: bytter naturen til én Pokémon (den eneste måten; avtalt 15.11). GOLD BOTTLE CAP: hypertrener alle seks verdiene på én gang, uten mynter,
+   fra nivået Hyper Training åpner på (HTLV; ønske 18). Ingen av dem kan brukes mens laget er låst i et løp. */
+function wkMint(m, nat) { if (!m || locked() || !(S.items.mint > 0) || !(nat >= 0 && nat < NAT.length) || nat === m.nat) return false; m.nat = nat; S.items.mint--; save(); return true; }
+const wkCapOk = m => !!m && htOk(m) && [0, 1, 2, 3, 4, 5].some(i => ivOf(m, i) < 31);
+function wkCap(m) { if (!wkCapOk(m) || locked() || !(S.items.gcap > 0)) return false; m.ht = [1, 1, 1, 1, 1, 1]; S.items.gcap--; save(); return true; }
 
 Object.assign(LNO, {
   'Your whole team is healed, and those that had fainted are back on their feet.': 'Hele laget er helet, og de som var slått ut, er på beina igjen.',
