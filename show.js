@@ -357,7 +357,7 @@ function sbxFinal(k, i) { const L = S.lad; L.n = LAPN - 1; L.c = CLIMBTOP; L.see
 /* o (valgene i sandkassa): boss = løpet starter ved bossen i runden, mega = en Mega blant de første sju, top = toppboss til slutt i hver runde. */
 function sbxFac(r, o) {
   o = o || {}; const w = o.boss ? FACN - 1 : 0;
-  S.fac.run = { round: r, w, streak: (r - 1) * FACN + w, offer: facOffer(r, o.mega), open: 0, team: null, foe: null };
+  S.fac.run = { round: r, w, streak: (r - 1) * FACN + w, offer: facOffer(r, { mg: o.mega ? 1 : 0, rare: o.rare || '' }), open: 0, team: null, foe: null };
   if (o.top) S.fac.run.top = 1;
 }
 function sbxRaid(id, sh, show) { const t = LEG[id].t; S.raid = { id, lv: raidLvFor(t), hx: +raidHx(t).toFixed(2), day: '', tries: 0, at: dayKey(), nw: 0, hid: 1, sh: sh ? 1 : 0 }; if (show) raidUnhide(); }
@@ -404,12 +404,12 @@ function sbxPick(what) {
 const SBXTABS = [['modes', 'Modes'], ['battles', 'Battles'], ['raids', 'Raids'], ['packs', 'Packs'], ['journey', 'Journey'], ['sound', 'Sound']];
 const SBXFO = [['boss', 'Start at the boss'], ['mega', 'A Mega in the first seven'], ['top', 'A top boss at the end']];
 const sbxF = () => U.sbf || (U.sbf = { r: 1, boss: 0, mega: 0, top: 0 });
-/* Hva runden betyr, regnet fra de samme tallene som spillet bruker: leiepoolen (FACBST), sjansen for toppboss (facTopP) og hvor ofte trenerne
+/* Hva runden betyr, regnet fra de samme tallene som spillet bruker: leiepoolen (FACPB), sjansen for toppboss (facTopP) og hvor ofte trenerne
    velger det beste angrepet (facSk, fra den første til den siste vanlige treneren i runden, ganget med vanskelighetsgraden). */
 function sbxFacPeek(r) {
-  const [a, b] = FACBST(r), up = dayBoost().mode === 'factory' ? 1.5 : 1, p = facTopP(r, up), sk = diff().sk, s0 = facSk(r, 0) * sk, s1 = facSk(r, FACN - 2) * sk;
+  const a = FACPB[Math.max(0, Math.min(FACEND, r) - 1)], up = dayBoost().mode === 'factory' ? 1.5 : 1, p = facTopP(r, up), sk = diff().sk, s0 = facSk(r, 0) * sk, s1 = facSk(r, FACN - 2) * sk;
   const pc = x => Math.round(x * 100), m = (n, f, v) => `<span>${n}</span><span class="bar gold"><i style="width:${pc(Math.max(0.05, Math.min(1, f)))}%"></i></span><b class="tn">${v}</b>`;
-  return `<div class="sbxm">${m('Rentals', (a - 400) / 125, `base stats ${a}–${b}`)}${m('Top boss', p / 0.6, `${pc(p)} %`)}${m('Trainers', (s0 + s1) / 2 / 0.95, `skill ${pc(s0) === pc(s1) ? pc(s0) : pc(s0) + '–' + pc(s1)} %`)}</div>
+  return `<div class="sbxm">${m('Rentals', (a - 40) / 40, `rated around ${a}`)}${m('Top boss', p / 0.6, `${pc(p)} %`)}${m('Trainers', (s0 + s1) / 2 / 0.95, `skill ${pc(s0) === pc(s1) ? pc(s0) : pc(s0) + '–' + pc(s1)} %`)}</div>
     <p class="sm tn">Boss: ${facBossOf(r).brain ? 'the Frontier Brain of the run' : 'a ' + facBossOf(r).k.map(k => TCL[k].n).join(', ')}${facBossOf(r).sym ? ' · ' + FACSYM[facBossOf(r).sym] + ' Symbol' : ''}. Opponents get stronger with every battle, and the run ends when round ${FACEND} is cleared.${up > 1 ? ' Frontier bonus today: top bosses 1.5× as often.' : ''}</p>`;
 }
 function sbxFacCard() {
