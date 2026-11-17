@@ -1304,6 +1304,7 @@ async function playOne(B, e) {
     if (big && !wild) { music(''); await say(`${B.tr.n} is down to the last Pokémon…`); }
     if (BT.B !== B || !sp.isConnected) return;
     if (!wild) await typeOut(e.txt);
+    if (BT.B !== B || !sp.isConnected || !$('#b-' + side)) return;
     clearMot(sp); $('#b-' + side).hidden = true;
     /* Bildet males skjult med en gang, så det hentes mens ballen er i lufta. */
     paintSprite(side, 'gone');
