@@ -379,7 +379,8 @@ function sbxTool(k) {
 const SNDUSE = { tap: 'A plain button', tab: 'Tabs and the next card', chip: 'A choice or a switch', ball: 'Choosing a ball', open: 'A sheet or a menu opens', close: 'Close, back and no thanks', ok: 'Confirmed and saved', warn: 'A warning, a no, and tap again', fav: 'Favourite',
   start: 'A session or a battle starts', done: 'A session is complete', coin: 'Coins and purchases', sell: 'Selling', found: 'An encounter', appear: 'A wild Pokémon appears', thr: 'A ball is thrown', wob: 'The ball wobbles',
   got: 'Caught', caught: 'Caught: shiny or legendary', fail: 'It broke free', flee: 'It fled', lvl: 'Level up', evo: 'A rare find, a Mega Stone', evolved: 'Evolution', hatch: 'An egg hatches', egg: 'An egg bought',
-  rank: 'A new rank', event: 'A special event', item: 'An item to hold', keyitem: 'A plate or another lasting item', berry: 'A berry', learn: 'A new move learned', heal: 'A berry fed to a wild Pokémon', saved: 'Your save copied or synced' };
+  rank: 'A new rank', event: 'A special event', item: 'An item to hold', keyitem: 'A plate or another lasting item', berry: 'A berry', learn: 'A new move learned', heal: 'A berry fed to a wild Pokémon', saved: 'Your save copied or synced',
+  rustle: 'The grass moves (the radar)', frise: 'A rare ball is about to open', fpop: 'A ball opens in the Frontier', shiny: 'A shiny appears' };
 /* Verktøyene i grupper, med korte navn på knappene (det lange navnet i SBXT står i bekreftelsen). */
 const SBXG = [['Resources', [['coins', '+100 000 coins'], ['level', 'Trainer level +10'], ['items', '5 of every item'], ['held', 'One of every held item'], ['team', 'My team to Lv 100']]],
   ['In the grass', [['enc', 'A legendary'], ['shenc', 'A shiny']]],
