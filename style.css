@@ -2652,3 +2652,35 @@ button.pkm{cursor:pointer}
 .shfx i{position:absolute;left:var(--x);top:var(--y);width:17px;height:17px;background:#fff8d6;clip-path:polygon(50% 0,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0 50%,40% 40%);filter:drop-shadow(0 0 5px #ffd75e);transform:translate(-50%,-50%) scale(0);animation:shfx .95s var(--d) ease-out 2 both}
 @keyframes shfx{0%{transform:translate(-50%,-50%) scale(0) rotate(0);opacity:0}35%{transform:translate(-50%,-50%) scale(var(--z)) rotate(45deg);opacity:1}100%{transform:translate(-50%,-50%) scale(0) rotate(110deg);opacity:0}}
 @media (prefers-reduced-motion:reduce){.fstage *,.ft.shut .ball,.ft::before,.flk i{animation:none!important}.shfx i{animation:none;transform:translate(-50%,-50%) scale(var(--z));opacity:.9}.fst-s{opacity:1}.fst-b{opacity:0}.fst-n{opacity:1}}
+
+/* Steg 1c.5: en hel modus er vunnet (seierslåta spiller). Overskriften i gull, og litt gullstøv som daler én gang. */
+.hof.fame .hof-h>span:first-child{color:var(--gold)}
+.fame-c{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:2}
+.fame-c i{position:absolute;left:var(--x);top:-12px;width:7px;height:11px;border-radius:2px;background:var(--gold);opacity:0;transform:rotate(var(--r));animation:famec 2.6s var(--d) ease-in 1 both}
+.fame-c i:nth-child(3n){background:#fff3c4;width:5px;height:5px;border-radius:50%}.fame-c i:nth-child(3n+1){background:#cfa94a}
+@keyframes famec{0%{opacity:0;transform:translateY(0) rotate(var(--r))}12%{opacity:.95}100%{opacity:0;transform:translateY(260px) rotate(calc(var(--r) + 240deg))}}
+@media (prefers-reduced-motion:reduce){.fame-c{display:none}}
+
+/* Steg 1c.5: utfordreren (lilla, som de sjeldne ballene), veiskillet (to kort), den ukjente i cupen og premieballene. */
+.chlc{background:radial-gradient(120% 90% at 15% 20%,color-mix(in srgb,#8f7bd6 34%,var(--card)),var(--card));box-shadow:0 0 0 1.5px #b99cff}
+.card.chlc,.card.forkc{display:flex;flex-direction:column;gap:12px}
+.chl-k{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;color:#b99cff}
+.fork{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 2px}
+.fkb{display:flex;flex-direction:column;align-items:center;gap:6px;border-radius:16px;padding:12px 8px;background:var(--soft);box-shadow:0 0 0 1px var(--line);color:var(--ink);font:inherit;text-align:center;border:0;min-height:44px}
+.fkb b{font-size:15px}.fkb .tsb{width:52px;height:52px}
+.fkb.on{box-shadow:0 0 0 2px var(--sage);background:color-mix(in srgb,var(--sage) 16%,var(--soft))}
+.fkb.fk-b .fk-c{color:var(--gold)}.fkb.fk-b.on{box-shadow:0 0 0 2px var(--gold);background:color-mix(in srgb,var(--gold) 14%,var(--soft))}
+.fk-l{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}.fk-l i{font-style:normal;font-size:11px;border-radius:99px;padding:2px 8px;background:var(--soft)}
+.fk-c{font-weight:800;font-size:13px}
+.mys-k{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;color:#b99cff;animation:rise .5s ease both}
+.mys-w{color:#b99cff}.lgp i.mys{box-shadow:0 0 0 1.5px #b99cff}
+.mysc{box-shadow:0 0 0 1.5px #b99cff}.mysc .pre-foe{animation:mysr .7s ease both}
+@keyframes mysr{0%{filter:brightness(0);transform:scale(.96)}60%{filter:brightness(1.6)}100%{filter:none;transform:none}}
+.pzr{display:flex;justify-content:center;gap:12px}.pzr.lg{gap:14px;margin:6px 0}
+.pzt{position:relative;width:76px;min-height:76px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:var(--soft);box-shadow:0 0 0 1px var(--line)}
+.pzr.lg .pzt{width:96px;min-height:104px}
+.pzt small{font-size:11px;color:var(--ink2);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px}.pzt em{font-style:normal;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+.pzt.rare{box-shadow:0 0 0 2px #e9d9ff,0 0 16px #b99cff;background:radial-gradient(circle at 50% 40%,#5b4a8a,#241d3a)}
+.pzt.rare::after{content:"✦";position:absolute;right:-4px;top:-8px;color:#fff;font-size:15px;text-shadow:0 0 8px var(--gold)}
+.pzt.open.rr-sh,.pzt.open.rr-star{box-shadow:0 0 0 1.5px var(--gold)}
+@media (prefers-reduced-motion:reduce){.mysc .pre-foe,.mys-k{animation:none}}

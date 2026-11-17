@@ -204,6 +204,26 @@ const MUSIC = (() => {
         'g5 - b5 - d6 - b5 - g5 - b5 - d6 - g6 -',
         'g5 g5 . g5 g5 . g5 g5 b5 b5 . d6 d6 . g6 -'] } } },
 
+    /* Seierslåta uten pakken (steg 1c.5): rolig og staselig, spilles én gang når en hel modus er vunnet. Egen melodi. */
+    fame: { bpm: 100, tp: 0, once: 1, seq: ['i', 'a', 'e'], loop: 1, sec: {
+      i: { ch: 'D D', bs: 'long', ar: 'pad', dr: ['boom', 'build1'], ld: [
+        'd5 - - - a5 - - - d6 - - - - - - -',
+        'f#5 - - - a5 - - - d6 - - - e6 - f#6 -'] },
+      a: { ch: 'D A Bm G D A G A', bs: 'half', ar: 'wave', dr: 'half', ld: [
+        'f#6 - - - - - e6 - d6 - - - a5 - - -',
+        'e6 - - - - - d6 - c#6 - - - a5 - - -',
+        'd6 - - - - - c#6 - b5 - - - f#5 - - -',
+        'g5 - - - b5 - - - d6 - - - e6 - - -',
+        'f#6 - - - - - g6 - a6 - - - f#6 - - -',
+        'e6 - - - - - f#6 - e6 - - - c#6 - - -',
+        'd6 - - - b5 - - - g5 - - - b5 - d6 -',
+        'e6 - - - - - - - a5 - c#6 - e6 - a6 -'] },
+      e: { ch: 'G A D D', bs: 'long', ar: 'pad', dr: ['half', 'half', 'boom', 'none'], ld: [
+        'b6 - - - - - a6 - g6 - - - d6 - - -',
+        'a6 - - - - - g6 - e6 - - - c#6 - e6 -',
+        'd6 - - - - - - - f#6 - - - a6 - - -',
+        'd7 - - - - - - - - - - - - - - -'] } } },
+
     /* Legendariske raid: tungt og truende, før det tar av. */
     legend: { bpm: 138, tp: -2, seq: ['i', 'a', 'b', 'c'], loop: 1, sec: {
       i: { ch: 'Dm Dm Dm Dm', bs: ['long', 'long', 'pedal', 'pedal'], ar: ['none', 'pad', 'pad', 'pad'], dr: ['boom', 'none', 'toms', 'fill2'], ld: [
@@ -307,7 +327,7 @@ const MUSIC = (() => {
         for (let s = 0; s < 16; s++) { let c = dp[s]; if (b === 0 && s === 0 && n >= 8 && (c === 'k' || c === 'K')) c = 'c'; if (c !== '.') steps[base + b * 16 + s].push(['D', c, 1]); }
       }
     });
-    return { spb: 60 / S0.bpm / 4, steps, loop, starts };
+    return { spb: 60 / S0.bpm / 4, steps, loop, starts, once: !!S0.once };
   }
   const comp = k => COMP[k] || (COMP[k] = compile(SONGS[k]));
 
@@ -393,7 +413,10 @@ const MUSIC = (() => {
     const tick = () => {
       if (cur !== st) return;
       const now = a.currentTime, until = now + 0.32; let guard = 0;
-      while (st.t < until && guard++ < 4000) { if (st.t > now - 0.02) sy.step(c.steps[st.i], st.t, c.spb); st.t += c.spb; if (++st.i >= c.steps.length) st.i = c.loop; }
+      while (!st.end && st.t < until && guard++ < 4000) {
+        if (st.t > now - 0.02) sy.step(c.steps[st.i], st.t, c.spb); st.t += c.spb;
+        if (++st.i >= c.steps.length) { if (c.once) { st.end = 1; setTimeout(() => { if (cur === st) stop(1.6); }, Math.max(0, st.t - a.currentTime) * 1000 + 900); } else st.i = c.loop; }
+      }
     };
     tick(); st.id = setInterval(tick, 70);
     return true;

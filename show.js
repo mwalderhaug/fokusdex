@@ -428,11 +428,16 @@ function sbxFacCard() {
 function sbxLeagueCard() {
   const L = S.lad;
   return `<div class="card stack"><div class="row" style="justify-content:space-between"><b class="h">Trainer League</b><span class="pill tn">Battle ${Math.min(LAPN, (L.n || 0) + 1)} of ${LAPN}</span></div>
-    <div class="row"><button type="button" class="btn sp" data-a="sbxlgo">Next battle</button><button type="button" class="btn sp" data-a="sbxpick" data-k="final">The final…</button></div></div>`;
+    <div class="row"><button type="button" class="btn sp" data-a="sbxlgo">Next battle</button><button type="button" class="btn sp" data-a="sbxpick" data-k="final">The final…</button></div>
+    <div class="row"><button type="button" class="btn sp" data-a="sbxchl">A challenger</button><button type="button" class="btn sp" data-a="sbxfork">A fork</button></div></div>`;
 }
+const SBXPZ = [['', 'As in the game'], ['none', 'None'], ['sh', 'Shiny'], ['star', 'Born star']], sbxW = () => U.sbw || (U.sbw = { dark: 0, pz: '' });
 function sbxCupCard() {
   const today = CUPS[new Date(dayKey() + 'T12:00:00').getDay()];
-  return `<div class="card stack"><b class="h">World Tournament</b><p class="sm">Pick a cup. Normally the day of the week decides it.</p>
+  const w = sbxW();
+  return `<div class="card stack" id="sbxwc"><b class="h">World Tournament</b><p class="sm">Pick a cup. Normally the day of the week decides it.</p>
+    <div class="chips sbxo"><button type="button" class="chip" data-a="sbxdark" aria-pressed="${!!w.dark}">Mystery entrant in the final</button></div>
+    <div class="lab">Rare ball in the prize</div><div class="chips sbxo">${SBXPZ.map(([k, n]) => `<button type="button" class="chip" data-a="sbxpz" data-k="${k}" aria-pressed="${(w.pz || '') === k}">${n}</button>`).join('')}</div>
     <div class="sbxcups">${CUPS.map((c, i) => `<button type="button" class="btn" data-a="sbxcup" data-k="${i}"><b>${esc(c.n.replace(' Leaders Cup', '').replace(/ Cup$/, ''))}</b><span class="sm tn">×${c.f}${c === today ? ' · today' : ''}</span></button>`).join('')}</div></div>`;
 }
 const sbxCopyCard = () => `<div class="card stack"><b class="h">The whole game</b><p class="sm">A copy of your save with all three modes open and the bonus at its peak. The Shop, the grass, raids and Simulate work as usual.</p>
@@ -496,11 +501,15 @@ const XA = {
   sbxo: el => { const f = sbxF(), k = el.dataset.k; if (k in f && k !== 'r' && k !== 'rare') { f[k] = f[k] ? 0 : 1; sbxFacRe(); } },
   sbxrare: el => { sbxF().rare = el.dataset.k || ''; sbxFacRe(); },
   sbxfinal: el => { const k = el.dataset.k, i = +el.dataset.i; if (!POOL[k] || !POOL[k][i] || !sbxEnter()) return; sbxDay(); sbxFinal(k, i); sbxIn(`Sandbox: ${POOL[k][i][0]} is waiting in the final.`, () => BA.bpre()); },
+  sbxchl: () => { if (!sbxEnter()) return; sbxDay(); const L = S.lad; L.next = null; L.fork = null; if (L.n >= LAPN - 1) L.n = 3; SBX.chl = 1; sbxIn('Sandbox: a challenger.', () => BA.bpre()); },
+  sbxfork: () => { if (!sbxEnter()) return; sbxDay(); const L = S.lad; L.next = null; L.fork = null; L.won = Math.max(L.won || 0, FORKMIN); if (!FORKN.includes(L.n)) { L.n = 4; L.c = 4; } SBX.chl = 0; sbxIn('Sandbox: two trainers are waiting.', () => BA.bpre()); },
+  sbxdark: () => { const w = sbxW(); w.dark = w.dark ? 0 : 1; const c = $('#sbxwc'); if (c) c.outerHTML = sbxCupCard(); },
+  sbxpz: el => { sbxW().pz = el.dataset.k || ''; const c = $('#sbxwc'); if (c) c.outerHTML = sbxCupCard(); },
   sbxlgo: () => { if (!sbxEnter()) return; sbxDay(); sbxIn('Sandbox: your next League battle.', () => BA.bpre()); },
   /* Frontier fra en runde, med valgene fra kortet. SBX.fr huskes, så et nytt løp i kopien starter likt (BA.fenter og «Again»). */
   sbxfac: el => { const f = sbxF(), r = Math.max(1, +el.dataset.k || f.r); if (!sbxEnter()) return; sbxDay(); SBX.fr = { r, boss: f.boss, mega: f.mega, top: f.top, rare: f.rare }; sbxFac(r, SBX.fr); sbxIn(`Sandbox: a Frontier run from round ${r}.`, facGo); },
   sbxagain: () => { if (!SBX || !SBX.fr) return; sbxDay(); sbxFac(SBX.fr.r, SBX.fr); sbxIn(`Sandbox: again from round ${SBX.fr.r}.`, facGo); },
-  sbxcup: el => { const i = +el.dataset.k; if (!CUPS[i] || !sbxEnter()) return; sbxDay(); SBX.cup = i; sbxIn(`Sandbox: the ${CUPS[i].n}.`, () => BA.wenter()); },
+  sbxcup: el => { const i = +el.dataset.k; if (!CUPS[i] || !sbxEnter()) return; sbxDay(); SBX.cup = i; SBX.dark = sbxW().dark ? 1 : 0; SBX.pz = sbxW().pz || ''; sbxIn(`Sandbox: the ${CUPS[i].n}.`, () => BA.wenter()); },
   sbxtools: () => { if (!SBX) return; sbxTools(); },
   /* Hurtigvalgene øverst. Alt skjer i kopien (som opprettes første gang), og ingenting lagres. */
   sbxq: el => {

@@ -498,6 +498,13 @@ function migrate11() {
 /* SPRÅK: forklaringer og introduksjoner kan leses på norsk (S.lang = 'no'). Navn, typer, angrep, knapper og faner står alltid på engelsk.
    tl(tekst, verdier): den engelske teksten er nøkkelen, LNO[tekst] den norske; {navn} byttes med verdier.navn. Mangler en oversettelse, står den engelske. */
 const LNO = {
+  // Steg 1c.5: utfordreren, veiskillet, den ukjente og premieballene
+  'A team built around a shiny. Win, and its kind waits in your grass as a shiny, with double coins. Lose, and the lap simply goes on.': 'Et lag bygget rundt en shiny. Vinner du, venter arten som shiny i gresset, med doble mynter. Taper du, går runden bare videre.',
+  'Two trainers are waiting. Pick the one you want to battle.': 'To trenere venter. Velg den du vil møte.',
+  'Who it is shows in the intro, as always.': 'Hvem det er, ser du i introen, som alltid.',
+  'All three are waiting in your encounters.': 'Alle tre venter i møtene dine.',
+  'Three balls, three encounters. A ball that looks different holds something rare.': 'Tre baller, tre møter. En ball som ser annerledes ut, har noe sjeldent i seg.',
+  'A mystery entrant is in this cup. You meet them in the final.': 'En ukjent deltaker er med i cupen. Du møter den i finalen.',
   // Startskjermen
   'Every minute you focus earns XP and coins. Every session lures out wild Pokémon you can catch, evolve and collect.': 'Hvert minutt du fokuserer gir XP og mynter. Hver økt lokker fram ville Pokémon du kan fange, utvikle og samle på.',
   'Pick your partner. You start with 20 Poké Balls, and next you add your subjects.': 'Velg partneren din. Du starter med 20 Poké Balls, og etterpå legger du inn fagene dine.',

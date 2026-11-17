@@ -344,7 +344,7 @@ const ladLives = () => (diff().lives || LIVES) + (evIs('wind') ? 1 : 0), facLive
 function ladLose(d) {
   const L = S.lad, n = (L.tries && L.tries.d === d ? L.tries.n : 0) + 1, left = Math.max(0, ladLives() - n);
   L.tries = { d, n };
-  if (!left) { L.lost = d; L.fell = L.n; L.n = 0; L.c = 0; L.seen = []; L.next = null; }
+  if (!left) { L.lost = d; L.fell = L.n; L.n = 0; L.c = 0; L.seen = []; L.next = null; L.fork = null; }
   else if (L.next) L.next.fail = d;
   return left;
 }
@@ -620,6 +620,61 @@ function trainerOf(k, i, x) {
 }
 const foeTeam = (k, d, n, base, st, flat, pre) => k === 'trainer' ? regTeam(d[2], n, base, st) : k === 'evilteam' ? regTeam(d[4], n, base, st) : bossTeam(d, n, base, st, flat, pre);
 
+/* ---------- Ligaen: utfordreren og veiskillet (steg 1c.5, Jazz valgte blant L1–L4 og W1–W4) ----------
+   UTFORDREREN (L1): en sjelden gang står en omreisende utfordrer i stedet for en av kampene midt i runden (kamp 3–7), med et lag bygget
+   rundt en shiny. Den tar plassen til kampen, så runden blir ikke lengre. Vinner du: CHLCOIN ganger myntene, og arten (første form) venter
+   som shiny i gresset. Taper du: runden går videre til neste kamp, og ingen forsøk er brukt. Den kommer høyst én gang per runde, tidligst
+   når du har vunnet CHLMIN ligakamper, og senest etter CHLDRY kamper uten (S.lad.chn teller dem). Styrken er som Elite Four (CHLST).
+   t.ch = { a: essets art, nm: navnet } på treneren som venter; B.ch i kampen. */
+const CHLP = 0.05, CHLDRY = 40, CHLMIN = 6, CHLCOIN = 2;
+const CHLACE = [350, 130, 59, 448, 282, 330, 468, 637, 612, 609, 212, 181, 359, 571, 405, 334, 38, 229, 466, 121, 208, 461, 6, 9, 3, 254, 257, 260, 392, 395];
+const CHLNAME = ['Lyra', 'Soren', 'Mika', 'Ilva', 'Tarek', 'Noor', 'Eskil', 'Runa', 'Odin', 'Saga'];
+const CHLST = Object.assign({}, TCL.e4, { n: 'Challenger', mons: 5 });
+const lineBase = id => { let b = id, g = 0; while (stageOf(b) && D(b)[4] && g++ < 4) b = D(b)[4]; return b; };
+const chlForce = () => typeof SBX !== 'undefined' && SBX && SBX.chl ? 1 : 0;
+function chlRoll() {
+  const L = S.lad; if (chlForce()) return L.n < LAPN - 1;
+  if (L.n < 2 || L.n > LAPN - 2 || L.chl === L.lap + 1 || (L.won || 0) < CHLMIN) return false;
+  L.chn = (L.chn || 0) + 1;
+  return L.chn >= CHLDRY || Math.random() < CHLP;
+}
+function chlMake() {
+  const L = S.lad, own = CHLACE.filter(id => S.regions.includes(regOf(lineBase(id)))), l = own.length >= 4 ? own : CHLACE, i0 = TCLASS.length;
+  L.chl = L.lap + 1; L.chn = 0; if (typeof SBX !== 'undefined' && SBX) SBX.chl = 0;
+  return { n: L.n, lap: L.lap, k: 'trainer', i: i0 + rnd(4), sup: 0, ch: { a: l[rnd(l.length)], nm: CHLNAME[rnd(CHLNAME.length)] } };
+}
+/* Laget: fire–fem på måfå, og esset sist: shiny, med full IV som alle shiny, i den formen nivået tillater. */
+function chlTeam(t, p) {
+  const ace = foeMon(fitForm(t.ch.a, p.lv + 1, p.st.slack || 0), Math.min(100, p.lv + 1), Object.assign({}, p.st, { q: tutOn() ? 3 : p.st.q }));
+  ace.sh = 1; ace.iv = [31, 31, 31, 31, 31, 31];
+  return regTeam([], Math.max(2, p.n - 1), p.lv, p.st).filter(m => lineBase(m.id) !== lineBase(ace.id)).concat([ace]);
+}
+function chlLoot(B, res, give) {
+  const b = lineBase(B.ch.a), e = genEnc({ ids: [b] }); e.sh = 1; pushEnc(res, e); give('ultra', 2); give('candy', 1);
+  res.chl = { id: b, nm: B.ch.nm, win: 1 }; res.perks.push(`You beat the challenger: a shiny ${D(b)[0]} is waiting in the grass.`);
+}
+/* VEISKILLET (L2): før kamp 3, 5 og 7 (FORKN, 0-basert) står to trenere og venter, og du velger hvem du møter. Den ene er den runden ville gitt
+   deg (som før), den andre en eller to klasser over (eller under, når runden alt er høyt oppe). Du ser klassen, typen og hva klassen gir;
+   hvem det er, kommer fram i introen som ellers. Valget kan gjøres om til kampen starter. Velger du ikke (simuleringen), blir det den
+   runden ville gitt. S.lad.fork = { n, lap, o: [lav, høy], d: plassen til den vanlige, s: valgt plass eller -1 }; S.lad.next er alltid den valgte. */
+const FORKN = [2, 4, 6], FORKMIN = 6;
+const mkNext = (k, i) => { const L = S.lad, t = { n: L.n, lap: L.lap, k, i, sup: 0 }; if ((POOL[k][i][6] || {}).fx) t.v = drawTeam(POOL[k][i]); return t; };
+function forkNow() {
+  const L = S.lad; if (!FORKN.includes(L.n) || (L.won || 0) < FORKMIN) return null;
+  const t = nextTrainer(); if (t.ch || t.fail) return null;
+  let F = L.fork;
+  if (F && F.n === L.n && F.lap === L.lap && F.o && F.o.length === 2 && F.o.some(x => x.k === t.k && x.i === t.i)) return F;
+  const c1 = clsI(t.k); let c2 = c1 >= 6 ? c1 - 1 - rnd(2) : c1 + 1 + (Math.random() < 0.35 ? 1 : 0); c2 = Math.max(2, Math.min(7, c2)); if (c2 === c1) c2 = c1 > 2 ? c1 - 1 : c1 + 1;
+  const k = ORDER[c2 - 1], pool = POOL[k]; let c = pool.map((_, i) => i).filter(i => !(L.seen || []).includes(k + i) && pool[i][0] !== POOL[t.k][t.i][0]); if (!c.length) c = pool.map((_, i) => i);
+  const alt = mkNext(k, c[rnd(c.length)]), lo = c2 < c1;
+  F = L.fork = { n: L.n, lap: L.lap, o: lo ? [alt, t] : [t, alt], d: lo ? 1 : 0, s: -1 }; save();
+  return F;
+}
+function forkPick(i) { const F = forkNow(); if (!F || !F.o[i]) return false; F.s = i; S.lad.next = F.o[i]; save(); return true; }
+/* Det klassen gir, i få ord (det samme som classLoot deler ut). */
+const FORKLOOT = { gym: ['Rare Candy', '1 encounter'], evilteam: ['Stolen coins', '1 encounter'], eviladmin: ['Ultra Balls', '2 encounters'], e4: ['Rare Candy', '2 encounters'], rival: ['An Egg', '2 encounters'], evilboss: ['Rare encounters', 'Coin boost'] };
+function forkInfo(t) { const p = leaguePlan(t), d = POOL[t.k][t.i]; return { k: t.k, cn: TCL[t.k].n, ci: clsI(t.k), ty: d[3], n: p.n, coins: leagueCoins(p.st, t.lap), loot: FORKLOOT[t.k] || [] }; }
+
 /* ---------- Ligaen ---------- */
 /* Hvem som venter. Lagres, så den samme treneren står der når du kommer tilbake (toppbossene drar videre hvis du taper).
    Ingen møtes to ganger i samme runde. En sjelden gang står en toppboss der en vanlig boss skulle stått. */
@@ -628,6 +683,7 @@ function nextTrainer() {
   /* Den som venter, blir stående til du har møtt den – også til omkampen når du har et forsøk igjen (Easy eller Second Wind). Taper du uten
      forsøk igjen, er runden over, og L.next er nullet (ladLose). v = laget en Champion eller Supreme Boss stiller med denne gangen. */
   if (old) { if (!old.v && (POOL[old.k][old.i][6] || {}).fx) old.v = drawTeam(POOL[old.k][old.i]); return old; }
+  if (chlRoll()) { L.next = chlMake(); return L.next; }
   const k = L.n >= LAPN - 1 ? (Math.random() < SUPP(L.lap) ? 'supreme' : 'champ') : ORDER[climb(L.n, L.c || 0) - 1];
   const pool = POOL[k], all = pool.map((_, i) => i), mk = i => { const t = { n: L.n, lap: L.lap, k, i, sup: 0 }; if ((pool[i][6] || {}).fx) t.v = drawTeam(pool[i]); return t; };
   let c = all.filter(i => !(L.seen || []).includes(k + i));
@@ -637,11 +693,11 @@ function nextTrainer() {
   L.next = mk(c[rnd(c.length)]);
   return L.next;
 }
-const trainerInfo = t => trainerOf(t.k, t.i);
+const trainerInfo = t => trainerOf(t.k, t.i, t.ch ? { n: t.ch.nm, title: 'Wanderer', cn: 'Challenger', ty: D(t.ch.a)[1], int: 4, cc: '#b99cff', chl: 1 } : null);
 /* Klassen, nivået og antallet for treneren som venter (brukes også på oppstillingen før kampen). */
 function leaguePlan(t) {
   const ri = rungInfo(t.n, t.lap), x = ((POOL[t.k] || [])[t.i] || [])[6] || {};
-  let st = diffSt(t.k === 'trainer' ? trainerCls(ri.rd) : TCL[t.k]);
+  let st = diffSt(t.ch ? CHLST : t.k === 'trainer' ? trainerCls(ri.rd) : TCL[t.k]);
   /* De spesielle kan stå litt over klassen sin (st: rel = tillegg i nivå, ev = ganger i trening). */
   if (x.st) st = Object.assign({}, st, { rel: st.rel + (x.st.rel || 0), ev: Math.round(st.ev * (x.st.ev || 1)) });
   return { ri, st, lv: rungLv(ri, t.lap, st), n: teamSize(st, t.lap) };
@@ -655,7 +711,7 @@ function newBattle(lead) {
   const t = nextTrainer(), p = leaguePlan(t), d = POOL[t.k][t.i], tr = trainerInfo(t);
   tr.skill = p.st.sk;
   const party = S.party.map(monBy).filter(Boolean); party.sort((a, b) => (b.u === lead) - (a.u === lead));
-  return evApply(mkBattle(party.map(evSrc), foeTeam(t.k, d, p.n, p.lv, p.st, false, t.v), tr, { mode: 'league', st: p.st, k: t.k, rd: p.ri.rd, n: t.n, lap: t.lap, ti: t.i, bag: bagN(), xm: xpMult() * diff().xp, sm: smFor('league'), dc: diff().coin, boost: dayBoost() }));
+  return evApply(mkBattle(party.map(evSrc), t.ch ? chlTeam(t, p) : foeTeam(t.k, d, p.n, p.lv, p.st, false, t.v), tr, { mode: 'league', st: p.st, ch: t.ch || null, k: t.k, rd: p.ri.rd, n: t.n, lap: t.lap, ti: t.i, bag: bagN(), xm: xpMult() * diff().xp, sm: smFor('league'), dc: diff().coin, boost: dayBoost() }));
 }
 /* XP til hele laget etter kampen. Alle får like mye, uansett hvem som kjempet. Sterkere motstandere og høyere klasse gir mer, og de som ligger
    under motstanderens nivå får mer enn de som ligger over (som i Black og White). Ligaen tar aldri slutt, så andelen er satt slik at en bossseier
@@ -713,9 +769,10 @@ function finishLeague(B) {
   if (win) {
     /* Rare Candy fra ligaen er skåret ned (LGCANDY) og følger fokustiden og vanskelighetsgraden (candyRoll): brøkdelen som blir igjen, er sjansen for én til. */
     const bm = B.boost.mode === 'league', give = (it, n) => { if (it === 'candy') n = candyRoll(n * LGCANDY); if (n > 0) { S.items[it] = (S.items[it] || 0) + n; res.items.push(`${n} × ${SHOP[it].n}`); } };
-    const fw = firstWin(); res.coins = Math.round(LGCOIN * st.coin * (B.dc || 1) * B.sm * lapCoin(B.lap) * (fw ? 2 : 1) * purseM()) + B.pay; S.coins += res.coins;
+    const fw = firstWin(); res.coins = Math.round(LGCOIN * st.coin * (B.dc || 1) * B.sm * lapCoin(B.lap) * (fw ? 2 : 1) * (B.ch ? CHLCOIN : 1) * purseM()) + B.pay; S.coins += res.coins;
     if (fw) { L.fw = L.day || dayKey(); res.perks.push('First win of the day: double coins.'); }
-    classLoot(B, res, give); ringAward(clsI(k), res); rarePrize(clsI(k), res); evPerk(res);
+    if (B.ch) chlLoot(B, res, give); else classLoot(B, res, give);
+    ringAward(clsI(k), res); rarePrize(clsI(k), res); evPerk(res);
     if (evIs('lucky') && B.tr.boss) { pushEnc(res, genEnc({ ty: [B.tr.ty], min: 2, luck: 1.5 })); res.perks.push('Lucky Day: one more encounter.'); }
     if (bm && B.tr.boss && Math.random() < 0.5) give('candy', 1);
     /* Byttetilbud: tilfeldig, ikke hver gang (rivaler tilbyr oftest). Den du får, er på ditt nivå og i den formen nivået tillater. */
@@ -734,13 +791,15 @@ function finishLeague(B) {
       spw[B.tr.n] = (spw[B.tr.n] || 0) + 1;
       res.sp = { n: B.tr.n, cn: (POOL[k][B.ti][6] || {}).cn || POOL[k][B.ti][2] || '', cc: B.tr.cc || '', extra, candy: SPCANDY, sig: se ? se.id : 0, first };
     }
-    L.best = (L.best || 0) + 1; (L.seen = L.seen || []).push(k + B.ti); L.next = null; L.c = Math.min(CLIMBTOP, clsI(k)); L.won = (L.won || 0) + 1;
+    L.best = (L.best || 0) + 1; (L.seen = L.seen || []).push(k + B.ti); L.next = null; L.fork = null; if (!B.ch) L.c = Math.min(CLIMBTOP, clsI(k)); L.won = (L.won || 0) + 1;
     if (clsI(k) >= 8) achInit().ch++;
     /* Runden er vunnet: ligaen er ferdig for i dag (én runde per ligadag), og en legendarisk kan vise seg (RAIDWIN). */
     if (++L.n >= LAPN) { L.lap++; L.n = 0; L.seen = []; L.c = 0; L.lapd = L.day || dayKey(); res.lapDone = true; raidRoll(RAIDWIN); raidUnhide(); }
   } else {
     /* Et tap avslutter runden, uansett hvem det var mot (ladLose). res.at = kampen du røk ut i (0-basert), res.left = forsøk igjen i dag. */
-    res.at = L.n; res.left = ladLose(L.day || dayKey()); res.out = !res.left; if (res.out) raidUnhide();
+    /* Utfordreren koster ingenting: runden går videre til neste kamp, og ingen forsøk er brukt. */
+    if (B.ch) { (L.seen = L.seen || []).push(k + B.ti); L.next = null; L.fork = null; L.n++; res.chl = { nm: B.ch.nm, win: 0 }; res.left = ladLives() - ladFails(); res.at = L.n; }
+    else { res.at = L.n; res.left = ladLose(L.day || dayKey()); res.out = !res.left; if (res.out) raidUnhide(); }
   }
   save();
   return res;
@@ -1122,6 +1181,36 @@ const CUPS = [
   gymCup('Kanto Leaders Cup', /^Kanto/), gymCup('Johto Leaders Cup', /^Johto/), gymCup('Hoenn Leaders Cup', /^Hoenn/), gymCup('Sinnoh Leaders Cup', /^Sinnoh/), gymCup('Unova Leaders Cup', /^B2 W2/),
   { n: 'Elite Four Cup', f: 1.5, pk: 'ultra', rounds: [['e4'], ['e4'], ['champ']] }
 ];
+/* ---------- World Tournament: den ukjente og premieballene (steg 1c.5, W1 og W4) ----------
+   DEN UKJENTE (W1): noen kampdager står en maskert deltaker i cupen. Datoen avgjør det (pwtDark, som dagens bonus: likt for alle), så det
+   synes før dagens modus velges. Når du til finalen, faller masken: en mester der du ventet en leder (i Elite Four Cup en av de aller
+   største). Seier gir DARKF ganger myntene i finalen, en gullpokal (S.pwt.gold) og premiepakken ett trinn opp (PKUP). Champions Cup har
+   ingen ukjent: der er finalen alt den største. R.dk = klassen den ukjente stiller i ('champ' eller 'supreme'). */
+const DARKP = 0.2, DARKF = 1.5, PKUP = { poke: 'great', great: 'ultra', ultra: 'master', master: 'master' };
+const DARKWHO = { 'Kanto Leaders Cup': [['champ', 'Blue']], 'Johto Leaders Cup': [['champ', 'Lance']], 'Hoenn Leaders Cup': [['champ', 'Steven'], ['champ', 'Wallace']], 'Sinnoh Leaders Cup': [['supreme', 'Cynthia']],
+  'Unova Leaders Cup': [['champ', 'Alder'], ['supreme', 'Iris']], 'Elite Four Cup': [['supreme', 'Red'], ['supreme', 'Cynthia'], ['supreme', 'Steven'], ['supreme', 'Iris']] };
+function pwtDark(c) {
+  c = c || cupNow(); if (!DARKWHO[c.n]) return false;
+  if (typeof SBX !== 'undefined' && SBX && SBX.dark != null) return !!SBX.dark;
+  const d = S.lad.day || dayKey(); let h = 0x2f6b; for (let i = 0; i < d.length; i++) h = (Math.imul(h, 31) + d.charCodeAt(i)) >>> 0; h = Math.imul(h ^ (h >>> 15), 0x85ebca6b) >>> 0; h = (h ^ (h >>> 13)) >>> 0;
+  return (h % 1000) / 1000 < DARKP;
+}
+function pwtDarkOpp(c) { const l = DARKWHO[c.n].map(([k, n]) => [k, POOL[k].findIndex(d => d[0] === n)]).filter(x => x[1] >= 0); return l.length ? l[rnd(l.length)] : null; }
+/* PREMIEBALLENE (W4): cuppremien er tre møter som før, men de åpnes som ballene i Frontier, og en sjelden ball kan ligge sist: en shiny
+   (PZSH av de sjeldne) eller en født med høyt potensial (fire eller fem stjerner). PZRARE = sjansen etter premiepakken. */
+const PZRARE = { great: 0.1, ultra: 1 / 6, master: 0.25 }, PZSH = 0.4;
+function pwtPrize(c, pk) {
+  const PK = PACKS[pk], l = PK.slots.map(sl => genEnc({ min: sl.min || 0, luck: sl.luck || 0, shm: PK.shm, evo: PK.evo || 0 }));
+  const want = typeof SBX !== 'undefined' && SBX && SBX.pz ? SBX.pz : '', e = l[l.length - 1];
+  if (want) e.sh = 0;
+  if (want !== 'none' && !e.sh && (want || Math.random() < (PZRARE[c.ms ? 'master' : pk] || 0.1))) {
+    if (want === 'sh' || (!want && Math.random() < PZSH)) e.sh = 1;
+    else { e.iv = starterIv().map(v => Math.min(31, v + 2)); e.nat = rnd(25); e.rr = 'star'; }
+  }
+  l.forEach(x => { if (x.sh) x.rr = 'sh'; });
+  return l;
+}
+
 const pwt = () => S.pwt || (S.pwt = { day: '', run: null, won: 0, cups: {} });
 const cupNow = () => (SBX && SBX.cup != null && CUPS[SBX.cup]) || CUPS[new Date((S.lad.day || dayKey()) + 'T12:00:00').getDay()] || CUPS[1];
 /* Cupen som er i gang. Den gjelder bare dagen den ble startet. */
@@ -1143,18 +1232,19 @@ const pwtCoins = (c, r) => Math.round(PWTCOIN[r] * c.f * smFor('pwt') * diff().c
 function pwtStart() {
   const P = pwt(), c = cupNow(), opp = [];
   c.rounds.forEach(([k, re]) => { let l = POOL[k].map((_, i) => i).filter(i => (!re || re.test(POOL[k][i][5] || '')) && !opp.some(o => o[0] === k && o[1] === i)); if (!l.length) l = POOL[k].map((_, i) => i); opp.push([k, l[rnd(l.length)]]); });
-  const lv = pwtLv();
+  const lv = pwtLv(), dk = pwtDark(c) ? pwtDarkOpp(c) : null;
+  if (dk) opp[opp.length - 1] = dk;
   /* Motstanderne følger vanskelighetsgraden slik som i ligaen: litt lavere nivå på Easy og Normal, likt på Hard. */
   if (P.day === S.lad.day && pwtXb() > 0) P.xb.n--;
-  P.day = S.lad.day; P.run = { day: S.lad.day, wd: CUPS.indexOf(c), lv, flv: Math.max(5, Math.round(lv * (1 + diff().rel))), n: pwtSize(), opp, r: 0, foe: null }; save();
+  P.day = S.lad.day; P.run = { day: S.lad.day, wd: CUPS.indexOf(c), lv, flv: Math.max(5, Math.round(lv * (1 + diff().rel))), n: pwtSize(), opp, r: 0, foe: null }; if (dk) P.run.dk = c.rounds[c.rounds.length - 1][0] === 'champ' || c.n === 'Elite Four Cup' ? 'supreme' : 'champ'; save();
 }
 /* Motstanderen i runden som venter: hele laget (esset sist), trukket én gang, så det du ser på forhånd, er det de velger blant.
    Bare esset har vært hos lærerne her (steg 1b.8): de stiller med tre, og esset er alltid med, så lærerangrepene veier tyngre enn i ligaen.
    (Et lag på tre fra en cup som var i gang før steg 1b.3, trekkes på nytt.) */
 function pwtFoe() {
-  const R = pwtRun(), c = CUPS[R.wd], [k, i] = R.opp[R.r], d = POOL[k][i], st = diffSt(TCL[k]);
+  const R = pwtRun(), c = CUPS[R.wd], [k, i] = R.opp[R.r], d = POOL[k][i], mys = !!R.dk && R.r === PWTN - 1, st = diffSt(TCL[mys ? R.dk : k]);
   if (!R.foe || R.foe.length < Math.min(6, d[4].length)) { R.foe = bossTeam(d, 6, R.flv || R.lv, Object.assign({}, st, { tut: Math.min(1, st.tut || 0) }), true); save(); }
-  return { c, k, st, team: R.foe, tr: trainerOf(k, i, { skill: st.sk, sc: 'pwt' }) };
+  return { c, k, st, mys, team: R.foe, tr: trainerOf(k, i, Object.assign({ skill: st.sk, sc: 'pwt' }, mys ? { mys: 1, ci: TCL[R.dk].i, sp: 0, film: '' } : null)) };
 }
 /* MOTSTANDERENS VALG I BLINDE: hvilke n av laget som stiller (plasser i team, i den rekkefølgen de sendes ut: lederen først, esset sist).
    Esset er alltid med (det er det du kjenner treneren på, og det du kan legge planen din etter) og aldri først. De andre velges ut fra HELE
@@ -1184,7 +1274,7 @@ function pwtPick(team, party, lv, n, tr) {
 function pwtBattle(us) {
   const R = pwtRun(), f = pwtFoe(), party = S.party.map(monBy).filter(Boolean), mine = us.map(monBy).filter(Boolean).slice(0, R.n).map(m => Object.assign({}, m, { lv: R.lv }));
   const foes = pwtPick(f.team, party, R.lv, Math.max(2, R.n), f.tr).map(i => f.team[i]);
-  return evApply(mkBattle(mine, foes, f.tr, { mode: 'pwt', st: f.st, k: f.k, r: R.r, cup: f.c.n, bag: 0, xm: 0, sm: smFor('pwt'), dc: diff().coin, boost: { mode: '', m: 1, xp: 1 } }));
+  return evApply(mkBattle(mine, foes, f.tr, { mode: 'pwt', st: f.st, mys: f.mys ? 1 : 0, k: f.mys ? R.dk : f.k, r: R.r, cup: f.c.n, bag: 0, xm: 0, sm: smFor('pwt'), dc: diff().coin, boost: { mode: '', m: 1, xp: 1 } }));
 }
 function finishPwt(B) {
   const P = pwt(), R = pwtRun(), win = B.over === 'win', res = { mode: 'pwt', win, ups: [], items: [], encs: [], coins: 0, trade: null, perks: [], note: '', r: B.r, cup: B.cup, done: false };
@@ -1196,7 +1286,7 @@ function finishPwt(B) {
       : `You are out of the ${c.n}. A new cup opens after your next day of focus.`;
     raidUnhide(); save(); return res;
   }
-  res.coins = Math.round(PWTCOIN[R.r] * c.f * B.sm * (B.dc || 1) * purseM()); S.coins += res.coins; ringAward(clsI(B.k), res); rarePrize(clsI(B.k), res); evPerk(res);
+  res.coins = Math.round(PWTCOIN[R.r] * c.f * (B.mys ? DARKF : 1) * B.sm * (B.dc || 1) * purseM()); S.coins += res.coins; ringAward(clsI(B.k), res); rarePrize(clsI(B.k), res); evPerk(res);
   modeXp(res, R.n, PWTXP * [1, 1.3, 1.7][Math.min(2, R.r)] * Math.sqrt(c.f), xpMult() * diff().xp * (dayBoost().mode === 'pwt' ? dayBoost().xp : 1));
   R.r++; R.foe = null;
   /* Finaleplassen gir en Rare Candy, og vinneren PWTCANDY til. */
@@ -1206,7 +1296,8 @@ function finishPwt(B) {
     { const n = Math.max(1, candyRoll(PWTCANDY)); S.items.candy = (S.items.candy || 0) + n; res.items.push(`${n} × Rare Candy`); }
     if (c.ms) { S.items.mstone = (S.items.mstone || 0) + c.ms; res.items.push(`${c.ms} × Mega Stone`); }
     /* Premien er tre møter trukket som plassene i pakken (uten den lille sjansen for epic og legendarisk i den siste plassen, som før). */
-    const PK = PACKS[c.pk]; PK.slots.forEach(sl => pushEnc(res, genEnc({ min: sl.min || 0, luck: sl.luck || 0, shm: PK.shm, evo: PK.evo || 0 })));
+    const pk = B.mys ? PKUP[c.pk] : c.pk, PK = PACKS[pk]; res.pz = pwtPrize(c, pk); res.pz.forEach(e => pushEnc(res, e));
+    if (B.mys) { P.gold = (P.gold || 0) + 1; res.mys = 1; res.perks.push(`You unmasked ${B.tr.n} and won: a gold trophy, and the prize is one step up.`); }
     res.perks.push(`Champion of the ${c.n}! That is trophy number ${P.won}.`); res.note = `The prize is ${aN(PK.n)}: three encounters are waiting in the grass.`;
   }
   save(); return res;
