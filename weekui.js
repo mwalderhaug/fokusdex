@@ -679,7 +679,9 @@ let WKAMB = 0;
 const wkAmbScreen = () => !!document.querySelector('#ov .wkisw, #ov #wkmap, #ov .wkend');
 async function wkAmb(ty) {
   if (!S.sound || S.music === 0) return; WKAMB = 1;
-  const f = typeof PACK !== 'undefined' && PACK.ok ? PACK.special(ty && WKT[ty] && WKT[ty].deep ? /Distortion World/ : /Underground/) : '';
+  let pk = false; try { pk = typeof PACK !== 'undefined' && !!(await PACK.init()); } catch (_) {}
+  if (!WKAMB || !wkAmbScreen()) return;
+  const f = pk ? PACK.special(ty && WKT[ty] && WKT[ty].deep ? /Distortion World/ : /Underground/) : '';
   if (f && await PACK.music(f, { fade: 1.4, out: 0.7 })) { if (WKAMB && wkAmbScreen()) music(''); else wkAmbOff(1); return; }
   if (!WKAMB || !wkAmbScreen()) return;
   if (typeof PACK !== 'undefined') PACK.music(''); music('isle', { fade: 1.2, out: 0.6 });
@@ -749,10 +751,12 @@ function wkIsle(o) {
     : N.played ? { a: L ? 'wkend' : '', h: 'Challenge', s: tl('Done for this week. See how it went.') }
     : N.offer ? { a: 'wkmode', h: 'Challenge', s: tl('Open today: choose the Expedition as the mode for the day.') }
     : { a: '', h: 'Challenge', s: N.today ? tl('Opens today, after Done for today.') : N.late ? tl('Last day: open the battles today to set out.') : tl('Opens on Friday, after Done for today.') };
+  /* Introen forstørrer bildet 2,05 ganger: punktet det forstørres rundt, velges så ukas sted havner så nær midten som bildet tillater. */
+  const zo = p => (Math.max(0, Math.min(1, (2.05 * p - 0.5) / 1.05)) * 100).toFixed(1);
   const mi = (a, g, h, s, dot) => `<button type="button" class="wkmi" data-a="${a}"><span class="wkmg">${wkGl(g)}</span><b>${h}</b><span class="sm">${s}</span>${dot ? '<i class="wkdot" aria-hidden="true"></i>' : ''}</button>`;
   const spot = k => { const [x, y] = WKSITE[k], cur = k === N.ty, nx = k === nxk && !cur, tag = cur ? 'This week' : nx ? 'Next' : ''; return `<button type="button" class="wkhs${cur ? ' cur' : ''}${nx ? ' nx' : ''}${x > 130 ? ' rt' : x < 46 ? ' lf' : ''}${k === 'worm' ? ' dn' : ''}" data-a="wksite" data-k="${k}" style="left:${(x / WKIW * 100).toFixed(1)}%;top:${((y - (k === 'worm' ? 0 : 8)) / WKIH * 100).toFixed(1)}%" aria-label="${esc(wkSiteName(k))}${cur ? ', this week' : nx ? ', next week' : ''}">${tag ? `<i>${tag}</i>` : ''}</button>`; };
   ov(`<div class="row wktop"><button type="button" class="btn sm2" data-a="wkout">${icn('back')}Back</button><span class="sp wk-h"><span class="wk-k">Expedition</span><b>Frontier Island</b></span>${wkLights(N.played ? 0 : N.tix, N.stars)}</div>
-    <div class="wkisw${intro ? ' intro' : ''}" id="wkisw" style="--wc:${T.c};--ox:${(WKSITE[N.ty][0] / WKIW * 100).toFixed(1)}%;--oy:${((WKSITE[N.ty][1] - (N.ty === 'worm' ? -14 : 4)) / WKIH * 100).toFixed(1)}%">
+    <div class="wkisw${intro ? ' intro' : ''}" id="wkisw" style="--wc:${T.c};--ox:${zo(WKSITE[N.ty][0] / WKIW)}%;--oy:${zo((WKSITE[N.ty][1] - (N.ty === 'worm' ? 0 : 8)) / WKIH)}%">
       <div class="wkis ph-${ph}"><canvas id="wkisc" width="${WKIW}" height="${WKIH}" role="img" aria-label="Frontier Island. ${esc(T.n)} is lit this week."></canvas>${Object.keys(WKSITE).map(spot).join('')}</div>
       ${intro ? wkIntroEl(N, T) : ''}
       <button type="button" class="wkwk" data-a="wkrule" data-k="${N.ty}">${wkEmb(T.c)}<span class="sp"><span class="wk-k">${tl('This week')} · ${esc(T.rule)}</span><b>${esc(T.n)}</b></span>${icn('chev')}</button>
