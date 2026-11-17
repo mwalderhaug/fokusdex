@@ -2565,3 +2565,110 @@ button.pkm{cursor:pointer}
 @keyframes btap{0%,100%{transform:translate(calc(var(--u,1.5px)*5),-50%)}50%{transform:translate(calc(var(--u,1.5px)*1),-50%)}}
 .btap{position:absolute;z-index:7;transform:translate(calc(var(--u,1.5px)*5),-50%);display:flex;align-items:center;padding:calc(var(--u,1.5px)*2) calc(var(--u,1.5px)*4) calc(var(--u,1.5px)*2) calc(var(--u,1.5px)*3);border-radius:calc(var(--u,1.5px)*2.5);background:#ffd75e;color:#15161b;font-family:var(--dsf,var(--pix));font-weight:var(--fw,800);font-size:calc(var(--u,1.5px)*10*var(--fz,1));line-height:calc(var(--u,1.5px)*10);letter-spacing:.06em;text-shadow:none;box-shadow:0 0 0 calc(var(--u,1.5px)*1) #15161b,0 calc(var(--u,1.5px)*2) 0 calc(var(--u,1.5px)*1) rgba(0,0,0,.35);animation:btap .9s ease-in-out infinite;-webkit-tap-highlight-color:transparent}
 .btap i{position:absolute;right:100%;top:50%;margin-top:calc(var(--u,1.5px)*-4);border:calc(var(--u,1.5px)*4) solid transparent;border-right-color:#ffd75e;border-left-width:0;filter:drop-shadow(calc(var(--u,1.5px)*-1) 0 0 #15161b)}
+
+/* ---------- STEG 1c: Battle Frontier, leie-Pokémonene (vurderingen, åpningen, de sjeldne ballene, flaksmåleren) ---------- */
+.frt{display:inline-flex;align-items:center;gap:4px;vertical-align:middle}
+.frt i{width:9px;height:9px;transform:rotate(45deg);border-radius:2px;background:color-mix(in srgb,var(--ink) 16%,transparent)}
+.frt i.on{background:var(--gold)}
+.frt b{margin-left:5px;font-size:13px;color:var(--gold)}
+.frt.sm{gap:3px}.frt.sm i{width:6px;height:6px;border-radius:1.5px}
+.fs-role{display:flex;align-items:center;gap:9px;margin-top:5px;font-size:12.5px;flex-wrap:wrap}
+.fs-why{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+.fs-why span{font-size:11px;font-weight:600;border-radius:99px;padding:2px 8px;background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.fs-why .p{color:color-mix(in srgb,var(--sage) 70%,var(--ink))}.fs-why .n{color:color-mix(in srgb,var(--red,#e0705f) 72%,var(--ink))}
+.fs-sub{line-height:1.4}.fs-sub b{color:var(--ink)}
+.far{font-size:8.5px;margin-left:3px;text-decoration:none;font-style:normal}
+.far.u{color:color-mix(in srgb,var(--sage) 75%,var(--ink))}.far.d{color:color-mix(in srgb,var(--red,#e0705f) 80%,var(--ink))}
+.fs-cap{margin-top:-6px;color:var(--ink2)}.fs-cap .far{margin:0 1px 0 0;font-size:9px}
+.fs-ml{display:flex;flex-direction:column;gap:6px}
+.fs-m{border-radius:11px;padding:7px 10px;background:color-mix(in srgb,var(--c) 22%,var(--card));box-shadow:inset 3px 0 0 var(--c)}
+.fs-mh{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.fs-mh b{font-size:13.5px}.fs-mh span{font-size:11px;color:var(--ink2);white-space:nowrap}
+.fs-m p{font-size:11.5px;line-height:1.35;color:var(--ink2);margin-top:2px}.fs-m em{font-style:normal;color:var(--ink)}
+.fs-loan{text-align:center;color:var(--ink2)}
+.fs-pk{min-height:46px;border-radius:23px}
+.frp{font-weight:800;letter-spacing:.3px;color:#17130f}
+.frp.sh{background:linear-gradient(100deg,#fff3c4,#ffd75e)}.frp.ace{background:linear-gradient(100deg,#bfe7c4,#8fd3a0)}.frp.leg{background:linear-gradient(100deg,#e3d5ff,#b99cff)}
+.fsum.rr-sh{box-shadow:0 0 0 2px #ffd75e,0 0 26px color-mix(in srgb,#ffd75e 40%,transparent)}
+.fsum.rr-ace{box-shadow:0 0 0 2px #8fd3a0,0 0 22px color-mix(in srgb,#8fd3a0 32%,transparent)}
+.fsum.rr-leg{box-shadow:0 0 0 2px #b99cff,0 0 30px color-mix(in srgb,#b99cff 45%,transparent)}
+/* Mega-kortet fulgte ikke utseendet (mørk bakgrunn med mørk tekst i lys modus): nå blandes fargene med kortets egen. */
+.fsum.mega{background:linear-gradient(135deg,color-mix(in srgb,#8f7bd6 30%,var(--card)),color-mix(in srgb,#f0b24a 24%,var(--card)) 70%,var(--card))}
+/* de sju som fliser, og flaksmåleren i den åttende ruta */
+.fts{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.ft{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;min-height:112px;padding:6px 3px 7px;border:0;border-radius:15px;font:inherit;color:var(--ink);background:var(--card);box-shadow:0 0 0 1px var(--line)}
+.ft.open{background:color-mix(in srgb,var(--tc) 13%,var(--card));cursor:pointer;justify-content:flex-start}
+.ft.open .sprb{--s:50px;flex:none}.ft.open .spr{image-rendering:pixelated}
+.ft.open b{font-size:10.5px;font-weight:700;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15}
+.ft.on{box-shadow:0 0 0 2px var(--ink)}
+.ft.sel{box-shadow:0 0 0 2px var(--gold);background:color-mix(in srgb,var(--gold) 16%,var(--card))}
+.ft.sel.on{box-shadow:0 0 0 2px var(--gold),0 0 0 4px color-mix(in srgb,var(--ink) 55%,transparent)}
+.ft .ord{position:absolute;left:5px;top:5px;width:19px;height:19px;border-radius:50%;background:var(--gold);color:#2a2109;font-weight:900;font-size:11.5px;display:flex;align-items:center;justify-content:center;z-index:1}
+.ft.mega{background:linear-gradient(135deg,color-mix(in srgb,#8f7bd6 34%,var(--card)),color-mix(in srgb,#f0b24a 26%,var(--card)))}
+.ft.rr-sh::after,.ft.rr-ace::after,.ft.rr-leg::after{content:"";position:absolute;right:5px;top:5px;width:10px;height:10px;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);background:#ffd75e}
+.ft.rr-ace::after{background:#8fd3a0}.ft.rr-leg::after{background:#b99cff}
+.fmb{display:flex;align-items:flex-end;gap:2px;height:20px;margin-top:2px}
+.fmb i{width:5px;border-radius:1.5px 1.5px 0 0;background:color-mix(in srgb,var(--tc) 70%,var(--ink2))}.fmb i.hi{background:var(--gold)}
+.ft.shut .ball{--s:44px;width:44px;height:auto;opacity:.55}
+.ft.shut.next{box-shadow:0 0 0 2px var(--gold)}.ft.shut.next .ball{opacity:1;animation:bob .9s ease-in-out infinite}
+.ft.shut.drop{animation:fdDrop .5s cubic-bezier(.2,.9,.3,1.25) backwards;animation-delay:calc(var(--i)*.07s)}
+.ft.shut.gone .ball{opacity:.12}
+.ft.b-great{box-shadow:0 0 0 1px color-mix(in srgb,var(--blue) 55%,var(--line))}
+.ft.b-ultra{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--gold) 65%,var(--line))}
+.ft.b-mega{box-shadow:0 0 0 2px var(--gold),0 0 16px color-mix(in srgb,var(--violet,#8f7bd6) 60%,transparent)}.ft.b-mega .ball{opacity:.9}
+.ft.b-sh,.ft.b-ace,.ft.b-leg{overflow:hidden}
+.ft.b-sh{box-shadow:0 0 0 2px #ffd75e,0 0 18px color-mix(in srgb,#ffd75e 55%,transparent)}
+.ft.b-ace{box-shadow:0 0 0 2px #8fd3a0,0 0 16px color-mix(in srgb,#8fd3a0 45%,transparent)}
+.ft.b-leg{box-shadow:0 0 0 2px #b99cff,0 0 20px color-mix(in srgb,#b99cff 60%,transparent)}
+.ft.b-sh .ball,.ft.b-ace .ball,.ft.b-leg .ball{opacity:1;animation:frGlow 1.6s ease-in-out infinite}
+.ft.b-sh::before,.ft.b-ace::before,.ft.b-leg::before{content:"";position:absolute;inset:-40%;background:conic-gradient(from 0deg,transparent 0 78%,color-mix(in srgb,#fff 26%,transparent) 88%,transparent 100%);animation:frSpin 3.2s linear infinite;pointer-events:none}
+.ft.b-sh.next,.ft.b-ace.next,.ft.b-leg.next{outline:2px solid var(--gold);outline-offset:2px}
+@keyframes frGlow{50%{transform:scale(1.08);filter:brightness(1.25)}}
+@keyframes frSpin{to{transform:rotate(360deg)}}
+.ft.luck{gap:6px;cursor:pointer;background:var(--card2)}.ft.luck b{font-size:11px;color:var(--ink2);font-weight:700}.ft.luck small{font-size:10.5px;color:var(--ink2)}
+.ft.luck.full{box-shadow:0 0 0 1.5px var(--gold)}.ft.luck.full small{color:var(--gold);font-weight:700}
+.flk{display:block;width:78%;height:8px;border-radius:5px;background:color-mix(in srgb,var(--ink) 10%,transparent);overflow:hidden}
+.flk i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#8f7bd6,var(--gold));transition:width .35s ease}
+.flk.full i{animation:frGlow 1.4s ease-in-out infinite}
+.flk.wide{width:100%}
+.flkrow{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px}
+.fact{position:sticky;bottom:10px;z-index:3}
+/* scenen der en ball åpnes: mørk i begge utseender, som et lite rampelys */
+.fstage{position:relative;display:block;width:100%;height:260px;border:0;border-radius:22px;overflow:hidden;cursor:pointer;font:inherit;color:#f4f1ea;background:radial-gradient(circle at 50% 46%,color-mix(in srgb,var(--tc) 34%,#1d1a26),#0d0c12 74%);box-shadow:0 0 0 1px var(--line)}
+.fst-b,.fst-s,.fst-g,.fst-r{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%)}
+.fst-b .ball{--s:84px;width:84px;height:auto;opacity:1;display:block}
+.fst-s{opacity:0}.fst-s .sprb{--s:132px}.fst-s .spr{image-rendering:pixelated}
+.fst-g{width:40px;height:40px;border-radius:50%;background:#fff;opacity:0}
+.fst-r{width:420px;height:420px;opacity:0;background:repeating-conic-gradient(color-mix(in srgb,var(--rc,#ffd75e) 55%,transparent) 0 7deg,transparent 7deg 20deg);-webkit-mask:radial-gradient(circle,transparent 16%,#000 30%,transparent 68%);mask:radial-gradient(circle,transparent 16%,#000 30%,transparent 68%)}
+.fst-c{position:absolute;left:0;right:0;top:14px;text-align:center;font-size:22px;font-weight:900;letter-spacing:.4px;color:var(--rc,#ffd75e);opacity:0;text-shadow:0 2px 12px rgba(0,0,0,.6)}
+.fst-n{position:absolute;left:0;right:0;bottom:30px;text-align:center;font-size:17px;font-weight:800;opacity:0}
+.fst-k{position:absolute;left:0;right:0;bottom:9px;text-align:center;font-size:10.5px;color:rgba(255,255,255,.4)}
+.fstage.k-sh{--rc:#ffd75e}.fstage.k-ace{--rc:#8fd3a0}.fstage.k-leg{--rc:#b99cff}.fstage.k-mega{--rc:#f6c453}
+.fstage.grand{animation:fstDim .5s ease both}
+.fstage.grand .fst-b{animation:fstRise .45s ease both}
+.fstage.grand .fst-r{animation:fstRay 6s linear infinite;opacity:.22}
+.fstage.wob .fst-b .ball{animation:fstWob .24s ease}
+.fstage.grand.wob .fst-b .ball{animation:fstWobB .4s ease}
+.fstage.burst .fst-b{animation:fstOut .22s ease-in both}
+.fstage.burst .fst-g{animation:fstFlash .55s ease-out both}
+.fstage.burst .fst-s{animation:fstIn .5s .1s cubic-bezier(.2,.9,.3,1.3) both}
+.fstage.burst .fst-n{animation:fstUp .35s .3s ease both}
+.fstage.grand.burst .fst-r{opacity:.75;animation:fstRay 5s linear infinite,fstPulse 1s ease-in-out infinite}
+.fstage.grand.burst .fst-c{animation:fstCall .5s .25s cubic-bezier(.2,.9,.3,1.5) both}
+.fstage.grand.burst{box-shadow:0 0 0 2px var(--rc),0 0 34px color-mix(in srgb,var(--rc) 50%,transparent)}
+@keyframes fstDim{from{filter:brightness(1.25)}}
+@keyframes fstRise{from{transform:translate(-50%,-30%) scale(.8)}}
+@keyframes fstWob{25%{transform:rotate(-16deg)}60%{transform:rotate(13deg)}}
+@keyframes fstWobB{20%{transform:rotate(-22deg) scale(1.06)}55%{transform:rotate(19deg) scale(1.1)}80%{transform:rotate(-8deg)}}
+@keyframes fstOut{to{transform:translate(-50%,-50%) scale(1.7);opacity:0}}
+@keyframes fstFlash{0%{opacity:.95;transform:translate(-50%,-50%) scale(.4)}100%{opacity:0;transform:translate(-50%,-50%) scale(12)}}
+@keyframes fstIn{0%{opacity:0;transform:translate(-50%,-50%) scale(.3);filter:brightness(4) saturate(0)}60%{opacity:1;filter:brightness(1.6) saturate(.6)}100%{opacity:1;transform:translate(-50%,-50%) scale(1);filter:none}}
+@keyframes fstUp{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+@keyframes fstCall{from{opacity:0;transform:scale(.5)}to{opacity:1}}
+@keyframes fstRay{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes fstPulse{50%{opacity:.4}}
+/* SHINY-EFFEKTEN (shinyFx i ui.js): stjerner som glitrer rundt den. Brukes overalt der en shiny viser seg. */
+.shfx{position:absolute;inset:-12%;pointer-events:none;z-index:4}
+.shfx i{position:absolute;left:var(--x);top:var(--y);width:17px;height:17px;background:#fff8d6;clip-path:polygon(50% 0,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0 50%,40% 40%);filter:drop-shadow(0 0 5px #ffd75e);transform:translate(-50%,-50%) scale(0);animation:shfx .95s var(--d) ease-out 2 both}
+@keyframes shfx{0%{transform:translate(-50%,-50%) scale(0) rotate(0);opacity:0}35%{transform:translate(-50%,-50%) scale(var(--z)) rotate(45deg);opacity:1}100%{transform:translate(-50%,-50%) scale(0) rotate(110deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){.fstage *,.ft.shut .ball,.ft::before,.flk i{animation:none!important}.shfx i{animation:none;transform:translate(-50%,-50%) scale(var(--z));opacity:.9}.fst-s{opacity:1}.fst-b{opacity:0}.fst-n{opacity:1}}

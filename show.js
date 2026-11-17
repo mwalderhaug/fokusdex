@@ -356,8 +356,8 @@ function sbxDay(only) {
 function sbxFinal(k, i) { const L = S.lad; L.n = LAPN - 1; L.c = CLIMBTOP; L.seen = []; const t = { n: L.n, lap: L.lap, k, i, sup: 0 }; if ((POOL[k][i][6] || {}).fx) t.v = drawTeam(POOL[k][i]); L.next = t; }
 /* o (valgene i sandkassa): boss = løpet starter ved bossen i runden, mega = en Mega blant de første sju, top = toppboss til slutt i hver runde. */
 function sbxFac(r, o) {
-  o = o || {}; const w = o.boss ? FACN - 1 : 0;
-  S.fac.run = { round: r, w, streak: (r - 1) * FACN + w, offer: facOffer(r, { mg: o.mega ? 1 : 0, rare: o.rare || '' }), open: 0, team: null, foe: null };
+  o = o || {}; const w = o.boss ? FACN - 1 : 0; if (o.rare === 'luck') S.fac.luck = FACLUCKN;
+  S.fac.run = { round: r, w, streak: (r - 1) * FACN + w, offer: facOffer(r, Object.assign({ mg: o.mega ? 1 : 0 }, o.rare && o.rare !== 'luck' ? { rare: o.rare === 'none' ? '' : o.rare } : {})), open: 0, team: null, foe: null };
   if (o.top) S.fac.run.top = 1;
 }
 function sbxRaid(id, sh, show) { const t = LEG[id].t; S.raid = { id, lv: raidLvFor(t), hx: +raidHx(t).toFixed(2), day: '', tries: 0, at: dayKey(), nw: 0, hid: 1, sh: sh ? 1 : 0 }; if (show) raidUnhide(); }
@@ -403,7 +403,9 @@ function sbxPick(what) {
    rett inn i skjermen for modusen (sbxIn), så du slipper å lete på forsiden. Valgene for Frontier huskes i U.sbf så lenge appen er åpen. */
 const SBXTABS = [['modes', 'Modes'], ['battles', 'Battles'], ['raids', 'Raids'], ['packs', 'Packs'], ['journey', 'Journey'], ['sound', 'Sound']];
 const SBXFO = [['boss', 'Start at the boss'], ['mega', 'A Mega in the first seven'], ['top', 'A top boss at the end']];
-const sbxF = () => U.sbf || (U.sbf = { r: 1, boss: 0, mega: 0, top: 0 });
+/* Den sjeldne ballen i de første sju (steg 1c): som i spillet, ingen, en bestemt, eller full flaksmåler (da er den garantert). */
+const SBXFR = [['', 'As in the game'], ['none', 'No rare ball'], ['sh', 'Shiny'], ['ace', 'Ace'], ['leg', 'Legend on loan'], ['luck', 'Full luck meter']];
+const sbxF = () => U.sbf || (U.sbf = { r: 1, boss: 0, mega: 0, top: 0, rare: '' });
 /* Hva runden betyr, regnet fra de samme tallene som spillet bruker: leiepoolen (FACPB), sjansen for toppboss (facTopP) og hvor ofte trenerne
    velger det beste angrepet (facSk, fra den første til den siste vanlige treneren i runden, ganget med vanskelighetsgraden). */
 function sbxFacPeek(r) {
@@ -419,6 +421,7 @@ function sbxFacCard() {
     <div class="sbxr" role="group" aria-label="Start in round">${[1, 2, 3, 4, 5, 6].map(r => `<button type="button" data-a="sbxr" data-k="${r}" aria-pressed="${f.r === r}">${r}</button>`).join('')}</div>
     ${sbxFacPeek(f.r)}
     <div class="chips sbxo">${SBXFO.map(([k, n]) => `<button type="button" class="chip" data-a="sbxo" data-k="${k}" aria-pressed="${!!f[k]}">${n}</button>`).join('')}</div>
+    <div class="lab">Rare ball in the first seven</div><div class="chips sbxo">${SBXFR.map(([k, n]) => `<button type="button" class="chip" data-a="sbxrare" data-k="${k}" aria-pressed="${(f.rare || '') === k}">${n}</button>`).join('')}</div>
     <button type="button" class="go gold" data-a="sbxfac" data-k="${f.r}">Start in round ${f.r}</button>
     ${R ? `<button type="button" class="btn wide" data-a="fenter">Continue · round ${R.round}, battle ${Math.min(FACN, R.w + 1)} of ${FACN}</button>` : ''}</div>`;
 }
@@ -490,11 +493,12 @@ const XA = {
     o.querySelectorAll('[data-a="sbxtab"]').forEach(b => { const on = String(b.dataset.k === k); b.setAttribute('aria-pressed', on); b.setAttribute('aria-selected', on); });
     if (o.scrollTop > 0) o.scrollTop = 0; },
   sbxr: el => { sbxF().r = Math.max(1, Math.min(8, +el.dataset.k || 1)); sbxFacRe(); },
-  sbxo: el => { const f = sbxF(), k = el.dataset.k; if (k in f && k !== 'r') { f[k] = f[k] ? 0 : 1; sbxFacRe(); } },
+  sbxo: el => { const f = sbxF(), k = el.dataset.k; if (k in f && k !== 'r' && k !== 'rare') { f[k] = f[k] ? 0 : 1; sbxFacRe(); } },
+  sbxrare: el => { sbxF().rare = el.dataset.k || ''; sbxFacRe(); },
   sbxfinal: el => { const k = el.dataset.k, i = +el.dataset.i; if (!POOL[k] || !POOL[k][i] || !sbxEnter()) return; sbxDay(); sbxFinal(k, i); sbxIn(`Sandbox: ${POOL[k][i][0]} is waiting in the final.`, () => BA.bpre()); },
   sbxlgo: () => { if (!sbxEnter()) return; sbxDay(); sbxIn('Sandbox: your next League battle.', () => BA.bpre()); },
   /* Frontier fra en runde, med valgene fra kortet. SBX.fr huskes, så et nytt løp i kopien starter likt (BA.fenter og «Again»). */
-  sbxfac: el => { const f = sbxF(), r = Math.max(1, +el.dataset.k || f.r); if (!sbxEnter()) return; sbxDay(); SBX.fr = { r, boss: f.boss, mega: f.mega, top: f.top }; sbxFac(r, SBX.fr); sbxIn(`Sandbox: a Frontier run from round ${r}.`, facGo); },
+  sbxfac: el => { const f = sbxF(), r = Math.max(1, +el.dataset.k || f.r); if (!sbxEnter()) return; sbxDay(); SBX.fr = { r, boss: f.boss, mega: f.mega, top: f.top, rare: f.rare }; sbxFac(r, SBX.fr); sbxIn(`Sandbox: a Frontier run from round ${r}.`, facGo); },
   sbxagain: () => { if (!SBX || !SBX.fr) return; sbxDay(); sbxFac(SBX.fr.r, SBX.fr); sbxIn(`Sandbox: again from round ${SBX.fr.r}.`, facGo); },
   sbxcup: el => { const i = +el.dataset.k; if (!CUPS[i] || !sbxEnter()) return; sbxDay(); SBX.cup = i; sbxIn(`Sandbox: the ${CUPS[i].n}.`, () => BA.wenter()); },
   sbxtools: () => { if (!SBX) return; sbxTools(); },
@@ -504,7 +508,7 @@ const XA = {
     if (SBX && SBX.jp && (k === 'day' || k === 'ses')) { closeOv(); return k === 'day' ? XA.jnext() : XA.jsess(); }
     if (SBX && SBX.jp) sbxLeave(); if (!sbxEnter()) return;
     if (k === 'raid') { sbxDay(); sbxTool('raidnow'); sbxIn('Sandbox: a legendary raid shows itself.', () => { if (typeof raidArrive === 'function') raidArrive(); }); }
-    else if (k === 'fac') { const f = sbxF(); sbxDay(); SBX.fr = { r: f.r, boss: f.boss, mega: f.mega, top: f.top }; sbxFac(f.r, SBX.fr); sbxIn(`Sandbox: a Frontier run from round ${f.r}.`, facGo); }
+    else if (k === 'fac') { const f = sbxF(); sbxDay(); SBX.fr = { r: f.r, boss: f.boss, mega: f.mega, top: f.top, rare: f.rare }; sbxFac(f.r, SBX.fr); sbxIn(`Sandbox: a Frontier run from round ${f.r}.`, facGo); }
     else if (k === 'day') { sbxDay(); sbxGo('Sandbox: a new battle day, all three modes open.'); }
     else if (k === 'ses') { const fg = Object.keys(S.fag)[0] || 'annet'; S.dn = ''; const R0 = grant(fg, 30, true, 30); closeOv(); U.tab = 'fokus'; render(); showReward(R0); toast('Sandbox: a 30 minute session.'); }
   },

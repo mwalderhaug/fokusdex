@@ -178,6 +178,11 @@ const sfx = {
   lvl: () => seq([784, 988, 1175, 1568], 0.08, 0.12, 0.045, 'triangle'),
   hatch: () => { noise(0, 0.15, 0.05, 900, 2500); seq([1047, 1319, 1568, 2093], 0.07, 0.1, 0.04, 'triangle'); },
   evo: () => [392, 494, 587, 784, 988, 1175].forEach((f, i) => tone(f, i * 0.11, 0.2, 0.06, 'triangle')),
+  /* Battle Frontier (steg 1c.3): oppbyggingen før en sjelden ball, smellet når en ball åpnes (n = vurderingen 1–5: jo bedre, jo fyldigere;
+     k = 'sh' | 'ace' | 'leg' | 'mega' får sin egen fanfare), og glitteret når en shiny viser seg (shinyFx). */
+  frise: () => { for (let i = 0; i < 10; i++) tone(196 * Math.pow(1.122, i), i * 0.12, 0.11, 0.028 + i * 0.003, 'triangle'); },
+  fpop: (n, k) => { noise(0, 0.14, 0.06, 900, 4200); if (k === 'mega') return sfx0.evo(); if (k) { seq([659, 880, 1109, 1319, 1760], 0.07, 0.16, 0.05, 'triangle'); tone(2637, 0.4, 0.5, 0.03, 'triangle'); tone(1319, 0.4, 0.6, 0.03); return; } seq([[784, 1047], [784, 1047], [880, 1175], [880, 1175, 1397], [988, 1319, 1568, 1976]][Math.max(0, Math.min(4, (n || 1) - 1))], 0.06, 0.09, 0.04, 'triangle'); },
+  shiny: () => { [2093, 2637, 3136, 2637, 3520].forEach((f, i) => tone(f, i * 0.06, 0.09, 0.03, 'triangle')); tone(4186, 0.34, 0.35, 0.02, 'sine'); },
   /* Øyeblikk som har sin egen fanfare i pakken. Uten pakke låter de som den nærmeste av lydene over. */
   caught: () => sfx0.got(), evolved: () => sfx0.evo(), item: () => sfx0.ok(), keyitem: () => sfx0.fav(), berry: () => sfx0.ok(), egg: () => sfx0.ok(), learn: () => sfx0.lvl(), heal: () => sfx0.ok(), saved: () => sfx0.ok()
 };
@@ -261,6 +266,15 @@ function press(el, fn) {
 }
 const heldSnd = k => (HELD[k].g === 'once' ? sfx.berry : HELD[k].g === 'plate' ? sfx.keyitem : sfx.item)();
 const buzz = p => { try { if (navigator.vibrate) navigator.vibrate(p); } catch (_) {} };
+/* SHINY-EFFEKTEN (steg 1c): stjerner som glitrer rundt den, og lyden, så det er tydelig at dette er en shiny. Én effekt for alle steder en
+   shiny viser seg (Frontier nå; møtet, raidet og pakkene i 1c.6). Tegnet i CSS (.shfx i style.css), så den virker uten pakken; har pakken
+   lyden «shiny», spilles den i stedet for den innebygde. host = elementet Pokémonen står i (det må ha position). o.quiet = uten lyd. */
+function shinyFx(host, o = {}) {
+  if (!host) return; const old = host.querySelector(':scope > .shfx'); if (old) old.remove();
+  const el = document.createElement('span'); el.className = 'shfx'; el.setAttribute('aria-hidden', 'true');
+  el.innerHTML = Array.from({ length: 9 }, (_, i) => { const a = i / 9 * Math.PI * 2 + 0.3, r = 36 + (i % 3) * 9; return `<i style="--x:${(50 + Math.cos(a) * r).toFixed(1)}%;--y:${(50 + Math.sin(a) * r * 0.92).toFixed(1)}%;--d:${(i * 0.07).toFixed(2)}s;--z:${[1, 0.6, 0.8][i % 3]}"></i>`; }).join('');
+  host.appendChild(el); if (!o.quiet) sfx.shiny(); setTimeout(() => el.remove(), 2700);
+}
 
 let toastT = 0;
 function toast(t) { const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, 2600); }

@@ -547,6 +547,7 @@ function ladderCard() {
     league: `<div class="card mode" id="mode-league">${modeHead('league', leagueTag(), `${tag('league')}${coins('league')}${pipsEl(ladLives(), ladFails())}`)}${row}${prog}
       ${shut || (ladLost() ? `<p class="sm">The lap ended at battle ${(L.fell || 0) + 1} of ${LAPN}. A new lap starts on your next battle day.</p>` : ladDone() ? '<p class="sm">You cleared the lap today. The next one opens on your next battle day.</p>' : `<button type="button" class="go${L.n >= LAPN - 1 ? ' gold' : ''}" data-a="bpre">${S.lad.next && S.lad.next.fail ? 'Rematch' : 'Battle'}</button>${simRow()}`)}</div>`,
     factory: `<div class="card mode" id="mode-factory">${modeHead('factory', R ? `Round ${R.round} · ${R.w}/${FACN} wins · streak ${R.streak}` : `Rent 4 of 7 · Lv ${FACLV}${facBestTxt()}`, `${tag('factory')}${coins('factory')}${pipsEl(facLives(), facFails())}`)}
+      ${facLuck() > 0 ? `<button type="button" class="flkrow flkb" data-a="fluck" aria-label="Frontier luck"><span class="sm">Frontier luck</span>${luckBar(facLuck(), 'wide')}<span class="sm tn">${facLuck() >= FACLUCKN ? 'a rare ball next' : `${facLuck()} / ${FACLUCKN}`}</span></button>` : ''}
       ${keepb}${shut || (facLost() ? '<p class="sm">Your runs for today are used. The Frontier opens again after your next day of focus.</p>' : `<button type="button" class="go" data-a="fenter">${R ? 'Continue the run' : 'Enter the Frontier'}</button>${simRow()}`)}</div>`,
     pwt: `<div class="card mode" id="mode-pwt">${modeHead('pwt', `${esc(wc.n)} · ${WR ? `${ROUNDN[WR.r]} · round ${WR.r + 1} of ${PWTN}` : 'three on three'} · Lv ${WR ? WR.lv : pwtLv()}${W.won ? ` · ${W.won} ${W.won === 1 ? 'trophy' : 'trophies'}` : ''}`, `${tag('pwt')}${coins('pwt')}${pipsEl(1, pwtOpen() ? 0 : 1)}`)}
       ${shut || (pwtOpen() ? `<button type="button" class="go" data-a="wenter">${WR ? 'Continue the cup' : 'Enter the cup'}</button>${simRow()}` : '<p class="sm">You have played today\'s cup. A new one opens after your next day of focus.</p>')}</div>`
@@ -1570,11 +1571,11 @@ async function darkRise(B) {
 /* ---------- Etter kampen ---------- */
 const encLine = res => res.encs.length ? `<div class="row" style="justify-content:space-between"><span>Encounters</span><b>${res.encs.length} waiting in the grass${res.encs.some(e => e.t >= 4) ? ' · legendary' : res.encs.some(e => e.t >= 3) ? ' · epic' : ''}</b></div>` : '';
 const tyEl = x => mTypes(x).filter(t => t >= 0).map(t => `<span class="ty" style="background:var(--t${t})">${TYN[t]}</span>`).join(' ');
-const monCard = (x, a, k, on) => `<button type="button" data-a="${a}" data-k="${k}" aria-pressed="${!!on}" class="${x.mega ? 'mega' : ''}" style="--tc:var(--t${mTypes(x)[0]})">${spr(x.id, { ani: 1, mega: x.mega })}<b>${esc(mName(x))}</b><span class="sm tn">Lv ${x.lv}${x.iv ? ' · ' + judge(x).t : ''}</span><span class="row" style="gap:4px;justify-content:center;flex-wrap:wrap">${tyEl(x)}</span>${x.mv ? `<span class="mvl">${x.mv.map(i => esc(MOVES[i][0])).join(' · ')}</span>` : ''}</button>`;
+const monCard = (x, a, k, on) => `<button type="button" data-a="${a}" data-k="${k}" aria-pressed="${!!on}" class="${x.mega ? 'mega' : ''}" style="--tc:var(--t${mTypes(x)[0]})">${spr(x.id, { ani: 1, mega: x.mega, sh: x.sh })}<b>${x.sh ? 'Shiny ' : ''}${esc(mName(x))}</b><span class="sm tn">Lv ${x.lv}${x.iv ? ' · ' + judge(x).t : ''}</span><span class="row" style="gap:4px;justify-content:center;flex-wrap:wrap">${tyEl(x)}</span>${x.mv ? `<span class="mvl">${x.mv.map(i => esc(MOVES[i][0])).join(' · ')}</span>` : ''}</button>`;
 /* Premien for en klar runde i Battle Frontier: behold én av de fire du leide. Brukes på resultatskjermen og fra forsiden (hvis valget ble utsatt). */
 function keepCard(sheet) {
   const kl = facKeepList(); if (!kl.length) return '';
-  return `<div class="${sheet ? 'stack' : 'card stack'}"><div class="row" style="justify-content:space-between"><b>Keep one of your rentals</b><span class="sm tn">round reward</span></div><p class="sm">You cleared the round. One of the four you rented can join your own Pokémon, at Lv ${kl[0].lv} and in the form that level allows.</p>
+  return `<div class="${sheet ? 'stack' : 'card stack'}"><div class="row" style="justify-content:space-between"><b>Keep one of your rentals</b><span class="sm tn">round reward</span></div><p class="sm">You cleared the round. One of the ${kl.length < 4 ? 'rentals' : 'four'} you rented can join your own Pokémon, at Lv ${kl[0].lv} and in the form that level allows.${kl.length < 4 ? ' The legend was on loan and has gone back.' : ''}</p>
     <div class="rent">${kl.map((x, i) => monCard({ id: x.id, lv: x.lv, iv: x.iv, nat: x.nat, sh: x.sh }, 'fkeep', i)).join('')}</div>
     <button type="button" class="btn wide" data-a="fkeepno">No thanks</button></div>`;
 }
@@ -1748,10 +1749,11 @@ function rulesSheet() {
       ${row('Their teams', 'the ace and the signature Pokémon are fixed<br>the rest change a little from time to time')}
       ${row('Coins per win', `${TCL.trainer.coin} for a trainer up to ${TCL.champ.coin} for a Champion<br>${TCL.supreme.coin} for one of the greatest`)}
       <p class="sm"><b>Cynthia</b> and <b>Ghetsis, Champions Edition</b> are the rarest finals. Each has a film of their own and a team to match, and pays half again as many coins, with one more legendary encounter, Rare Candy and a Mega Stone on top.</p></div>
-    <div class="card stack"><b>Battle Frontier</b><p class="sm">Rental Pokémon at Lv ${FACLV}: you open seven balls and pick four. ${FACN - 1} trainers and then a boss a round. After a win you may swap one of theirs for one of yours. You win coins, items and encounters, and your own team gets XP for every win. A loss ends the run, and you can start ${FACLIVES} runs a day.</p>
+    <div class="card stack"><b>Battle Frontier</b><p class="sm">Rental Pokémon at Lv ${FACLV}: you open seven balls and pick four. Each one is rated with one to five marks: how well it does against the Pokémon you meet here, worked out from its stats, moves, Ability and types. ${FACN - 1} trainers and then a boss a round. After a win you may swap one of theirs for one of yours. You win coins, items and encounters, and your own team gets XP for every win. A loss ends the run, and you can start ${FACLIVES} runs a day.</p>
       <p class="sm">Every trainer is stronger than the one before, round after round, and the rentals get better with every round too. A run is ${FACEND} rounds: clear the last one and the Frontier is conquered for the day.</p>
       ${row('The bosses', 'round 2: the Bronze Symbol<br>round 3: a Frontier Brain, the Silver Symbol<br>round 4: the same Brain, stronger, the Gold Symbol<br>round 6: the Brain at full strength, the Diamond Symbol')}${row('Symbols', 'kept under Profile, Achievements, with a prize the first time')}
-      ${row('Coins per win', `${Math.round(FACCOIN * 30)} to ${Math.round(FACCOIN * (30 + 12 * (FACN - 1)))} × bonus in round 1<br>${Math.round(FACCOIN * 15)} more for every round up to round 4`)}${row('Round cleared', `${FACROUND(1)} and up × bonus<br>and you keep one of your four rentals`)}</div>
+      ${row('Coins per win', `${Math.round(FACCOIN * 30)} to ${Math.round(FACCOIN * (30 + 12 * (FACN - 1)))} × bonus in round 1<br>${Math.round(FACCOIN * 15)} more for every round up to round 4`)}${row('Round cleared', `${FACROUND(1)} and up × bonus<br>and you keep one of your four rentals`)}
+      ${row('Rare balls', 'a shiny rental: keep it, shiny, if you clear the round<br>an ace: one of the very best, with the right nature<br>a legend on loan: it goes back after the round')}${row('How often', 'about one set of seven in four holds one<br>it is always the last ball')}${row('Frontier luck', `${FACLUCKN} balls without a rare one,<br>and the next seven hold one for sure`)}</div>
     <div class="card stack"><b>World Tournament</b><p class="sm">One cup a day, a new one each day of the week. Quarter-final, semi-final and final, three on three. Your three all play at your team's level, whatever level they really are, and the opponents stand at the same level on Hard and a little below it on Normal and Easy. Both sides see each other's whole team, and both pick three without seeing the other's choice. Their ace always comes, but never first. No Bag, and one loss ends the cup. Every round you win gives your own team XP.</p>
       ${row('Coins per round', PWTCOIN.join(' · ') + ' × cup × bonus')}${row('Leaders cups · Elite Four · Champions', CUPS.slice(1, 2).concat(CUPS[6], CUPS[0]).map(c => '×' + c.f).join(' · '))}${row('Winner', `trophy · ${PWTCANDY} Rare Candy · a pack`)}</div>
     <div class="card stack"><b>Legendary raids</b><p class="sm">Rare, and never on a fixed day. One legendary against your whole team, and who it is stays secret until you stand in front of it. You get ${RAIDTRIES} attempts, one a day: the first without knowing who is waiting, the second knowing. Then it moves on. It stands well above your team's level and has ${RAIDHP[0]} to ${RAIDHP[4]} times the HP of a normal Pokémon. Beat it and it is yours: winning is the catch.</p>
@@ -1811,19 +1813,11 @@ function rulesSheet() {
 }
 function facScreen() {
   const R = S.fac.run; if (!R) return;
-  if (R.offer && R.open != null && (R.open < 7 || !BT.fpick)) return facDraw(R);
-  if (R.offer) {
-    const sel = BT.fsel;
-    return ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Battle Frontier · Round ${R.round}</span></div>
-      <div><h1 class="big">Pick 4 of 7.</h1><p class="mut" style="margin-top:6px">Rental Pokémon, all at Lv ${FACLV} like everyone you meet. The first one you pick leads. A round is ${FACN - 1} trainers and then a boss, and you can swap in one Pokémon from each trainer you beat.</p></div>
-      <div class="rent">${R.offer.map((m, i) => monCard(m, 'fsel', i, sel.includes(i)).replace('<b>', (sel.includes(i) ? `<span class="ord">${sel.indexOf(i) + 1}</span>` : '') + `<span class="fstar sm" aria-hidden="true">${'★'.repeat(facStars(m))}</span><b>`)).join('')}</div>
-      ${sel.length >= 2 ? `<p class="sm" style="text-align:center">${teamWeak(sel.map(i => R.offer[i]))}</p>` : ''}
-      <div class="acts"><button type="button" class="btn gold" data-a="fpick"${sel.length === 4 ? '' : ' disabled'}>${sel.length === 4 ? 'Take these four' : `Pick ${4 - sel.length} more`}</button></div>`, 'tint', 'var(--t8)');
-  }
+  if (R.offer) return facDraw(R);
   const f = facFoe(), tr = facInfo(f), tier = TIER(tr.kind);
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Round ${R.round} · battle ${R.w + 1} of ${FACN}</span></div>
     <div class="card k-${tier}"${kst(tr)}><div class="pre-foe">${tsprite(tr.img)}<div class="sp"><div class="sm">${f.boss ? (tr.ultra ? `${esc(RARE[tr.kind][0].toUpperCase() + RARE[tr.kind].slice(1))} · ${esc(tr.cn)} · extra rewards` : `Boss · ${esc(tr.cn)} · ${f.sym ? FACSYM[f.sym] + ' Symbol at stake' : 'last battle of the round'}`) : 'Battle Frontier'}</div><b class="${f.boss ? 'bossn' : ''}" style="font-size:19px">${esc(who(tr))}</b><div class="sm tn" style="margin-top:4px">${f.team.length} Pokémon at Lv ${FACLV} · favours ${TYN[f.hint]} types</div></div></div></div>
-    <div><div class="lab">Your rentals · tap the one that leads</div><div class="lineup">${R.team.map((m, i) => `<button type="button" data-a="flead" data-k="${i}" class="${i ? '' : 'lead'}">${spr(m.id, { it: m.item, mega: m.mega })}<span class="sp"><b>${esc(mName(m))}</b><br><span class="sm tn">${m.mv.map(x => esc(MOVES[x][0])).join(', ')}</span></span>${i ? '' : '<span class="pill">Leads</span>'}</button>`).join('')}</div></div>
+    <div><div class="lab">Your rentals · tap the one that leads</div><div class="lineup">${R.team.map((m, i) => `<button type="button" data-a="flead" data-k="${i}" class="${i ? '' : 'lead'}">${spr(m.id, { it: m.item, mega: m.mega, sh: m.sh })}<span class="sp"><b>${esc(mName(m))}</b> ${rateEl(m, { sm: 1 })}<br><span class="sm tn">${m.mv.map(x => esc(MOVES[x][0])).join(', ')}</span></span>${i ? '' : '<span class="pill">Leads</span>'}</button>`).join('')}</div></div>
     <button type="button" class="btn wide nf" data-a="fstats">Stats and moves of your four</button>
     <div class="acts"><button type="button" class="btn gold" data-a="fgo">Start battle</button></div>`, 'tint', 'var(--t8)');
 }
@@ -1840,36 +1834,91 @@ function facSwapScreen() {
   const W = BT.sw || (BT.sw = { a: null, b: null, view: null }), theirs = res.swap, mine = R.team, done = W.a != null && W.b != null;
   const myRow = mine.map((m, i) => done && i === W.b ? theirs[W.a] : m), thRow = theirs.map((m, i) => done && i === W.a ? mine[W.b] : m);
   const card = (m, side, i) => { const sel = side === 'th' ? W.a === i : W.b === i, on = W.view && W.view[0] === side && W.view[1] === i;
-    return `<button type="button" class="swc${sel ? ' sel' : ''}${done && sel ? ' moved' : ''}${on ? ' on' : ''}${m.mega ? ' mega' : ''}" data-a="swtap" data-s="${side}" data-k="${i}" id="sw-${side}-${i}" style="--tc:var(--t${mTypes(m)[0]})" aria-pressed="${sel}">${spr(m.id, { it: m.item, mega: m.mega, s: '52px' })}<b>${esc(mName(m))}</b><span class="fstar" aria-hidden="true">${'★'.repeat(facStars(m))}</span>${sel ? `<span class="swt">${done ? (side === 'my' ? 'NEW' : 'GIVEN') : side === 'my' ? 'OUT' : 'IN'}</span>` : ''}</button>`; };
+    return `<button type="button" class="swc${sel ? ' sel' : ''}${done && sel ? ' moved' : ''}${on ? ' on' : ''}${m.mega ? ' mega' : ''}" data-a="swtap" data-s="${side}" data-k="${i}" id="sw-${side}-${i}" style="--tc:var(--t${mTypes(m)[0]})" aria-pressed="${sel}">${spr(m.id, { it: m.item, mega: m.mega, sh: m.sh, s: '52px' })}<b>${esc(mName(m))}</b>${rateEl(m, { sm: 1 })}${sel ? `<span class="swt">${done ? (side === 'my' ? 'NEW' : 'GIVEN') : side === 'my' ? 'OUT' : 'IN'}</span>` : ''}</button>`; };
   const v = W.view, vm = v ? (v[0] === 'th' ? thRow : myRow)[v[1]] : null;
+  /* Pilene på kortet: mot den fra det andre laget som er valgt, ellers mot laget ditt. */
+  const other = !vm || done ? null : v[0] === 'th' ? (W.b != null ? mine[W.b] : null) : (W.a != null ? theirs[W.a] : null), vref = other ? [other] : myRow, vcap = other ? 'against ' + mName(other) : 'against your team';
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="swback">Back</button><span class="pill tn">Round ${R.round} · ${R.w} of ${FACN} won</span></div>
     <div><h1 class="big" style="font-size:26px">${done ? 'Swapped. For now.' : 'Swap one in?'}</h1><p class="sm" style="margin-top:6px">${done ? 'This is your team if you go on. Undo if you change your mind: nothing is final until you press Next.' : W.a != null ? 'Now tap the one of yours that leaves.' : W.b != null ? 'Now tap the one of theirs that comes in.' : 'Tap one of theirs and one of yours, in any order. Or keep your four.'}</p></div>
     <div class="swg"><div class="swl th"><span>${esc(who(B.tr))}</span><b>Their team</b></div><div class="swr th">${thRow.map((m, i) => card(m, 'th', i)).join('')}</div>
       <div class="swmid" aria-hidden="true"><i></i><span>${done ? 'swapped' : 'swap'}</span><i></i></div>
       <div class="swl my"><span>Lv ${FACLV} rentals</span><b>Your team</b></div><div class="swr my">${myRow.map((m, i) => card(m, 'my', i)).join('')}</div></div>
     <div class="acts">${done ? '<button type="button" class="btn nf" data-a="swundo">Undo</button>' : ''}<button type="button" class="btn gold" data-a="swnext">${done ? 'Next · lock this team' : 'Next · keep my four'}</button></div>
-    ${vm ? sumCard(vm) : '<div class="fsum empty"><p class="mut">Tap a Pokémon to see its stats and moves.</p></div>'}`, 'tint', 'var(--t8)');
+    ${vm ? sumCard(vm, 0, { ref: vref, cap: vcap }) : '<div class="fsum empty"><p class="mut">Tap a Pokémon to see its rating, stats and moves.</p></div>'}`, 'tint', 'var(--t8)');
 }
 
-/* Battle Frontier: leie-Pokémonene trekkes én og én. Hver ball må åpnes og Pokémonen ses over (typer, verdier, angrep) før den neste kan åpnes.
-   De som er åpnet, kan ses på igjen. Når alle sju er åpnet, velges laget. En Mega får sin egen fanfare. */
+/* ---------- Battle Frontier: leie-Pokémonene på skjermen (steg 1c.3 og 1c.4) ----------
+   rateEl      vurderingen (facRate i league.js) som 1–5 RUTER. Ruter og ikke stjerner, så de ikke blandes med IV-stjernene på kortet.
+   statMini    de seks verdiene som små søyler (flisene med de sju), den høyeste i gull.
+   facCmp      pil opp eller ned per verdi mot snittet av de andre i ref (de andre i tilbudet, laget ditt, eller den du vurderer å bytte med).
+   facMvEl     ett angrep: type, klasse, styrke, og hva det faktisk gjør (mvInfo, samme forklaring som i kampen).
+   sumCard     hele kortet: bildet, vurderingen med noen få ord om hvorfor, evnen, verdiene som streker med piler, og angrepene.
+               o.ref = hvem pilene måles mot, o.cap = teksten under strekene, o.pick = { i, on, full } gir velg-knappen på kortet. */
 const STN6 = ['HP', 'Attack', 'Defense', 'Sp. Atk', 'Sp. Def', 'Speed'];
-function sumCard(m, fresh) {
-  const g = megaOf(m), st = statsOf(m), ty = mTypes(m), top = Math.max(...st.slice(1));
-  return `<div class="fsum${g ? ' mega' : ''}${fresh ? ' pop' : ''}" style="--tc:var(--t${ty[0]})">
-    <div class="fs-top">${spr(m.id, { it: m.item, ani: 1, mega: m.mega })}<div class="sp"><b class="fs-n">${esc(mName(m))}</b><div class="sm tn">Lv ${m.lv} · ${NAT[m.nat]} · ${judge(m).t}</div>${m.u ? '' : `<div class="fs-role"><span class="fstar" role="img" aria-label="Strength ${facStars(m)} of 5">${'★'.repeat(facStars(m))}<i>${'★'.repeat(5 - facStars(m))}</i></span><b>${facRole(m)}</b></div>`}<div class="row" style="gap:4px;margin-top:6px;flex-wrap:wrap">${tyEl(m)}${g ? '<span class="pill megap">MEGA</span>' : ''}</div></div></div>
-    <div class="fs-st">${STN6.map((n, i) => `<div><span>${n}</span><i><b style="width:${Math.min(100, st[i] / 220 * 100).toFixed(0)}%;background:${i && st[i] === top ? 'var(--gold)' : 'var(--tc)'}"></b></i><em class="tn">${st[i]}</em></div>`).join('')}</div>
-    <div class="fs-mv">${m.mv.map(x => { const mv = mvEff(null, { src: m }, MOVES[x]); return `<span style="--c:var(--t${mv[1]})"><b>${esc(mv[0])}</b><small>${TYN[mv[1]]}${mv[2] ? ' · ' + mv[2] : ''}</small></span>`; }).join('')}</div></div>`;
+const rateEl = (m, o = {}) => { const r = facRate(m); return `<span class="frt${o.sm ? ' sm' : ''}" role="img" aria-label="Rated ${r.n} of 5">${[1, 2, 3, 4, 5].map(i => `<i${i <= r.n ? ' class="on"' : ''}></i>`).join('')}${o.num ? `<b class="tn">${r.p}</b>` : ''}</span>`; };
+const statMini = m => { const st = statsOf(m), top = Math.max(...st.slice(1)); return `<span class="fmb" aria-hidden="true">${st.map((v, i) => `<i style="height:${Math.max(10, Math.min(100, v / 1.9)).toFixed(0)}%"${i && v === top ? ' class="hi"' : ''}></i>`).join('')}</span>`; };
+function facCmp(m, ref) {
+  const l = (ref || []).filter(x => x && x !== m); if (!l.length) return [0, 0, 0, 0, 0, 0];
+  const st = statsOf(m), all = l.map(statsOf); return st.map((v, i) => { const av = all.reduce((a, s) => a + s[i], 0) / all.length; return v >= av * 1.12 ? 1 : v <= av * 0.88 ? -1 : 0; });
 }
+const FACCALL = { mega: 'Mega!', sh: 'Shiny!', ace: 'An ace!', leg: 'A legend on loan!' };
+const rarePill = m => m.rr === 'leg' ? '<span class="pill frp leg">LEGEND ON LOAN</span>' : m.rr === 'ace' ? '<span class="pill frp ace">ACE</span>' : m.sh ? '<span class="pill frp sh">SHINY</span>' : '';
+function facMvEl(x, m) {
+  const mi = mvInfo(x, m), own = mi.cls > 0 && mTypes(m).includes(mi.ty), fit = mi.cls === 0 && MOVES[x][12].length && MOVES[x][17] === 1 && MOVES[x][12].some(s => (s[0] === 2 || s[0] === 4) && s[1] > 0);
+  const head = `${TYN[mi.ty]}${mi.cls ? ` · ${mi.cls === 1 ? 'Physical' : 'Special'}${mi.pw ? ' ' + mi.pw : ''}` : ' · Status'}${mi.acc && /^\d/.test(mi.acc) && mi.acc !== '100 %' ? ' · hits ' + mi.acc : ''}`;
+  return `<div class="fs-m" style="--c:var(--t${mi.ty})"><div class="fs-mh"><b>${esc(mi.n)}</b><span class="tn">${head}</span></div><p>${own ? '<em>Its own type: half again as strong.</em> ' : ''}${esc(mi.txt)}${fit ? ' <em>Fits its attacks.</em>' : ''}</p></div>`;
+}
+function sumCard(m, fresh, o = {}) {
+  const g = megaOf(m), st = statsOf(m), ty = mTypes(m), top = Math.max(...st.slice(1)), r = facRate(m), up = natUp(m.nat), dn = natDn(m.nat), ab = abShow(m.id, m.mega), cmp = facCmp(m, o.ref), kind = facRare(m);
+  const pk = o.pick ? `<button type="button" class="btn ${o.pick.on ? 'nf' : 'gold'} wide fs-pk" data-a="fsel" data-k="${o.pick.i}"${!o.pick.on && o.pick.full ? ' disabled' : ''}>${o.pick.on ? `Picked · tap to take ${esc(mName(m))} out` : o.pick.full ? 'Four are picked' : `Pick ${esc(mName(m))}`}</button>` : '';
+  return `<div class="fsum${g ? ' mega' : ''}${kind ? ' rr-' + kind : ''}${fresh ? ' pop' : ''}" style="--tc:var(--t${ty[0]})">
+    <div class="fs-top">${spr(m.id, { it: m.item, ani: 1, mega: m.mega, sh: m.sh })}<div class="sp"><b class="fs-n">${esc(mName(m))}</b>
+      <div class="fs-role">${rateEl(m, { num: 1 })}<b>${r.role}</b></div>
+      ${r.why.length ? `<div class="fs-why">${r.why.map(w => `<span class="${w[1] > 0 ? 'p' : 'n'}">${esc(w[0])}</span>`).join('')}</div>` : ''}
+      <div class="row" style="gap:4px;margin-top:6px;flex-wrap:wrap">${tyEl(m)}${g ? '<span class="pill megap">MEGA</span>' : ''}${rarePill(m)}</div></div></div>
+    <div class="sm tn fs-sub">Lv ${m.lv} · ${NAT[m.nat]}${up !== dn ? ` (+${STN6[up]}, −${STN6[dn]})` : ''}${ab ? ` · <b>${esc(ab.n)}</b>: ${esc(ab.d)}` : ''}</div>
+    <div class="fs-st">${STN6.map((n, i) => `<div><span>${n}${cmp[i] ? `<u class="far ${cmp[i] > 0 ? 'u' : 'd'}" aria-label="${cmp[i] > 0 ? 'higher' : 'lower'}">${cmp[i] > 0 ? '▲' : '▼'}</u>` : ''}</span><i><b style="width:${Math.min(100, st[i] / 220 * 100).toFixed(0)}%;background:${i && st[i] === top ? 'var(--gold)' : 'var(--tc)'}"></b></i><em class="tn">${st[i]}</em></div>`).join('')}</div>
+    ${o.cap && cmp.some(Boolean) ? `<div class="fs-cap sm"><u class="far u">▲</u><u class="far d">▼</u> ${esc(o.cap)}</div>` : ''}
+    <div class="fs-ml">${m.mv.map(x => facMvEl(x, m)).join('')}</div>${m.rr === 'leg' ? '<p class="sm fs-loan">On loan for this round: it cannot be kept.</p>' : m.sh ? '<p class="sm fs-loan">Clear the round with it and you can keep it, shiny.</p>' : ''}${pk}</div>`;
+}
+/* ÅPNINGEN (steg 1c.3). Alt skjer på én skjerm: de sju som fliser (ballen før den er åpnet; etterpå bildet, vurderingen og verdiene som små
+   søyler), flaksmåleren i den åttende ruta, og kortet til den du ser på. Når alle sju er åpne, velges de fire her: trykk på en flis for å se
+   den, og en gang til (eller knappen på kortet) for å velge den. Hver ball er et lite øyeblikk (facReveal): den rister én til tre ganger etter
+   klassen og spretter opp; en sjelden ball eller en Mega får lengre oppbygging, lys, sitt eget rop og sin egen lyd. Et trykk hopper over. */
+const facBallImg = m => m.rr === 'leg' ? 'master' : m.rr === 'ace' ? 'dusk' : facBall(m), facBallK = m => m.mega ? 'mega' : facRare(m) || facBall(m);
+/* Det måleren viser mens ballene åpnes: den fylles ball for ball i et tilbud uten en sjelden ball, og tømmes når en sjelden ball er åpnet. */
+function facLuckShow(R, n) { const F = S.fac, l0 = Math.max(0, Math.min(FACLUCKN, F.lk0 || 0)); return R.offer.some(facRare) ? (n < 7 ? l0 : facLuck()) : Math.min(FACLUCKN, l0 + n); }
+const luckBar = (v, cls) => `<span class="flk${cls ? ' ' + cls : ''}${v >= FACLUCKN ? ' full' : ''}" role="img" aria-label="Frontier luck ${v} of ${FACLUCKN}"><i style="width:${Math.round(v / FACLUCKN * 100)}%"></i></span>`;
+const facStage = m => { const kind = m.mega ? 'mega' : facRare(m); return `<button type="button" class="fstage k-${kind || facBall(m)}" id="fstage" data-a="fskip" style="--tc:var(--t${mTypes(m)[0]})" aria-label="Opening the ball. Tap to skip."><span class="fst-g" aria-hidden="true"></span><span class="fst-r" aria-hidden="true"></span><span class="fst-b">${ballEl(facBallImg(m), '84px')}</span><span class="fst-s">${spr(m.id, { ani: 1, mega: m.mega, sh: m.sh, s: '132px' })}</span><b class="fst-c">${kind ? FACCALL[kind] : ''}</b><small class="fst-n">${esc(mName(m))}</small><span class="fst-k">tap to skip</span></button>`; };
 function facDraw(R) {
-  const n = R.open, vi = BT.fview != null && BT.fview < n ? BT.fview : n - 1, cur = vi >= 0 ? R.offer[vi] : null, fresh = !!BT.fnew && vi === n - 1;
+  const n = R.open == null ? 7 : Math.min(7, R.open), all = n >= 7, sel = BT.fsel, rev = BT.frev && BT.frev.i < n ? BT.frev : (BT.frev = null);
+  const vi = BT.fview != null && BT.fview < n ? BT.fview : n - 1, cur = vi >= 0 ? R.offer[vi] : null, fresh = !!BT.fnew && vi === n - 1, opened = R.offer.slice(0, n), nx = n < 7 ? R.offer[n] : null, lk = facLuckShow(R, rev ? n - 1 : n);
   BT.fnew = false;
+  const tile = (m, i) => i < n && !(rev && rev.i === i)
+    ? `<button type="button" class="ft open${m.mega ? ' mega' : ''}${facRare(m) ? ' rr-' + facRare(m) : ''}${i === vi && !rev ? ' on' : ''}${sel.includes(i) ? ' sel' : ''}" data-a="fview" data-k="${i}" style="--tc:var(--t${mTypes(m)[0]})" aria-label="${esc(mName(m))}, rated ${facRate(m).n} of 5${sel.includes(i) ? ', picked' : ''}">${sel.includes(i) ? `<span class="ord">${sel.indexOf(i) + 1}</span>` : ''}${spr(m.id, { mega: m.mega, sh: m.sh })}<b>${esc(mName(m))}</b>${rateEl(m, { sm: 1 })}${statMini(m)}</button>`
+    : `<span class="ft shut b-${facBallK(m)}${i === n && !rev ? ' next' : ''}${n === 0 ? ' drop' : ''}${rev && rev.i === i ? ' gone' : ''}" style="--i:${i}">${ballEl(facBallImg(m))}</span>`;
+  const head = n === 0 ? ['Seven Poké Balls.', 'Open them one at a time. The ball tells you a little: a Great Ball holds a better Pokémon than a Poké Ball, and an Ultra Ball the best. A ball that looks different holds something rare.']
+    : !all ? [`Pokémon ${Math.min(n, vi + 1)} of 7`, 'Look it over, then open the next ball.'] : ['Pick 4 of 7.', 'Tap one to look at it, and tap it again to pick it. The first one you pick leads.'];
+  const card = rev ? facStage(R.offer[rev.i]) : cur ? sumCard(cur, fresh, { ref: opened, cap: opened.length > 2 ? 'against the other rentals here' : '', pick: all ? { i: vi, on: sel.includes(vi), full: sel.length >= 4 } : null }) : '<div class="fsum empty"><p class="mut">Nothing opened yet.</p></div>';
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Battle Frontier · Round ${R.round}</span></div>
-    <div><h1 class="big">${n === 0 ? 'Seven Poké Balls.' : n < 7 ? `Pokémon ${vi + 1} of 7` : 'All seven are open.'}</h1><p class="mut" style="margin-top:6px">${n === 0 ? `Open them one at a time. The ball tells you a little: a Great Ball holds a stronger Pokémon than a Poké Ball, and an Ultra Ball the strongest. With great luck one of them is a Mega.` : n < 7 ? 'Look it over, then open the next ball. You pick four when all seven are open.' : 'Tap a ball to look again, then pick your four.'}</p></div>
-    <div class="fdr">${R.offer.map((m, i) => i < n ? `<button type="button" class="fdb open${m.mega ? ' mega' : ''}${i === vi ? ' on' : ''}" data-a="fview" data-k="${i}" aria-label="${esc(mName(m))}">${spr(m.id, { it: m.item, mega: m.mega })}</button>` : `<span class="fdb b-${m.mega ? 'mega' : facBall(m)}${i === n ? ' next' : ''}${n === 0 ? ' drop' : ''}" style="--i:${i}">${ballEl(facBall(m))}</span>`).join('')}</div>
-    ${cur ? sumCard(cur, fresh) : `<div class="fsum empty"><p class="mut">Nothing opened yet.</p></div>`}
-    <div class="acts">${n < 7 ? `<button type="button" class="btn gold" data-a="fopen">${n === 0 ? 'Open the first ball' : n === 6 ? 'Open the last ball' : 'Open the next ball'} · ${n}/7</button>` : '<button type="button" class="btn gold" data-a="fteam">Pick your four</button>'}</div>`, 'tint', 'var(--t8)');
+    <div><h1 class="big">${head[0]}</h1><p class="mut" style="margin-top:6px">${head[1]}</p></div>
+    <div class="fts">${R.offer.map(tile).join('')}<button type="button" class="ft luck${lk >= FACLUCKN ? ' full' : ''}" data-a="fluck"><b>Luck</b>${luckBar(lk)}<small class="tn">${lk >= FACLUCKN ? 'full' : `${lk} / ${FACLUCKN}`}</small></button></div>
+    ${all && sel.length >= 2 ? `<p class="sm" style="text-align:center">${teamWeak(sel.map(i => R.offer[i]))}</p>` : ''}
+    <div class="acts fact">${!all ? `<button type="button" class="btn gold" data-a="fopen">${rev ? 'Skip' : nx && (facRare(nx) || nx.mega) ? `Open the ${nx.mega ? 'Mega' : 'rare'} ball` : n === 0 ? 'Open the first ball' : n === 6 ? 'Open the last ball' : 'Open the next ball'} · ${n}/7</button>` : `<button type="button" class="btn gold" data-a="fpick"${sel.length === 4 ? '' : ' disabled'}>${sel.length === 4 ? 'Take these four' : `Pick ${4 - sel.length} more`}</button>`}</div>
+    ${card}`, 'tint', 'var(--t8)');
 }
+function facReveal(i) {
+  const R = S.fac.run, m = R && R.offer && R.offer[i], st = $('#fstage'), T = BT.frev; if (!m || !st || !T) return facRevealEnd();
+  const kind = m.mega ? 'mega' : facRare(m), big = !!kind, n = facRate(m).n, wobs = big ? 3 : n >= 4 ? 2 : 1, gap = big ? 430 : 250; let t = big ? 380 : 140;
+  T.tm = []; const at = (ms, f) => T.tm.push(setTimeout(() => { if (BT.frev === T && $('#fstage')) f(); }, ms));
+  preSpr(m.id, { ani: 1, sh: m.sh, mega: m.mega });
+  if (big) { st.classList.add('grand'); sfx.frise(); buzz(20); }
+  for (let k = 0; k < wobs; k++) { at(t, () => { const s = $('#fstage'); s.classList.remove('wob'); void s.offsetWidth; s.classList.add('wob'); sfx.wob(k + (big ? 2 : 0)); buzz(big ? 25 + 15 * k : 14); }); t += gap; }
+  if (big) t += 260;
+  at(t, () => { const s = $('#fstage'); s.classList.remove('wob'); s.classList.add('burst'); sfx.fpop(n, kind); buzz(big ? [40, 30, 40, 30, 220] : 30); cry(m.id, big ? 350 : 120, 0.38); if (kind === 'sh') setTimeout(() => { if (BT.frev === T) shinyFx($('#fstage .fst-s')); }, 420); });
+  at(t + (big ? 2100 : 720), facRevealEnd);
+}
+function facRevealEnd() { const T = BT.frev; if (T && T.tm) T.tm.forEach(clearTimeout); BT.frev = null; BT.fnew = true; facScreen(); }
 
 /* ---------- Sandkassa ---------- */
 /* Skjermen ligger i show.js (sbxScreen): enkeltkamper, raid, filmer, pakker, og en kopi av lagringen der hele spillet kan prøves. Bare for admin. */
@@ -1955,11 +2004,22 @@ const BA = {
   /* Resultatskjermen: «Details» folder ut tallene uten å tegne skjermen på nytt (XP-strekene skal ikke starte om igjen). */
   rdet: el => { BT.rdet = BT.rdet ? 0 : 1; const d = $('#rs-det'); if (d) d.hidden = !BT.rdet; el.setAttribute('aria-expanded', String(!!BT.rdet)); if (BT.rdet && d && d.scrollIntoView) d.scrollIntoView({ block: 'nearest', behavior: calm() ? 'auto' : 'smooth' }); },
   fenter: () => { if (!facOpen()) { closeOv(); return render(); } if (!S.fac.run) { if (SBX && SBX.fr && typeof sbxFac === 'function') sbxFac(SBX.fr.r, SBX.fr); else facStart(); BT.fsel = []; } BT.B = null; BT.busy = false; sfx.open(); facScreen(); },
-  fopen: () => { const R = S.fac.run; if (!R || !R.offer || !(R.open < 7)) return; const m = R.offer[R.open]; R.open++; save(); BT.fview = null; BT.fnew = true; if (m.mega) { sfx.evo(); buzz([60, 40, 60, 40, 260]); } else { sfx.found(); buzz(30); } cry(m.id, 250, 0.35); facScreen(); },
-  fview: el => { BT.fview = +el.dataset.k; facScreen(); },
-  fteam: () => { BT.fpick = true; BT.fsel = []; sfx.open(); facScreen(); },
-  fsel: el => { const i = +el.dataset.k, s = BT.fsel, k = s.indexOf(i); if (k >= 0) s.splice(k, 1); else if (s.length < 4) s.push(i); facScreen(); },
+  /* Åpne neste ball: den er åpnet og lagret med en gang, og så spilles øyeblikket (facReveal). Et trykk til hopper over. */
+  fopen: () => { const R = S.fac.run; if (!R || !R.offer) return; if (BT.frev) return facRevealEnd(); if (!(R.open < 7)) return; const i = R.open, m = R.offer[i]; R.open++; save(); BT.fview = null;
+    if (calm()) { BT.fnew = true; sfx.fpop(facRate(m).n, m.mega ? 'mega' : facRare(m)); buzz(30); cry(m.id, 250, 0.35); return facScreen(); }
+    BT.frev = { i }; facScreen(); facReveal(i); },
+  fskip: () => facRevealEnd(),
+  /* En flis: første trykk viser den, et trykk til på den samme velger den (når alle sju er åpne). */
+  fview: el => { const R = S.fac.run, i = +el.dataset.k; if (BT.frev) return facRevealEnd(); if (R && R.offer && R.open >= 7 && BT.fview === i) return BA.fsel(el); BT.fview = i; facScreen(); },
+  fteam: () => facScreen(),
+  fsel: el => { const R = S.fac.run; if (!R || !R.offer || R.open < 7) return; const i = +el.dataset.k, s = BT.fsel, k = s.indexOf(i); if (k >= 0) { s.splice(k, 1); sfx.close(); } else if (s.length < 4) { s.push(i); sfx.ok(); buzz(15); } else { sfx.warn(); return toast('Four are picked. Take one out first.'); } BT.fview = i; facScreen(); },
   fpick: () => { if (BT.fsel.length !== 4) return; facPick(BT.fsel.slice()); BT.fsel = []; BT.fpick = false; BT.fview = null; sfx.ok(); facScreen(); },
+  fluck: () => { sfx.open(); openSheet(`<h2 class="h" style="margin-top:0">Frontier luck</h2>
+    <div class="flkrow">${luckBar(facLuck(), 'wide')}<b class="tn">${facLuck()} / ${FACLUCKN}</b></div>
+    <p class="sm" style="margin-top:10px">Now and then one of the seven balls is rare: a <b>shiny</b> rental, an <b>ace</b> (one of the very best, with the nature that suits it) or a <b>legend on loan</b>. A rare ball is always the last one you open.</p>
+    <p class="sm">Every ball in a set without a rare one fills the meter, and it stays with you between runs and days. When it is full, your next seven hold a rare ball for sure.</p>
+    <p class="sm">Clear the round, and a shiny or an ace you rented can be the one you keep. A legend is on loan and goes back.</p>
+    <button type="button" class="btn wide" data-a="close" style="margin-top:12px">Close</button>`); },
   flead: el => { const R = S.fac.run, i = +el.dataset.k; if (i > 0) { R.team.unshift(R.team.splice(i, 1)[0]); save(); } facScreen(); },
   fgo: () => { if (!facOpen() || !S.fac.run || !S.fac.run.team) return; PACK.unlock(); sfx.start(); BT.busy = false; startBattle(facBattle()); },
   swopen: () => { if (!BT.res || !BT.res.swap || !S.fac.run) return; BT.sw = { a: null, b: null, view: null }; sfx.open(); facSwapScreen(); },
