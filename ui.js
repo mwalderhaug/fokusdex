@@ -68,17 +68,36 @@ function ac() {
   try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state !== 'running') AC.resume(); return AC; } catch (_) { return null; }
 }
 /* Effektene går gjennom én hovedvolumknapp (S.vol). Skrikene har sin egen (S.cvol). */
-let MG = null, NB = null, LIM = null;
-/* ALT SOM LÅTER (effekter, skrik, musikk) går gjennom én begrenser før høyttaleren. Den gjør ingenting så lenge summen er under full styrke: terskelen
-   ligger rett under (LIMDB), så musikken alene går urørt gjennom. Når flere sterke lyder faller oppå hverandre, holder den summen nede i stedet for at
-   nettleseren klipper toppene (det låter som skurring). Finnes ikke noden, går lyden rett ut som før. */
-const LIMDB = -0.6, LIMTRIM = 0.95;
-function master() {
-  const a = ac(); if (!a) return null;
-  if (!LIM) { try { const c = a.createDynamicsCompressor(); c.threshold.value = LIMDB; c.knee.value = 0; c.ratio.value = 20; c.attack.value = 0.002; c.release.value = 0.12; const tg = a.createGain(); tg.gain.value = LIMTRIM; c.connect(tg); tg.connect(a.destination); LIM = c; } catch (_) { LIM = a.destination; } }
-  return LIM;
+let MG = null, NB = null, BUS = null;
+/* LYDGRAFEN (steg 1.12, ønske 14). Musikken og effektene går hver sin vei til høyttaleren:
+     musikk (master()) ──────────────► mus: takhøyde (MUSTRIM) ─────────────────────────┐
+     effekter (out()) og skrik ──► fx: begrenser bare for dem (FXDB) ──► FXTRIM ────────┴─► sum: myk klipper ──► høyttaleren
+   Før gikk alt gjennom én begrenser like under full styrke. Musikken ligger nær full styrke, så hvert angrep og hvert skrik presset ned hele
+   summen, også musikken, og slapp den opp igjen: den dukket og pumpet. Nå rører ingen begrenser musikken. Effektene holdes nede av sin egen
+   (under terskelen går de urørt gjennom: forsterkningen noden legger på selv, er tatt bort igjen), og summen har så god plass at den myke
+   klipperen bare runder av de korteste toppene. Klipperen har ingen hukommelse, så den kan ikke pumpe.
+   busFor(ctx) bygger grafen, så testene kan lage den samme i en OfflineAudioContext og måle den (pw/t_lyd.js). */
+const MUSTRIM = 0.8, FXTRIM = 0.8, FXDB = -7, FXRATIO = 20, SUMKNEE = 0.86, SUMIN = 2;
+/* Myk klipper: rett linje opp til SUMKNEE, så en myk bue mot 1. Kurven dekker inngang fra −SUMIN til SUMIN. */
+function softCurve() {
+  const n = 8193, c = new Float32Array(n), k = SUMKNEE;
+  for (let i = 0; i < n; i++) { const x = (i / (n - 1) * 2 - 1) * SUMIN, a = Math.abs(x), y = a <= k ? a : k + (1 - k) * Math.tanh((a - k) / (1 - k)); c[i] = x < 0 ? -y : y; }
+  return c;
 }
-function out() { const a = ac(); if (!a) return null; if (!MG) { MG = a.createGain(); MG.connect(master() || a.destination); } MG.gain.value = Math.pow((S.vol == null ? 70 : S.vol) / 100, 1.6) * 2.13; return MG; }
+function busFor(a) {
+  const pre = a.createGain(), sum = a.createWaveShaper(); pre.gain.value = 1 / SUMIN; sum.curve = softCurve(); sum.oversample = '2x'; pre.connect(sum); sum.connect(a.destination);
+  const mus = a.createGain(); mus.gain.value = MUSTRIM; mus.connect(pre);
+  /* Begrenseren legger selv på forsterkning etter terskelen og forholdet (full styrke inn gir T·(1 − 1/R) dB ut, og noden løfter alt med
+     den inverse opphøyd i 0,6). Den tas bort igjen her, så en lyd under terskelen går gjennom akkurat som den er. */
+  const fx = a.createDynamicsCompressor(), fg = a.createGain(), mk = Math.pow(1 / Math.pow(10, FXDB * (1 - 1 / FXRATIO) / 20), 0.6);
+  fx.threshold.value = FXDB; fx.knee.value = 0; fx.ratio.value = FXRATIO; fx.attack.value = 0.002; fx.release.value = 0.1; fg.gain.value = FXTRIM / mk; fx.connect(fg); fg.connect(pre);
+  return { mus, fx, sum, pre };
+}
+function bus() { const a = ac(); if (!a) return null; if (!BUS) { try { BUS = busFor(a); } catch (_) { BUS = { mus: a.destination, fx: a.destination }; } } return BUS; }
+/* Musikken (music.js og pack.js) kobler seg til master(). Effektene går til out(), og skrikene rett til fxBus(). */
+function master() { const b = bus(); return b ? b.mus : null; }
+function fxBus() { const b = bus(); return b ? b.fx : null; }
+function out() { const a = ac(); if (!a) return null; if (!MG) { MG = a.createGain(); MG.connect(fxBus() || a.destination); } MG.gain.value = Math.pow((S.vol == null ? 70 : S.vol) / 100, 1.6) * 2.13; return MG; }
 /* Lydstyrken (K-vektet som i LUFS-målinger) i det sterkeste 400 ms-vinduet av en dekodet lyd. Brukes til å holde angrepslyder og skrik på
    nivå med musikken, uansett hvor sterkt filene er tatt opp. Regnes én gang per lyd. */
 function loudOf(buf) {
@@ -185,7 +204,7 @@ function cry(id, delay = 0, vol = 0.45) {
     const a = ac(), src = a.createBufferSource(), g = a.createGain();
     /* Skrikene er tatt opp med svært ulik styrke (de nyeste er mye sterkere enn de eldste), så hvert skrik jevnes til samme nivå før volumet legges på. */
     const L = loudOf(buf), norm = L > -90 ? Math.max(0.12, Math.min(2, Math.pow(10, (-18 - L) / 20))) : 0.4;
-    src.buffer = buf; g.gain.value = Math.min(1.6, vol * norm * Math.pow((S.cvol == null ? 70 : S.cvol) / 100, 1.6) * 4.27); src.connect(g); g.connect(master() || a.destination);
+    src.buffer = buf; g.gain.value = Math.min(1.6, vol * norm * Math.pow((S.cvol == null ? 70 : S.cvol) / 100, 1.6) * 4.27); src.connect(g); g.connect(fxBus() || a.destination);
     src.start(a.currentTime + Math.max(0, delay - (performance.now() - t0)) / 1000);
     window.cryCount++;
   }).catch(() => {});
