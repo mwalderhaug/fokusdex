@@ -646,7 +646,7 @@ const LNO = {
   'Pick one way to battle today.': 'Velg én måte å kjempe på i dag.',
   'Coins ×{x} from your {t} of focus today.': 'Mynter ×{x} fra {t} med fokus i dag.',
   'Tap FIGHT and pick a move. The number on a move shows how hard it hits: 2× is strong, ½ is weak.': 'Trykk FIGHT og velg et angrep. Tallet på et angrep viser hvor hardt det treffer: 2× er sterkt, ½ er svakt.',
-  'You both see the whole team of the other, and you both pick {n} in secret. The ace always comes, but never first.': 'Dere ser hele laget til hverandre, og begge velger {n} i hemmelighet. Esset er alltid med, men aldri først.',
+  "You both see each other's whole team, and both pick {n} in secret. Their ace always comes, but never first.": 'Dere ser hele laget til hverandre, og begge velger {n} i hemmelighet. Esset deres er alltid med, men aldri først.',
   'Study, and a Pokémon world grows around it.': 'Les, og en Pokémon-verden vokser fram rundt det.',
   'A little at a time': 'Litt om gangen',
   'Each study day opens a few new things, so you master one before the next.': 'Hver studiedag åpner noen få nye ting, så du mestrer én før den neste kommer.',

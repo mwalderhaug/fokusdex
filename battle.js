@@ -875,8 +875,9 @@ const aiIq = B => B.tr.iq != null ? B.tr.iq : Math.max(0, Math.min(1, ((B.tr.ski
 const aiSlow = (B, u, t) => (spdB(B, t) > spdB(B, u)) !== !!B.troom;
 /* STEDET DER DET FRISTER Å BYTTE: det samme som der treneren selv ville byttet (aiSwitch). Den som står inne hos spilleren, er truet hardt av
    trenerens sterkeste angrep (minst 55 % av HP-en) og slår svakt tilbake (under halvparten av trenerens HP). Gir { k: det opplagte angrepet,
-   a: andelen det tar av den som står inne, i: den på benken som tåler det klart best (−1 = ingen), b: andelen den tar }, eller null ellers. Treneren kjenner bare dem spilleren har vist fram i kampen (seen).
-   Brukes av aiCover, og av runTurn, som teller hvor ofte spilleren faktisk bytter her (B.hab). */
+   a: andelen det tar av den som står inne, i: den på benken som tåler det klart best (−1 = ingen), b: andelen den tar }, eller null ellers.
+   Treneren kjenner bare dem spilleren har vist fram i kampen (seen). Brukes av aiCover, og av runTurn, som teller hvor ofte spilleren
+   faktisk bytter her (B.hab). */
 function aiSpot(B) {
   const u = B.foe[B.b], t = B.me[B.a];
   if (!u || !t || u.hp <= 0 || t.hp <= 0 || u.v.lock || u.v.rech || t.v.lock || t.v.rech || stuck(B, 'me')) return null;
@@ -889,10 +890,10 @@ function aiSpot(B) {
 }
 /* DEKNING: spilleren pleier å bytte når den som står inne er truet. B.hab teller det i denne kampen (n ganger truet, sw ganger byttet), og
    h er troen på et bytte nå. Før spilleren har byttet én gang, skjer ingenting. Siden sikter treneren noen ganger på den som ventes inn, med
-   angrepet som treffer den hardest, i stedet for det opplagte. hs er troen der de to valgene er like gode (regnet av skaden i de fire utfallene): over den lønner
-   dekningen seg. Sjansen stiger jevnt rundt hs, så valget aldri er sikkert: mot en som aldri bytter, nesten aldri; mot en som alltid bytter,
-   som oftest. Finnes det ikke noe angrep som biter på den som ventes inn, bygger treneren seg heller opp. ok = angrepene som kan brukes
-   ([plass, poeng], det beste først). Gir plassen til angrepet, eller −1. */
+   angrepet som treffer den hardest, i stedet for det opplagte. hs er troen der de to valgene er like gode (regnet av skaden i de fire
+   utfallene): over den lønner dekningen seg. Sjansen stiger jevnt rundt hs, så valget aldri er sikkert: mot en som bare har byttet én gang,
+   sjelden; mot en som alltid bytter, som oftest. Finnes det ikke noe angrep som biter på den som ventes inn, bygger treneren seg heller opp.
+   ok = angrepene som kan brukes ([plass, poeng], det beste først). Gir plassen til angrepet, eller −1. */
 function aiCover(B, iq, ok) {
   const sp = aiSpot(B); if (!sp || sp.i < 0 || ok[0][0] !== sp.k) return -1;
   const H = B.hab; if (!H || !H.sw) return -1;
