@@ -792,9 +792,10 @@ function facRole(m) {
   const st = statsOf(m), off = Math.max(st[1], st[3]), bulk = (st[0] - 60 + st[2] + st[4]) / 3, sp = st[5];
   return sp >= 112 && off >= 112 ? 'Fast attacker' : off >= 128 ? (st[1] >= st[3] ? 'Heavy hitter' : 'Special cannon') : bulk >= 108 && off < 105 ? 'Wall' : sp >= 118 ? 'Speedster' : bulk >= 98 ? 'Tank' : 'All-rounder';
 }
-/* LEIEPOOLEN (steg 1c.2). Før ble artene trukket etter samlet basisverdi (FACBST), og i de høye rundene var vinduet 540–600: 45 arter, og de
-   samme gikk igjen (Togekiss, Volcarona og Kingdra i 8–9 % av trekkene). Nå trekkes de etter vurderingen (facRate), så en art med lavere
-   verdier, men gode angrep eller en sterk evne, er med der den hører hjemme (Gengar, Starmie, Azumarill, Darmanitan i de høye rundene).
+/* LEIEPOOLEN (steg 1c.2). Før ble artene trukket etter samlet basisverdi (FACBST), og i de høye rundene gikk de samme igjen: 400 tilbud ga
+   90 arter i runde 4, 37 i runde 5 og 17 i runde 6, der Metagross, Tyranitar og Archeops var med i over halvparten. Nå trekkes de etter
+   vurderingen (facRate), så en art med lavere verdier, men gode angrep eller en sterk evne, er med der den hører hjemme (Gengar, Starmie,
+   Darmanitan i de høye rundene): 195, 152 og 102 arter i runde 4, 5 og 6, og ingen er med i mer enn hvert tiende tilbud (sim/facvar2.js).
      FACPB[runde]          midten leie-Pokémonene trekkes rundt, i vurderingen de får med rundens IV-er
      FACPF[runde][trener]  midten for lagene til de fire vanlige trenerne (stiger hele veien, aldri ned)
      FACPH                 halve bredden på vinduet (leie, trenere): artene nær midten trekkes oftest
@@ -891,8 +892,8 @@ const rentSet = m => { m.mv = rentMoves(m); return m; };
    hver art én mot én mot feltet med den vanlige og den flinke boten), og lag med høyere vurdering vinner oftere (sim/stars_team.js).
    facRate(m) = { p: 0–100 (omtrent hvor mange av hundre dueller mot feltet den vinner), n: 1–5 merker (FACCUT), why: [[tekst, 1 | -1], …],
    role, d (duellene), f (tilleggene), ab }. Merkene vises som RUTER, ikke stjerner: stjernene på kortet er IV-ene (spørsmål 7 i gjennomgangen).
-   Målt 17.11 (387 arter og Mega-former): rangkorrelasjonen med fasiten er 0,88–0,90 (samlet basisverdi: 0,77), og seier per merke er
-   27, 42, 57, 70 og 83 % for den vanlige boten og 31, 46, 61, 74 og 87 % for den flinke. */
+   Målt 17.11 (387 arter og Mega-former): rangkorrelasjonen med fasiten er 0,89–0,91 (samlet basisverdi: 0,77), og seier per merke er
+   29, 44, 55, 64 og 79 % for den vanlige boten og 31, 47, 58, 67 og 82 % for den flinke. */
 const FACW = { k: 0.08, v: 0.67, wins: 0.31, slp: 0.13, bo: 0.055, heal: 0.036 };
 const FACABB = { intimidate: 0.07, levitate: 0.035, speedboost: 0.04, slowstart: -0.2 };
 const FACCUT = [40, 51, 62, 72];
