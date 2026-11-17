@@ -467,7 +467,28 @@ function foeMoves(id, lv, q) {
   if (stat.length && sval(stat[0]) >= 4) pick.push(stat[0]);
   for (const x of dmg) { if (pick.length >= 4) break; if (!pick.includes(x)) pick.push(x); }
   for (const x of stat) { if (pick.length >= 4) break; if (!pick.includes(x)) pick.push(x); }
-  return pick.slice(0, 4);
+  return boostFix(pick.slice(0, 4), dmg, stat, sval);
+}
+/* ET BOOST SKAL PASSE TIL ANGREPENE I SETTET (steg 1c.2, Jazz 17.11: «har flere ganger fått et angrep som booster Sp. Atk på en Pokémon med bare
+   fysiske angrep»). boostFits: et statusangrep som bare hever Attack (Swords Dance, Bulk Up, Dragon Dance), krever at settet har fysiske angrep og
+   minst like mange som spesielle; ett som bare hever Sp. Atk (Nasty Plot, Calm Mind), krever spesielle på samme måte. Angrep med fast skade og
+   Foul Play teller ikke, for de bruker ikke brukerens slagkraft. Boost som hever begge, eller ingen av dem (Agility, Amnesia), passer alltid.
+   boostFix bytter ut det som ikke passer: helst et annet nyttig statusangrep som passer, så det sterkeste skadeangrepet som er igjen, og ellers
+   går plassen ut. Settet er ellers urørt, så motstanderne i ligaen har de samme angrepene som før der ingenting var galt. */
+function boostFits(x, set) {
+  const m = MOVES[x]; if (m[4] !== 0 || !m[12].length || m[17] !== 1) return true;
+  const up = i => m[12].some(s => s[0] === i && s[1] > 0), a = up(2), s = up(4); if (a === s) return true;
+  let ph = 0, sp = 0; for (const y of set) { const d = MOVES[y]; if (!(d[4] > 0) || FIXED[d[0]] || d[6] === 9 || d[0] === 'Foul Play') continue; if (d[4] === 1) ph++; else sp++; }
+  return a ? ph > 0 && ph >= sp : sp > 0 && sp >= ph;
+}
+function boostFix(pick, dmg, stat, sval) {
+  for (let i = 0; i < pick.length; i++) {
+    if (boostFits(pick[i], pick)) continue;
+    const rest = pick.filter((x, k) => k !== i), ok = x => !pick.includes(x) && boostFits(x, rest);
+    const alt = [stat.find(x => ok(x) && sval(x) >= 4), dmg.find(x => !pick.includes(x)), stat.find(x => ok(x) && sval(x) > 0)].find(x => x != null);
+    if (alt != null) pick[i] = alt; else pick.splice(i--, 1);
+  }
+  return pick;
 }
 /* «SUGGEST FOUR» i angrepsvalget (ønske 22): det sterkeste angrepet i hver av dens egne typer, ett som dekker det de ikke biter på, og ett taktisk.
    Regnes på det den faktisk er (verdiene nå, formen), blant angrepene den kan velge (pool, ellers alt den har lært). Angrep uten virkning er aldri med. */
@@ -772,8 +793,8 @@ const facIq = (r, w) => r < 3 ? 0 : Math.min(0.5, 0.15 * (r - 2) + 0.03 * w), fa
    og litt mindre jo lenger under leiepoolen de ligger, til runde 3 (−11 → 7); etter det 8, 9 og 10, så det aldri går ned. */
 const facIvB = (r, d) => d < 0 && r > 3 ? 4 + r : 4 * r + Math.round(d / 5);
 const facW = (s, a, b) => { const m = (a + b) / 2, h = (b - a) / 2 || 1; return 0.35 + 0.65 * (1 - Math.abs(s - m) / h); };
-/* Hvor sterk en leie-Pokémon er, i stjerner (1–5), og ballen den ligger i før den åpnes. Mega er alltid fem. */
-const facStars = m => { if (m.mega) return 5; const s = bstSum(m.id); return s < 455 ? 1 : s < 485 ? 2 : s < 515 ? 3 : s < 545 ? 4 : 5; };
+/* Hvor god en leie-Pokémon er, i merker (1–5, se facRate lenger ned), og ballen den ligger i før den åpnes. */
+const facStars = m => facRate(m).n;
 const facBall = m => { const n = facStars(m); return n >= 4 ? 'ultra' : n === 3 ? 'great' : 'poke'; };
 /* Rollen, lest av verdiene på nivå 50: til hjelp når laget velges. */
 function facRole(m) {
@@ -792,7 +813,134 @@ function facMon(r, used, d, tys) {
   if (!pool.length) return facMon(r, used, d, null);
   let x = Math.random() * tot, id = pool[pool.length - 1][0]; for (const [i, w] of pool) { x -= w; if (x <= 0) { id = i; break; } }
   used.add(id); if (tys) tys[D(id)[1]] = (tys[D(id)[1]] || 0) + 1;
-  return { id, lv: FACLV, sh: 0, iv: Array.from({ length: 6 }, () => Math.max(0, Math.min(31, facIvB(r, d) + 6 + rnd(14)))), ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: foeMoves(id, FACLV, 1) };
+  return rentSet({ id, lv: FACLV, sh: 0, iv: Array.from({ length: 6 }, () => Math.max(0, Math.min(31, facIvB(r, d) + 6 + rnd(14)))), ev: [0, 0, 0, 0, 0, 0], nat: rnd(25) });
+}
+/* SETTENE I BATTLE FRONTIER (steg 1c.2). Leie-Pokémon, trenerne og bossene i Frontier kan det formene før lærte og det de tre vanlige lærerne
+   lærer bort (som toppene i ligaen), og settet bygges slik «Suggest four» gjør: det beste angrepet i hver av dens egne typer, ett som dekker det
+   de ikke biter på, og ett taktisk som passer til resten (boostFits). Det regnes på det den faktisk er: verdiene med natur og IV, Mega-formen, og
+   evnene som endrer slagkraften (Huge Power, Technician, Skill Link, Adaptability, Aerilate og de andre som bytter type). Før kom settet fra
+   nivålista alene (foeMoves med q = 1): Starmie hadde Water Gun og Swift, Salamence ingen Dragon-angrep, og Weavile Nasty Plot.
+   RENTV: mellom valg som er nesten like gode, trekkes det, og noen ganger går det taktiske ut for et fjerde angrep (RENTALL), så samme art ikke
+   alltid kommer med de samme fire. fix = uten trekning (det beste hver gang): brukes når en art skal vurderes for seg (facPow).
+   De legendariske har settet sitt fra LEGSET. */
+const RENTV = 0.12, RENTALL = 0.25;
+const RENTBAD = new Set(['Dream Eater', 'Focus Punch', 'Last Resort', 'Fake Out', 'Snore', 'Synchronoise', 'Final Gambit', 'Counter', 'Mirror Coat', 'Metal Burst', 'Endeavor', 'Bide', 'Spit Up', 'Natural Gift', 'Fling', 'Sucker Punch', 'Belch']);
+const RENTUTIL = { 'Reflect': 4, 'Light Screen': 4, 'Substitute': 4, 'Taunt': 4, 'Stealth Rock': 4, 'Spikes': 4, 'Toxic Spikes': 4, 'Wish': 4, 'Belly Drum': 4, 'Rain Dance': 3, 'Sunny Day': 3, 'Sandstorm': 3, 'Hail': 3, 'Roar': 3, 'Whirlwind': 3, 'Protect': 3, 'Detect': 3 };
+function rentPool(id, lv) { return movesAt(id, lv).concat(preMoves(id, lv), tutFoe(id, lv)).filter((x, i, a) => a.indexOf(x) === i && !DEADMV.has(x)); }
+function rentMoves(m, fix) {
+  if (LEGSET[m.id]) return legSet(m.id);
+  const all = rentPool(m.id, m.lv); if (all.length <= 4) return all.length ? all : defaultMoves(m.id, m.lv);
+  const st = statsOf(m), ab = abilityOf(m.id, m.mega), own = mTypes(m).filter(t => t >= 0), atk = st[1] * (ab === 'hugepower' || ab === 'purepower' ? 2 : 1), top = Math.max(atk, st[3], 1);
+  const mvOf = x => MOVES[x][0] === 'Hidden Power' ? mvEff(null, { src: m }, MOVES[x]) : MOVES[x], tyOf = x => { const mv = mvOf(x); return ATE[ab] != null && mv[1] === 0 ? ATE[ab] : mv[1]; };
+  const val = x => {
+    const mv = mvOf(x), n = mv[0]; let pw = mv[2] || (n === 'Return' ? 100 : FIXED[n] ? 45 : 60); if (ab === 'technician' && pw <= 60) pw *= 1.5;
+    let p = pw * (ab === 'noguard' || !mv[3] ? 1 : mv[3] / 100) * (mv[13] ? (ab === 'skilllink' ? mv[14] : (mv[13] + mv[14]) / 2) : 1);
+    if (CHARGE[n] || RECHARGE.has(n)) p *= 0.55;
+    if (BOOM.has(n) || RENTBAD.has(n)) p *= 0.3;
+    if (mv[9] < 0) p *= 0.9; if (mv[6] === 9) p = 30; if (n === 'Future Sight' || n === 'Doom Desire') p *= 0.6;
+    if (RAGE.has(n)) p *= 0.75; else if (mv[6] === 7 && mv[12].some(s => s[1] < 0)) p *= 0.85;
+    if (ATE[ab] != null && mv[1] === 0) p *= 1.2;
+    return p * (n === 'Foul Play' ? 0.8 : Math.max(0.45, (mv[4] === 1 ? atk : st[3]) / top)) * (own.includes(tyOf(x)) ? (ab === 'adaptability' ? 2 : 1.5) : 1);
+  };
+  /* Det taktiske: søvn først, så oppbygging som passer (mest for den som hever slagkraften to trinn), lammelse og brannskade, helbredelse, og
+     gift og skjermer. Treffsikkerheten teller. Rene forsvarsboost og unnvikelse er sjelden verdt en plass. */
+  const tact = x => {
+    const mv = MOVES[x], n = mv[0], acc = mv[3] ? mv[3] / 100 : 1;
+    if (n === 'Swallow' || n === 'Spit Up') return 0;
+    if (mv[6] === 1) return (mv[7] === 2 ? 9 : mv[7] === 1 || mv[7] === 4 || mv[7] === 18 ? 7 : n === 'Toxic' ? 5.5 : mv[7] === 5 || mv[7] === 6 || mv[7] === 14 ? 4.5 : 2) * acc;
+    if (n === 'Rest') return 4; if (mv[6] === 3) return 6;
+    if (mv[12].length && mv[17] === 1) {
+      const d = i => Math.max(0, ...mv[12].filter(s => s[0] === i).map(s => s[1])), off = Math.min(2, Math.max(d(2), d(4))), spe = Math.min(2, d(6));
+      return off || spe ? 5.5 + 1.25 * off + 0.5 * spe + (d(3) || d(5) ? 0.5 : 0) : d(8) ? 2 : 3;
+    }
+    return RENTUTIL[n] || (mv[12].length || UM[n] ? 2 : 0);
+  };
+  const dmg = all.filter(x => MOVES[x][4] > 0).sort((a, b) => val(b) - val(a)), stat = all.filter(x => MOVES[x][4] === 0).sort((a, b) => tact(b) - tact(a)), pick = [], tys = new Set();
+  /* Blant dem som er nesten like gode som den beste (f = hvor nær), trekkes det. */
+  const near = (l, sc, f) => { if (!l.length) return null; if (fix) return l[0]; const b = sc(l[0]), c = l.filter(x => sc(x) >= b * f); return c[rnd(c.length)]; };
+  const add = x => { if (x != null && !pick.includes(x) && pick.length < 4) { pick.push(x); if (MOVES[x][4] > 0) tys.add(tyOf(x)); } };
+  for (const t of own) add(near(dmg.filter(x => tyOf(x) === t && val(x) >= 45), val, 1 - RENTV));
+  const cover = x => { const t = tyOf(x); let n = 0; for (let d = 0; d < TYN.length; d++) { const best = Math.max(0, ...[...tys].map(a => CH[a][d])); if (CH[t][d] > 1 && best <= 1) n += 1; else if (CH[t][d] >= 1 && best < 1) n += 0.5; } return n; };
+  const cv = x => val(x) * (1 + 0.12 * cover(x)), covs = () => dmg.filter(x => !tys.has(tyOf(x)) && !pick.includes(x)).sort((a, b) => cv(b) - cv(a));
+  add(near(covs(), cv, 1 - RENTV));
+  { const c2 = covs(), fits = stat.filter(x => tact(x) >= 4 && boostFits(x, pick));
+    if (fits.length && !(!fix && c2.length && val(c2[0]) >= 60 && Math.random() < RENTALL)) add(near(fits, tact, 0.78)); }
+  for (const x of covs()) { if (pick.length >= 4) break; if (!tys.has(tyOf(x)) && val(x) >= 40) add(x); }
+  for (const x of stat) { if (pick.length >= 4) break; if (tact(x) >= 6 && boostFits(x, pick)) add(x); }
+  for (const x of dmg) add(x);
+  for (const x of stat) if (boostFits(x, pick)) add(x);
+  return boostFix(pick, dmg, stat, tact);
+}
+const rentSet = m => { m.mv = rentMoves(m); return m; };
+/* VURDERINGEN AV EN LEIE-POKÉMON (steg 1c.4, Jazz 14.11: «Stjerner må være basert på stats og moves og hvor god denne faktisk er»).
+   Før var stjernene samlet basisverdi alene. Nå spiller den i tankene én mot én mot et fast panel av dem man møter i Frontier (FACREF: hver
+   sjuende av de ferdig utviklede, nivå 50, med settet de ville hatt), med spillets egen skaderegning (bestDmg): verdiene med natur og IV,
+   angrepene, typene begge veier og evnene som teller i regnestykket er da med av seg selv. facDuel gir for hver motstander hvem som vinner
+   og hvor mye HP som er igjen; snittet er grunnlaget. Oppå kommer det regnestykket ikke ser: søvn, lammelse og brannskade, oppbygging som
+   passer, helbredelse, og evner som virker når den kommer inn (FACABB). Vektene (FACW) er stilt inn mot fasiten fra botene (sim/stars_elo.js:
+   hver art én mot én mot feltet med den vanlige og den flinke boten), og lag med høyere vurdering vinner oftere (sim/stars_team.js).
+   facRate(m) = { p: 0–100 (omtrent hvor mange av hundre dueller mot feltet den vinner), n: 1–5 merker (FACCUT), why: [[tekst, 1 | -1], …],
+   role, d (duellene), f (tilleggene), ab }. Merkene vises som RUTER, ikke stjerner: stjernene på kortet er IV-ene (spørsmål 7 i gjennomgangen).
+   Målt 17.11 (387 arter og Mega-former): rangkorrelasjonen med fasiten er 0,88–0,90 (samlet basisverdi: 0,77), og seier per merke er
+   27, 42, 57, 70 og 83 % for den vanlige boten og 31, 46, 61, 74 og 87 % for den flinke. */
+const FACW = { k: 0.08, v: 0.67, wins: 0.31, slp: 0.13, bo: 0.055, heal: 0.036 };
+const FACABB = { intimidate: 0.07, levitate: 0.035, speedboost: 0.04, slowstart: -0.2 };
+const FACCUT = [40, 51, 62, 72];
+let _facRef = null;
+function facRefs() {
+  if (_facRef) return _facRef;
+  const l = []; for (let id = 1; id <= 649; id++) { if (isLeg(id) || (D(id)[6] & 4) || (EVO[id] && EVO[id].length) || reqLv(id) > FACLV + 12) continue; const s = bstSum(id); if (s >= 440 && s <= 600) l.push(id); }
+  return (_facRef = l.filter((_, i) => i % 7 === 3).map(id => { const m = { id, lv: FACLV, sh: 0, iv: [15, 15, 15, 15, 15, 15], ev: [0, 0, 0, 0, 0, 0], nat: 0 }; m.mv = rentMoves(m, 1); return m; }));
+}
+/* Én mot én mot hver i panelet. out = andelen av motstanderens HP den tar per runde (i snitt, treffsikkerheten medregnet), inc = det den selv mister. */
+function facDuel(m) {
+  const B = mkBattle([m], facRefs(), { skill: 1 }, {}), me = B.me[0]; let v = 0, out = 0, inc = 0, fast = 0, wins = 0, walled = 0;
+  const one = (o, i, f) => { const to = o > 0.02 ? Math.ceil(1 / o - 1e-9) : 50, ti = i > 0.02 ? Math.ceil(1 / i - 1e-9) : 50, win = f ? to <= ti : to < ti; return win ? [1, 0.5 + 0.5 * Math.max(0, 1 - (f ? to - 1 : to) * i)] : [0, 0.5 * Math.min(1, (f ? ti : ti - 1) * o)]; };
+  for (const c of B.foe) {
+    const o = Math.min(1, bestDmg(B, me, c) / c.max), i = Math.min(1, bestDmg(B, c, me) / me.max), sa = spdB(B, me), sc = spdB(B, c), a = one(o, i, true), b = one(o, i, false), w = sa > sc ? 1 : sa < sc ? 0 : 0.5;
+    v += w * a[1] + (1 - w) * b[1]; wins += w * a[0] + (1 - w) * b[0]; out += o; inc += i; fast += w; if (o < 0.2) walled++;
+  }
+  const n = B.foe.length; return { v: v / n, out: out / n, inc: inc / n, fast: fast / n, wins: wins / n, walled: walled / n, st: me.st, max: me.max };
+}
+function facRate(m) {
+  if (m._fr && m._fr.k === m.mv.join()) return m._fr.r;
+  const d = facDuel(m), ab = abilityOf(m.id, m.mega), mvs = m.mv.map(x => MOVES[x]), f = { wins: d.wins, slp: 0, bo: 0, heal: 0 };
+  /* Oppbygging og helbredelse hjelper den som tåler å stå en runde (safe). Lammelse, gift og fart alene ga ikke flere seire i målingen. */
+  const safe = Math.max(0, 1 - d.inc * 2);
+  mvs.forEach((mv, k) => {
+    if (mv[4] !== 0) return; const up = i => Math.max(0, ...mv[12].filter(s => s[0] === i).map(s => s[1]));
+    if (mv[6] === 1 && mv[7] === 2) f.slp = Math.max(f.slp, mv[3] ? mv[3] / 100 : 1);
+    if (mv[12].length && mv[17] === 1 && boostFits(m.mv[k], m.mv)) f.bo = Math.max(f.bo, Math.min(2, Math.max(up(2), up(4))) / 2 * safe);
+    if (mv[6] === 3 && mv[0] !== 'Swallow') f.heal = safe;
+  });
+  let x = FACW.k + FACW.v * d.v + (FACABB[ab] || 0); for (const k in f) x += FACW[k] * f[k];
+  const p = Math.max(0, Math.min(100, Math.round(100 * x))), n = 1 + FACCUT.filter(c => p >= c).length;
+  const r = { p, n, why: [], d, f, role: facRole(m), ab };
+  facWhy(m, r);
+  Object.defineProperty(m, '_fr', { value: { k: m.mv.join(), r }, enumerable: false, configurable: true, writable: true });
+  return r;
+}
+/* NOEN FÅ ORD OM HVORFOR (FACWHY = tersklene, satt etter spredningen blant leie-Pokémonene: de beste og svakeste 20 %). Høyst tre: det beste
+   først, og én svakhet; en svak får én styrke og to svakheter. Evnen nevnes når den teller i regnestykket. */
+const FACWHY = { fast: 0.74, slow: 0.17, hard: 0.72, soft: 0.5, bulky: 0.5, frail: 0.74, walled: 0.09, stab: 85, cover: 9 }, FACWHY2 = { fast: 0.57, slow: 0.29, hard: 0.67, soft: 0.57, bulky: 0.57, frail: 0.68 };
+const FACABW = { hugepower: 'Huge Power: Attack ×2', purepower: 'Pure Power: Attack ×2', intimidate: 'Intimidate', levitate: 'Levitate', speedboost: 'Speed Boost', adaptability: 'Adaptability', technician: 'Technician', skilllink: 'Skill Link', multiscale: 'Multiscale', regenerator: 'Regenerator', sheerforce: 'Sheer Force', toughclaws: 'Tough Claws', parentalbond: 'Parental Bond', drizzle: 'Brings rain', drought: 'Brings sun', sandstream: 'Brings a sandstorm', wonderguard: 'Wonder Guard', magicbounce: 'Magic Bounce', prankster: 'Prankster' };
+const FACIMM = { levitate: 4, voltabsorb: 12, lightningrod: 12, motordrive: 12, waterabsorb: 10, dryskin: 10, stormdrain: 10, flashfire: 9, sapsipper: 11 };
+function facWhy(m, r) {
+  const d = r.d, ab = r.ab, ty = mTypes(m).filter(t => t >= 0), st = statsOf(m), atk = st[1] * (ab === 'hugepower' || ab === 'purepower' ? 2 : 1), top = Math.max(atk, st[3], 1);
+  const dm = m.mv.map(x => MOVES[x][0] === 'Hidden Power' ? mvEff(null, { src: m }, MOVES[x]) : MOVES[x]).filter(mv => mv[4] > 0), tyOf = mv => ATE[ab] != null && mv[1] === 0 ? ATE[ab] : mv[1];
+  const pw = mv => (mv[2] || 0) * (mv[3] ? mv[3] / 100 : 1) * (mv[13] ? (mv[13] + mv[14]) / 2 : 1), stab = dm.filter(mv => ty.includes(tyOf(mv)));
+  const strong = stab.some(mv => pw(mv) >= FACWHY.stab && (mv[4] === 1 ? atk : st[3]) >= 0.85 * top);
+  let cov = 0; for (let t = 0; t < TYN.length; t++) if (dm.some(mv => (mv[2] || 0) >= 60 && CH[tyOf(mv)][t] > 1)) cov++;
+  /* q = 0: de strenge tersklene. q = 1: de løsere (FACWHY2), når en god ikke har fått noen styrke eller en svak ingen svakhet. */
+  const W = [FACWHY, FACWHY2], soft = q => d.out <= W[q].soft;
+  const P = q => { const o = []; if (FACABW[ab]) o.push(FACABW[ab]); if (r.f.slp >= 0.6) o.push('Sleep move'); if (d.out >= W[q].hard) o.push('Hits hard'); else if (strong && !soft(0)) o.push('Strong STAB');
+    if (d.fast >= W[q].fast) o.push('Fast'); if (d.inc <= W[q].bulky) o.push('Bulky'); if (r.f.bo > 0.25) o.push('Sets up'); if (r.f.heal > 0.25) o.push('Heals itself'); if (cov >= FACWHY.cover) o.push('Wide coverage'); return o; };
+  const w4 = []; for (let t = 0; t < TYN.length; t++) { if (FACIMM[ab] === t) continue; let e = 1; for (const y of ty) e *= CH[t][y]; if (ab === 'thickfat' && (t === 9 || t === 14)) e /= 2; if (e >= 4) w4.push(TYN[t]); }
+  const N = q => { const o = []; if (w4.length) o.push('4× weak to ' + w4.slice(0, 2).join(' and ')); if (!stab.length && dm.length) o.push('No STAB'); else if (soft(q)) o.push(dm.some(mv => pw(mv) >= 70) ? 'Hits softly' : 'Weak moves');
+    if (d.inc >= W[q].frail) o.push('Frail'); if (d.fast <= W[q].slow) o.push('Slow'); if (d.walled >= FACWHY.walled) o.push('Easily walled'); return o; };
+  let pos = P(0), neg = N(0); if (r.n >= 4 && pos.length < 2) pos = P(1); if (r.n <= 2 && neg.length < 2) neg = N(1);
+  const np = r.n >= 3 ? 2 : 1, nn = r.n >= 3 ? 1 : 2;
+  r.why = pos.slice(0, np + (neg.length ? 0 : 1)).map(t => [t, 1]).concat(neg.slice(0, nn + (pos.length >= np ? 0 : 1)).map(t => [t, -1])).slice(0, 3);
 }
 /* Leie-Pokémon er alltid fullt utviklet. En sjelden gang (MEGAP for runden; i runde 6 alltid) er én av de sju en Mega. Den trekkes blant alle Mega-former
    som ikke er legendariske, og de svakeste kommer klart oftest: Mawile og Beedrill mange ganger så ofte som Garchomp og Salamence. */
@@ -817,13 +965,13 @@ function facStar(r, used, tys) {
   }
   if (!pool.length) return null;
   const id = pool[rnd(pool.length)]; used.add(id); if (tys) tys[D(id)[1]] = (tys[D(id)[1]] || 0) + 1;
-  return { id, lv: FACLV, sh: 0, iv: Array.from({ length: 6 }, () => Math.max(0, Math.min(31, 4 * r + 6 + rnd(14)))), ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: foeMoves(id, FACLV, 1) };
+  return rentSet({ id, lv: FACLV, sh: 0, iv: Array.from({ length: 6 }, () => Math.max(0, Math.min(31, 4 * r + 6 + rnd(14)))), ev: [0, 0, 0, 0, 0, 0], nat: rnd(25) });
 }
 /* mg: én av de sju er alltid en Mega (bare fra sandkassa). En Mega tar aldri plassen til trekkplasteret. */
 function facOffer(r, mg) {
   const used = new Set(), tys = {}, l = Array.from({ length: 6 }, () => facMon(r, used, 0, tys)), si = rnd(7);
   l.splice(si, 0, facStar(r, used, tys) || facMon(r, used, 0, tys));
-  if (mg || Math.random() < facMegaP(r)) { const k = megaPick(used), g = MEGA[k], i = (si + 1 + rnd(6)) % 7; l[i] = { id: g[0], mega: k + 1, lv: FACLV, sh: 0, iv: l[i].iv, ev: [0, 0, 0, 0, 0, 0], nat: rnd(25), mv: foeMoves(g[0], FACLV, 1) }; }
+  if (mg || Math.random() < facMegaP(r)) { const k = megaPick(used), g = MEGA[k], i = (si + 1 + rnd(6)) % 7; l[i] = rentSet({ id: g[0], mega: k + 1, lv: FACLV, sh: 0, iv: l[i].iv, ev: [0, 0, 0, 0, 0, 0], nat: rnd(25) }); }
   return l;
 }
 function facStart() { S.fac.run = { round: 1, w: 0, streak: 0, offer: facOffer(1), open: 0, team: null, foe: null, brain: rnd(POOL.brain.length) }; save(); }
@@ -844,7 +992,7 @@ function facFoe() {
     /* De sjeldne (u = 1 til 3 for klasse 7 til 9) ligger alltid et hakk eller mer over rundens boss, så de sjeldneste er vanskeligst også her. */
     const st = { iv: Math.min(31, T.iv + (u ? 4 + 4 * u : 0)), ev: T.ev + 8 * u, q: u ? 2 : T.q, slack: u >= 3 ? 99 : Math.max(T.slack, u ? [6, 14, 99][u - 1] : 0), mg: TCL[k].i >= 8 };
     const dd = diff(); st.iv = Math.round(st.iv * dd.iv); st.ev = Math.round(st.ev * dd.ev);
-    f = { boss: 1, k, i, sk: Math.min(1, T.sk + 0.06 * u), iq: Math.min(1, T.iq + 0.15 * u), sym: T.sym || 0, team: bossTeam(POOL[k][i], u ? 4 : T.mons || 4, FACLV, st, true), hint: POOL[k][i][3] };
+    f = { boss: 1, k, i, sk: Math.min(1, T.sk + 0.06 * u), iq: Math.min(1, T.iq + 0.15 * u), sym: T.sym || 0, team: bossTeam(POOL[k][i], u ? 4 : T.mons || 4, FACLV, st, true).map(rentSet), hint: POOL[k][i][3] };
   } else {
     const rr = Math.max(1, Math.min(FACEND, R.round)), d = facD(rr, R.w), team = Array.from({ length: 4 }, () => facMon(rr, used, d));
     team.forEach(m => { const t = D(m.id)[1]; cnt[t] = (cnt[t] || 0) + 1; });
