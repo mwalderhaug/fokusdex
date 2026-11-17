@@ -625,8 +625,10 @@ const foeTeam = (k, d, n, base, st, flat, pre) => k === 'trainer' ? regTeam(d[2]
    rundt en shiny. Den tar plassen til kampen, så runden blir ikke lengre. Vinner du: CHLCOIN ganger myntene, og arten (første form) venter
    som shiny i gresset. Taper du: runden går videre til neste kamp, og ingen forsøk er brukt. Den kommer høyst én gang per runde, tidligst
    når du har vunnet CHLMIN ligakamper, og senest etter CHLDRY kamper uten (S.lad.chn teller dem). Styrken er som Elite Four (CHLST).
+   CHLP 0,026 per kamp gir en utfordrer i rundt hver åttende runde (målt 1c.7: med 0,05 ga ligaen 0,32 shiny-møter per kampdag mot 0,04–0,06
+   i de to andre modusene; nå rundt 0,2, der lagets egne bonuser står for det meste).
    t.ch = { a: essets art, nm: navnet } på treneren som venter; B.ch i kampen. */
-const CHLP = 0.05, CHLDRY = 40, CHLMIN = 6, CHLCOIN = 2;
+const CHLP = 0.026, CHLDRY = 60, CHLMIN = 6, CHLCOIN = 2;
 const CHLACE = [350, 130, 59, 448, 282, 330, 468, 637, 612, 609, 212, 181, 359, 571, 405, 334, 38, 229, 466, 121, 208, 461, 6, 9, 3, 254, 257, 260, 392, 395];
 const CHLNAME = ['Lyra', 'Soren', 'Mika', 'Ilva', 'Tarek', 'Noor', 'Eskil', 'Runa', 'Odin', 'Saga'];
 const CHLST = Object.assign({}, TCL.e4, { n: 'Challenger', mons: 5 });
@@ -1161,9 +1163,12 @@ function facSwap(mine, theirs) { const R = S.fac.run; if (R && R.team && R.team[
    Elite Four-cupen med en mester i finalen, og mesternes cup med en av de aller største i finalen.
    PREMIER: mynter for hver runde (PWTCOIN × cupens faktor × vanskelighetsgrad × studiebonus). Vinneren får et trofé, PWTCANDY Rare Candy og en pakke encounters
    (samme trekning som pakken i butikken, uten de legendariske). */
-const PWTN = 3, PWTCOIN = [260, 520, 1040], PWTCANDY = 2, ROUNDN = ['Quarter-final', 'Semi-final', 'Final'];
-/* Stilt inn mot ligaen (se LGCOIN): mynter i Frontier (FACCOIN) og XP til eget lag per seier i Frontier (FACXP) og i cupen (PWTXP). */
-const FACCOIN = 3.9, FACXP = 1.25, PWTXP = 3.2;
+const PWTN = 3, PWTCOIN = [360, 720, 1440], PWTCANDY = 2, ROUNDN = ['Quarter-final', 'Semi-final', 'Final'];
+/* Stilt inn mot ligaen (se LGCOIN): mynter i Frontier (FACCOIN) og XP til eget lag per seier i Frontier (FACXP) og i cupen (PWTXP).
+   Steg 1c.7 (17.11): målt som hele kampdager med begge botene på eierens lag (Hard, 270 min fokus, uten dagens bonus) ga ligaen rundt 13 000
+   mynter, Frontier 17 000–21 000 (to løp, og flere seire etter at vurderingen kom) og cupen 9 000–10 000. FACCOIN 3,9 → 2,7 og PWTCOIN
+   260/520/1040 → 360/720/1440 legger dem på linje med ligaen, og PWTXP 3,2 → 3,8 fordi cupen er den korteste og ga minst XP. */
+const FACCOIN = 2.7, FACXP = 1.25, PWTXP = 3.8;
 /* XP til ditt eget lag fra Battle Frontier og cupen, der det ikke kjemper selv (leielag) eller står på lånt nivå: hver seier gir hele laget like mye
    som en ligaseier mot n Pokémon på lagets eget nivå, ganger cx (modusens sats) og xm (studiebonus, vanskelighetsgrad og dagens bonus).
    Før var ligaen den eneste modusen som løftet laget, og da kunne ikke dagens bonus styre valget. */
