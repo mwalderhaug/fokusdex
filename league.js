@@ -242,10 +242,49 @@ const liveMine = () => !!S.live && S.live.dev === devId();
 function liveBegin(B) {
   if (!B || B.mode === 'lab' || SBX) return;
   S.live = { m: B.mode, d: B.mode === 'raid' ? dayKey() : (S.lad.day || dayKey()), dev: devId(), at: Date.now(), u: B.tr && B.tr.ultra ? 1 : 0, n: B.tr ? B.tr.n : '' };
+  lockMark(B.mode);
   stamp(); liveSave(B); save();
 }
 function liveSave(B) { if (!B || B.mode === 'lab' || SBX || !liveMine()) return; try { localStorage.setItem(LIVEK, JSON.stringify({ v: 1, at: S.live.at, B: battleSnap(B) })); } catch (_) {} }
 function liveEnd() { if (SBX) { delete S.live; return; } if (S.live) { delete S.live; stamp(); } try { localStorage.removeItem(LIVEK); } catch (_) {} }
+/* LÅSEN UNDER ET LØP (steg 1b.7, Jazz 14.11): «Man skal ikke kunne endre lag eller lvl opp pokemonene underveis etter du har startet en av
+   game modusene … fordi da kan man se motstanderens lag og lvl opp, og det er juks.» runLock() gir modusen som låser ('league', 'factory'
+   eller 'pwt'), eller '' når alt er åpent. Låsen står fra FØRSTE KAMP i løpet på denne kampdagen til løpet er over:
+     ligaen     fra første kamp i dag til runden er tapt eller klar (S.lad.lk = kampdagen)
+     Frontier   fra første kamp i dag til løpet er tapt eller vunnet (S.fac.run.lk = kampdagen; et nytt løp er åpent til sin første kamp)
+     turneringen fra første runde til du er ute eller har vunnet (S.pwt.run.lk)
+   Den slipper også når kampdagen er over: en ny økt (startTimer nuller S.lad.day), «Not today» eller en godtatt simulering. Før første
+   kamp og etter løpet er alt åpent, så laget kan stilles etter den første motstanderen, men ikke etter de neste.
+   LÅST: hvem som er på laget og hvem som er partner, Rare Candy, trening (EV, Hyper Training), utvikling, det de holder, Mega-steinen,
+   formen, angrepene (valget, lærerne og egg-angrepene) og vanskelighetsgraden. game.js spør locked() i hver av dem, og ui.js stopper
+   trykket med en forklaring (LOCKA, lockMsg). SOM FØR: hvem som leder i hver kamp, XP-en laget får av kampene (og angrepet et nytt nivå
+   tilbyr), byttet en boss tilbyr, og fangst (den nye går i boksen mens laget er låst). Raid låser ikke, og Sandbox er unntatt. */
+function lockMark(mode) {
+  const d = S.lad.day || dayKey();
+  if (mode === 'league') S.lad.lk = d; else if (mode === 'fac' && S.fac.run) S.fac.run.lk = d; else if (mode === 'pwt' && S.pwt && S.pwt.run) S.pwt.run.lk = d;
+}
+function runLock() {
+  if (SBX || SIMRUN) return '';
+  const lm = S.live && S.live.m;
+  if (lm === 'league' || lm === 'pwt') return lm;
+  if (lm === 'fac') return 'factory';
+  const d = S.lad.day; if (!d || dayShut()) return '';
+  if (S.lad.lk === d && !ladLost() && !ladDone()) return 'league';
+  if (S.fac.run && S.fac.run.lk === d) return 'factory';
+  const P = S.pwt && S.pwt.run; if (P && P.lk && P.day === d) return 'pwt';
+  return '';
+}
+/* Én linje til spilleren: hva som låser, og når det åpnes igjen. full = 1: også hva som er låst (banneret i Team og under Settings). */
+const LOCKTXT = {
+  league: ['Locked during your League lap.', 'It opens when the lap is won or lost.'],
+  factory: ['Locked during your Frontier run.', 'It opens when the run is over.'],
+  pwt: ['Locked during the cup.', 'It opens when you are out or have won it.']
+};
+function lockMsg(full) {
+  const k = runLock(); if (!k) return '';
+  const t = LOCKTXT[k];
+  return tl(t[0]) + ' ' + (full ? tl('Your team, its levels, training, items, moves and the difficulty stay as they were at the first battle.') + ' ' : '') + tl(t[1]);
+}
 /* Kampen som ble forlatt, hvis den finnes på denne enheten og hører til merket i lagringen. */
 function liveLoad() {
   if (!liveMine()) return null;
@@ -326,7 +365,7 @@ function surgeList(e) {
 }
 const surgeCan = () => S.mons.filter(m => megaOpts(m.id).length > 0).sort((a, b) => (S.party.includes(b.u) - S.party.includes(a.u)) || b.lv - a.lv);
 function surgeToggle(u) {
-  const e = evNow(); if (!e || e.k !== 'surge' || !surgeOk(u)) return false;
+  const e = evNow(); if (!e || e.k !== 'surge' || !surgeOk(u) || runLock()) return false;
   const l = surgeList(e), i = l.indexOf(u);
   if (i >= 0) l.splice(i, 1); else { if (l.length >= SURGEN) return false; l.push(u); }
   e.mg = l; return true;

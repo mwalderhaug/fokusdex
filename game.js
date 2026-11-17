@@ -100,6 +100,7 @@ const HELDG = [['once', 'Berries · used up when they work'], ['plate', 'Plates 
 const heldOf = m => (m && m.item && HELD[m.item]) || null;
 /* Gir m gjenstanden k fra sekken; den m holdt fra før, går tilbake dit. k = '' tar den av. */
 function giveHeld(m, k) {
+  if (locked()) return false;
   if (!m || (m.item || '') === (k || '') || (k && (!HELD[k] || !(S.items[k] > 0)))) return false;
   if (heldOf(m)) S.items[m.item] = (S.items[m.item] || 0) + 1;
   if (k) { S.items[k]--; m.item = k; } else delete m.item;
@@ -300,7 +301,7 @@ function kyuMoves(m, from, to) {
   const a = KYU[from] || KYU[''], b = KYU[to] || KYU[''], ix = n => MOVES.findIndex(x => x[0] === n);
   a.forEach((n, i) => { const p = m.mv.indexOf(ix(n)), q = ix(b[i]); if (p >= 0 && q >= 0) { if (m.mv.includes(q)) m.mv.splice(p, 1); else m.mv[p] = q; } });
 }
-function setForm(m, k) { const o = formOpts(m).find(x => x[0] === k); if (!o || o[2] || (m.mega || 0) === k) return false; const f0 = formName(m); m.mega = k; if (m.id === 646) kyuMoves(m, f0, formName(m)); save(); return true; }
+function setForm(m, k) { const o = formOpts(m).find(x => x[0] === k); if (locked() || !o || o[2] || (m.mega || 0) === k) return false; const f0 = formName(m); m.mega = k; if (m.id === 646) kyuMoves(m, f0, formName(m)); save(); return true; }
 const isMega = m => { const g = megaOf(m); return !!g && !FORMS.has(g[1]); };
 /* Mega Evolution i kamp. megaOpts = formene en art har (plass i MEGA + 1; Charizard og Mewtwo har to). En egen Pokémon kan mega-utvikle seg når
    du har Mega Ring (S.ring, fra den første Champion du slår) og den har fått en Mega Stone (m.ms = formen; S.items.mstone er steinene du har).
@@ -319,7 +320,7 @@ function megaForm(src) {
 }
 /* Gir en Mega Stone til en av dine (bruker opp steinen), eller bytter form på en som alt har en (gratis). Legendariske bytter bare form. */
 function bondMega(m, k) {
-  const o = megaOpts(m.id); if (!S.ring || !o.includes(k)) return false;
+  const o = megaOpts(m.id); if (locked() || !S.ring || !o.includes(k)) return false;
   if (isLeg(m.id)) { if (!hasStone(m.id)) return false; m.ms = k; save(); return true; }
   if (!o.includes(m.ms)) { if (!(S.items.mstone > 0)) return false; S.items.mstone--; }
   m.ms = k; save(); return true;
@@ -407,12 +408,12 @@ const evRoom = (m, i) => Math.max(0, Math.min(EVMAX - m.ev[i], EVTOT - evSum(m))
 /* Så mange poeng et ønske om n faktisk gir: aldri mer enn det er plass til og råd til. */
 const trainCut = () => typeof evPrice === 'function' ? evPrice() : 1, evPriceOf = n => Math.ceil(n * EVP * trainCut());
 const evCan = (m, i, n) => { n = Math.max(0, Math.min(n, evRoom(m, i))); while (n > 0 && evPriceOf(n) > S.coins) n--; return n; };
-function buyEv(m, i, n) { n = evCan(m, i, n); if (!(n > 0)) return 0; m.ev[i] += n; S.coins -= evPriceOf(n); save(); return n; }
-function clearEv(m, i) { const n = m.ev[i]; if (n) { m.ev[i] = 0; save(); } return n; }
+function buyEv(m, i, n) { n = locked() ? 0 : evCan(m, i, n); if (!(n > 0)) return 0; m.ev[i] += n; S.coins -= evPriceOf(n); save(); return n; }
+function clearEv(m, i) { const n = locked() ? 0 : m.ev[i]; if (n) { m.ev[i] = 0; save(); } return n; }
 /* Hypertrening av én verdi: prisen (0 når verdien alt er 31), og om nivået er høyt nok. */
 const ivCost = (m, i) => ivOf(m, i) >= 31 ? 0 : Math.ceil(HTP * trainCut());
 const htOk = m => m.lv >= HTLV;
-function buyIv(m, i) { const c = ivCost(m, i); if (!(c > 0) || !htOk(m) || S.coins < c) return 0; if (!m.ht) m.ht = [0, 0, 0, 0, 0, 0]; m.ht[i] = 1; S.coins -= c; save(); return c; }
+function buyIv(m, i) { const c = locked() ? 0 : ivCost(m, i); if (!(c > 0) || !htOk(m) || S.coins < c) return 0; if (!m.ht) m.ht = [0, 0, 0, 0, 0, 0]; m.ht[i] = 1; S.coins -= c; save(); return c; }
 /* EV-er fra økter legges først i den staten som alt er mest trent, og ellers i artens beste stat (maks 252 per stat, 510 totalt). For en Pokémon
    som bare er trent av økter, er det samme rekkefølge som før; har du selv kjøpt trening i en stat, fortsetter øktene der. */
 function addEv(m, n) {
@@ -674,7 +675,7 @@ const LNO = {
   'For those new to Pokémon. Opponents are below your level and play simply, and one loss a day is forgiven.': 'For deg som er ny til Pokémon. Motstanderne ligger under nivået ditt og spiller enkelt, og ett tap om dagen er tilgitt.',
   'For those who have played a bit. Opponents are near your level and pick sensible moves.': 'For deg som har spilt litt. Motstanderne er nær nivået ditt og velger fornuftige angrep.',
   'For those who know types and strategy. Opponents are fully trained and play to win.': 'For deg som kan typer og strategi. Motstanderne er fullt trent og spiller for å vinne.',
-  'Harder battles pay more. You can change this any time under Profile → Settings.': 'Vanskeligere kamper gir mer. Du kan endre dette når som helst under Profile → Settings.',
+  'Harder battles pay more. You can change this under Profile → Settings, except in the middle of a run.': 'Vanskeligere kamper gir mer. Du kan endre dette under Profile → Settings, men ikke midt i et løp.',
   'Choose your partner': 'Velg partneren din',
   'Grass, Fire or Water: all three are equally strong. Pick the one you like.': 'Grass, Fire eller Water: alle tre er like sterke. Velg den du liker.',
   'The region decides which Pokémon you meet first. The others open as you go.': 'Regionen avgjør hvilke Pokémon du møter først. De andre åpnes underveis.',
@@ -719,6 +720,10 @@ const LNO = {
   'Coins come from study and battles. They buy balls, packs of three encounters and things for your team. Every pack shows your own odds before you buy.': 'Mynter kommer fra lesing og kamper. De kjøper baller, pakker med tre møter og ting til laget. Hver pakke viser dine egne sjanser før du kjøper.',
   'Medals for what you do: study hours, species caught, League wins. Each step pays coins, and your medals raise your rank, the frame around your picture.': 'Medaljer for det du gjør: studietimer, arter fanget, seire i ligaen. Hvert trinn gir mynter, og medaljene løfter rangen din, rammen rundt bildet ditt.',
   'Fokusdex cannot see whether you really study, and trusts you with that. It only closes the shortcuts it can: the clock, old saves and abandoned battles.': 'Fokusdex kan ikke se om du faktisk leser, og stoler på deg. Det stenger bare snarveiene det kan: klokka, gamle lagringer og kamper du forlater.',
+  'Locked during your League lap.': 'Låst under runden din i ligaen.', 'It opens when the lap is won or lost.': 'Det åpnes når runden er vunnet eller tapt.',
+  'Locked during your Frontier run.': 'Låst under løpet ditt i Battle Frontier.', 'It opens when the run is over.': 'Det åpnes når løpet er over.',
+  'Locked during the cup.': 'Låst under cupen.', 'It opens when you are out or have won it.': 'Det åpnes når du er ute eller har vunnet.',
+  'Your team, its levels, training, items, moves and the difficulty stay as they were at the first battle.': 'Laget, nivåene, treningen, gjenstandene, angrepene og vanskelighetsgraden står som de var ved første kamp.',
   'Your game is saved on this device as you go. Sync keeps a copy in a private GitHub repository, so it follows you between devices.': 'Spillet lagres på denne enheten underveis. Synk holder en kopi i et privat GitHub-repo, så det følger deg mellom enheter.',
 };
 const tl = (s, v) => { const x = typeof S !== 'undefined' && S && S.lang === 'no' && LNO[s] != null ? LNO[s] : s; return v ? x.replace(/\{(\w+)\}/g, (m, k) => v[k] != null ? v[k] : m) : x; };
@@ -991,7 +996,7 @@ function carry(p) {
   if (!p || !p.started) return;
   const ge = (a, b) => (a || '') >= (b || ''), tr = (a, b) => !a ? b : !b ? a : a.d === b.d ? (a.n >= b.n ? a : b) : (a.d > b.d ? a : b);
   /* Et tap den andre lagringen ikke kjenner til, avslutter runden der også (ligaen: tap = runden over), og en runde som er vunnet i dag, er dagens runde. */
-  if (p.lad) { S.lad.tries = tr(p.lad.tries, S.lad.tries) || null; if (ge(p.lad.lost, S.lad.lost)) { if (p.lad.lost && p.lad.lost !== S.lad.lost) { S.lad.n = 0; S.lad.c = 0; S.lad.seen = []; S.lad.next = null; S.lad.fell = p.lad.fell || 0; } S.lad.lost = p.lad.lost || ''; } if (ge(p.lad.fw, S.lad.fw) && p.lad.fw) S.lad.fw = p.lad.fw; if (p.lad.lapd && ge(p.lad.lapd, S.lad.lapd)) S.lad.lapd = p.lad.lapd; }
+  if (p.lad) { S.lad.tries = tr(p.lad.tries, S.lad.tries) || null; if (ge(p.lad.lost, S.lad.lost)) { if (p.lad.lost && p.lad.lost !== S.lad.lost) { S.lad.n = 0; S.lad.c = 0; S.lad.seen = []; S.lad.next = null; S.lad.fell = p.lad.fell || 0; } S.lad.lost = p.lad.lost || ''; } if (ge(p.lad.fw, S.lad.fw) && p.lad.fw) S.lad.fw = p.lad.fw; if (p.lad.lapd && ge(p.lad.lapd, S.lad.lapd)) S.lad.lapd = p.lad.lapd; if (p.lad.lk && ge(p.lad.lk, S.lad.lk)) S.lad.lk = p.lad.lk; }
   if (p.fac) { S.fac.tries = tr(p.fac.tries, S.fac.tries) || null; if (ge(p.fac.lost, S.fac.lost)) S.fac.lost = p.fac.lost || ''; }
   if (p.pwt && p.pwt.day && (!S.pwt || ge(p.pwt.day, S.pwt.day))) { if (!S.pwt) S.pwt = { day: '', run: null, won: 0, cups: {} }; if (S.pwt.day !== p.pwt.day) { S.pwt.day = p.pwt.day; S.pwt.run = null; } }
   if (p.mode && p.mode.day && (!S.mode || ge(p.mode.day, S.mode.day))) S.mode = p.mode;
@@ -1125,7 +1130,8 @@ function addMon(id, lv, sh, egg, g) {
   const sz = rollSz(id); if (sz !== 1) m.sz = sz;
   S.mons.push(m);
   S.seen[id] = 1; S.caught[id] = 1; unlockRegions();
-  if (S.party.length < 6) S.party.push(m.u);
+  /* Mens laget er låst under et løp (steg 1b.7), går en ny rett i boksen. */
+  if (S.party.length < 6 && !locked()) S.party.push(m.u);
   return m;
 }
 
@@ -1419,7 +1425,7 @@ function evoOpts(m) {
 }
 function evolve(m, to) {
   const o = evoOpts(m).find(x => x.to === to);
-  if (!o || !o.ok) return false;
+  if (!o || !o.ok || locked()) return false;
   if (o.stone) S.items.stone--;
   achInit().ev++;
   m.id = to; S.seen[to] = 1; S.caught[to] = 1;
@@ -1433,7 +1439,7 @@ const PKSELL = 0.3;
    største inntektskilden sent i spillet. */
 const sellValue = m => Math.round(SELL[tierOf(m.id)] * (m.sh ? 5 : 1) * (m.pk ? PKSELL : 1) * qualM(m));
 function sell(m) {
-  if (S.mons.length <= 1) return 0;
+  if (S.mons.length <= 1 || (S.party.includes(m.u) && locked())) return 0;
   const v = sellValue(m); unbond(m); dropHeld(m);
   S.mons = S.mons.filter(x => x !== m); S.party = S.party.filter(u => u !== m.u);
   if (!S.party.length && S.mons.length) S.party.push(S.mons[0].u);
@@ -1473,22 +1479,26 @@ function packKeepers(cards) {
 }
 /* Bytt mellom «blir» og «selges» for én (ett trykk i lista). */
 function dupToggle(m) { const g = dupGroups().find(x => x.id === m.id); if (!g || dupWhy(m)) return false; if (dupKeep(m, g)) m.kp = 2; else m.kp = 1; save(); return true; }
-function setPartner(m) { S.party = [m.u, ...S.party.filter(u => u !== m.u)].slice(0, 6); save(); }
+/* Låsen under et løp (steg 1b.7, runLock i league.js): sann fra første kamp i et løp til løpet er over. Alt som endrer laget eller gjør
+   det sterkere, spør her først. */
+const locked = () => typeof runLock === 'function' && !!runLock();
+function setPartner(m) { if (locked()) return false; S.party = [m.u, ...S.party.filter(u => u !== m.u)].slice(0, 6); save(); }
 /* Bytt rett fra Team (ønske 1): inn på plassen til den som går ut (outU = 0: en ledig plass). Går partneren ut, blir den nye partner.
    Alt som endrer hvem som er på laget, går gjennom setPartner, swapParty og toggleParty: der skal låsen under et løp (steg 1b.7) stå. */
 function swapParty(outU, inU) {
-  if (!monBy(inU) || S.party.includes(inU)) return false;
+  if (locked() || !monBy(inU) || S.party.includes(inU)) return false;
   const i = S.party.indexOf(outU);
   if (i >= 0) S.party[i] = inU; else if (S.party.length < 6) S.party.push(inU); else return false;
   save(); return true;
 }
 function toggleParty(m) {
+  if (locked()) return false;
   if (S.party.includes(m.u)) { if (S.party.length > 1) S.party = S.party.filter(u => u !== m.u); }
   else if (S.party.length < 6) S.party.push(m.u);
   save();
 }
 /* Rare Candy: n om gangen (ønske 23). Svaret er hvor mange som ble brukt. Angrepene den går forbi, læres eller venter som ellers. */
-function useCandyN(m, n) { let k = 0; while (k < n && S.items.candy > 0 && m.lv < 100) { S.items.candy--; m.lv++; m.xp = Math.max(m.xp, xpAt(m.lv)); learnUp(m, m.lv - 1); k++; } if (k) save(); return k; }
+function useCandyN(m, n) { let k = 0; while (!locked() && k < n && S.items.candy > 0 && m.lv < 100) { S.items.candy--; m.lv++; m.xp = Math.max(m.xp, xpAt(m.lv)); learnUp(m, m.lv - 1); k++; } if (k) save(); return k; }
 function useCandy(m) { return useCandyN(m, 1) > 0; }
 function buy(k) {
   const it = SHOP[k];

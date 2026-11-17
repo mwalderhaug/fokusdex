@@ -244,8 +244,14 @@ const SND = {
 };
 let CLK = '', SNDP = 0;
 const snd = k => { CLK = k || ''; };
+/* Handlingene låsen under et løp stopper (steg 1b.7). De som åpner et ark der noe bare kan endres (bytte, angrepsvalget), stoppes ved
+   døra, så forklaringen kommer før arbeidet. Salg stoppes bare for dem som står på laget. */
+const LOCKA = new Set(['lead', 'party', 'tsw', 'tswgo', 'tswr', 'candy', 'heldgive', 'heldoff', 'mgive', 'triv', 'trev', 'trclr', 'evolve', 'form', 'mvpick', 'mvsug', 'mvsave', 'diff', 'tutteach', 'egginh']);
+const lockStops = (a, el) => (LOCKA.has(a) || (a === 'sell' && S.party.includes(+el.dataset.u))) && typeof runLock === 'function' && !!runLock();
+const lockEl = () => { const t = typeof lockMsg === 'function' ? lockMsg(1) : ''; return t ? `<div class="lockn" role="note">${icn('lock')}<p class="sm">${t}</p></div>` : ''; };
 function press(el, fn) {
   const a = el.dataset.a, arm = el.dataset.ok;
+  if (lockStops(a, el)) { toast(lockMsg()); if (sfx.warn) sfx.warn(); return; }
   CLK = OWN.has(a) ? '' : SND[a] || 'tap'; SNDP = 0;
   try { fn(el); } finally {
     /* «Tap again»-knappene: det første trykket er en advarsel, ikke en bekreftelse. */
@@ -791,7 +797,7 @@ function teamView(head) {
         <span class="tc-p tn"><b>${nb(pw)}</b><small>power</small></span></button>
       ${cmp ? '' : `<button type="button" class="tc-x" data-a="tsw" data-u="${m.u}" aria-label="Swap ${esc(mName(m))} for another Pokémon">${icn('swap')}</button>`}</div>`; };
   const empty = S.party.length < 6 && !cmp ? `<button type="button" class="tc empty" data-a="tsw" data-u="0">${icn('plus')}<span>${S.mons.length > S.party.length ? 'Add a Pokémon' : 'An empty place'}</span><small class="tn">${S.party.length}/6</small></button>` : '';
-  return `${head}
+  return `${head}${lockEl()}
     <div class="tctl"><div class="seg sm2" role="group" aria-label="Order"><button type="button" data-a="tord" data-k="" aria-pressed="${U.tord !== 'pw'}">Team order</button><button type="button" data-a="tord" data-k="pw" aria-pressed="${U.tord === 'pw'}">Strongest</button></div>
       ${mons.length > 1 ? `<button type="button" class="chip cmpb" data-a="cmp" aria-pressed="${!!cmp}">${icn('scale')}Compare</button>` : ''}</div>
     ${cmp ? `<p class="sm tcmp">${tl('Tap two to see them side by side.')}</p>` : tipEl('pw', tl('Power is what a Pokémon really brings right now: level, training, nature, shiny and size all count, not only the species.'))}
@@ -873,7 +879,7 @@ function monSheet(m, re) {
         ${m.nn && !ed ? `<div class="sm">${esc(spName(m))}</div>` : ''}
         <div class="mc-t">${mTyChips(m)}${tierEl(m.id)}${m.sh === 2 ? '<span class="pill dkp">Dark</span>' : m.sh ? '<span class="pill au">Shiny</span>' : ''}${fn ? `<span class="pill">${fn} Forme</span>` : ''}${szTag(m)}</div></div>
       <button type="button" class="mc-f${m.fav ? ' on' : ''}" data-a="fav" data-u="${m.u}" aria-pressed="${!!m.fav}" aria-label="${m.fav ? 'Favourite: on' : 'Mark as favourite'}">${icn('heart')}</button></div>
-    ${cardTip(m)}<div class="card2 mc-s" style="--tc:var(--t${ty[0]})">
+    ${lockEl()}${cardTip(m)}<div class="card2 mc-s" style="--tc:var(--t${ty[0]})">
       <button type="button" class="mc-pw" data-a="mstat" data-u="${m.u}" aria-label="Power ${pwOf(m)}. See the numbers"><span class="pw tn"><b>${nb(pwOf(m))}</b><small>power</small></span><span class="sp">${potOn() ? `${starRow(m, 'lg')}<small>${now > born ? `Born ${JT[born - 1].toLowerCase()} · trained to ${now} stars` : `Born ${JT[born - 1].toLowerCase()}`}</small>` : ''}
         <span class="mtrs"><span class="mtr" role="img" aria-label="Level ${m.lv} of 100"><small>Level</small><i><b style="width:${m.lv}%"></b></i></span>${has('train') ? `<span class="mtr" role="img" aria-label="Training: ${evSum(m)} of ${EVTOT} EVs"><small>Training</small><i><b style="width:${Math.round(evSum(m) / EVTOT * 100)}%"></b></i></span>` : ''}</span></span>${icn('chev')}</button>
       ${hexEl(m)}
@@ -1118,7 +1124,7 @@ function setSheet(k, re) {
       <button type="button" class="btn wide rowb" data-a="work"><span>Work days</span><span class="sm tn">${workIsOn() ? 'on' : 'off'}</span></button></div>`;
   else if (k === 'battle') { const d = S.diff == null ? 2 : S.diff;
     h = `<div><div class="lab">Difficulty</div><div class="seg">${DIFF.map((x, i) => `<button type="button" data-a="diff" data-k="${i}" aria-pressed="${d === i}">${x.n}</button>`).join('')}</div>
-      <p class="sm" style="margin-top:6px">${DIFFTXT[d]} Coins ×${diff().coin} and XP ×${diff().xp} from battles.</p></div>
+      <p class="sm" style="margin-top:6px">${DIFFTXT[d]} Coins ×${diff().coin} and XP ×${diff().xp} from battles.</p>${lockEl()}</div>
       <div class="tgls">${tog('hfx', S.hfx !== 0, 'Move hints')}${tog('hty', S.hty !== 0, 'Type tags')}</div>
       <p class="sm">${tl('Move hints put 4×, 2×, ½, ¼ or 0× on each move. Type tags show the types by the HP boxes: tap a box to see what hits it hard. The i in the move menu tells what each move does.')}</p>
       <p class="sm">${tl('Battle speed, music and forfeit are in the Pause menu during a battle.')}</p>`; }
@@ -1420,7 +1426,7 @@ function intro() {
     const d = stDiff();
     ov(`${stTop(2)}<div class="mid st2"><h1 class="big">${tl('How hard should the battles be?')}</h1>
       <div class="stcs" role="radiogroup">${DIFF.map((x, i) => stCard('stdiff', i, d === i, `<span class="st-pips p${i}"><i></i><i></i><i></i></span>`, x.n, tl(DIFFWHO[i]), `<span class="st-pay tn"><span class="coin"><i></i></span>×${x.coin}</span>`)).join('')}</div>
-      <p class="sm" style="max-width:34ch">${tl('Harder battles pay more. You can change this any time under Profile → Settings.')}</p></div>
+      <p class="sm" style="max-width:34ch">${tl('Harder battles pay more. You can change this under Profile → Settings, except in the middle of a run.')}</p></div>
       <div class="acts"><button type="button" class="btn pri" data-a="stnext">Next</button></div>`);
     return;
   }
@@ -1770,7 +1776,7 @@ const A = {
   /* Lyden når et møte dukker opp under en økt (S.fsnd = 0: av). Bjella på timeren og knappen under Settings. */
   fsnd: () => { S.fsnd = S.fsnd === 0 ? 1 : 0; save(); const b = $('#t-snd'); if (b) { b.innerHTML = bellSvg(S.fsnd !== 0); b.setAttribute('aria-pressed', S.fsnd !== 0); } else { render(); setRe(); } toast(S.fsnd === 0 ? 'Encounter sound off' : 'Encounter sound on'); },
   lang: el => { S.lang = el.dataset.k === 'no' ? 'no' : 'en'; save(true); if (!S.started) intro(); else { render(); setRe(); } },
-  diff: el => { S.diff = +el.dataset.k; save(); render(); setRe(); toast(`Difficulty: ${diff().n}. It applies from your next battle.`); },
+  diff: el => { S.diff = +el.dataset.k; save(); render(); setRe(); toast(`Difficulty: ${diff().n}. It stays fixed from the first battle of a run until the run is over.`); },
   hfx: () => { S.hfx = S.hfx === 0 ? 1 : 0; save(); render(); setRe(); },
   hty: () => { S.hty = S.hty === 0 ? 1 : 0; save(); render(); setRe(); },
   nick: el => { const m = monBy(+el.dataset.u); if (!m) return; U.nick = m.u; monSheet(m, 1); const i = $('#nkin'); if (i) { i.focus(); i.select(); } },

@@ -1772,6 +1772,7 @@ function rulesSheet() {
       ${row('Ranks', RANKS.map(r => `${r[0]} ${r[1]}`).join(' · ') + ' medals')}</div>
     <div class="card stack"><b>Fair play</b><p class="sm">The game trusts you with the clock and the timer, and closes the shortcuts it can.</p>
       ${row('Opening the battles', `needs ${OPENMIN} minutes of focus that day`)}${row('A battle you leave', 'is saved after every turn and goes on where it was<br>giving up counts as a loss')}
+      ${row('During a run', 'from the first battle until the lap, the run or the cup is over:<br>team, levels, training, items, moves and difficulty are locked<br>raids are not')}
       ${row('The device clock', 'set back or ahead: sessions and battles pause until it is right again')}
       ${row('Backups and sync', 'only a newer save can replace the one on the device')}
       ${row('Badge rewards', `in an exam period: ${MSGATE / 60}, ${MSGATE / 30} and ${MSGATE / 20} h logged in the subject, ${BADGEGATE / 60} h for the legendary`)}
