@@ -588,9 +588,9 @@ const LNO = {
   'Battle speed, music and forfeit are in the Pause menu during a battle.': 'Kampfart, musikk og å gi opp ligger i pausemenyen under en kamp.',
   'How hard each type of move hits it': 'Hvor hardt hver angrepstype treffer den',
   'How hard each type of move hits your Pokémon': 'Hvor hardt hver angrepstype treffer din Pokémon',
-  'Tap an HP box to see weaknesses': 'Trykk på en HP-boks for å se svakheter',
+  'Tap the foe\'s HP box to see its weaknesses': 'Trykk på motstanderens HP-boks: se svakhetene',
   'Sheets close with a swipe down, or with the ✕ in the corner.': 'Arkene lukkes med et sveip ned, eller med ✕ i hjørnet.',
-  'In battle, both Pokémon have their types by the i button: tap one to see weaknesses.': 'I kamp står typene til begge ved i-knappen: trykk på en for å se svakheter.',
+  'Battles point out where to tap to see what the foe is weak to.': 'Kampene viser hvor du trykker for å se hva motstanderen er svak mot.',
   'Size and training are easier to read on a Pokémon\'s card.': 'Størrelse og trening er lettere å lese på kortet til en Pokémon.',
   'Bug fixes.': 'Feilrettinger.',
   'Every other type: normal damage': 'Alle andre typer: vanlig skade',
@@ -763,7 +763,7 @@ function jFriend() {
 const has = k => !!(S.ulk && S.ulk[k]);
 /* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
    Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
-const WNV = 75, WN = ['Sheets close with a swipe down, or with the ✕ in the corner.', 'In battle, both Pokémon have their types by the i button: tap one to see weaknesses.', 'Size and training are easier to read on a Pokémon\'s card.', 'Bug fixes.'];
+const WNV = 75, WN = ['Sheets close with a swipe down, or with the ✕ in the corner.', 'Battles point out where to tap to see what the foe is weak to.', 'Size and training are easier to read on a Pokémon\'s card.', 'Bug fixes.'];
 /* Første linje for dem som går reisen (whatsNew i ui.js). */
 const WNJ = 'Your journey: new things now open one study day at a time. See the card on the Focus page.';
 function featCheck() { S.ulk = S.ulk || {}; if (!jOn()) return 0; let ch = 0; for (const [k, d] of JOURNEY) if (!S.ulk[k] && (S.jd || 0) >= d) { S.ulk[k] = 1; ch = 1; } return ch; }

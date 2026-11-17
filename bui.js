@@ -821,8 +821,8 @@ function paintBox(side) {
   } else { el.className = 'hpb ' + side + gold; el.innerHTML = boxEl(side); }
   const cur = teamOf(side)[BT.v[side].i], th = tyBadge(cur) + (isMega(cur) ? `<span class="mgt">${megaOf(cur)[1] === 'Primal' ? 'Primal' : 'Mega'}</span>` : '') + (cur.evb && cur.evb !== 'surge' ? '<span class="evt">Event</span>' : '');
   /* Dine egne merker står på den nederste skjermen (drawMenu setter dem inn, og de oppdateres her når en ny kommer ut). Motstanderens står oppå boksen dens. */
-  if (side === 'me') { BT.tyme = th; const o0 = el.querySelector('.tyb'); if (o0) o0.remove(); tySet('me', th); }
-  else { BT.tyfoe = th; tySet('foe', th); const thq = th + tyQ(); let tb = el.querySelector('.tyb'); if (!tb) { tb = document.createElement('div'); tb.className = 'tyb'; el.appendChild(tb); } if (tb.dataset.h !== thq) { tb.dataset.h = thq; tb.innerHTML = thq; } }
+  if (side === 'me') { BT.tyme = th; const o0 = el.querySelector('.tyb'); if (o0) o0.remove(); const m = $('#bty-me'); if (m && m.dataset.h !== th) { m.dataset.h = th; m.innerHTML = th; } }
+  else { const thq = th + tyQ(); let tb = el.querySelector('.tyb'); if (!tb) { tb = document.createElement('div'); tb.className = 'tyb'; el.appendChild(tb); } if (tb.dataset.h !== thq) { tb.dataset.h = thq; tb.innerHTML = thq; } }
   if (!el.dataset.a) { el.dataset.a = 'btypes'; el.dataset.s = side; el.setAttribute('role', 'button'); el.setAttribute('aria-label', side === 'me' ? 'What hits your Pokémon hard' : 'What hits the foe hard'); }
   el.hidden = false;
 }
@@ -999,19 +999,20 @@ function partyPanel(b, i, act, ok, cur) {
 }
 /* «?» ved typemerkene: boksen kan trykkes. Borte når Type tags er slått av. */
 const tyQ = () => S.hty === 0 ? '' : '<i class="tyq">?</i>';
-/* Typene til begge på den nederste skjermen (v81), med navn på hvem som er hvem: motstanderen øverst og din egen under, som på skjermen over.
-   Hver rad kan trykkes (samme panel som HP-boksene). cls: 'bl' = nederst til venstre ved «i» (angrepsmenyen), 'tr' = øverst til høyre. */
-const tyRow = (side, th) => `<button type="button" class="tyb bw-ty" id="bty-${side}" data-a="btypes" data-s="${side}" data-h="${th ? 1 : ''}" aria-label="${side === 'me' ? 'What hits your Pokémon hard' : 'What hits the foe hard'}"><b>${side === 'me' ? 'YOU' : 'FOE'}</b><span>${th || ''}</span>${tyQ()}</button>`;
-const tyRows = cls => S.hty === 0 ? '' : `<div class="bw-tyr ${cls}">${tyRow('foe', BT.tyfoe)}${tyRow('me', BT.tyme)}</div>`;
-const tySet = (side, th) => { const m = $('#bty-' + side); if (m && m.dataset.h !== th) { m.dataset.h = th; const sp = m.querySelector('span'); if (sp) sp.innerHTML = th; } };
-/* Hintet om at HP-boksene kan trykkes (v81): de første kampene står det i tekstboksen under spørsmålet, og «?»-merkene pulserer. Det gir seg
-   når spilleren har åpnet panelet to ganger (S.tip.bty), eller etter åtte kamper (S.tip.btyn): radene og merkene står der uansett. */
+/* Hintet om at motstanderens HP-boks kan trykkes (v81, Jazz: «gjør det tydelig i starten at man skal trykke på der»). De første kampene,
+   hver gang du skal velge: en gul «TAP»-pil står ved boksen og peker på den, boksen lyser, «?» pulserer, og i tekstboksen står det hva
+   trykket gir. Det gir seg når panelet er åpnet to ganger (S.tip.bty), eller etter åtte kamper (S.tip.btyn). */
 const tyHintOn = () => { const t = S.tip || {}; return S.hty !== 0 && (t.bty || 0) < 2 && ((t.btyn || 0) < 8 || BT.hintB === BT.B); };
 function tyHint() {
-  const bx = $('#btext'), B = BT.B, h = $('#bhint'), root = $('#ov'); if (!bx) return;
-  const on = !!(B && !B.over && !BT.busy && !B.need && (!BT.menu || BT.menu === 'main' || BT.menu === 'moves') && tyHintOn());
-  if (on && !h) { bx.insertAdjacentHTML('beforeend', `<small id="bhint"><em class="tyq">?</em>${tl('Tap an HP box to see weaknesses')}</small>`); if (BT.hintB !== B) { BT.hintB = B; const t = S.tip || (S.tip = {}); t.btyn = (t.btyn || 0) + 1; } }
+  const bx = $('#btext'), B = BT.B, h = $('#bhint'), root = $('#ov'), box = $('#b-foe'), tp = $('#btap'); if (!bx) return;
+  const on = !!(B && !B.over && !BT.busy && !B.need && box && !box.hidden && (!BT.menu || BT.menu === 'main' || BT.menu === 'moves') && tyHintOn());
+  if (on && !h) { bx.insertAdjacentHTML('beforeend', `<small id="bhint"><em class="tyq">?</em>${tl('Tap the foe\'s HP box to see its weaknesses')}</small>`); if (BT.hintB !== B) { BT.hintB = B; const t = S.tip || (S.tip = {}); t.btyn = (t.btyn || 0) + 1; } }
   else if (!on && h) h.remove();
+  /* Pila står rett til høyre for boksen, midt på høyden, og peker på den. Et trykk på pila er et trykk på boksen. */
+  if (on) { const par = box.parentElement, r = box.getBoundingClientRect(), p = par.getBoundingClientRect(), t = tp || par.appendChild(Object.assign(document.createElement('button'), { type: 'button', id: 'btap', className: 'btap', innerHTML: '<i></i>TAP' }));
+    if (!tp) { t.dataset.a = 'btypes'; t.dataset.s = 'foe'; t.setAttribute('aria-label', 'What hits the foe hard'); }
+    t.style.left = Math.round(r.right - p.left) + 'px'; t.style.top = Math.round(r.top - p.top + r.height / 2) + 'px'; }
+  else if (tp) tp.remove();
   if (root) root.classList.toggle('tyhint', on);
 }
 function drawMenu() {
@@ -1021,7 +1022,7 @@ function drawMenu() {
   { const B0 = BT.B, ar = $('#arena'), on = !!(B0 && !B0.over && !BT.busy && B0.mode === 'lab' && B0.raid && B0.tr && B0.tr.leg === 150 && !B0.tr.dk), b = $('#dkskip');
     if (on && ar && !b) ar.insertAdjacentHTML('beforeend', '<button type="button" id="dkskip" class="dkskip" data-a="dkskip">Skip to Dark Mewtwo ›</button>'); else if (!on && b) b.remove(); }
   const B = BT.B, pk = PACK.menu ? ' pk' : '', bg = mim('pbg'), cancel = (a, t) => `<button type="button" class="bw-cancel bback" data-a="${a || 'bback'}" aria-label="${t || 'Back'}" style="--c:#2f84e6">${MFR}${RET}</button>`;
-  const myTy = tyRows('tr');
+  const myTy = `<button type="button" class="tyb bw-ty" id="bty-me" data-a="btypes" data-s="me" data-h="" aria-label="What hits your Pokémon hard">${BT.tyme || ''}</button>`;
   if (!B || BT.busy || B.over) { el.innerHTML = `<div class="bw bw-main bw-idle${pk}" style="${mim('ball')}">${B && !B.over ? myTy : ''}</div>`; return; }
   const me = B.me[B.a];
   if (BT.menu === 'types') { el.innerHTML = typesPanel(B, cancel); return; }
@@ -1037,7 +1038,7 @@ function drawMenu() {
     const mvb = (k, m, pp, ok) => `<button type="button" class="bw-m${TYN[m[1]].length > 6 ? ' lg' : ''}${inf && k === BT.ik ? ' sel' : ''}${inf && !ok ? ' nopp' : ''}" data-a="bmove" data-k="${k}" style="--c:var(--b${m[1]})"${ok || inf ? '' : ' disabled'}${inf ? ` aria-pressed="${k === BT.ik}"` : ''}>${MFR}<b>${esc(m[0])}</b><span class="mty">${TYN[m[1]]}</span><span class="pp tn">${pp}</span>${k >= 0 ? fxTag(B, m) : ''}</button>`;
     el.innerHTML = `<div class="bw bw-moves bmv${S.hfx === 0 ? '' : ' hfx'}${inf ? ' inf' : ''}">${inf ? MVBG3 : MVBG}<span class="mv-foe">${B.foe.map((b, i) => `<i class="${b.hp <= 0 ? 'out' : i === fv.i ? 'on' : ''}"></i>`).join('')}</span>
       ${any ? me.mv.map((x, k) => mvb(k, mvEff(B, me, MOVES[x.i]), `<em>PP</em>${x.pp}/${x.max}`, moveOk(B, k))).join('') : mvb(-1, ['Struggle', 0], '<em>No PP left</em>', true)}
-      <span class="mv-balls">${Array.from({ length: 6 }, (_, i) => { const b = B.me[i]; return `<i class="${!b ? 'no' : b.hp <= 0 ? 'out' : b.status ? 'st' : ''}${i === B.a ? ' cur' : ''}"></i>`; }).join('')}</span>${tyRows('bl' + (mg ? ' up' : ''))}${mg ? `<button type="button" class="bw-mega${BT.mega ? ' on' : ''}" data-a="bmega" aria-pressed="${!!BT.mega}" aria-label="${MEGA[me.mg - 1][1] === 'Primal' ? 'Primal Reversion' : 'Mega Evolve'} with the next move"><span>${MEGA[me.mg - 1][1] === 'Primal' ? 'PRIMAL' : 'MEGA'}</span></button>` : ''}${any && !inf ? '<button type="button" class="bw-info" data-a="binfo" aria-label="What the moves do">i</button>' : ''}${inf ? moveFoot(B, me, BT.ik) : ''}${cancel(inf ? 'binfo' : 'bback')}</div>`;
+      <span class="mv-balls">${Array.from({ length: 6 }, (_, i) => { const b = B.me[i]; return `<i class="${!b ? 'no' : b.hp <= 0 ? 'out' : b.status ? 'st' : ''}${i === B.a ? ' cur' : ''}"></i>`; }).join('')}</span>${myTy}${mg ? `<button type="button" class="bw-mega${BT.mega ? ' on' : ''}" data-a="bmega" aria-pressed="${!!BT.mega}" aria-label="${MEGA[me.mg - 1][1] === 'Primal' ? 'Primal Reversion' : 'Mega Evolve'} with the next move"><span>${MEGA[me.mg - 1][1] === 'Primal' ? 'PRIMAL' : 'MEGA'}</span></button>` : ''}${any && !inf ? '<button type="button" class="bw-info" data-a="binfo" aria-label="What the moves do">i</button>' : ''}${inf ? moveFoot(B, me, BT.ik) : ''}${cancel(inf ? 'binfo' : 'bback')}</div>`;
     return;
   }
   if (BT.menu === 'pause') {
