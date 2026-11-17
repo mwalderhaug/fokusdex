@@ -223,7 +223,7 @@ function cry(id, delay = 0, vol = 0.45) {
    SND gir lyden for hver handling (ellers tap). Trykket spilles etter handlingen: har handlingen selv spilt en lyd (SNDP settes i out()),
    faller trykklyden bort, så ingenting blir dobbelt. En handling kan si fra selv med snd('warn') eller snd('') (stille).
    OWN = handlinger som skal være stille når de ikke spiller noe med en gang (kampen, kastet og filmene har sine egne lyder litt etter). */
-const OWN = new Set(['wkgo', 'wkdo', 'wkpick', 'wkdoor', 'wkstop', 'wkcpb', 'wkbagu', 'wksnag', 'wkpun', 'wkchest', 'wkchall', 'wkmintok', 'wkcap', 'evpick', 'mgive', 'triv', 'trev', 'start', 'throw', 'buy', 'buy10', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'evolve', 'sestart', 'sound', 'hunt', 'cries', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'buse', 'btypes', 'honyes', 'clkagain', 'help', 'tour', 'tourend', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats', 'achget', 'achall', 'sbxsnd', 'held', 'heldgive', 'heldoff', 'heldshop', 'heldbuy', 'form', 'tswp', 'tswgo', 'pkrel', 'early', 'bforfeit', 'bmega', 'berry', 'showfilm', 'tutteach', 'tutlearn']);
+const OWN = new Set(['wkisle', 'wkout', 'wkskip', 'wkintok', 'wkshgo', 'wkshdl', 'wkshtx', 'wkgo', 'wkdo', 'wkpick', 'wkdoor', 'wkstop', 'wkcpb', 'wkbagu', 'wksnag', 'wkpun', 'wkchest', 'wkchall', 'wkmintok', 'wkcap', 'evpick', 'mgive', 'triv', 'trev', 'start', 'throw', 'buy', 'buy10', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'evolve', 'sestart', 'sound', 'hunt', 'cries', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'buse', 'btypes', 'honyes', 'clkagain', 'help', 'tour', 'tourend', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats', 'achget', 'achall', 'sbxsnd', 'held', 'heldgive', 'heldoff', 'heldshop', 'heldbuy', 'form', 'tswp', 'tswgo', 'pkrel', 'early', 'bforfeit', 'bmega', 'berry', 'showfilm', 'tutteach', 'tutlearn']);
 const SND = {
   /* Faner og sider */
   tab: 'tab', lagv: 'tab', dexr: 'tab', sbxtab: 'tab', shopt: 'tab', pknext: 'tab', tourgo: 'tab', toshop: 'tab', bteam: 'tab', sbxsounds: 'tab',
@@ -248,6 +248,7 @@ const SND = {
   /* Ekspedisjonen (weekui.js) */
   wkinfo: 'open', wkopen: 'open', wknode: 'open', wkend: 'open', sbxwk: 'open', wklead: 'chip', sbxwky: 'chip', sbxwkt: 'chip',
   wkrule: 'open', wkcp: 'open', wkcps: 'open', wkbag: 'open', wkbags: 'open', wkdepth: 'open', wksnags: 'open', wksym: 'open', wkitems: 'open', wkmint: 'open', wkmintp: 'chip', sbxwki: 'open', sbxwkp: 'open',
+  wkhome: 'open', wkmode: 'open', wkrew: 'open', wksyms: 'open', wksite: 'open', wkshare: 'open', sbxwkd: 'open', sbxwkh: 'chip',
   /* Ellers */
   ball: 'ball', fav: 'fav', boinfo: 'warn'
 };
@@ -1493,7 +1494,7 @@ function pkEnd() {
     : `${live.length ? '<button type="button" class="btn gold" data-a="pkhunt">Catch them now</button>' : ''}<button type="button" class="btn nf" data-a="pkdone">${live.length ? 'Later' : 'Done'}</button>${!sum && pkPickOn() && live.some(e => !e.myst) ? '<button type="button" class="btn nf pk-lg" data-a="pkpick">Let some go for coins</button>' : ''}`;
 }
 function ov(html, cls, tc) { const o = $('#ov'); o.className = 'ov' + (cls ? ' ' + cls : ''); o.style.setProperty('--tc', tc || 'var(--sage)'); o.innerHTML = `<div class="ovin">${html}</div>`; o.hidden = false; }
-function closeOv() { const o = $('#ov'); o.hidden = true; o.innerHTML = ''; }
+function closeOv() { const o = $('#ov'); o.hidden = true; o.innerHTML = ''; if (typeof wkAmbOff === 'function') wkAmbOff(); }
 
 /* ---------- STARTEN (steg 1.10, ønske 8, 10, 16 og 17) ----------
    Fem korte skjermer, én idé på hver: velkommen og løftet · hvor godt du kjenner Pokémon · hvor vanskelige kampene skal være · region og
@@ -1795,7 +1796,7 @@ const A = {
   minfo: el => modeInfo(el.dataset.k || ''),
   boinfo: el => { const k = el.dataset.k, it = SHOP[k], st = boostState(k); if (!it) return; toast(st === 'on' ? `${it.n} is already active.` : st === 'lk' ? `${it.n} opens at trainer level ${it.lv}.` : `${it.n} costs ${nb(it.p)} coins. You have ${nb(S.coins)}.`); },
   adm: () => { if (!isAdmin()) return; U.adm = !admOn(); try { localStorage.setItem(KEY + '.adm', U.adm ? '1' : '0'); } catch (_) {} render(); setRe(); toast(U.adm ? 'Admin view is on: everything is open, and the Sandbox is here.' : 'Admin view is off: you see what everyone sees.'); },
-  wnok: () => { closeSheet(); if (!giftSheet() && !jAfter() && !incSheet() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
+  wnok: () => { closeSheet(); if (!giftSheet() && !jAfter() && !incSheet() && !wkDay10() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
   fpk: () => { const k = Object.keys(S.fpk || {}).find(x => PACKS[x]); if (!k) return render(); const out = openPacks(k, Math.min(10, S.fpk[k])); if (!out) { snd('warn'); return toast('Catch some of your waiting encounters first.'); } sfx.coin(); render(); packShow(k, out); },
   newsok: el => { S.news = (S.news || []).filter(k => k !== el.dataset.k); save(true); render(); },
   /* «Done for today»: resten av appen kommer fram. Er det studert nok til kampene (og de er åpnet for deg), åpnes kampdagen med det samme. */
@@ -1812,7 +1813,7 @@ const A = {
   pause: () => { togglePause(); paintTimer(); },
   early: () => endTimer(),
   quit: () => { if (!U.quit) { snd('warn'); U.quit = 1; $('#t-quit').textContent = 'Tap again to cancel'; setTimeout(() => { U.quit = 0; const b = $('#t-quit'); if (b) b.textContent = 'Cancel'; }, 3000); return; } clearInterval(tick); dropAwake(); S.timer = null; save(true); document.title = 'Fokusdex'; closeOv(); render(); },
-  home: () => { encQuiet(); closeOv(); render(); if (!jAfter() && !incSheet() && !giftSheet() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
+  home: () => { encQuiet(); closeOv(); render(); if (!jAfter() && !incSheet() && !giftSheet() && !wkDay10() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
   hunt: () => { if (jOn() && (S.jx || {}).sh === 1 && $('#sheet').hidden) { snd('ok'); closeOv(); render(); jAfter(); return; } closeSheet(); hunt(); },
   jok: () => { closeSheet(); if (jAfter() || incSheet()) return; const d = U.jfrom === 'dn'; U.jfrom = ''; if (d && has('battles') && S.party.length && openNeed() <= 0 && (!S.lad.day || (dayOld() && dayDone()))) BA.bdone(); else if (typeof raidArrive === 'function' && raidGo()) raidArrive(); },
   later: () => { cancelAnimationFrame(E.raf); encQuiet(); closeOv(); render(); },
@@ -2060,7 +2061,7 @@ window.addEventListener('storage', ev => { if (ev.key === KEY) tabShow(); });
 render();
 clockCheck();
 netTime().then(o => { if (o != null && clockCheck() && $('#ov').hidden) render(); });
-if (S.started && S.timer) showTimer(); else if (!(typeof liveGate === 'function' && liveGate()) && S.started) { if (S.tour !== TOURV) tourShow(0); else if (!whatsNew() && !giftSheet() && !jAfter() && !incSheet() && typeof raidArrive === 'function' && raidGo()) raidArrive(); }
+if (S.started && S.timer) showTimer(); else if (!(typeof liveGate === 'function' && liveGate()) && S.started) { if (S.tour !== TOURV) tourShow(0); else if (!whatsNew() && !giftSheet() && !jAfter() && !incSheet() && !wkDay10() && typeof raidArrive === 'function' && raidGo()) raidArrive(); }
 ghPull();
 setTimeout(() => PACK.init(), 2500);
 /* Adressen …/#lab åpner demoen direkte. */

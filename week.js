@@ -12,7 +12,8 @@
      w     = uka det siste løpet ble startet i (ett løp per uke)    run      = løpet som er i gang (se wkBegin), ellers null
      sym   = symboler per anlegg (1 sølv, 2 gull)                   last     = det forrige løpet (til resultatkortet), n = antall løp
      vault = hvelvet som venter etter løpet (wkVault)               snag     = Shadow-fangstene som renses (wkPure), so = tilbudet om å snappe
-     pun   = de som nettopp er renset (til arket), rs = uka regelkortet sist ble vist */
+     pun   = de som nettopp er renset (til arket), rs = uka regelkortet sist ble vist
+     pt    = portalen er sett i full lengde, iw = uka ukas intro sist ble vist, d10 = arket på studiedag WKDAY er vist (weekui.js) */
 
 /* ---------- Uka og billettene ---------- */
 const WKDAY = 10, WKMAX = 5, WKWKND = 0.05;
@@ -318,7 +319,7 @@ function wkEnd(how) {
   const T = WKT[R.ty], X = R.x || {};
   /* Castle: poengene som er spart, blir mynter. */
   let cp = 0, cpc = 0; if (T.cp && X.cp > 0) { cp = X.cp; cpc = wkCoins(R, cp * WKCPC); S.coins += cpc; R.got.coins += cpc; }
-  const out = { w: R.w, ty: R.ty, t: R.t, ms: R.ms, how, wins: R.got.wins, coins: R.got.coins, steps: R.path.length, d: dayKey() };
+  const out = { w: R.w, ty: R.ty, t: R.t, ms: R.ms, how, wins: R.got.wins, coins: R.got.coins, steps: R.path.length, d: dayKey(), p: R.path.slice(), tm: wkParty().map(m => m.id), lv: R.flv };
   if (cp) { out.cp = cp; out.cpc = cpc; }
   if (R.got.snag) out.snag = R.got.snag.slice();
   if (T.fac && R.ms >= 3) { const s = R.ms >= 4 ? 2 : 1; out.got = s; if ((W.sym[R.ty] || 0) < s) { W.sym[R.ty] = s; out.sym = s; } }
@@ -532,6 +533,10 @@ function wkPure() {
    candy = Rare Candy (antallet etter metallet), balls = Ultra Balls, enc = et sjeldent møte, pseudo = en pseudo-legendarisk i gresset,
    tutor = et sjeldent angrep åpnes hos lærerne (er alle åpne: Rare Candy). */
 const WKVN = ['Bronze', 'Silver', 'Gold'], WKVCANDY = [1, 2, 3];
+/* PUNGEN (steg 1d.8): den første kista har i tillegg en fast sum (× studiebonusen og vanskelighetsgraden, som alt annet), så også et løp med én
+   billett gir minst som en vanlig kampdag (Jazz: «minst like mange mynter som en vanlig kampdag»). Den er lik uansett billetter og metall:
+   flere billetter gir flere kister og mer av kartet, ikke en større pung. Målt i NOTES.md (18. nov). */
+const WKPURSE = 1900;
 const WKV = [
   { coin: [70, 130], p: { candy: 30, balls: 24, enc: 26, stone: 12, mint: 8 } },
   { coin: [130, 210], p: { mint: 22, candy: 22, enc: 22, tutor: 14, mstone: 10, gcap: 6, stone: 4 }, sure: ['mint'] },
@@ -543,6 +548,7 @@ function wkChest() {
   const C = WKV[v.m] || WKV[0], left = v.n - v.open.length, need = (C.sure || []).filter(k => !v.open.some(o => o.k === k));
   let k = need.length >= left ? need[0] : (() => { const ks = Object.keys(C.p); let x = Math.random() * ks.reduce((a, q) => a + C.p[q], 0); for (const q of ks) { x -= C.p[q]; if (x <= 0) return q; } return ks[0]; })();
   const o = { k, coins: Math.round((C.coin[0] + Math.random() * (C.coin[1] - C.coin[0])) * (v.cm || 1) / 10) * 10, items: [] };
+  if (!v.open.length) { o.coins += Math.round(WKPURSE * (v.cm || 1) / 10) * 10; o.purse = 1; }
   const give = (it, n) => { if (n > 0 && SHOP[it]) { S.items[it] = (S.items[it] || 0) + n; o.items.push(`${n} × ${SHOP[it].n}`); } };
   const enc = q => { const e = genEnc(q); S.pend.push(e); trimPend(30); o.enc = { id: e.id, sh: e.sh || 0 }; };
   if (k === 'tutor') { const l = Object.keys(TUTNEED).map(mvIx).filter(x => x >= 0 && !tutOpen(x)); if (l.length) { const x = l[rnd(l.length)]; tutUnlock(x); o.mv = MOVES[x][0]; } else k = o.k = 'candy'; }
