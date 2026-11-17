@@ -473,7 +473,7 @@ function achSheet() {
     const s = achState(a), full = s.got >= s.max, r = achRew(a, Math.min(s.max - 1, s.got)), body = `<b>${TYN[a.ty]}</b><span class="sm tn">${s.done >= s.max ? s.val : `${s.val} of ${s.next}`}</span>${achPips(s)}${s.open ? `<span class="tyget">Claim ${nb(r.c)}</span>` : ''}`;
     return s.open ? `<button type="button" class="tyc rdy" id="ach-${a.k}" data-a="achget" data-k="${a.k}" style="--tc:var(--t${a.ty})" aria-label="${TYN[a.ty]} collector: claim ${nb(r.c)} coins">${body}</button>` : `<div class="tyc${full ? ' full' : ''}" id="ach-${a.k}" style="--tc:var(--t${a.ty})">${body}</div>`;
   };
-  const html = `<div class="row" style="justify-content:space-between"><h2 class="h" style="font-size:22px;margin:0">Achievements</h2><button type="button" class="btn sm2" data-a="close">Close</button></div>
+  const html = `<div class="row" style="justify-content:space-between"><h2 class="h" style="font-size:22px;margin:0">Achievements</h2></div>
     <div class="ahead" style="--rk:${R.c}">${avFrame(R, 'lg', 1)}<div class="sp"><div class="sm">Your rank</div><b class="arank">${R.n}</b>
       <div class="bar"><i style="width:${pct}%;background:${R.c}"></i></div><div class="sm tn" style="margin-top:5px">${R.p} of ${tot} medals${R.nn ? ` · ${R.next - R.p} more to ${R.nn}` : ' · the highest rank'}</div></div></div>
     <div class="rkl">${RANKS.map((r, i) => `<span class="${i <= R.i ? 'on' : ''}${i === R.i ? ' now' : ''}" style="--rk:${r[2]}"><b>${r[0]}</b><i class="tn">${r[1]}</i></span>`).join('')}</div>
@@ -483,7 +483,7 @@ function achSheet() {
     <div class="lab">Types · species caught of each type</div><div class="tygrid">${ACH.filter(a => a.ty != null).map(tyc).join('')}</div>
     <button type="button" class="btn wide" data-a="avatar">${S.av ? 'Change character' : 'Pick a character'}</button>`;
   const sh = document.querySelector('#sheet .sheet.achsh');
-  if (sh) { const y = sh.scrollTop; sh.innerHTML = `<span class="grab"></span>${html}`; sh.scrollTop = y; }
+  if (sh) { const y = sh.scrollTop; sh.innerHTML = SHTOP + html; sh.scrollTop = y; }
   else { openSheet(html); const s = document.querySelector('#sheet .sheet'); if (s) s.classList.add('achsh'); }
 }
 /* Ny rang: bildet i den nye rammen, og stempelet som slås ned. Ligger over arket til du trykker videre. */
@@ -500,7 +500,7 @@ function rankUp(R) {
 const ICN = {
   flame: ['f', 'M13 2c.6 3.4-3.8 5-3.8 9.2 0 .8.3 1.5.8 2 .1-1.9 1.1-3.1 2.4-4.1 2.6 1.6 4.4 3.8 4.4 6.5a5.3 5.3 0 0 1-10.6.2C6.2 10.6 11.5 8.2 13 2z'],
   grass: ['', 'M5 20c0-5 .8-8 3-10.5M12 20c-.5-6 0-10 .5-14M19 20c0-5-1-8-3.200-10.500M8.500 20c.2-3 .5-4.500 1.200-6M15.500 20c-.2-3-.5-4.500-1.200-6'],
-  chev: ['', 'M9 5l7 7-7 7'], down: ['', 'M5 9l7 7 7-7'], back: ['', 'M15 5l-7 7 7 7'], x: ['', 'M6 6l12 12M18 6L6 18'], plus: ['', 'M12 5v14M5 12h14'],
+  chev: ['', 'M9 5l7 7-7 7'], down: ['', 'M5 9l7 7 7-7'], back: ['', 'M15 5l-7 7 7 7'], x: ['', 'M6 6l12 12M18 6L6 18'], size: ['', 'M6.500 17.500l11-11M12 6.500h5.500V12M12 17.500H6.500V12'], plus: ['', 'M12 5v14M5 12h14'],
   check: ['', 'M5 12.500l4.500 4.500L19 7.500'], arrow: ['', 'M4 12h15M13 6l6 6-6 6'],
   lock: ['', 'M7.700 10.500h8.600a2.200 2.200 0 0 1 2.200 2.200v5.100a2.200 2.200 0 0 1-2.200 2.200H7.700a2.200 2.200 0 0 1-2.200-2.200v-5.100a2.200 2.200 0 0 1 2.200-2.200zM8.500 10.500V8a3.500 3.500 0 0 1 7 0v2.500'],
   spark: ['f', 'M12 2c.7 5.200 2.800 7.300 8 8-5.200.7-7.300 2.800-8 8-.7-5.200-2.800-7.300-8-8 5.200-.7 7.300-2.800 8-8zM19 16c.3 2 1 2.700 3 3-2 .3-2.700 1-3 3-.3-2-1-2.700-3-3 2-.3 2.700-1 3-3z'],
@@ -709,12 +709,12 @@ function bstEl(id, mega, sh) {
   return `<div class="bst" role="table" aria-label="Base stats">${['HP', 'Attack', 'Defense', 'Sp. Atk', 'Sp. Def', 'Speed'].map((n, i) => `<div role="row"><span role="cell">${n}</span><b class="tn" role="cell">${b[i]}</b><span class="bst-b" role="cell" aria-hidden="true"><i style="width:${Math.min(100, Math.round(b[i] / 180 * 100))}%;background:${BSC(b[i])}"></i></span></div>`).join('')}<div class="bst-t" role="row"><span role="cell">Total</span><b class="tn" role="cell">${tot}</b><span class="sm" role="cell">${sh ? `Shiny: every stat is ${id === ARCEUS ? Math.round((SHINYARC - 1) * 100) : Math.round((SHINYST - 1) * 100)} % higher` : ''}</span></div></div>`;
 }
 function hexEl(m) {
-  const st = statsOf(m), pot = potOn(), up = pot ? natUp(m.nat) : 0, dn = pot ? natDn(m.nat) : 0, cx = 130, cy = 104, R = 64;
+  const st = statsOf(m), pot = potOn(), up = pot ? natUp(m.nat) : 0, dn = pot ? natDn(m.nat) : 0, cx = 130, cy = 104, R = 64, zs = szOn() && m.id !== 292 ? szOf(m) : 1;
   const ref = i => i === 0 ? Math.floor(291 * m.lv / 100) + m.lv + 10 : Math.floor(291 * m.lv / 100) + 5;
   const pt = (i, f) => { const a = (-90 + i * 60) * Math.PI / 180; return [Math.round((cx + Math.cos(a) * R * f) * 10) / 10, Math.round((cy + Math.sin(a) * R * f) * 10) / 10]; };
   const order = [0, 1, 2, 5, 4, 3], ring = f => order.map((_, k) => pt(k, f).join(',')).join(' ');
   const shape = order.map((s, k) => pt(k, Math.max(0.14, Math.min(1, st[s] / ref(s)))).join(',')).join(' ');
-  const lab = order.map((s, k) => { const [x, y] = pt(k, 1.36), col = up !== dn && s === up ? 'var(--good)' : up !== dn && s === dn ? 'var(--red)' : 'var(--ink2)';
+  const lab = order.map((s, k) => { const [x, y] = pt(k, 1.36), col = up !== dn && s === up || s === 0 && zs > 1 ? 'var(--good)' : up !== dn && s === dn || s === 0 && zs < 1 ? 'var(--red)' : 'var(--ink2)';
     return `<text x="${x}" y="${y - 3}" text-anchor="middle" font-size="10.5" font-weight="650" fill="${col}">${SN[s]}</text><text x="${x}" y="${y + 11}" text-anchor="middle" font-size="13" font-weight="800" fill="var(--ink)">${st[s]}</text>`; }).join('');
   return `<svg class="hex" viewBox="0 0 260 208" role="img" aria-label="${order.map(s => SN[s] + ' ' + st[s]).join(', ')}"><polygon points="${ring(1)}" fill="var(--soft)" stroke="var(--line)"/><polygon points="${ring(0.5)}" fill="none" stroke="var(--line)" stroke-opacity=".7"/>${order.map((_, k) => `<line x1="${cx}" y1="${cy}" x2="${pt(k, 1)[0]}" y2="${pt(k, 1)[1]}" stroke="var(--line)" stroke-opacity=".6"/>`).join('')}<polygon points="${shape}" fill="var(--tc)" fill-opacity=".38" stroke="var(--tc)" stroke-width="2" stroke-linejoin="round"/>${lab}</svg>`;
 }
@@ -757,12 +757,15 @@ const mTyIcs = m => mTypes(m).filter(t => t >= 0).map(t => tyIc(t)).join(''), mT
 /* Stjerneraden (ønske 18): de fødte stjernene fylt, de fra hypertrening dempet, resten tomme. Størrelsen står bare når den ikke er Normal. */
 const JT = ['Decent', 'Above average', 'Great', 'Outstanding', 'Flawless'];
 const starRow = (m, cls) => { const b = bornStars(m), n = nowStars(m); return `<span class="strs${cls ? ' ' + cls : ''}" role="img" aria-label="Born with ${b} of 5 stars${n > b ? ', ' + n + ' with training' : ''}">${Array.from({ length: 5 }, (_, i) => `<i class="${i < b ? 'on' : i < n ? 'tr' : ''}"></i>`).join('')}</span>`; };
-const szTag = m => szOn() && szOf(m) !== 1 ? `<span class="szt sz${szOf(m)}">${SZN[szOf(m)]}</span>` : '';
+/* big = på kortet: med ikonet, så det er tydelig at brikken er størrelsen. I listene er det bare ordet. */
+const szTag = (m, big) => szOn() && szOf(m) !== 1 ? `<span class="szt sz${szOf(m)}${big ? ' big' : ''}">${big ? icn('size') : ''}${SZN[szOf(m)]}</span>` : '';
+/* Hva størrelsen gjør, sagt som naturen under sekskanten: «Large ▲ HP +3 %». Shedinja har alltid 1 HP. */
+const szLine = m => { const z = szOf(m); return szOn() && z !== 1 && m.id !== 292 ? `<div class="mc-n mc-z"><b>${icn('size')}${SZN[z]}</b><span class="${z > 1 ? 'up' : 'dn'}">${icn(z > 1 ? 'up' : 'dn')}HP</span><span class="tn zp">${z > 1 ? '+' : '−'}${Math.abs(Math.round((SZHP[z] - 1) * 100))} %</span></div>` : ''; };
 /* Potensialet (stjernene og naturen) vises på reisen først når det er forklart (studiedag 4). */
 const potOn = () => !jOn() || has('nature');
 const mcat = c => `<span class="mcat s ${['stt', 'ph', 'spc'][c]}" title="${CLS[c]}"></span>`;
 /* Tegner innholdet i arket som står åpent på nytt, uten at det glir inn igjen og uten å miste plassen i rullingen. */
-function reSheet(html) { const w = $('#sheet'), s = w.querySelector('.sheet'); if (w.hidden || !s) return openSheet(html); const y = s.scrollTop; s.innerHTML = `<span class="grab"></span>${html}`; s.scrollTop = y; }
+function reSheet(html) { const w = $('#sheet'), s = w.querySelector('.sheet'); if (w.hidden || !s) return openSheet(html); const y = s.scrollTop; s.innerHTML = SHTOP + html; s.scrollTop = y; }
 /* Forklaringen som vises én gang (S.tip[k]) og kvitteres med OK. */
 const tipEl = (k, txt, lvl) => (S.tip && S.tip[k]) || know() > (lvl == null ? 2 : lvl) ? '' : `<div class="tipc">${icn('info')}<p class="sm">${txt}</p><button type="button" class="btn sm2" data-a="tipok" data-k="${k}">OK</button></div>`;
 /* Kortet til en Pokémon forklarer én ny ting om gangen, første gang den står der: typer (for den som er ny), stjernene og naturen (når potensial
@@ -825,7 +828,7 @@ function swapSheet(re) {
   const w = U.sw || {}, cur = monBy(w.u), inP = cur && S.party.includes(cur.u), lead = cur && S.party[0] === cur.u, so = SWSO[U.sws] ? U.sws : 'pw';
   const title = w.mode === 'cmp' ? `Compare ${esc(mName(cur))} with` : w.mode === 'slot' ? 'Who steps out?' : cur ? `Swap ${esc(mName(cur))}` : 'Add to the team';
   const top = cur ? `<div class="swcur">${monRow(cur, { act: 'mon', tag: w.mode === 'slot' ? '<span class="pill au">coming in</span>' : lead ? '<span class="pill ptn">Partner</span>' : '' })}${w.mode === 'swap' && inP ? `<div class="row">${lead ? '' : `<button type="button" class="btn sm2 sp" data-a="lead" data-u="${cur.u}">Make partner</button>`}<button type="button" class="btn sm2 sp" data-a="tswr" data-u="${cur.u}"${S.party.length < 2 ? ' disabled' : ''}>Take off the team</button></div>` : ''}</div>` : '';
-  const html = `<div class="row" style="justify-content:space-between"><h2 class="h" style="margin:0">${title}</h2><button type="button" class="xb" data-a="close" aria-label="Close">${icn('x')}</button></div>
+  const html = `<div class="row" style="justify-content:space-between"><h2 class="h" style="margin:0">${title}</h2></div>
     ${top}
     ${w.mode === 'slot' ? `<p class="sm">${tl('The team is full. Tap the one that should make room.')}</p>` : `<div class="swf"><input class="swq" type="search" data-q="sw" value="${esc(U.swq || '')}" placeholder="Search name or type" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Search">
       <div class="chips swso">${Object.keys(SWSO).map(k => `<button type="button" class="chip" data-a="tsws" data-k="${k}" aria-pressed="${so === k}">${SWSO[k][0]}</button>`).join('')}</div></div>`}
@@ -840,7 +843,7 @@ function cmpSheet(a, b) {
   const row = (n, x, y) => `<div class="cm-r"><b class="tn${x > y ? ' w' : ''}">${x}</b><span class="cm-b l"><i style="width:${Math.round(x / mx * 100)}%"></i></span><span class="cm-n">${n}</span><span class="cm-b"><i style="width:${Math.round(y / mx * 100)}%"></i></span><b class="tn${y > x ? ' w' : ''}">${y}</b></div>`;
   const nat = m => { const up = natUp(m.nat), dn = natDn(m.nat); return `${NAT[m.nat]}${up !== dn ? ` · +${SN[up]} −${SN[dn]}` : ''}`; };
   const swap = inA !== inB ? `<button type="button" class="btn pri wide" data-a="tswgo" data-u="${inA ? b.u : a.u}" data-o="${inA ? a.u : b.u}">Put ${esc(mName(inA ? b : a))} in for ${esc(mName(inA ? a : b))}</button>` : '';
-  openSheet(`<div class="row" style="justify-content:space-between"><h2 class="h" style="margin:0">Compare</h2><button type="button" class="xb" data-a="close" aria-label="Close">${icn('x')}</button></div>
+  openSheet(`<div class="row" style="justify-content:space-between"><h2 class="h" style="margin:0">Compare</h2></div>
     <div class="cm-h">${col(a, pa, pa > pb)}<span class="cm-d tn">${pa === pb ? '=' : `${pa > pb ? '◀' : '▶'} ${nb(Math.abs(pa - pb))}`}</span>${col(b, pb, pb > pa)}</div>
     <div class="cm">${SN.map((n, i) => row(n, sa[i], sb[i])).join('')}</div>
     ${potOn() ? `<div class="cm-x sm"><span>${nat(a)}</span><span>Nature</span><span>${nat(b)}</span></div>` : ''}
@@ -871,13 +874,13 @@ function monSheet(m, re) {
       <div class="sp"><div class="sm tn">No. ${m.id} · ${REG[regOf(m.id)].n} · Level ${m.lv}</div>
         ${ed ? `<div class="nkrow"><input class="nkin" id="nkin" maxlength="12" value="${esc(m.nn || '')}" placeholder="${esc(d[0])}" autocomplete="off" autocapitalize="words" aria-label="Nickname"><button type="button" class="btn sm2 pri" data-a="nicksave" data-u="${m.u}">Save</button></div>` : `<div class="pn">${esc(mName(m))}${gs(m)}<button type="button" class="nkb" data-a="nick" data-u="${m.u}" aria-label="Give a nickname">✎</button></div>`}
         ${m.nn && !ed ? `<div class="sm">${esc(spName(m))}</div>` : ''}
-        <div class="mc-t">${mTyChips(m)}${tierEl(m.id)}${m.sh === 2 ? '<span class="pill dkp">Dark</span>' : m.sh ? '<span class="pill au">Shiny</span>' : ''}${fn ? `<span class="pill">${fn} Forme</span>` : ''}${szTag(m)}</div></div>
+        <div class="mc-t">${mTyChips(m)}${tierEl(m.id)}${m.sh === 2 ? '<span class="pill dkp">Dark</span>' : m.sh ? '<span class="pill au">Shiny</span>' : ''}${fn ? `<span class="pill">${fn} Forme</span>` : ''}${szTag(m, 1)}</div></div>
       <button type="button" class="mc-f${m.fav ? ' on' : ''}" data-a="fav" data-u="${m.u}" aria-pressed="${!!m.fav}" aria-label="${m.fav ? 'Favourite: on' : 'Mark as favourite'}">${icn('heart')}</button></div>
     ${cardTip(m)}<div class="card2 mc-s" style="--tc:var(--t${ty[0]})">
       <button type="button" class="mc-pw" data-a="mstat" data-u="${m.u}" aria-label="Power ${pwOf(m)}. See the numbers"><span class="pw tn"><b>${nb(pwOf(m))}</b><small>power</small></span><span class="sp">${potOn() ? `${starRow(m, 'lg')}<small>${now > born ? `Born ${JT[born - 1].toLowerCase()} · trained to ${now} stars` : `Born ${JT[born - 1].toLowerCase()}`}</small>` : ''}
         <span class="mtrs"><span class="mtr" role="img" aria-label="Level ${m.lv} of 100"><small>Level</small><i><b style="width:${m.lv}%"></b></i></span>${has('train') ? `<span class="mtr" role="img" aria-label="Training: ${evSum(m)} of ${EVTOT} EVs"><small>Training</small><i><b style="width:${Math.round(evSum(m) / EVTOT * 100)}%"></b></i></span>` : ''}</span></span>${icn('chev')}</button>
       ${hexEl(m)}
-      ${potOn() ? `<div class="mc-n"><b>${NAT[m.nat]}</b>${up !== dn ? `<span class="up">${icn('up')}${SN[up]}</span><span class="dn">${icn('dn')}${SN[dn]}</span>` : '<span>no stat up or down</span>'}</div>` : ''}
+      ${potOn() ? `<div class="mc-n"><b>${NAT[m.nat]}</b>${up !== dn ? `<span class="up">${icn('up')}${SN[up]}</span><span class="dn">${icn('dn')}${SN[dn]}</span>` : '<span>no stat up or down</span>'}</div>` : ''}${szLine(m)}
       ${sg ? `<div class="mc-x au">${icn('spark')}<span><b>Shiny</b> · ${nb(sg.sum)} more power than a regular ${esc(d[0])}</span></div>` : ''}
       ${ab ? `<div class="mc-x"><span><b>${ab.n}</b> · ${ab.d}${ab.live ? '' : ' <i class="nyet">Not in battles yet.</i>'}</span></div>` : ''}
       ${S.mons.length > 1 ? `<button type="button" class="btn sm2 wide mc-c" data-a="cmpw" data-u="${m.u}">${icn('scale')}Compare with another</button>` : ''}</div>
@@ -974,7 +977,7 @@ function trainSheet(m) {
     : `<div class="trb fix">${m.ev[i] ? `<button type="button" class="btn sm2" data-a="trclr">Clear</button>` : ''}<span class="sm" style="align-self:center">${m.ev[i] >= EVMAX ? `This stat is at the cap of ${EVMAX}.` : `All ${EVTOT} EVs are placed. Clear a stat to move them.`}</span></div>`;
   const ivb = ht ? '<span class="pill" style="color:var(--gold)">Hyper trained</span>' : ivv >= 31 ? '<span class="pill" style="color:var(--gold)">Perfect</span>'
     : htOk(m) ? `<button type="button" class="btn sm2 gold" data-a="triv"${S.coins >= ic ? '' : ' disabled'}>Hyper Train ${coinEl(ic)}</button>` : `<span class="pill">From Lv ${HTLV}</span>`;
-  const html = `${trainTip()}<div class="trs"><div class="trh"><span></span><span></span><span>IV · max 31</span><span>EV · max ${EVMAX}</span></div>${rows}</div>
+  const html = `${trainTip(m, i)}<div class="trs"><div class="trh"><span></span><span></span><span>IV · max 31</span><span>EV · max ${EVMAX}</span></div>${rows}</div>
     <div class="card2 trx"><div class="row" style="justify-content:space-between"><b>${SN[i]}</b><span class="sm tn" style="${natc(i)}">${st[i]}${up !== dn && i === up ? ' · nature +10 %' : up !== dn && i === dn ? ' · nature −10 %' : ''}</span></div>
       ${shed ? '<p class="sm">Shedinja always has 1 HP, so there is nothing to train here.</p>' : `<div class="trl"><span class="sm"><b>IV</b> <b class="tn">${m.iv[i]}</b> of 31${ht ? ' · counts as 31' : ''}<br>${ht || ivv >= 31 ? 'Nothing more to gain here.' : `Born with it. Hyper Training makes it count as 31: +${dIv} now, +${dIv100} at Lv 100.`}</span>${ivb}</div>
       <div class="sm"><b>EV</b> <b class="tn">${m.ev[i]}</b> of ${EVMAX} · ${VIT[i]}${dEv > 0 ? `<br>Room for ${room} more: +${dEv} now, +${dEv100} at Lv 100.` : ''}</div>${evb}`}</div>
@@ -1135,7 +1138,7 @@ function setSheet(k, re) {
       <p class="sm">${n ? `The device clock did not match the game${last ? ' on ' + new Date(last.d + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : ''}. A mark does nothing but stand here.` : 'The clock has matched the game, and nothing has been rolled back.'} ${hn ? `You have answered ${hn} honest ${hn === 1 ? 'check' : 'checks'}.` : ''} Cheating is optional, but your integrity pays for it.</p>`; }
   else if (k === 'admin') h = `<div class="tgls">${tog('adm', admOn(), 'Admin view · everything open')}</div>
       <div class="stack"><button type="button" class="btn wide rowb" data-a="lab"><span>Sandbox</span><span class="sm">test anything</span></button><button type="button" class="btn wide rowb" data-a="jprev"><span>Journey preview</span><span class="sm">see it as a new player</span></button></div><p class="sm">Only you see this.</p>`;
-  const html = `<div class="row" style="justify-content:space-between"><h2 class="h" style="margin:0">${def[1]}</h2><button type="button" class="hq" data-a="close" aria-label="Close">${icn('x')}</button></div>${h}`;
+  const html = `<div class="row" style="justify-content:space-between"><h2 class="h" style="margin:0">${def[1]}</h2></div>${h}`;
   const host = $('#setd'); if (re && host) host.innerHTML = html; else openSheet(`<div id="setd" class="setd">${html}</div>`);
 }
 /* Etter et valg i et ark: tegn arket om hvis det fortsatt står framme. */
@@ -1285,13 +1288,41 @@ function backupSheet() {
     <button type="button" class="btn wide danger" data-a="reset">Start over from scratch</button>`);
 }
 
-/* ---------- Ark ---------- */
+/* ---------- Ark ----------
+   Tre veier ut av et ark (v81): lukkeknappen i topplinja, et drag nedover, og et trykk utenfor. Topplinja (SHTOP: håndtaket og knappen)
+   står fast øverst mens arket rulles, så veien ut alltid er synlig. */
+const SHTOP = `<div class="sh-top"><span class="grab"></span><button type="button" class="sh-x" data-a="close" aria-label="Close">${icn('x')}</button></div>`;
 function openSheet(html) {
   const w = $('#sheet'), s = w.querySelector('.sheet');
-  if (!w.hidden && s) { s.className = 'sheet'; s.innerHTML = `<span class="grab"></span>${html}`; s.scrollTop = 0; void s.offsetWidth; s.classList.add('swp'); return; }
-  w.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><span class="grab"></span>${html}</div>`; w.hidden = false;
+  if (!w.hidden && s) { s.className = 'sheet'; s.style.transform = s.style.transition = ''; s.innerHTML = SHTOP + html; s.scrollTop = 0; void s.offsetWidth; s.classList.add('swp'); return; }
+  w.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${SHTOP}${html}</div>`; w.hidden = false;
 }
 function closeSheet() { const w = $('#sheet'); w.hidden = true; w.innerHTML = ''; U.pset = null; }
+/* Dra arket ned for å lukke det. Draget gjelder når arket står øverst og fingeren går nedover, eller når det starter på topplinja.
+   Slippes arket et stykke nede eller i fart, glir det ut og lukkes; ellers spretter det tilbake. Felt, skyvere og lister som ruller
+   for seg selv inne i arket, beholder fingeren. */
+(() => {
+  const w = $('#sheet'); let g = null; if (!w) return;
+  const back = () => { const s = g && g.s; g = null; if (!s || !s.isConnected) return; s.style.transition = 'transform .22s cubic-bezier(.2,.8,.2,1)'; s.style.transform = ''; setTimeout(() => { if (s.isConnected) s.style.transition = ''; }, 240); };
+  w.addEventListener('touchstart', ev => {
+    g = null; const s = ev.target.closest ? ev.target.closest('.sheet') : null; if (!s || ev.touches.length !== 1 || ev.target.closest('input,textarea,select')) return;
+    const bar = !!ev.target.closest('.sh-top'); let top = s.scrollTop <= 0; for (let e = ev.target; e && e !== s; e = e.parentElement) if (e.scrollTop > 0 || e.scrollWidth > e.clientWidth + 4 && getComputedStyle(e).overflowX !== 'visible') top = false;
+    if (bar || top) g = { s, y: ev.touches[0].clientY, x: ev.touches[0].clientX, t: ev.timeStamp, on: 0, dy: 0 };
+  }, { passive: true });
+  w.addEventListener('touchmove', ev => {
+    if (!g) return; const t = ev.touches[0], dy = t.clientY - g.y, dx = t.clientX - g.x;
+    if (!g.on) { if (dy < -6 || Math.abs(dx) > 12 && Math.abs(dx) > dy) { g = null; return; } if (dy < 10) return; g.on = 1; g.y += 10; g.s.style.transition = 'none'; }
+    if (ev.cancelable) ev.preventDefault();
+    g.dy = Math.max(0, t.clientY - g.y); g.s.style.transform = `translateY(${g.dy}px)`;
+  }, { passive: false });
+  w.addEventListener('touchend', ev => {
+    if (!g) return; if (!g.on) { g = null; return; }
+    const s = g.s, v = g.dy / Math.max(1, ev.timeStamp - g.t);
+    if (g.dy > Math.min(130, s.offsetHeight * 0.25) || g.dy > 36 && v > 0.5) { g = null; sfx.close(); s.style.transition = 'transform .18s ease-in'; s.style.transform = 'translateY(110%)'; setTimeout(() => { if (s.isConnected) closeSheet(); }, 170); }
+    else back();
+  });
+  w.addEventListener('touchcancel', back);
+})();
 /* Byttet på laget: inn på plassen til den som går ut (out = null: en ledig plass). Arket lukkes, og laget tegnes på nytt. */
 function teamSwap(out, inn) { if (!inn || !swapParty(out ? out.u : 0, inn.u)) return; U.sw = null; closeSheet(); render(); sfx.ok(); toast(out ? `${mName(inn)} is in for ${mName(out)}.` : `${mName(inn)} joined the team.`); }
 /* Prosent slik sjansene vises: hele tall, én desimal under ti, og 100 % først når det er sikkert. */
