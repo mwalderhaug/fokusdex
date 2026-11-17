@@ -37,7 +37,7 @@ const TCL = {
    om dagen gir Hard rundt 30 % flere mynter og seks nivåer mer enn Normal, og nesten dobbelt så mange raid. */
 const DIFF = [
   { n: 'Easy', rel: -0.1, sk: 0.6, iv: 0.4, ev: 0, q: 1, mons: -1, slack: 0.5, coin: 0.5, xp: 0.75, candy: 0.6, lives: 2, bag: 5, rlv: 0.96, rhp: 0.9, rf: 0.6, rc: 1, lg: 0.5 },
-  { n: 'Normal', rel: -0.05, sk: 0.85, iv: 0.75, ev: 0.5, q: 2, mons: 0, slack: 0.8, coin: 1, xp: 1, candy: 1, lives: 1, bag: 4, rlv: 1, rhp: 1, rf: 1, rc: 0, lg: 1 },
+  { n: 'Normal', rel: -0.05, sk: 0.85, iv: 0.75, ev: 0.5, q: 2, mons: 0, slack: 0.8, coin: 1, xp: 1, candy: 1, lives: 1, bag: 4, rlv: 1, rhp: 0.9, rf: 1, rc: 0, lg: 1 },
   { n: 'Hard', rel: 0, sk: 1, iv: 1, ev: 1, q: 2, mons: 0, slack: 1, coin: 2.3, xp: 1.5, candy: 1.7, lives: 1, bag: 3, rlv: 1.02, rhp: 1.05, rf: 1.8, rc: -1, lg: 1 }
 ];
 const diff = () => DIFF[S.diff == null ? 2 : S.diff] || DIFF[2];
@@ -1060,7 +1060,7 @@ const RAIDLV = [75, 88, 82, 96, 100], RAIDHP = [2.0, 3.2, 1.8, 3.4, 3.6], RAIDCO
 const RAIDTRIES = 2, RAIDP0 = 0.08, RAIDPITY = 0.035, RAIDWIN = 0.25, RAIDCOOL = 3, MEWP = 0.08, MEWP1 = 0.16;
 /* Egen HP-faktor for enkelte arter, oppå klassens (RAIDHP). Innen «de største» var spredningen for stor: Dialga, Palkia, Zekrom og Reshiram var nesten
    uslåelige for alle lag uten legendariske, og hardere enn Mewtwo og Arceus, som skal være de to vanskeligste. Stilt inn med sim/perleg.js. */
-const RAIDX = { 144: [1.2, 1.02], 145: [0.99, 1], 146: [1.2, 1.05], 150: [0.51, 0.9], 151: [1.44, 1.02], 243: [0.77, 1], 244: [1.16, 1], 245: [0.93, 1], 249: [0.61, 0.98], 251: [1.3, 1.08], 377: [1.16, 1], 378: [1.2, 1.05], 379: [1.2, 1.05], 380: [0.85, 1], 381: [0.53, 1], 382: [0.63, 0.88], 383: [0.86, 1], 384: [0.93, 1], 385: [1.45, 1], 386: [1.4, 1], 480: [1.08, 1.02], 481: [0.8, 1], 482: [1.2, 1.05], 483: [0.55, 0.86], 484: [0.51, 0.86], 485: [1.2, 1.05], 486: [1.06, 1.02], 487: [0.56, 0.96], 488: [1.14, 1.02], 490: [0.56, 1], 491: [0.86, 1], 492: [1.07, 1], 493: [0.85, 1], 494: [1.5, 1.1], 638: [0.84, 1], 639: [0.62, 1], 640: [1.01, 1], 641: [1.2, 1.05], 642: [1.2, 1.05], 643: [0.6, 0.94], 644: [0.6, 0.97], 645: [1.2, 1.05], 646: [0.57, 0.98], 647: [0.53, 0.88], 648: [1.5, 1.1], 649: [1.01, 1] };
+const RAIDX = { 144: [1.15, 1.04], 145: [1.07, 1], 146: [1.2, 1.05], 150: [0.51, 0.9], 151: [1.5, 1.06], 243: [0.87, 1], 244: [1.17, 1.02], 245: [0.91, 1], 249: [0.8, 0.98], 251: [1.26, 1.1], 377: [1.16, 1.02], 378: [1.2, 1.05], 379: [1.2, 1.05], 380: [0.89, 1], 381: [0.66, 1], 382: [0.7, 0.88], 383: [0.95, 1], 384: [0.9, 1], 385: [1.39, 1.04], 386: [1.4, 1], 480: [1.2, 1.02], 481: [0.85, 1], 482: [1.2, 1.05], 483: [0.64, 0.86], 484: [0.6, 0.86], 485: [1.2, 1.05], 486: [1.07, 1.02], 487: [0.65, 0.96], 488: [1.05, 1.04], 490: [0.61, 1], 491: [0.98, 1], 492: [1.21, 1], 493: [0.85, 1], 494: [1.5, 1.1], 638: [0.92, 1], 639: [0.69, 1], 640: [1.07, 1], 641: [1.2, 1.05], 642: [1.2, 1.05], 643: [0.73, 0.94], 644: [0.73, 0.97], 645: [1.2, 1.05], 646: [0.67, 0.98], 647: [0.63, 0.88], 648: [1.5, 1.1], 649: [1.07, 1] };
 const raidX = id => RAIDX[id] || [1, 1];
 /* Ingen legendarisk går tom for PP i et raid (steg 1b.4, useMove i battle.js). Før gjaldt det bare Mewtwo, Arceus, Deoxys og den mørke, og de andre
    mistet de sterkeste angrepene sine i en lang kamp. */
