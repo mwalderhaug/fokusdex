@@ -1351,6 +1351,17 @@ button.pill{font:inherit;font-size:11.5px;font-weight:600;color:var(--ink2)}butt
 .pv{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;border-radius:14px;background:var(--card2);min-width:0;text-align:center}
 .pv b{font-size:13px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pv .sprb{--s:56px}
+/* World Tournament i blinde (steg 1b.3): hele laget på to rader, esset med en tynn gullkant, og regelen i en rolig stripe. */
+.pvs.six{gap:6px}
+.pvs.six .pv{position:relative;padding:14px 4px 7px;gap:3px}
+.pvs.six .pv .sprb{--s:46px}
+.pvs.six .pvt{display:flex;flex-wrap:wrap;justify-content:center;gap:3px}
+.pvs.six .pvt .ty{font-size:10px;padding:1px 6px}
+.pv.ace{box-shadow:inset 0 0 0 1px var(--gold)}
+.pvb{position:absolute;top:5px;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;line-height:1;padding:2px 5px;border-radius:999px}
+.pvb.acep{left:5px;color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold)}
+.pvb.mgp{right:5px;background:linear-gradient(100deg,#ff8a8a,#ffe08a 30%,#9af0a8 52%,#7fd4f5 74%,#c3a3ff);color:#17130f}
+.sm.blind{padding:8px 10px;border-radius:10px;background:var(--card2)}
 .rent{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;width:100%}
 .rent button{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 8px;border-radius:16px;background:var(--card);box-shadow:0 0 0 1px var(--line);text-align:center;min-width:0}
 .rent button[aria-pressed=true]{box-shadow:0 0 0 2px var(--gold)}

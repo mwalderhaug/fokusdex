@@ -828,7 +828,9 @@ function facSwap(mine, theirs) { const R = S.fac.run; if (R && R.team && R.team[
 
 /* ---------- World Tournament ----------
    En daglig cup med utslagsrunder: kvartfinale, semifinale og finale på rad. Tre mot tre, og alle dine spiller på samme nivå (lagets nivå da cupen startet).
-   Motstanderne står på det samme nivået på Hard, og litt under på Normal og Easy (som i ligaen), så det er valget av de tre og spillet som avgjør, ikke hvem som har trent mest. Du ser motstanderens tre før du velger dine. Ingen veske og ingen XP,
+   Motstanderne står på det samme nivået på Hard, og litt under på Normal og Easy (som i ligaen), så det er valget av de tre og spillet som avgjør, ikke hvem som har trent mest.
+   VALGET I BLINDE (steg 1b.3): begge ser hele laget til den andre (motstanderen stiller med seks), og begge velger tre uten å se den andres valg,
+   som i de ekte verdensmesterskapene. Motstanderen velger ut fra hele laget ditt, med sin egen logikk (pwtPick). Ingen veske og ingen XP,
    og laget er friskt til hver runde. Ett tap, og du er ute til neste dag med kamper. Cupen skifter med ukedagen (CUPS, søndag først): lederne fra hver region,
    Elite Four-cupen med en mester i finalen, og mesternes cup med en av de aller største i finalen.
    PREMIER: mynter for hver runde (PWTCOIN × cupens faktor × vanskelighetsgrad × studiebonus). Vinneren får et trofé, PWTCANDY Rare Candy og en pakke encounters
@@ -876,16 +878,42 @@ function pwtStart() {
   /* Motstanderne følger vanskelighetsgraden slik som i ligaen: litt lavere nivå på Easy og Normal, likt på Hard. */
   P.day = S.lad.day; P.run = { day: S.lad.day, wd: CUPS.indexOf(c), lv, flv: Math.max(5, Math.round(lv * (1 + diff().rel))), n: pwtSize(), opp, r: 0, foe: null }; save();
 }
-/* Motstanderen i runden som venter. Laget trekkes én gang, så det du ser på forhånd er det du møter. */
+/* Motstanderen i runden som venter: hele laget (esset sist), trukket én gang, så det du ser på forhånd, er det de velger blant.
+   (Et lag på tre fra en cup som var i gang før steg 1b.3, trekkes på nytt.) */
 function pwtFoe() {
   const R = pwtRun(), c = CUPS[R.wd], [k, i] = R.opp[R.r], d = POOL[k][i], st = diffSt(TCL[k]);
-  if (!R.foe) { R.foe = bossTeam(d, R.n, R.flv || R.lv, st, true); save(); }
+  if (!R.foe || R.foe.length < Math.min(6, d[4].length)) { R.foe = bossTeam(d, 6, R.flv || R.lv, st, true); save(); }
   return { c, k, st, team: R.foe, tr: trainerOf(k, i, { skill: st.sk, sc: 'pwt' }) };
 }
-/* us = de du har valgt (u), den første går ut først. Dine spiller på cupens nivå i denne kampen, uten at de egentlige nivåene røres. */
+/* MOTSTANDERENS VALG I BLINDE: hvilke n av laget som stiller (plasser i team, i den rekkefølgen de sendes ut: lederen først, esset sist).
+   Esset er alltid med (det er det du kjenner treneren på, og det du kan legge planen din etter) og aldri først. De andre velges ut fra HELE
+   laget ditt (party), for motstanderen vet ikke hvem du stiller med. For hver av dine regnes hvor godt hver av deres står mot den: skaden den
+   gir mot skaden den tar, og hvem som slår først (den som bærer Mega-steinen, regnes i formen sin). Laget som har det beste svaret på flest
+   av dine, og ellers står best samlet, vinner (PWTAVG = hvor mye det samlede teller). Litt tilfeldighet (PWTNOISE) gjør at jevne lag veksler.
+   Hvor nøye de velger, følger taktikken (aiIq) i annen: uten taktikk (Easy, og lederne og Elite Four på Normal) er det oftest to tilfeldige
+   ved siden av esset, en mester på Normal velger det beste laget i hver tredje kamp, en leder på Hard også, og en mester på Hard nesten
+   alltid (PWTBEST = sjansen uten taktikk og tillegget med full taktikk). */
+const PWTAVG = 0.3, PWTNOISE = 0.4, PWTBEST = [0.15, 0.8];
+function pwtPick(team, party, lv, n, tr) {
+  const ace = team.length - 1, rest = team.map((m, i) => i).filter(i => i !== ace);
+  n = Math.max(1, Math.min(n, team.length));
+  if (n === 1 || !rest.length) return [ace];
+  const iq = aiIq({ tr }), B1 = mkBattle(party.map(m => Object.assign({}, m, { lv })), team.map(m => megaOpts(m.id).includes(m.ms) ? Object.assign({}, m, { mega: m.ms }) : m), tr, {});
+  const adv = B1.foe.map(c => B1.me.map(p => { const fast = spdB(B1, c) > spdB(B1, p); return Math.min(1, bestDmg(B1, c, p) / p.max) * (fast ? 1.15 : 1) - Math.min(1, bestDmg(B1, p, c) / c.max) * (fast ? 1 : 1.15); }));
+  const val = T => { let s = 0; for (let p = 0; p < B1.me.length; p++) { let b = -9, sum = 0; for (const c of T) { if (adv[c][p] > b) b = adv[c][p]; sum += adv[c][p]; } s += b + PWTAVG * sum / T.length; } return s; };
+  const sets = []; (function rec(st, from) { if (st.length === n - 1) { sets.push(st.slice()); return; } for (let j = from; j < rest.length; j++) { st.push(rest[j]); rec(st, j + 1); st.pop(); } })([], 0);
+  let pick = sets[rnd(sets.length)];
+  if (Math.random() < PWTBEST[0] + PWTBEST[1] * iq * iq) { let bs = -1e9; for (const st of sets) { const sc = val(st.concat(ace)) + Math.random() * PWTNOISE; if (sc > bs) { bs = sc; pick = st; } } }
+  /* Lederen: med taktikk den av de valgte som står best mot laget ditt samlet, ellers den som står først. */
+  const avg = c => adv[c].reduce((a, x) => a + x, 0), lead = iq > 0 ? pick.slice().sort((a, b) => avg(b) - avg(a))[0] : pick[0];
+  return [lead].concat(pick.filter(i => i !== lead), ace);
+}
+/* us = de du har valgt (u), den første går ut først. Dine spiller på cupens nivå i denne kampen, uten at de egentlige nivåene røres.
+   Motstanderen velger uten å se dine: pwtPick får hele laget ditt, ikke us. (Som før stiller de med minst to.) */
 function pwtBattle(us) {
-  const R = pwtRun(), f = pwtFoe(), mine = us.map(monBy).filter(Boolean).slice(0, R.n).map(m => Object.assign({}, m, { lv: R.lv }));
-  return evApply(mkBattle(mine, f.team, f.tr, { mode: 'pwt', st: f.st, k: f.k, r: R.r, cup: f.c.n, bag: 0, xm: 0, sm: smFor('pwt'), dc: diff().coin, boost: { mode: '', m: 1, xp: 1 } }));
+  const R = pwtRun(), f = pwtFoe(), party = S.party.map(monBy).filter(Boolean), mine = us.map(monBy).filter(Boolean).slice(0, R.n).map(m => Object.assign({}, m, { lv: R.lv }));
+  const foes = pwtPick(f.team, party, R.lv, Math.max(2, R.n), f.tr).map(i => f.team[i]);
+  return evApply(mkBattle(mine, foes, f.tr, { mode: 'pwt', st: f.st, k: f.k, r: R.r, cup: f.c.n, bag: 0, xm: 0, sm: smFor('pwt'), dc: diff().coin, boost: { mode: '', m: 1, xp: 1 } }));
 }
 function finishPwt(B) {
   const P = pwt(), R = pwtRun(), win = B.over === 'win', res = { mode: 'pwt', win, ups: [], items: [], encs: [], coins: 0, trade: null, perks: [], note: '', r: B.r, cup: B.cup, done: false };
