@@ -2708,3 +2708,98 @@ button.rtf::before{content:"";position:absolute;left:10px;right:10px;bottom:6px;
 .echn{display:flex;justify-content:center;align-items:baseline;gap:8px;margin:6px 0}.echn b{color:var(--gold)}
 .pill.tpp{box-shadow:inset 0 0 0 1px var(--line)}.tp-skit{color:#9fd3e6}.tp-heavy{color:#d8b58a}.tp-rest{color:#bfe3c0}.tp-fierce{color:#f0a08c}
 @media (prefers-reduced-motion:reduce){.rtf i,.rtf.sp::after{animation:none!important}}
+
+/* ---------- Ekspedisjonen (steg 1d): billettene, kortet på forsiden, kartet og rommene ----------
+   --wc er ukas farge (WKT i week.js). Forsiden følger utseendet som er valgt (lys eller mørk); kartet (.ov.wkov) er alltid mørkt. */
+.wk-k{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2)}
+/* Billettene: fem små lykter. */
+.wkl{display:inline-flex;gap:5px;align-items:center;flex:none}
+.wkl i{position:relative;width:11px;height:15px;border-radius:4px 4px 5px 5px;background:var(--track);box-shadow:inset 0 0 0 1px var(--line)}
+.wkl i::before{content:"";position:absolute;left:50%;top:-3px;width:5px;height:3px;margin-left:-2.5px;border-radius:2px 2px 0 0;background:var(--line)}
+.wkl i.on{background:linear-gradient(#fff6d6,var(--gold));box-shadow:0 0 9px color-mix(in srgb,var(--gold) 75%,transparent)}
+.wkl em{font-style:normal;font-size:11px;color:var(--gold);margin-left:1px;letter-spacing:1px}
+.wkl.lg i{width:15px;height:20px;border-radius:5px 5px 7px 7px}.wkl.lg{gap:7px}
+.wkemb{flex:none;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--wc) 22%,var(--card));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--wc) 55%,transparent)}
+.wkemb svg{width:22px;height:22px;fill:none;stroke:color-mix(in srgb,var(--wc) 70%,var(--ink));stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* Raden på forsiden */
+.wks{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border:0;font:inherit;color:var(--ink);text-align:left;cursor:pointer}
+.wks .sp{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}.wks .sp b{font-size:15.5px;font-weight:600;letter-spacing:-.01em}.wks .sp .sm{line-height:1.3}
+.wks.go{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--gold) 70%,transparent)}
+.wkc .mode-h .wkemb{width:34px;height:34px;border-radius:11px}.wkc .mode-h .wkemb svg{width:19px;height:19px}
+.wkc .mode-t .wkl{margin-left:auto}
+/* Laget i løpet */
+.wkt{display:flex;justify-content:center;gap:8px}
+.wkt>span{display:flex;flex-direction:column;align-items:center;gap:3px;width:38px}.wkt .sprb{--s:34px}
+.wkt>span>i{display:block;width:30px;height:4px;border-radius:3px;background:var(--track);overflow:hidden}.wkt>span>i>i{display:block;height:100%;border-radius:3px}
+.wkt>span.ko .sprb{filter:grayscale(1);opacity:.35}
+/* Kortet i valget av dagens modus */
+.mdc.wkm{background:linear-gradient(135deg,color-mix(in srgb,var(--wc) 20%,var(--card)),var(--card) 70%);box-shadow:0 0 0 1.5px color-mix(in srgb,var(--wc) 60%,var(--line))}
+.mdc.wkm.on{box-shadow:0 0 0 2.5px var(--gold)}
+.mdc.wkm .wkl{margin-left:auto}
+/* Arkene */
+.wkih{display:flex;align-items:center;gap:12px;margin-bottom:4px}.wkih .sp{flex:1;min-width:0}
+.wkzl{display:flex;flex-direction:column;gap:7px;margin:4px 0}
+.wkzl>div{display:flex;gap:10px;align-items:center;font-size:13.5px;color:var(--ink3)}
+.wkzl i{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:11.5px;font-weight:700;background:var(--track);color:var(--ink3)}
+.wkzl>div.on{color:var(--ink)}.wkzl>div.on i{background:linear-gradient(#fff6d6,var(--gold));color:var(--goldink)}
+.wkwhy{color:var(--ink2);border-radius:12px;padding:10px 12px;background:var(--soft)}
+.wkfoe{display:flex;gap:12px;align-items:center;border-radius:16px;padding:10px 12px;background:var(--card2);box-shadow:0 0 0 1px var(--line)}
+.wkfoe .sp{display:flex;flex-direction:column;gap:3px;min-width:0}.wkfoe .sp b{font-size:17px}.wkfoe .ty{font-size:10.5px;padding:1px 7px;border-radius:99px;color:var(--tyink)}
+.wkscout{display:flex;align-items:center;flex-wrap:wrap;gap:4px}.wkscout .sm{width:100%}.wkscout .sprb{--s:38px}
+.wklu{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.wklu button{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;padding:8px 4px 7px;border:0;border-radius:14px;background:var(--card2);box-shadow:0 0 0 1px var(--line);color:var(--ink);font:inherit;cursor:pointer}
+.wklu button.lead{box-shadow:0 0 0 2px var(--sage);background:color-mix(in srgb,var(--sage) 12%,var(--card2))}
+.wklu b{max-width:100%;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wklu .sprb{--s:40px}
+.wkhp{display:block;width:72%;height:4px;border-radius:3px;background:var(--track);overflow:hidden}.wkhp>i{display:block;height:100%;border-radius:3px}
+.wklu button.ko{opacity:.45}.wklu button.ko .sprb{filter:grayscale(1)}
+.wkevd{font-size:15px;line-height:1.45;color:var(--ink)}
+.wkopts{display:flex;flex-direction:column;gap:8px}
+.wkopt{display:flex;flex-direction:column;gap:3px;width:100%;padding:13px 14px;border:0;border-radius:16px;background:var(--card2);box-shadow:0 0 0 1px var(--line);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.wkopt b{font-size:15.5px}.wkopt:active{transform:scale(.985)}
+.wkrs{justify-content:center;margin:4px 0}
+/* Rommene: samme merke på kartet og i arkene (.stat = står stille i et ark). */
+.wkn{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;padding:0;border:0;border-radius:50%;display:grid;place-items:center;background:#241f33;color:#d9d3ea;box-shadow:0 0 0 1.5px rgba(255,255,255,.2);cursor:pointer;transition:transform .12s ease}
+.wkn:active{transform:scale(.93)}
+.wkn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.wkn svg.f{fill:currentColor;stroke:none}
+.wkn .wkq{font-size:21px;font-weight:800;line-height:1}
+.wkn.stat{position:static;margin:0;flex:none;cursor:default}
+.wkn.k-tr{color:#cfd6c4}.wkn.k-ac{color:#f0c987;box-shadow:0 0 0 1.5px #f0c987}.wkn.k-gt,.wkn.k-el{color:#f3e3bd;box-shadow:0 0 0 2px rgba(240,201,135,.7)}
+.wkn.k-ev{color:#c9b3ff}.wkn.k-sp{color:#8fd6d0}.wkn.k-tz{color:#f0c56d}.wkn.k-en{color:#9fd08a}.wkn.k-sr{color:#e9d9ff}
+.wkn.big{width:62px;height:62px;margin:-31px 0 0 -31px;overflow:hidden;background:radial-gradient(circle at 40% 30%,#3d4250,#1a1c24);box-shadow:0 0 0 2px #cfd5e2,0 0 20px rgba(207,213,226,.3);color:#e3e7f0}
+.wkn.big.k-bg{background:radial-gradient(circle at 40% 30%,#4c3f2a,#221b12);box-shadow:0 0 0 2px #f0c987,0 0 22px rgba(240,201,135,.4);color:#f0c987}
+.wkn.big.k-sr{background:radial-gradient(circle at 40% 30%,#3b2a5c,#17102a);box-shadow:0 0 0 2px #b99cff,0 0 22px rgba(185,156,255,.35)}
+.wkn.big svg{width:28px;height:28px}
+.wkn.big .tsb{width:62px;height:62px;border-radius:50%;background:none}
+.wkn.done{opacity:.5}.wkn.off{opacity:.22}
+.wkn.lock{opacity:.28;box-shadow:0 0 0 1px rgba(255,255,255,.14)}
+.wkn.now{box-shadow:0 0 0 2.5px #fff,0 0 18px rgba(255,255,255,.55);background:#3a3152;opacity:1}
+.wkn.open{box-shadow:0 0 0 2.5px var(--tc),0 0 0 6px color-mix(in srgb,var(--tc) 22%,transparent);animation:wkpulse 1.8s ease-in-out infinite}
+.wkn .wkok{position:absolute;right:-4px;bottom:-4px;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:#6fd08a;color:#10210f}.wkn .wkok svg{width:12px;height:12px;stroke-width:3}
+@keyframes wkpulse{50%{box-shadow:0 0 0 2.5px var(--tc),0 0 0 11px color-mix(in srgb,var(--tc) 0%,transparent)}}
+@media (prefers-reduced-motion:reduce){.wkn.open{animation:none}}
+/* Kartet: en mørk sone */
+.ov.wkov{--bg:#141021;--bg2:#0b0910;--panel:#1c1830;--panel2:#262139;--card:rgba(255,255,255,.065);--card2:rgba(255,255,255,.06);--line:rgba(255,255,255,.11);--soft:rgba(255,255,255,.08);--hi:rgba(255,255,255,.14);
+  --ink:#f3f1f8;--ink2:#b1acc2;--ink3:#777289;--acc:#b5a8e6;--acc2:#edb5a0;--accink:#1a152c;--accsoft:rgba(181,168,230,.16);--gold:#f0c987;--goldsoft:rgba(240,201,135,.14);--goldink:#2a2109;--red:#e79a8c;--good:#a9d6a5;
+  --shade:rgba(6,5,16,.5);--scrim:rgba(7,6,16,.55);--track:rgba(255,255,255,.1);--sage:var(--acc);
+  --page:radial-gradient(120% 34% at 50% 0%,color-mix(in srgb,var(--tc) 24%,transparent),transparent 70%),linear-gradient(#151122,#0b0910);background:var(--page);color:var(--ink);color-scheme:dark}
+.wktop{align-items:center;gap:10px}.wk-h{display:flex;flex-direction:column;min-width:0;text-align:center}.wk-h b{font-size:17px;letter-spacing:-.01em}
+.wkmap{position:relative;width:100%;border-radius:22px;overflow:hidden;background:radial-gradient(120% 30% at 50% 100%,color-mix(in srgb,var(--tc) 16%,#14111d),transparent 70%),linear-gradient(#0f0c17,#100d19);box-shadow:0 0 0 1px var(--line)}
+.wkz{position:absolute;left:0;right:0;border-top:1px dashed rgba(255,255,255,.14);pointer-events:none}
+.wkz span{position:absolute;left:10px;top:5px;display:flex;gap:5px;align-items:center;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+.wkz span svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.wkz.lock{background:repeating-linear-gradient(135deg,rgba(0,0,0,.4) 0 9px,rgba(0,0,0,.26) 9px 18px)}.wkz.lock span{color:var(--ink2)}
+.wke{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.wke line{stroke:rgba(255,255,255,.24);stroke-width:1.6;stroke-dasharray:2 6;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.wke line.w{stroke:#fff;stroke-width:2.4;stroke-dasharray:none}.wke line.o{stroke:var(--tc);stroke-width:2.4;stroke-dasharray:3 6}.wke line.d{stroke:rgba(255,255,255,.09)}
+.wkme{position:absolute;width:30px;height:30px;margin:-52px 0 0 -15px;pointer-events:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}.wkme .sprb{--s:30px}
+.wkgate{position:absolute;left:0;right:0;margin-top:-10px;text-align:center;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);pointer-events:none}
+.wkacts{position:sticky;bottom:0;align-items:center;padding:10px 12px;border-radius:18px;background:rgba(17,13,27,.9);box-shadow:0 0 0 1px var(--line);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.wkacts p{flex:1;margin:0}.wkacts .btn{flex:none}
+/* Oppsummeringen */
+.wkend{display:flex;flex-direction:column;gap:14px;align-items:stretch;text-align:left;margin-top:8vh}
+.wkzp{display:flex;flex-direction:column;gap:8px}
+.wkzp span{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--ink3)}
+.wkzp i{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--track);box-shadow:inset 0 0 0 1px var(--line)}
+.wkzp i svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.wkzp span.op{color:var(--ink2)}.wkzp span.on{color:var(--ink)}.wkzp span.on i{background:linear-gradient(#fff6d6,var(--gold));color:var(--goldink);box-shadow:0 0 10px color-mix(in srgb,var(--gold) 55%,transparent)}
+.wkend .gain{grid-template-columns:repeat(3,minmax(0,1fr))}

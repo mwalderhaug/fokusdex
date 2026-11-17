@@ -72,22 +72,23 @@ function wkNow() {
 
 /* ---------- Ukestypene ----------
    En runde er seks uker: fire anlegg, Ultra Wormhole og Shadow Snag. Hvert anlegg har sin Frontier Brain (navnet i POOL.brain) og sitt eget
-   sølv- og gullsymbol. WKEPOCH = uka med fredag 20.11.2026, den første i rundgangen. Reglene som skiller typene, kommer i steg 1d.4:
+   sølv- og gullsymbol. x = de to som kommer i tillegg til de fire i POOL.brain: den første i sølvkampen (fem i alt), begge i gullkampen (seks;
+   mest hentet fra lagene de har i spillene: Brandon med fuglene, Palmer med Heatran og Cresselia). WKEPOCH = uka med fredag 20.11.2026, den første i rundgangen. Reglene som skiller typene, kommer i steg 1d.4:
    til da går alle på grunnkartet (fac = et anlegg med Brain; de to andre har en annen boss til slutt). */
 const WKT = {
-  pike: { n: 'Battle Pike', brain: 'Lucy', c: '#c9a3ff', fac: 1 },
-  arcade: { n: 'Battle Arcade', brain: 'Dahlia', c: '#ff9f6b', fac: 1 },
+  pike: { n: 'Battle Pike', brain: 'Lucy', x: [213, 24], c: '#c9a3ff', fac: 1 },
+  arcade: { n: 'Battle Arcade', brain: 'Dahlia', x: [308, 145], c: '#ff9f6b', fac: 1 },
   worm: { n: 'Ultra Wormhole', c: '#9fd9ff', boss: 'champ' },
-  pyramid: { n: 'Battle Pyramid', brain: 'Brandon', c: '#e0b36a', fac: 1 },
-  castle: { n: 'Battle Castle', brain: 'Darach', c: '#8fb6ff', fac: 1 },
+  pyramid: { n: 'Battle Pyramid', brain: 'Brandon', x: [144, 146], c: '#e0b36a', fac: 1 },
+  castle: { n: 'Battle Castle', brain: 'Darach', x: [244, 282], c: '#8fb6ff', fac: 1 },
   shadow: { n: 'Shadow Snag', c: '#c58bff', boss: 'evilboss' },
-  dome: { n: 'Battle Dome', brain: 'Tucker', c: '#ffd27a', fac: 1 },
-  hall: { n: 'Battle Hall', brain: 'Argenta', c: '#d7c8a8', fac: 1 },
-  arena: { n: 'Battle Arena', brain: 'Greta', c: '#f08a8a', fac: 1 },
-  tower: { n: 'Battle Tower', brain: 'Palmer', c: '#b7c4ff', fac: 1 }
+  dome: { n: 'Battle Dome', brain: 'Tucker', x: [380, 59], c: '#ffd27a', fac: 1 },
+  hall: { n: 'Battle Hall', brain: 'Argenta', x: [149, 445], c: '#d7c8a8', fac: 1 },
+  arena: { n: 'Battle Arena', brain: 'Greta', x: [292, 68], c: '#f08a8a', fac: 1 },
+  tower: { n: 'Battle Tower', brain: 'Palmer', x: [485, 488], c: '#b7c4ff', fac: 1 }
 };
 const WKROT = ['pike', 'arcade', 'worm', 'pyramid', 'castle', 'shadow', 'dome', 'hall', 'worm', 'arena', 'tower', 'shadow'], WKEPOCH = 2967;
-const wkType = w => { const sb = wkSbx(); return sb && WKT[sb.ty] ? sb.ty : WKROT[(((w - WKEPOCH) % WKROT.length) + WKROT.length) % WKROT.length]; };
+const wkType = w => { const sb = wkSbx(); return sb && WKT[sb.ty] && w === wkIdx(dayKey()) ? sb.ty : WKROT[(((w - WKEPOCH) % WKROT.length) + WKROT.length) % WKROT.length]; };
 
 /* ---------- Fast tilfeldighet ----------
    Alt som skal være likt for alle samme uke, trekkes med en egen generator fra et frø (wkRng). wkSeeded bytter ut Math.random mens f går,
@@ -152,14 +153,14 @@ function wkMap(w, ty) {
    Vanskelig fordi det er flere gode trenere, ikke fordi verdiene er høyere (Jazz 15.11): alle står på lagets nivå (R.flv; litt under på Easy og
    Normal, som i cupen), med oppdrett som klassene i ligaen. Det som skiller dem fra en vanlig kampdag, er at det er mange på rad, at de spiller
    godt (sk, iq), og at settene henger sammen (rentSet, som i Battle Frontier). Tallene her er spakene steg 1d.8 måler og stiller.
-   mons = antall, iv/ev = oppdrett, q = angrepene, sk/iq = spillet, slack = hvor tidlig de er utviklet, xp = XP-faktor, coin = mynter (× studiebonus). */
+   mons = antall, rel = nivået mot laget ditt (aldri over), iv/ev = oppdrett, q = angrepene, sk/iq = spillet, slack = hvor tidlig de er utviklet, xp = XP-faktor, coin = mynter (× studiebonus). */
 const WKFOE = {
-  tr: { n: 'Trainer', mons: 3, iv: 14, ev: 8, q: 2, sk: 0.86, iq: 0.25, slack: 4, xp: 1.2, coin: 300 },
-  ac: { n: 'Ace', mons: 4, iv: 20, ev: 20, q: 2, sk: 0.94, iq: 0.6, slack: 8, tut: 1, xp: 1.5, coin: 520 },
-  gt: { n: 'Gatekeeper', mons: 4, iv: 18, ev: 16, q: 2, sk: 0.92, iq: 0.5, slack: 8, xp: 1.45, coin: 480 },
-  el: { n: 'Elite', mons: 5, iv: 22, ev: 24, q: 2, sk: 0.96, iq: 0.7, slack: 12, tut: 1, xp: 1.6, coin: 650 },
-  bs: { n: 'Frontier Brain', mons: 4, iv: 24, ev: 28, q: 2, sk: 1, iq: 0.85, slack: 99, tut: 1, xp: 1.8, coin: 900 },
-  bg: { n: 'Frontier Brain', mons: 4, iv: 31, ev: 60, q: 2, sk: 1, iq: 1, slack: 99, tut: 2, xp: 2.1, coin: 1300 }
+  tr: { n: 'Trainer', mons: 3, rel: 0.92, iv: 8, ev: 0, q: 2, sk: 0.86, iq: 0.25, slack: 4, xp: 1.2, coin: 300 },
+  ac: { n: 'Ace', mons: 4, rel: 0.97, iv: 18, ev: 16, q: 2, sk: 0.94, iq: 0.6, slack: 8, tut: 1, xp: 1.5, coin: 520 },
+  gt: { n: 'Gatekeeper', mons: 3, rel: 0.94, iv: 12, ev: 4, q: 2, sk: 0.92, iq: 0.5, slack: 8, xp: 1.45, coin: 480 },
+  el: { n: 'Elite', mons: 4, rel: 0.98, iv: 20, ev: 20, q: 2, sk: 0.96, iq: 0.7, slack: 12, tut: 1, xp: 1.6, coin: 650 },
+  bs: { n: 'Frontier Brain', mons: 5, rel: 1, iv: 20, ev: 20, q: 2, sk: 1, iq: 0.85, slack: 99, tut: 1, xp: 1.8, coin: 900 },
+  bg: { n: 'Frontier Brain', mons: 6, rel: 1, iv: 31, ev: 60, q: 2, sk: 1, iq: 1, slack: 99, tut: 2, xp: 2.1, coin: 1300 }
 };
 /* De store trenerne i de indre hallene: en leder, en av Elite Four, en rival eller en admin. */
 const WKELITE = ['gym', 'e4', 'rival', 'eviladmin'];
@@ -176,12 +177,12 @@ function wkBoss(M) {
 }
 /* Motstanderen i en node: { st, tr, team, hint }. Likt for alle samme uke (frøet til noden), på nivået flv. */
 function wkFoe(M, nd, flv) {
-  const st = wkFoeSt(nd.k);
+  const st = wkFoeSt(nd.k); flv = Math.max(3, Math.round(flv * st.rel));
   return wkSeeded(nd.s, () => {
     if (nd.k === 'bs' || nd.k === 'bg') {
-      const [k, i] = wkBoss(M), d = POOL[k][i], gold = nd.k === 'bg';
-      const team = bossTeam(d, gold ? 6 : st.mons, flv, st, true).map(rentSet);
-      return { st, k, team, hint: d[3], tr: trainerOf(k, i, { skill: st.sk, iq: st.iq, fr: k === 'brain' ? 1 : 0, arena: 'hall', int: gold ? 5 : 3, wk: nd.k, film: '', sp: 0 }) };
+      const [k, i] = wkBoss(M), d0 = POOL[k][i], x = WKT[M.ty].x, d = x ? Object.assign(d0.slice(), { 4: d0[4].concat(x) }) : d0;
+      const team = bossTeam(d, st.mons, flv, st, true).map(rentSet);
+      return { st, k, team, hint: d[3], tr: trainerOf(k, i, { skill: st.sk, iq: st.iq, fr: k === 'brain' ? 1 : 0, arena: 'hall', int: nd.k === 'bg' ? 5 : 3, wk: nd.k, film: '', sp: 0 }) };
     }
     if (nd.k === 'el') {
       const k = WKELITE[rnd(WKELITE.length)], i = rnd(POOL[k].length), d = POOL[k][i];
@@ -202,8 +203,10 @@ function wkFoe(M, nd, flv) {
    sc: noden speideren har fortalt om, used: hendelser som er brukt, lk: kampdagen laget ble låst, d: kampdagen løpet startet }.
    INGEN HELING MELLOM KAMPENE: HP og PP følger med fra kamp til kamp, og de som er slått ut, blir liggende. Kildene heler alt (WKSPRING).
    Etter en seier kommer de som står, seg litt (WKREST), og tilstander (gift, søvn) slipper. Ingen veske i kampene (bag 0).
+   NÅR EN SONE ER KLAR (kampen som avslutter den, er vunnet), får laget en pust i bakken: alle får tilbake WKZREST av HP-en, de som var
+   slått ut, reiser seg med så mye, og PP-en er full. Sonene er altså hver sin etappe, og det er innenfor en sone det gjelder å holde ut.
    LÅSEN: laget står fast fra første kamp til løpet er over (runLock i league.js). */
-const WKREST = 0.1, WKSPRING = 1;
+const WKREST = 0.1, WKSPRING = 1, WKZREST = 0.5;
 const wkParty = () => S.party.map(monBy).filter(Boolean);
 const wkHp = (R, u) => (R.hp[u] || (R.hp[u] = { h: 1, pp: {} }));
 /* Laget slik det står i løpet: [{ m, h }], h = andelen HP (0 = slått ut). Uten løp er alle friske. */
@@ -235,7 +238,7 @@ function wkEnter(id) {
 }
 /* Noden er ferdig: sonen er klar hvis det var den siste kampen i den, og løpet er over når ingenting mer er åpent med billettene dine. */
 function wkAfter(R, nd) {
-  R.pend = ''; if (WKCLOSE[nd.k]) R.ms = Math.max(R.ms, WKCLOSE[nd.k]);
+  R.pend = ''; if (WKCLOSE[nd.k]) { R.ms = Math.max(R.ms, WKCLOSE[nd.k]); for (const m of wkParty()) { const c = wkHp(R, m.u); c.h = Math.min(1, c.h + WKZREST); c.pp = {}; } }
   const M = wkMap(R.w, R.ty);
   return nd.to.some(i => M.nodes[i].z <= R.t) ? null : wkEnd('won');
 }
@@ -261,7 +264,7 @@ function wkBattle(id, lead) {
   const pending = V.R && V.R.pend && V.R.at === id, nd = pending ? V.M.nodes[id] : wkEnter(id); if (!nd || !WKFIGHT.has(nd.k)) return null;
   const R = wkSt().run, f = wkFoe(V.M, nd, R.flv), alive = m => wkHp(R, m.u).h > 0, party = wkParty();
   party.sort((a, b) => (alive(b) - alive(a)) || ((b.u === lead) - (a.u === lead)));
-  const B = mkBattle(party, f.team, f.tr, { mode: 'wk', st: f.st, k: f.k, nk: nd.k, nid: nd.id, zone: nd.z, bag: 0, xm: xpMult() * diff().xp, sm: wkSm(), dc: diff().coin, boost: { mode: '', m: 1, xp: 1 } });
+  const B = mkBattle(party, f.team, f.tr, { mode: 'wk', tag: `${WKT[R.ty].n} · ${WKZN[nd.z]}`, st: f.st, k: f.k, nk: nd.k, nid: nd.id, zone: nd.z, bag: 0, xm: xpMult() * diff().xp, sm: wkSm(), dc: diff().coin, boost: { mode: '', m: 1, xp: 1 } });
   for (const b of B.me) { const c = R.hp[b.src.u]; if (!c) continue; b.hp = c.h <= 0 ? 0 : Math.max(1, Math.round(b.max * c.h)); if (b.hp <= 0) b.out = 1; for (const m of b.mv) if (c.pp[m.i] != null) m.pp = Math.max(0, Math.min(m.max, c.pp[m.i])); }
   return B;
 }
@@ -291,7 +294,7 @@ function finishWeek(B) {
   if (R.st) res.perks.push(`Weekend study in exam season: ${Math.round(WKWKND * R.st * 100)} % more coins.`);
   R.got.wins++; R.got.coins += res.coins; R.got.encs += res.encs.length; res.items.forEach(x => R.got.items.push(x));
   res.zone = WKCLOSE[nd.k] || 0; res.end = wkAfter(R, nd);
-  if (res.end && res.end.sym) res.sym = res.end.sym;
+  if (res.end && res.end.sym) { res.sym = res.end.sym; res.perks.push(`You earned the ${res.sym === 2 ? 'Gold' : 'Silver'} Symbol of the ${WKT[res.end.ty].n}.`); }
   stamp(); save();
   return res;
 }

@@ -223,7 +223,7 @@ function cry(id, delay = 0, vol = 0.45) {
    SND gir lyden for hver handling (ellers tap). Trykket spilles etter handlingen: har handlingen selv spilt en lyd (SNDP settes i out()),
    faller trykklyden bort, så ingenting blir dobbelt. En handling kan si fra selv med snd('warn') eller snd('') (stille).
    OWN = handlinger som skal være stille når de ikke spiller noe med en gang (kampen, kastet og filmene har sine egne lyder litt etter). */
-const OWN = new Set(['evpick', 'mgive', 'triv', 'trev', 'start', 'throw', 'buy', 'buy10', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'evolve', 'sestart', 'sound', 'hunt', 'cries', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'buse', 'btypes', 'honyes', 'clkagain', 'help', 'tour', 'tourend', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats', 'achget', 'achall', 'sbxsnd', 'held', 'heldgive', 'heldoff', 'heldshop', 'heldbuy', 'form', 'tswp', 'tswgo', 'pkrel', 'early', 'bforfeit', 'bmega', 'berry', 'showfilm', 'tutteach', 'tutlearn']);
+const OWN = new Set(['wkgo', 'wkdo', 'wkpick', 'evpick', 'mgive', 'triv', 'trev', 'start', 'throw', 'buy', 'buy10', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'evolve', 'sestart', 'sound', 'hunt', 'cries', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'buse', 'btypes', 'honyes', 'clkagain', 'help', 'tour', 'tourend', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats', 'achget', 'achall', 'sbxsnd', 'held', 'heldgive', 'heldoff', 'heldshop', 'heldbuy', 'form', 'tswp', 'tswgo', 'pkrel', 'early', 'bforfeit', 'bmega', 'berry', 'showfilm', 'tutteach', 'tutlearn']);
 const SND = {
   /* Faner og sider */
   tab: 'tab', lagv: 'tab', dexr: 'tab', sbxtab: 'tab', shopt: 'tab', pknext: 'tab', tourgo: 'tab', toshop: 'tab', bteam: 'tab', sbxsounds: 'tab',
@@ -245,6 +245,8 @@ const SND = {
   pkkeep: 'ok', sbxq: 'ok', jday: 'ok', avpick: 'ok', rkok: 'ok', stnext: 'ok', tipok: 'ok', mvsug: 'ok', lead: 'ok', sesave: 'ok', party: 'ok', wnok: 'ok', newsok: 'ok', jok: 'ok', mvsave: 'ok',
   nicksave: 'ok', wsave: 'ok', wone: 'ok', wearly: 'ok', exsave: 'ok', upd: 'ok', trtipok: 'ok', rcdone: 'ok', jnext: 'ok',
   bkcopy: 'saved', bkload: 'saved', bkold: 'saved',
+  /* Ekspedisjonen (weekui.js) */
+  wkinfo: 'open', wkopen: 'open', wknode: 'open', wkend: 'open', sbxwk: 'open', wklead: 'chip', sbxwky: 'chip', sbxwkt: 'chip',
   /* Ellers */
   ball: 'ball', fav: 'fav', boinfo: 'warn'
 };
@@ -666,11 +668,11 @@ VIEW.fokus = () => {
   /* En vanlig dag ligger kampene nederst. På en eventdag står eventet og kampene øverst, og det som har med studeringen å gjøre, under. */
   const CL = clockLock(); if (CL) top += clockCard(CL);
   const fpk = S.fpk && Object.keys(S.fpk).length ? `<button type="button" class="btn wide gold" data-a="fpk">${icn('gift')}Open your free packs</button>` : '';
-  if (!open) return top + hero + (S.raid && S.raid.ev && S.party.length ? raidCard() : '') + fpk + ses + today + studyFoot() + admRow();
+  if (!open) return top + hero + (S.raid && S.raid.ev && S.party.length ? raidCard() : '') + fpk + ses + today + wkStrip() + studyFoot() + admRow();
   /* Etter «Done for today»: økta er foldet sammen til én rad («Study more») til den åpnes. */
   const sesRow = U.sopen ? ses : `<button type="button" class="card sesrow" data-a="sopen" aria-expanded="false">${icn('clock')}<span class="sp"><b>Study more</b><span class="sm tn">${esc(F(fag).n)}<i class="sep"></i>${min} min</span></span>${icn('chev')}</button>`;
   const battles = S.party.length ? (has('battles') ? raidCard() + ladderCard() : lockCard('battles')) : '';
-  return top + hero + newsEl() + journeyCard() + fpk + battles + today + sesRow + admRow();
+  return top + hero + newsEl() + journeyCard() + fpk + battles + wkStrip() + today + sesRow + admRow();
 };
 
 /* ---------- Laget, Box og Duplicates ---------- */
@@ -2001,7 +2003,7 @@ const A = {
 };
 document.addEventListener('click', ev => {
   const el = ev.target.closest('[data-a]');
-  const fn = el && !el.disabled && (A[el.dataset.a] || BA[el.dataset.a] || HA[el.dataset.a] || (typeof XA !== 'undefined' && XA[el.dataset.a]));
+  const fn = el && !el.disabled && (A[el.dataset.a] || BA[el.dataset.a] || HA[el.dataset.a] || (typeof XA !== 'undefined' && XA[el.dataset.a]) || WA[el.dataset.a]);
   if (fn) { press(el, fn); return; }
   if (ev.target.id === 'sheet') { sfx.close(); closeSheet(); }
 });

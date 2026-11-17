@@ -468,19 +468,19 @@ const pipsEl = (n, used) => `<span class="pips" role="img" aria-label="${Math.ma
    valget gjelder hele kampdagen og kan ikke gjøres om. */
 function modeSheet() {
   if (!S.lad.day || !modePicks()) { closeOv(); return render(); }
-  const bo = dayBoost(), L1 = S.lad, R = S.fac.run, WR = pwtRun(), wc = WR ? CUPS[WR.wd] : cupNow(), W = pwt(), sel = MODES.includes(BT.msel) ? BT.msel : '';
+  const bo = dayBoost(), L1 = S.lad, R = S.fac.run, WR = pwtRun(), wc = WR ? CUPS[WR.wd] : cupNow(), W = pwt(), wo = wkOffer(), sel = MODES.includes(BT.msel) || (BT.msel === 'week' && wo) ? BT.msel : '';
   const C = {
     league: { s: `${leagueTag()} · ${L1.n >= LAPN - 1 ? 'the final' : L1.n <= 0 ? 'a new lap' : 'the class rises'}`, d: 'Your own team', a: ladLives() > 1 ? 'You can lose once and try again' : 'One loss ends the lap', n: ladLives(), u: ladFails() },
     factory: { s: R ? `Round ${R.round} · ${R.w}/${FACN} wins · streak ${R.streak}` : `Rental Pokémon at Lv ${FACLV}${facBestTxt()}`, d: R ? 'Rental Pokémon' : '', a: `${FACLIVES} runs · a loss ends a run`, n: FACLIVES, u: facFails() },
     pwt: { s: `Today: ${wc.n}${(WR ? WR.dk : pwtDark(wc)) ? ' · mystery entrant' : ''}`, d: 'A cup, three on three', a: 'One cup · a loss ends it', n: 1, u: W.day === S.lad.day && !WR ? 1 : 0 }
   };
-  ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Not now</button><span class="pill tn">Choose 1 of ${MODES.length}</span></div>
+  ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Not now</button><span class="pill tn">Choose 1 of ${MODES.length + (wo ? 1 : 0)}</span></div>
     <div><h1 class="big" style="font-size:30px">Today's mode ${hq('modes', 'What are the modes?')}</h1><p class="sm" style="margin-top:6px">${tl('Pick one way to battle today.')}</p></div>
-    <div class="mdl">${MODES.map(k => `<button type="button" class="mdc${sel === k ? ' on' : ''}${bo.mode === k ? ' bo' : ''}" data-a="msel" data-k="${k}" aria-pressed="${sel === k}">
+    <div class="mdl">${wo ? wkModeCard(wo, sel === 'week') : ''}${MODES.map(k => `<button type="button" class="mdc${sel === k ? ' on' : ''}${bo.mode === k ? ' bo' : ''}" data-a="msel" data-k="${k}" aria-pressed="${sel === k}">
       <span class="mdc-top"><span class="ficon">${MODEIC[k]}</span><span class="sp"><b>${MODEN[k]}${k === 'league' && jOn() && !(S.jx || {}).b ? ' <i class="mdc-st">Start here</i>' : ''}</b><span class="sm tn">${esc(C[k].d ? C[k].d + ' · ' : '')}${esc(C[k].s)}</span></span>${pipsEl(C[k].n, C[k].u)}</span>
       <span class="mdc-f"><span class="pill tn">Coins ×${smFor(k)}</span>${bo.mode === k ? `<span class="bonus">Bonus today · coins ×${DAYCOIN}</span>` : ''}<span class="sm">${esc(C[k].a)}</span></span></button>`).join('')}</div>
     <p class="sm" style="text-align:center">${tl('Coins ×{x} from your {t} of focus today.', { x: studyMult(), t: hm(ladMin()) })}</p>
-    <div class="acts"><button type="button" class="btn gold" id="mgo" data-a="mgo"${sel ? '' : ' disabled'}>${sel ? `Play the ${MODEN[sel]} today` : 'Tap a mode to choose it'}</button></div>`, 'tint modeov', 'var(--gold)');
+    <div class="acts"><button type="button" class="btn gold" id="mgo" data-a="mgo"${sel ? '' : ' disabled'}>${sel === 'week' ? 'Set out on the Expedition' : sel ? `Play the ${MODEN[sel]} today` : 'Tap a mode to choose it'}</button></div>`, 'tint modeov', 'var(--gold)');
 }
 /* Hva kampdagen heter når den ikke er i dag. */
 const dayWord = d => { if (!d || d === dayKey()) return 'today'; if (d === dayKey(addDays(new Date(), -1))) return 'yesterday'; const q = d.split('-').map(Number); return 'on ' + new Date(q[0], q[1] - 1, q[2]).toLocaleDateString('en-US', { weekday: 'long' }); };
@@ -535,7 +535,7 @@ function ladderCard() {
   /* Kamper fra en tidligere dag kan tas helt til en ny økt starter. Da gjelder den dagens fokus og den dagens bonus, og det skal være tydelig. */
   const old = dayOld(), when = dayWord(L.day), oldc = old ? `<div class="card oldday"><div class="row" style="justify-content:space-between"><b>Battles from ${when.replace(/^on /, '')}</b><span class="pill tn">${dayDone() ? 'Done' : 'Not played yet'}</span></div><p class="sm" style="margin-top:4px">Coins ×${studyMult()} from ${hm(ladMin())} that day. They close when you start a session.</p></div>` : '';
   /* Kampene er åpnet, men dagens modus er ikke valgt ennå (valget ble utsatt). */
-  if (modePicks() > 0 && !dayShut()) return `${oldc}<div class="card mode modeask">${modeHead('', 'Pick one mode for the day', `<span class="pill tn">Choose 1 of ${MODES.length}</span>`)}
+  if (modePicks() > 0 && !dayShut()) return `${oldc}<div class="card mode modeask">${modeHead('', 'Pick one mode for the day', `<span class="pill tn">Choose 1 of ${MODES.length + (wkOffer() ? 1 : 0)}</span>`)}${wkOffer() ? `<p class="sm" style="color:var(--gold)">${tl('The Expedition is open today.')}</p>` : ''}
     <button type="button" class="go" data-a="mopen">Choose ${old ? 'the' : "today's"} mode</button><button type="button" class="btn wide nf" data-a="skipday">Not today · no battles</button></div>${charm}`;
   /* Kampdagen er stengt uten at en modus er valgt («Not today» før valget). */
   if (modePicks() > 0) return `${oldc}<div class="card mode">${modeHead('', `No battles ${when}`, '<span class="pill tn">Closed</span>')}<p class="sm">They open again after your next day of focus.</p></div>${charm}`;
@@ -553,7 +553,7 @@ function ladderCard() {
     pwt: `<div class="card mode" id="mode-pwt">${modeHead('pwt', `${esc(wc.n)}${(WR ? WR.dk : pwtDark(wc)) ? ' · mystery entrant' : ''} · ${WR ? `${ROUNDN[WR.r]} · round ${WR.r + 1} of ${PWTN}` : 'three on three'} · Lv ${WR ? WR.lv : pwtLv()}${W.won ? ` · ${W.won} ${W.won === 1 ? 'trophy' : 'trophies'}${W.gold ? `, ${W.gold} gold` : ''}` : ''}`, `${tag('pwt')}${coins('pwt')}${pipsEl(1, pwtOpen() ? 0 : 1)}`)}
       ${shut || (pwtOpen() ? `<button type="button" class="go" data-a="wenter">${WR ? 'Continue the cup' : 'Enter the cup'}</button>${simRow()}` : '<p class="sm">You have played today\'s cup. A new one opens after your next day of focus.</p>')}</div>`
   };
-  return `${oldc}${simCard()}${E ? evChip(E) : ''}${on.map(k => cards[k]).join('')}${charm}`;
+  return `${oldc}${simCard()}${E ? evChip(E) : ''}${modeOn('week') ? wkCard() : ''}${on.map(k => cards[k]).join('')}${charm}`;
 }
 /* ---------- Steg 1c.5: utfordreren, veiskillet og premieballene på skjermen ---------- */
 /* Utfordreren står på oppstillingen i stedet for spørsmålstegnet: hvem det er, sies, men ikke hvilken art esset er. */
@@ -620,7 +620,7 @@ function boxEl(side) {
   return `<div class="hpn"><b>${esc(b.short || b.name)}${gs(b)}</b>${v.st ? `<i class="st-${v.st}">${STAG[v.st]}</i>` : ''}<span class="blv tn"><small>Lv</small>${b.lv}</span></div>
     <div class="hpr"><em>HP</em><div class="hpbar"><b></b><i style="width:${(f * 100).toFixed(1)}%;background:${hpCol(f)}"></i></div></div>
     <div class="hpf"><span class="dots">${team.map((x, i) => `<i class="${x.out && !(i === v.i && v.hp > 0) ? 'out' : ''}"></i>`).join('')}</span>${side === 'me' ? `<span class="hpnum tn">${v.hp}/${b.max}</span>` : ''}</div>
-    ${side === 'me' && B.mode === 'league' ? `<div class="xpr"><em>EXP</em><div class="xpbar"><i style="width:${Math.round(xf * 100)}%"></i></div></div>` : ''}`;
+    ${side === 'me' && (B.mode === 'league' || B.mode === 'wk') ? `<div class="xpr"><em>EXP</em><div class="xpbar"><i style="width:${Math.round(xf * 100)}%"></i></div></div>` : ''}`;
 }
 /* Med ressurspakken tegnes HP-boksene piksel for piksel fra arket, slik de ser ut i Black 2 og White 2: navn, nivå, HP-linje, tall og EXP.
    Uten pakke brukes de innebygde boksene over. Toppbossene i ligaen (klasse 7 til 9) får en glinsende gullramme rundt boksen sin. */
@@ -677,7 +677,7 @@ function hudDraw(side) {
     const s = String(Math.max(0, Math.round(hp))); x = 74 - 8 * s.length; for (const ch of s) { put('h' + ch, x, py + 5); x += 8; }
     x = 82; for (const ch of String(b.max)) { put('h' + ch, x, py + 5); x += 8; }
     r = R.xp_empty; g.drawImage(H.im, r[0], r[1], r[2], r[3], 25 + M, py + 14, r[2], r[3]);
-    const xa = xpAt(b.lv), xb = xpAt(b.lv + 1), xw = b.src.u && b.src.xp != null && B.mode === 'league' ? Math.round(80 * Math.max(0, Math.min(1, (b.src.xp - xa) / (xb - xa)))) : 0;
+    const xa = xpAt(b.lv), xb = xpAt(b.lv + 1), xw = b.src.u && b.src.xp != null && (B.mode === 'league' || B.mode === 'wk') ? Math.round(80 * Math.max(0, Math.min(1, (b.src.xp - xa) / (xb - xa)))) : 0;
     r = R.xp; if (xw) g.drawImage(H.im, r[0], r[1], 1 + xw, 4, 25 + M, py + 14, 1 + xw, 4);
   }
   /* Små kuler under boksen viser hvor mange som er igjen på laget. */
@@ -1543,18 +1543,18 @@ async function startBattle(B) {
    sekund, seiersfanfaren er broen, og låta kommer inn rett etter (FAMEAT). Fra pakken er det låta i «special» med Hall of Fame i tittelen
    (52 s, spilles én gang); uten pakken den innebygde «fame» (music.js). Den spiller ut av seg selv, og en ny kamp tar over som vanlig. */
 const FAMEAT = 950;
-const fameWin = res => !!res && !!res.win && (res.mode === 'league' ? !!res.lapDone : res.mode === 'pwt' ? !!res.done : res.mode === 'fac' ? !!(res.sym || res.done) : false);
+const fameWin = res => !!res && !!res.win && (res.mode === 'league' ? !!res.lapDone : res.mode === 'pwt' ? !!res.done : res.mode === 'fac' ? !!(res.sym || res.done) : res.mode === 'wk' ? !!res.sym : false);
 function fameSong(res) {
   const f = PACK.special(/Hall of Fame/); if (f) PACK.cue(f);
   setTimeout(() => { if (BT.res !== res || BT.B && !BT.B.over) return; if (f) PACK.music(f, { loop: false, fade: 0.5, from: 0.35, out: 0.2 }).then(ok => { if (!ok && BT.res === res) music('fame', { fade: 0.4, from: 0.3 }); }); else music('fame', { fade: 0.4, from: 0.3 }); }, FAMEAT);
 }
-const fameHead = res => res.mode === 'fac' ? (res.done ? 'CONQUERED' : 'NEW SYMBOL') : 'CHAMPION';
+const fameHead = res => res.mode === 'wk' ? (res.sym === 2 ? 'GOLD SYMBOL' : 'SILVER SYMBOL') : res.mode === 'fac' ? (res.done ? 'CONQUERED' : 'NEW SYMBOL') : 'CHAMPION';
 function endBattle() {
   /* Kampmusikken klinger ut over et par sekunder i stedet for å stoppe: først dukker den, så seierslyden slipper til. */
   const B = BT.B; BT.busy = false; clearTimeout(BT.dkTm); BT.dkB = null;
   if (B.mode !== 'lab') liveEnd();
   clearInterval(BT.goldT); FX.show(null); if (BT.air) { BT.air(); BT.air = null; }
-  const res = BT.res = B.mode === 'fac' ? finishFactory(B) : B.mode === 'lab' ? finishLab(B) : B.mode === 'raid' ? finishRaid(B) : B.mode === 'pwt' ? finishPwt(B) : finishLeague(B);
+  const res = BT.res = B.mode === 'wk' ? finishWeek(B) : B.mode === 'fac' ? finishFactory(B) : B.mode === 'lab' ? finishLab(B) : B.mode === 'raid' ? finishRaid(B) : B.mode === 'pwt' ? finishPwt(B) : finishLeague(B);
   if (jOn() && B.mode !== 'raid' && B.mode !== 'lab' && !(S.jx || {}).b) { (S.jx = S.jx || {}).b = 1; jRaid(); }
   /* En hel modus er vunnet: kamplåta toner kort ut, og seierslåta tar over etter fanfaren (fameSong). Ellers klinger den ut som før. */
   res.fame = fameWin(res) ? 1 : 0; stopMusic(res.fame ? 0.9 : 2.6); if (res.fame) fameSong(res);
@@ -1567,7 +1567,7 @@ function endBattle() {
 }
 /* ---------- En kamp som ble forlatt ----------
    liveGate kalles ved oppstart. Er det en kamp i gang på denne enheten, er det bare to veier videre: fortsette der den var, eller gi opp (som er et tap). */
-const LIVEN = { league: 'League battle', fac: 'Frontier battle', pwt: 'cup match', raid: 'raid' };
+const LIVEN = { league: 'League battle', fac: 'Frontier battle', pwt: 'cup match', raid: 'raid', wk: 'expedition battle' };
 function liveGate() {
   if (!S.started || !S.live || !liveMine()) return false;
   const B = liveLoad(), L = S.live;
@@ -1701,7 +1701,8 @@ function overview() {
     extra = `<div class="card rs-swap"><div class="sp"><b>Swap one in?</b><div class="swprev">${res.swap.map(x => spr(x.id, { mega: x.mega, s: '38px' })).join('')}</div></div><button type="button" class="btn" data-a="swopen">Their team</button></div>`;
   }
   const L = S.lad, R = S.fac.run;
-  const next = raid ? esc(res.note) : cup ? (!res.win ? esc(res.note) : res.done ? `You won the ${esc(res.cup)}. A new cup opens after your next day of focus.` : `Next: the ${ROUNDN[res.r + 1].toLowerCase()} of the ${esc(res.cup)}. Your team is healed.`) : lab ? (B.exh ? 'Showcase battle: nothing was at stake, and your progress is untouched.' : 'Sandbox battle: no XP or rewards, and your League and Frontier progress are untouched.')
+  const wk = res.mode === 'wk';
+  const next = wk ? (!res.win ? tl('The expedition ends here. Everything you won on the way is yours.') : res.end ? tl('That was everything your tickets opened this week.') : tl('Back to the map: choose your next room.')) : raid ? esc(res.note) : cup ? (!res.win ? esc(res.note) : res.done ? `You won the ${esc(res.cup)}. A new cup opens after your next day of focus.` : `Next: the ${ROUNDN[res.r + 1].toLowerCase()} of the ${esc(res.cup)}. Your team is healed.`) : lab ? (B.exh ? 'Showcase battle: nothing was at stake, and your progress is untouched.' : 'Sandbox battle: no XP or rewards, and your League and Frontier progress are untouched.')
     : fac ? (res.win ? (res.done ? `Frontier conquered: all ${FACEND} rounds, ${res.streak} wins in a row. It opens again after your next day of focus.` : res.roundDone ? `Round ${res.round} cleared. Round ${res.round + 1} has stronger rentals and opponents.` : `Next: battle ${R.w + 1} of ${FACN}${R.w === FACN - 1 ? ' · the boss' : ''}`) : `The run ends at a streak of ${res.streak}. ${res.left ? 'You have one more run today.' : 'The Frontier opens again after your next day of focus.'}`)
     : res.chl && !res.win ? `The challenger moves on, and so does your lap: battle ${L.n + 1} of ${LAPN} is next. No attempt was used.`
     : res.win ? (res.lapDone ? `Lap cleared: that was today's lap. Lap ${L.lap + 1} opens on your next battle day, with stronger trainers, bigger teams and better rewards.` : 'Next: ' + esc(leagueTag()) + (L.n >= LAPN - 1 ? ' · the final' : '')) : (res.left ? `You have one more attempt: ${esc(tr.n)} is still waiting.` : `The lap ends here, at battle ${(res.at || 0) + 1} of ${LAPN}. A new lap starts from battle 1 on your next battle day, and your team keeps the XP it earned.`);
@@ -1713,7 +1714,7 @@ function overview() {
       ${strip}<p class="hof-t">${res.win ? (res.cau ? `You beat ${nm}, and it is yours.` : `You beat ${nm}.`) : lab ? `${nm} won this time.` : cup ? `${nm} knocked you out of the cup.` : fac ? `${nm} stopped your run.` : `${nm} won this time.`}</p>${sum}</div>
     ${spc}${learn}${extra}${res.ring ? `<div class="card mgring"><div class="row" style="gap:12px;align-items:center"><span class="gem mg" style="width:34px;height:34px;flex:none"></span><div class="sp"><div class="sm">A Champion's gift</div><b style="font-size:19px">The Mega Ring</b><p class="sm" style="margin-top:4px">Give your Mega Stone to a Pokémon that has a Mega form, on its card. It can then Mega Evolve once a battle, from the move menu.</p></div></div></div>` : ''}
     <p class="rs-next">${next}</p>
-    <div class="acts">${lab ? (B.exh ? '<button type="button" class="btn gold" data-a="show">Back to the showcase</button>' : isAdmin() ? '<button type="button" class="btn gold" data-a="lab">Back to the Sandbox</button>' : '') + '<button type="button" class="btn nf" data-a="home">Done</button>' : (res.win || res.left) && open ? `<button type="button" class="btn gold" data-a="${cup ? 'wenter' : fac ? 'fenter' : 'bpre'}">${cup ? 'Next round' : !res.win ? (fac ? 'Start a new run' : res.chl ? 'Next battle' : 'Rematch') : fac && res.roundDone ? 'Pick new rentals' : fac && res.swap ? 'Next battle · keep my four' : 'Next battle'}</button><button type="button" class="btn nf" data-a="home">Done</button>` : '<button type="button" class="btn pri" data-a="home">Done</button>'}</div>
+    <div class="acts">${wk ? (res.end ? '<button type="button" class="btn gold" data-a="wkend">The expedition</button>' : '<button type="button" class="btn gold" data-a="wkopen">Back to the map</button><button type="button" class="btn nf" data-a="home">Done</button>') : lab ? (B.exh ? '<button type="button" class="btn gold" data-a="show">Back to the showcase</button>' : isAdmin() ? '<button type="button" class="btn gold" data-a="lab">Back to the Sandbox</button>' : '') + '<button type="button" class="btn nf" data-a="home">Done</button>' : (res.win || res.left) && open ? `<button type="button" class="btn gold" data-a="${cup ? 'wenter' : fac ? 'fenter' : 'bpre'}">${cup ? 'Next round' : !res.win ? (fac ? 'Start a new run' : res.chl ? 'Next battle' : 'Rematch') : fac && res.roundDone ? 'Pick new rentals' : fac && res.swap ? 'Next battle · keep my four' : 'Next battle'}</button><button type="button" class="btn nf" data-a="home">Done</button>` : '<button type="button" class="btn pri" data-a="home">Done</button>'}</div>
     ${SBX && !SBX.jp && !lab ? `<div class="row sbxacts">${fac && !res.win && SBX.fr && !(res.left && open) ? `<button type="button" class="btn sp gold" data-a="sbxagain">Round ${SBX.fr.r} again</button>` : ''}<button type="button" class="btn sp nf" data-a="lab">Sandbox</button></div>` : ''}
     ${det ? `<button type="button" class="rs-more" data-a="rdet" aria-expanded="${dopen}" aria-controls="rs-det"><span>Details</span>${icn('down')}</button><div class="rs-det stack" id="rs-det"${dopen ? '' : ' hidden'}>${det}</div>` : ''}`, 'tint ovtop', res.win ? 'var(--gold)' : 'var(--red)');
   if (first && (team || sum)) setTimeout(animXp, 500);
@@ -2014,7 +2015,7 @@ const BA = {
   lresume: () => { const B = BT.live; if (!B) { closeOv(); return render(); } PACK.unlock(); sfx.start(); BT.busy = false; resumeBattle(B); },
   lgive: el => { if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = 'Tap again to give up'; return; } const B = BT.live; BT.live = null; if (!B) { liveLoss(); closeOv(); return render(); } BT.B = B; BT.busy = false; B.over = 'loss'; endBattle(); },
   lgiveo: el => { if (el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = 'Tap again to give it up'; return; } const w = liveLoss(); sfx.close(); closeSheet(); closeOv(); render(); toast(`The ${w} counts as a loss.`); },
-  msel: el => { const k = el.dataset.k; if (!MODES.includes(k)) return; BT.msel = k; document.querySelectorAll('#ov .mdc').forEach(x => { const on = x === el; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); }); const b = $('#mgo'); if (b) { b.disabled = false; b.textContent = `Play the ${MODEN[k]} today`; } sfx.tap(); buzz(12); },
+  msel: el => { const k = el.dataset.k; if (!MODES.includes(k) && !(k === 'week' && wkOffer())) return; BT.msel = k; document.querySelectorAll('#ov .mdc').forEach(x => { const on = x === el; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); }); const b = $('#mgo'); if (b) { b.disabled = false; b.textContent = k === 'week' ? 'Set out on the Expedition' : `Play the ${MODEN[k]} today`; } sfx.tap(); buzz(12); },
   /* Valget står for hele kampdagen. Dagens event trekkes i det samme (modePick), og viser seg som et symbol over modusen. */
   mgo: () => {
     const k = BT.msel; if (!k || !modePick(k)) { closeOv(); return render(); }

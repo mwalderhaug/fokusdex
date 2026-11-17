@@ -19,15 +19,15 @@ Teksten i appen er på engelsk. Kommentarene i koden er på norsk.
 ## Filene, i rekkefølgen fra index.html
 `look` (utseendet: lys eller mørk og fargesettet, lastes i `<head>` før alt annet) · `data`, `data2` (arter, angrep, typer) · `game` (lagringen `S`, `fresh`, `adopt`, `migrateNN`, XP, møter, butikken `SHOP`, pakkene `PACKS`,
 `FEATS`/`WN`, synken `GH`) · `battle` (kampmotoren) · `league` (ligaen `POOL`/`TCL`, Frontier, turneringen, raid: `LEG`, `RAIDX`, `raidRoll`,
-belønninger) · `bfx`, `ebx`, `ebxp` (effekter, EBDX-animasjoner) · `raid`, `raidf`, `raidx` (raidfilmer, entréer, stedene) · `bossf`, `darkf`
+belønninger) · `week` (ekspedisjonen, ukemodusen: billettene, uka og ukestypene `WKT`, kartet `wkMap`, løpet `S.wk.run`, `finishWeek`) · `bfx`, `ebx`, `ebxp` (effekter, EBDX-animasjoner) · `raid`, `raidf`, `raidx` (raidfilmer, entréer, stedene) · `bossf`, `darkf`
 (filmene til Ghetsis/Cynthia og Dark Mewtwo) · `pack` (henter ressurspakken) · `bui` (kampskjermen, resultatet, raidskjermene, regelkortet) ·
-`music` · `help` (hjelp og guide) · `show` (raidvarselet, demoen/Sandbox, showcase) · `ui` (resten av grensesnittet, handlingene `A.*`, oppstart).
+`music` · `help` (hjelp og guide) · `show` (raidvarselet, demoen/Sandbox, showcase) · `weekui` (ekspedisjonen på skjermen: kartet, rommene, `WA`) · `ui` (resten av grensesnittet, handlingene `A.*`, oppstart).
 `sw.js` er service workeren. `style.css` er all stil. Lærerangrepene `TUTMV` og egg-angrepene `EGGMV` i `data2.js` lages av `work/tools/tutors.js`, og `FACPW` (hver arts vurdering som leie-Pokémon i Battle Frontier, `facRate` i league.js) av `work/tools/facpow.js`: kjør den på nytt når sett, evner, skaderegningen eller vektene i vurderingen endres (`sim/t_c1.js` sier fra).
 
 ## Arbeidsmåten
 - Verktøyene ligger i `/home/claude/work` (eierens private repo, `dev/`). Ny økt: se under.
 - Endringer gjøres som små Python-patcher i `work/patch/` med `lib.py` (`patch(fil, [(gammel, ny)])`, der teksten må finnes nøyaktig én gang).
-  Gi dem navn etter bestillingen (`m1.py`, `m2.py` …). Etter hver: `sh work/chk.sh` skal si `ok: 20 filer` og ikke noe mer
+  Gi dem navn etter bestillingen (`m1.py`, `m2.py` …). Etter hver: `sh work/chk.sh` skal si `ok: 22 filer` og ikke noe mer
   (den leser alle skriptene samlet og kjører en røyktest av reglene; en linje som starter med `RØYK:` betyr at et navn er forsvunnet).
 - Regeltester: `cd work/sim && node <navn>.js` (skal si `alt ok`). Nettlesertester med Playwright: `cd work/pw && ./srv.sh && node t_<navn>.js`.
   Serveren stopper mellom svarene, så start den på nytt. Full regresjon: `work/pw/regress10.sh`.
