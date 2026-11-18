@@ -73,21 +73,39 @@
     const m = 2, bw = x1 - x0 + 1, bh = y1 - y0 + 1, cw = bw + 2 * m, ch = bh + 2 * m, cols = Math.ceil(Math.sqrt(n * ch / cw)), sheet = document.createElement('canvas'); sheet.width = cols * cw; sheet.height = Math.ceil(n / cols) * ch;
     const X = sheet.getContext('2d');
     comp.forEach((img, i) => { const id = X.createImageData(cw, ch); for (let y = 0; y < bh; y++) id.data.set(img.subarray(((y0 + y) * w + x0) * 4, ((y0 + y) * w + x1 + 1) * 4), ((y + m) * cw + m) * 4); if (dk) C.darken(id.data); X.putImageData(id, (i % cols) * cw, floor(i / cols) * ch); });
-    return { sheet, n, cols, cw, ch, m, bw, bh, gw: w, gh: h, x0, y0, t, total: tot };
+    /* Merker til filmene: mv[i] = hvor mye bilde i skiller seg fra det første (0–1), peak = tidspunktet der den beveger seg mest (brølet, slaget med halen). */
+    const mv = comp.map(img => { let d = 0; for (let i = 0; i < img.length; i += 16) if (abs(img[i] - comp[0][i]) + abs(img[i + 1] - comp[0][i + 1]) + abs(img[i + 2] - comp[0][i + 2]) + abs(img[i + 3] - comp[0][i + 3]) > 40) d++; return d; }), mx = max(1, ...mv), pk = mv.indexOf(mx);
+    return { sheet, n, cols, cw, ch, m, bw, bh, gw: w, gh: h, x0, y0, t, total: tot, mv: mv.map(q => q / mx), peak: pk > 0 ? t[pk - 1] : 0 };
   }
   C.gif = gif;
   C.aniUrl = id => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${id}.gif`;
+  /* Bilder som skal leses (ikke bare vises) hentes med en egen adresse: service workeren har ofte alt lagret svaret til et vanlig bildeelement,
+     og det svaret kan ikke leses. Uten dette får filmene stillbildet i stedet for animasjonen hos alle som har sett Pokémonen i en kamp før. */
+  const corsUrl = u => /githubusercontent/.test(u) && !/[?&]c=1/.test(u) ? u + (u.indexOf('?') < 0 ? '?' : '&') + 'c=1' : u;
   const aniJobs = new Map();
   /* Henter animasjonen til en art og legger den på bildet (sp.ani). Går det ikke, står sp.ani som 0 og stillbildet brukes. */
   C.loadAni = (id, sp) => {
     if (sp.ani != null) return Promise.resolve(sp.ani); if (aniJobs.has(id)) return aniJobs.get(id);
     const dk = typeof id === 'string' && id.indexOf('dk') === 0, base = dk ? +id.slice(2) : id;
-    const j = fetch(C.aniUrl(base), { mode: 'cors' }).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }).then(b => (sp.ani = sheetOf(gif(b), dk))).catch(() => (sp.ani = 0));
+    const j = fetch(corsUrl(C.aniUrl(base)), { mode: 'cors' }).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }).then(b => (sp.ani = sheetOf(gif(b), dk))).catch(() => (sp.ani = 0));
     aniJobs.set(id, j); return j;
+  };
+  /* Bildet et element på kampskjermen viser (animasjonen eller stillbildet), hentet og delt i bilder, så arenaen kan tegne figuren selv med scenens lys.
+     Gir null til det er klart, og false hvis det ikke lar seg hente (da vises elementets eget bilde som før). */
+  const urlSpr = new Map();
+  C.spriteOf = url => {
+    let e = urlSpr.get(url); if (e) return e.sp; e = { sp: null }; if (urlSpr.size > 16) urlSpr.delete(urlSpr.keys().next().value); urlSpr.set(url, e);
+    fetch(corsUrl(url), { mode: 'cors' }).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }).then(async b => {
+      const d = new Uint8Array(b);
+      if (d[0] === 71 && d[1] === 73 && d[2] === 70) { const A = sheetOf(gif(b), 0); e.sp = { cv: A.sheet, bx: 0, by: 0, bw: A.gw, bh: A.gh, w: A.gw, h: A.gh, clean: true, tint: new Map(), ani: A }; return; }
+      const bm = await createImageBitmap(new Blob([b])), cv = document.createElement('canvas'); cv.width = bm.width; cv.height = bm.height; cv.getContext('2d').drawImage(bm, 0, 0);
+      e.sp = { cv, bx: 0, by: 0, bw: bm.width, bh: bm.height, w: bm.width, h: bm.height, clean: true, tint: new Map(), ani: 0 };
+    }).catch(() => { e.sp = false; });
+    return null;
   };
   /* Masker: et utvalg av figurens piksler som eget bilde, til å tegne dem lysende (o.mask i K.mon). f(r, g, b) velger pikslene; inner = hvor mange
      piksler inn fra omrisset de må ligge (så bare strekene inne i kroppen blir med, ikke omrisset). */
-  K.MASK = { ink: { f: (r, g, b) => r + g + b < 70 }, seam: { f: (r, g, b) => r + g + b < 70, inner: 2 } };
+  K.MASK = { ink: { f: (r, g, b) => r + g + b < 70 }, seam: { f: (r, g, b) => r + g + b < 70, inner: 2 }, red: { f: (r, g, b) => r > 150 && g < 110 && b < 120 && r - max(g, b) > 70 } };
   const maskOf = (sp, A, name) => {
     const hold = A || sp, key = 'mask_' + name; if (hold[key] !== undefined) return hold[key]; const src = A ? A.sheet : sp.cv, c = document.createElement('canvas'), w = c.width = src.width, h = c.height = src.height, x = c.getContext('2d'), M = K.MASK[name]; x.drawImage(src, 0, 0);
     try { const im = x.getImageData(0, 0, w, h), d = im.data, al = new Uint8Array(w * h), n = M.inner || 0; for (let i = 0; i < w * h; i++) al[i] = d[i * 4 + 3] > 40 ? 1 : 0;
@@ -104,7 +122,16 @@
            col (silhuett), dark (0–1 mørklegging, darkc fargen), lit [{ col, a, h (andel av høyden), top }] (lys nedenfra eller ovenfra),
            rim { col, dx, dy, a } (kantlys: dx, dy er retningen lyset går), cut (alt under denne linja i bildet skjules: lava, vann, tåke),
            fx(X, w, h, ax, ay, m) (egen tegning i figurens egne piksler, m = forstørringen), hq (1, 2 eller 4: forstørring med EPX; ellers velges den etter størrelsen) }.
-     Lys og kanter regnes i figurens egne piksler, så de følger pikseltegningen. */
+     Lys og kanter regnes i figurens egne piksler, så de følger pikseltegningen.
+     SCENENS LYS (K.lightSet): figuren skal stå I stedet, ikke oppå det. Arenaen sier hvilket lys som gjelder akkurat nå, og alle figurer som tegnes
+     med K.mon får det (o.sl = styrken, 0 = uten; silhuetter og masker får det aldri):
+       amb   fargen alt ganges med: stedets tone og mørke (varm og mørk ved lavaen, kjølig i uvær)
+       sat   metningen (1 = som bildet, 0,8 = litt avdempet)
+       lift  fargen de mørkeste pikslene løftes til, så omriss og skygger får scenens skyggefarge i stedet for kullsvart
+       lights [{ col, a, h, top }]  lys fra kildene: nedenfra (lava, vann som lyser) eller ovenfra (himmel), sterkest ved kilden og svakere bortover;
+              lyset ganges inn i fargene (lyse flater tar mer lys enn mørke), det males ikke over
+       rim   [{ col, dx, dy, a }]   kantlys fra kilder bak og ved siden av (sola, vulkanen, lynet)
+     Regelen (work/RAIDS.md, verktøykassa nr. 7): figuren er aldri lysere enn det lyseste i scenen, unntatt der lyset treffer den. */
   /* Forstørring av pikseltegninger uten grove klosser (EPX): hver piksel blir fire, og hjørnene mot en skrå kant får nabofargen, så skrå linjer blir
      jevnere uten at tegningen blir uskarp. Brukes når figuren tegnes stort (nærbilder i filmene). To runder gir fire ganger størrelsen. */
   const epx = (src, w, h) => {
@@ -119,6 +146,7 @@
     try { if (!sR) { sR = document.createElement('canvas'); sR.width = sR.height = 160; } if (sR.width < sw || sR.height < sh) { sR.width = max(sR.width, sw); sR.height = max(sR.height, sh); } const x = sR.getContext('2d', { willReadFrequently: true }); x.clearRect(0, 0, sw, sh); x.drawImage(src, sx, sy, sw, sh, 0, 0, sw, sh); d = x.getImageData(0, 0, sw, sh); d = epx(d, sw, sh); if (n >= 4) d = epx(d, sw * 2, sh * 2); } catch (_) { d = null; }
     if (hqC.size > 5) hqC.delete(hqC.keys().next().value); hqC.set(key, d); return d;
   };
+  K.lightSet = L => { K.P.light = L || null; return L; };
   const mon = (x, y, s, o) => {
     o = o || {}; const cur = K.cur, sp = o.id ? cur.sps[o.id] : cur.sp; if (!sp) return null;
     const a = o.a == null ? 1 : c01(o.a), A = sp.ani && !o.still ? sp.ani : null, ky = s * (o.sy || 1); let src, sx, sy, sw, sh, ax, ay, fi = -1;
@@ -129,12 +157,24 @@
     /* Tegnes figuren stort, forstørres pikseltegningen først (to eller fire ganger), og lys og kanter regnes i den forstørrede. */
     const big = s * C._.rs(), want = o.hq != null ? o.hq : sp.clean === false ? 1 : big >= 3.1 ? 4 : big >= 2.3 ? 2 : 1, hd = want > 1 ? hqOf(`${o.id || cur.id}|${fi}|${o.mask || ''}|${want}`, src, sx, sy, sw, sh, want) : null, m = hd ? want : 1;
     let img = src, ix = sx, iy = sy;
-    if (m > 1 || o.col || o.lit || o.rim || o.dark || o.cut != null || o.fx) {
+    const SL = !o.col && !o.mask && o.sl !== 0 ? K.P.light : null, sl = SL ? (o.sl == null ? 1 : c01(o.sl)) : 0;
+    if (m > 1 || o.col || o.lit || o.rim || o.dark || o.cut != null || o.fx || sl > 0) {
       const X = small(sw * m, sh * m, 0), w2 = sw * m, h2 = sh * m; if (hd) X.putImageData(hd, 0, 0); else X.drawImage(src, sx, sy, sw, sh, 0, 0, sw, sh); X.globalCompositeOperation = 'source-atop';
+      /* En farge eller fargeovergang blandet inn i figuren (bare der figuren er), med en blandemåte: multiply, lighten, saturation, color-dodge, screen. */
+      const mf = (fill, mode, al) => { if (al <= 0.004) return; const Y = small(w2, h2, 1); Y.fillStyle = fill; Y.fillRect(0, 0, w2, h2); Y.globalCompositeOperation = 'destination-in'; Y.drawImage(sA, 0, 0, w2, h2, 0, 0, w2, h2); X.globalCompositeOperation = mode; X.globalAlpha = c01(al); X.drawImage(sB, 0, 0, w2, h2, 0, 0, w2, h2); X.globalAlpha = 1; X.globalCompositeOperation = 'source-atop'; };
+      const edge = (r, k) => { const Y = small(w2, h2, 1); Y.drawImage(sA, 0, 0, w2, h2, 0, 0, w2, h2); Y.globalCompositeOperation = 'source-in'; Y.fillStyle = r.col; Y.fillRect(0, 0, w2, h2); Y.globalCompositeOperation = 'destination-out'; Y.drawImage(sA, 0, 0, w2, h2, (r.dx || 0) * m * (r.w || 1), (r.dy == null ? 1 : r.dy) * m * (r.w || 1), w2, h2); X.globalAlpha = c01((r.a == null ? 0.9 : r.a) * k); X.drawImage(sB, 0, 0, w2, h2, 0, 0, w2, h2); X.globalAlpha = 1; };
+      if (sl > 0) {
+        if (SL.sat != null && SL.sat < 1) mf('#808080', 'saturation', (1 - SL.sat) * sl);
+        if (SL.amb) mf(SL.amb, 'multiply', sl);
+        if (SL.lift) mf(SL.lift, 'lighten', sl);
+        for (const L of SL.lights || []) { const hh = ay * (L.h || 0.6) * m, gr = X.createLinearGradient(0, L.top ? 0 : ay * m, 0, L.top ? hh : ay * m - hh), cd = blend('#000000', L.col, 0.6); gr.addColorStop(0, cd); gr.addColorStop(1, rgba(cd, 0)); mf(gr, 'color-dodge', (L.a == null ? 0.5 : L.a) * sl);
+          const g2 = X.createLinearGradient(0, L.top ? 0 : ay * m, 0, L.top ? hh * 0.7 : ay * m - hh * 0.7); g2.addColorStop(0, L.col); g2.addColorStop(1, rgba(L.col, 0)); mf(g2, 'screen', (L.a == null ? 0.5 : L.a) * 0.3 * sl); }
+        for (const r of SL.rim || []) edge(r, sl);
+      }
       if (o.col) { X.fillStyle = o.col; X.fillRect(0, 0, w2, h2); }
       if (o.dark) { X.globalAlpha = c01(o.dark); X.fillStyle = o.darkc || '#000'; X.fillRect(0, 0, w2, h2); X.globalAlpha = 1; }
       for (const L of [].concat(o.lit || [])) { const hh = ay * (L.h || 0.6) * m, gr = X.createLinearGradient(0, L.top ? 0 : ay * m, 0, L.top ? hh : ay * m - hh); gr.addColorStop(0, rgba(L.col, L.a == null ? 0.5 : L.a)); gr.addColorStop(1, rgba(L.col, 0)); X.fillStyle = gr; X.fillRect(0, 0, w2, h2); }
-      if (o.rim) { const r = o.rim, Y = small(w2, h2, 1); Y.drawImage(sA, 0, 0, w2, h2, 0, 0, w2, h2); Y.globalCompositeOperation = 'source-in'; Y.fillStyle = r.col; Y.fillRect(0, 0, w2, h2); Y.globalCompositeOperation = 'destination-out'; Y.drawImage(sA, 0, 0, w2, h2, (r.dx || 0) * m, (r.dy == null ? 1 : r.dy) * m, w2, h2); X.globalAlpha = c01(r.a == null ? 0.9 : r.a); X.drawImage(sB, 0, 0, w2, h2, 0, 0, w2, h2); X.globalAlpha = 1; }
+      if (o.rim) edge(o.rim, 1);
       if (o.fx) { X.save(); o.fx(X, w2, h2, ax * m, ay * m, m); X.restore(); }
       if (o.cut != null) { const row = (ay - (y - o.cut) / ky) * m; if (row < h2) { X.globalCompositeOperation = 'destination-out'; X.globalAlpha = 1; X.fillStyle = '#000'; X.fillRect(0, max(0, row), w2, h2); } }
       img = sA; ix = 0; iy = 0;
@@ -148,6 +188,8 @@
   K.monGlow = (x, y, s, col, r, a, o) => { for (let i = 0; i < 8; i++) mon(x + cos(i * PI / 4) * r, y + sin(i * PI / 4) * r, s, Object.assign({}, o, { col, a: a == null ? 0.5 : a, add: 1, lit: null, rim: null, dark: 0 })); };
   /* Skyggen på bakken: silhuetten lagt ned mot kameraet. len = lengden (andel av høyden), skew = hvor skrått den faller. */
   K.monShadow = (x, y, s, o) => { o = o || {}; mon(x, y, s, Object.assign({}, o, { col: o.col || '#000', a: o.a == null ? 0.4 : o.a, tf: [1, 0, o.skew || 0, -(o.len || 0.28)], lit: null, rim: null, dark: 0, cut: null, add: 0 })); };
+  /* Skyggen under føttene når figuren selv ikke kan tegnes: en tett kontaktskygge der den står, og en myk skygge rundt. w = bredden. */
+  K.contact = (x, y, w, o) => { o = o || {}; const a = o.a == null ? 1 : o.a, col = o.col || '#000000'; K.blob(x + (o.dx || 0), y, w * 0.95, col, 0.34 * a, 0, o.sy || 0.2); K.blob(x, y - w * 0.01, w * 0.5, col, 0.55 * a, 0, (o.sy || 0.2) * 0.7); };
   /* Speilbildet i vann, is eller blankt gulv: figuren opp ned under føttene. */
   K.monRefl = (x, y, s, o) => { o = o || {}; mon(x, y, s, Object.assign({}, o, { a: o.a == null ? 0.3 : o.a, tf: [1, 0, 0, -(o.len || 0.8)], cut: null })); };
   /* Figuren bygges av biter som samler seg (k 0 → 1), eller løses opp (k 1 → 0). o = { spread, seed, col, sz }. */
@@ -170,6 +212,30 @@
   };
   /* Ettersynsbilder: fn(tid, styrke) kalles for n tidligere øyeblikk (eldst først), så en figur i fart får et spor etter seg. */
   K.echo = (n, dt, fn) => { for (let i = n; i >= 1; i--) fn(K.T - i * dt, 1 - i / (n + 1)); };
+  /* ---------- Skuespillet: en figur som lever ----------
+     Filmene styrer selv hvilket bilde av animasjonen som vises (o.ft i K.mon), så et brøl kan ligge på et slag i låta:
+     K.clip(t, [[filmtid, animasjonstid], …]) spiller animasjonen jevnt mellom punktene, og K.pp(t, a, b, periode) går fram og tilbake mellom to
+     tidspunkter i animasjonen (kjeften som står åpen og skjelver mens brølet varer).
+     K.act(t, o) gir kroppens form akkurat nå: { sx, sy, r, dx, dy, sh } som gis videre til K.mon (sx, sy, r, og dx, dy lagt til føttene), og sh til kameraet (P.sh).
+     o = { breath (1 = rolig pust, 2 = tung), bp (sekunder per pust),
+           land [tid eller { t, a }] (en landing: kroppen klemmes sammen og fjærer opp igjen),
+           roar [[t0, lengde, styrke]] (et brøl: den samler seg like før t0, strekker seg så opp og fram, og skjelver mens det varer),
+           steps [tider] (tunge steg: kroppen løftes og vugger, faller på slaget og klemmes sammen), lift, pre, sa,
+           face (−1 ser mot venstre, 1 mot høyre), amp (alt ganges med dette: 0 = kampens stilling) }. dx og dy er i figurens egne enheter (gang med størrelsen). */
+  const lin1 = k => k;
+  K.clip = (t, pts) => K.kf(t, pts, lin1);
+  K.pp = (t, a, b, per) => { const k = ((t / per) % 1 + 1) % 1; return a + (b - a) * (k < 0.5 ? k * 2 : 2 - k * 2); };
+  K.act = (t, o) => {
+    o = o || {}; const face = o.face || -1, amp = o.amp == null ? 1 : o.amp, br = o.breath == null ? 1 : o.breath; let sx = 1, sy = 1, r = 0, dx = 0, dy = 0, sh = 0;
+    if (br) { const ph = sin(t / (o.bp || 2.4) * TAU); sy += 0.017 * br * ph; sx -= 0.008 * br * ph; }
+    for (const q of o.land || []) { const d = t - (q.t == null ? q : q.t), a = q.a == null ? 1 : q.a; if (d >= 0 && d < 1.1) { const k = Math.exp(-d * 6) * cos(d * 19) * 0.15 * a; sy -= k; sx += k * 0.62; sh += hit(d, 0, 0.35) * 7 * a; } }
+    for (const q of o.roar || []) { const t0 = q[0], len = q[1] || 0.9, a = q[2] == null ? 1 : q[2], pre = seg(t, t0 - 0.3, t0 - 0.04) * (1 - seg(t, t0 - 0.04, t0 + 0.07)), on = seg(t, t0, t0 + 0.09) * (1 - seg(t, t0 + len - 0.3, t0 + len)); if (pre <= 0 && on <= 0) continue;
+      sy += (-0.06 * pre + 0.085 * on) * a; sx += (0.04 * pre - 0.04 * on) * a; r += face * (-0.05 * pre + 0.07 * on) * a + sin(t * 73) * 0.012 * on * a; dx += sin(t * 88) * 1.5 * on * a; dy += sin(t * 61) * 0.8 * on * a; sh += on * 5 * a; }
+    (o.steps || []).forEach((q, i) => { const pre = o.pre || 0.42, d = t - q, side = i % 2 ? 1 : -1;
+      if (d >= -pre && d < 0) { const k = (d + pre) / pre, up = sin(k * PI); dy -= up * (o.lift == null ? 12 : o.lift); r += side * 0.045 * up + face * 0.03 * k; sy += 0.03 * up; sx -= 0.015 * up; }
+      else if (d >= 0 && d < 1) { const k = Math.exp(-d * 6.5) * cos(d * 18) * 0.17 * (o.sa == null ? 1 : o.sa); sy -= k; sx += k * 0.62; r += face * 0.03 * Math.exp(-d * 5); sh += hit(d, 0, 0.4) * 9; } });
+    return { sx: 1 + (sx - 1) * amp, sy: 1 + (sy - 1) * amp, r: r * amp, dx: dx * amp, dy: dy * amp, sh: sh * amp };
+  };
   /* Tunge steg: kroppen løftes før hvert steg og faller på det. times = når føttene treffer. Gir { y (løft i piksler), sq (klem 0–1), k (0–1 siden forrige steg), i, hit }. */
   K.stomp = (t, times, o) => {
     o = o || {}; const lift = o.lift == null ? 7 : o.lift, pre = o.pre || 0.42; let y = 0, sq = 0, i = -1, k = 1, ht = 0;
@@ -179,11 +245,12 @@
 
   /* ================= 2. SCENEN I DYBDEN =================
      Bakken er et plan sett fra et kamera litt over det. Kampvinkelen er utgangspunktet: horisonten i YH, den legendariske står i (377, 198) og din egen i
-     (190, 372). Verdensenheten er én piksel der den legendariske står (Z = 400). Kameraet kan flyttes (x, z), løftes (h), tiltes (tilt) og zoomes (zoom),
+     (190, 372). Verdensenheten er én piksel der den legendariske står (Z = 400). K.stage({ yh, hc }): hc = kameraets høyde over bakken når bakken ikke går gjennom
+     føttene til den legendariske (havet: vannflata ligger over føttene, så den står i vannet). Kameraet kan flyttes (x, z), løftes (h), tiltes (tilt) og zoomes (zoom),
      og lag i ulik avstand flytter seg ulikt (parallakse). Lagene tegnes i kampvinkelens piksler og flyttes av K.layer. */
   const ST = { F: 400, YH: 146, HC: 52, x0: 256, yh: 146, f: 400, hc: 52, cx: 0, cz: 0 };
   K.st = ST;
-  K.stage = o => { o = o || {}; ST.YH = o.yh == null ? 146 : o.yh; ST.HC = 198 - ST.YH; K.camTo(); };
+  K.stage = o => { o = o || {}; ST.YH = o.yh == null ? 146 : o.yh; ST.HC = o.hc == null ? 198 - ST.YH : o.hc; K.camTo(); };
   K.camTo = o => { o = o || {}; ST.cx = o.x || 0; ST.cz = o.z || 0; ST.f = ST.F * (o.zoom || 1); ST.hc = ST.HC * (o.h || 1); ST.yh = ST.YH + (o.tilt || 0); ST.x0 = 256 + (o.px || 0); };
   /* Et punkt på bakken (X, Z) – eller Y over bakken – til skjermen: { x, y, s (piksler per enhet) }. null bak kameraet. */
   K.gp = (X, Z, Y) => { const d = Z - ST.cz; if (d < 6) return null; const s = ST.f / d; return { x: ST.x0 + (X - ST.cx) * s, y: ST.yh + (ST.hc - (Y || 0)) * s, s }; };
@@ -204,6 +271,35 @@
     else if (GND[kind]) GND[kind](g, yh, u, o.t == null ? K.T : o.t);
     g.restore();
   };
+  /* ---------- Havet (materialet 'ocean' i fxgl.js) ----------
+     K.seaH er den samme høydefunksjonen som seaH i shaderen (tallene MÅ være like begge steder). u = de samme radene som gis til K.ground('ocean', u).
+     Med den kan en figur stå i sjøen: K.seaLine gir vannlinja foran figuren, som enten kutter figuren (filmene: K.seaCut som o.fx i K.mon)
+     eller avgrenser biten av det ferdige bildet som legges foran figuren (kampen: arenaens mid-lag, K.seaOver). */
+  const sst = (a, b, x) => { const k = c01((x - a) / (b - a)); return k * k * (3 - 2 * k); }, crest = p => { const q = 0.5 + 0.5 * sin(p); return 2 * q * q - 0.75; };
+  K.seaH = (X, Z, t, u) => {
+    const A = u[0][0], e = u[6] ? mix(u[6][2], 1, sst(u[6][0], u[6][1], Z)) : 1, a = A * e, r = u[2];
+    let h = a * (crest(Z * 0.0142 + X * 0.0052 + t * 0.95 + 1.3 * sin(X * 0.0031 + t * 0.21)) + 0.45 * crest(Z * 0.0243 - X * 0.0124 + t * 1.32 + 2.1));
+    if (r && r[1] > 0) { const q = (Z - r[0] - X * X * 0.00035) / r[2]; h += r[1] * Math.exp(-q * q * (q < 0 ? 5 : 1)) * (1 + 0.07 * sin(X * 0.013 + 2)); }
+    return h;
+  };
+  /* Vannlinja foran noe som står i dybden Z: punkter [x, y] på skjermen for x0..x1, der y er den høyeste vannkanten blant flatene i Z og nærmere kameraet. */
+  const SEAZ = [0, -12, -30, -55, -90, -135, -190];
+  K.seaLine = (Z, x0, x1, t, u, o) => {
+    o = o || {}; const st = o.step || 4, out = [];
+    for (let x = x0; x <= x1 + 0.01; x += st) { let y = 1e9; for (const dz of SEAZ) { const d = Z + dz - ST.cz; if (d < 6) continue; const sc = ST.f / d, yy = ST.yh + (ST.hc - K.seaH(ST.cx + (x - ST.x0) / sc, Z + dz, t, u)) * sc; if (yy < y) y = yy; } out.push([x, y + (o.dy || 0)]); }
+    return out;
+  };
+  /* Til K.mon (o.fx): alt av figuren under vannlinja skjules. (x, y, s, ky) = det K.mon får: føttene på skjermen og forstørrelsen. */
+  K.seaCut = (line, x, y, s, ky) => (X, w, h, ax, ay, m) => { X.globalCompositeOperation = 'destination-out'; X.globalAlpha = 1; X.fillStyle = '#000'; X.beginPath(); line.forEach((q, i) => { const px = ax + (q[0] - x) / s * m, py = ay + (q[1] - y) / (ky || s) * m; i ? X.lineTo(px, py) : X.moveTo(-4, py); if (!i) X.lineTo(px, py); }); X.lineTo(w + 4, ay + (line[line.length - 1][1] - y) / (ky || s) * m); X.lineTo(w + 4, h + 4); X.lineTo(-4, h + 4); X.closePath(); X.fill(); };
+  /* Kampen: biten av det ferdige bildet (src, hele lerretet bak figurene) under vannlinja legges foran figuren, så den står i vannet. yb = hvor langt ned. */
+  K.seaOver = (src, line, yb) => { const g = K.g; if (!src || line.length < 2) return; g.save(); g.beginPath(); line.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.lineTo(line[line.length - 1][0], yb); g.lineTo(line[0][0], yb); g.closePath(); g.clip(); g.imageSmoothingEnabled = true; g.drawImage(src, 0, 0, W, H); g.restore(); };
+  /* Skum og sprut langs en vannlinje, der noe bryter flata. o = { a, seed, size, col, w (hvor mye av linja: 0–1 fra midten), up (sprut oppover) }. */
+  K.seaFoam = (line, o) => {
+    o = o || {}; const T = K.T, n = line.length, sd = o.seed || 91, A = o.a == null ? 1 : o.a, sz = o.size || 5, col = o.col || '#e6f4fb', wd = o.w == null ? 1 : o.w; if (A <= 0.004 || n < 2) return;
+    for (let i = 0; i < n; i++) { const u = n > 1 ? i / (n - 1) : 0.5, edge = c01((1 - abs(u - 0.5) * 2 / wd) * 4); if (edge <= 0) continue; const q = line[i], fl = 0.55 + 0.45 * sin(T * (2.2 + rnd(i, sd) * 3) + i * 1.7), r = sz * (0.55 + 0.9 * rnd(i, sd + 1)) * (0.7 + 0.3 * fl);
+      K.blob(q[0] + sin(T * 1.3 + i) * 1.5, q[1] + 1 + r * 0.15, r, col, A * edge * (0.5 + 0.5 * fl), 0, 0.62);
+      if (o.up && rnd(i, sd + 2) > 0.55) { const ph = (T * (0.9 + rnd(i, sd + 3)) + rnd(i, sd + 4)) % 1; K.blob(q[0] + (rnd(i, sd + 5) - 0.5) * 8, q[1] - ph * o.up * (0.4 + rnd(i, sd + 6)), 1.2 + sz * 0.22 * (1 - ph), '#ffffff', A * edge * (1 - ph) * 0.8, 0); } }
+  };
   /* Reservene: bakken tegnet i 2D. Sprekkene og dønningene ligger i samme perspektiv som resten. */
   const cells = (cell, far, fn) => { const zn = ST.cz + ST.f * ST.hc / (H - ST.yh + 40), z0 = floor(zn / cell) - 1, z1 = floor((ST.cz + far) / cell); for (let j = z0; j <= z1; j++) { const Z = j * cell, d = max(20, Z + cell - ST.cz), half = 300 * d / ST.f + cell, i0 = floor((ST.cx - half) / cell), i1 = floor((ST.cx + half) / cell); for (let i = i0; i <= i1; i++) fn(i, j); } };
   const GND = {
@@ -213,6 +309,14 @@
       g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
       for (const [lw, col, al] of [[5, '#ff4a10', 0.22], [1.6, '#ffb44a', 0.85]]) { g.beginPath(); cells(cell, 1100, (i, j) => { const a = pt(i, j), b = pt(i + 1, j), c = pt(i, j + 1); if (!a) return; if (b) { g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); } if (c && rnd(i * 3 + j, 9) > 0.25) { g.moveTo(a.x, a.y); g.lineTo(c.x, c.y); } }); g.strokeStyle = col; g.globalAlpha = al * (0.75 + 0.25 * sin(t * 1.6)) * min(1.3, 0.7 + heat * 0.5); g.lineWidth = lw; g.stroke(); }
       g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    },
+    ocean(g, yh, u, t) {
+      const stm = u[1] ? u[1][0] : 1, fl = u[1] ? u[1][1] || 0 : 0, sk = g.createLinearGradient(0, 0, 0, max(8, yh)); sk.addColorStop(0, blend('#1a2440', '#04060a', stm)); sk.addColorStop(1, blend(blend('#807a8c', '#2c3742', stm), '#aebcd0', fl * 0.5)); g.fillStyle = sk; g.fillRect(0, 0, W, H);
+      for (let i = 0; i < 9; i++) { const x = ((rnd(i, 3) * 760 + t * (3 + rnd(i, 4) * 4)) % 760) - 120; K.blob(x, rnd(i, 5) * max(20, yh - 30), 70 + rnd(i, 6) * 70, blend('#3a3c4a', '#0a0e14', stm), 0.5 + 0.4 * stm, 0, 0.45); }
+      const N = 30, deep = blend('#0a2a3a', '#03121c', stm), haze = blend('#807a8c', '#2c3742', stm);
+      for (let j = N; j >= 0; j--) { const d = 26 * Math.pow(1.21, j), Z = ST.cz + d, sc = ST.f / d, fog = 1 - Math.exp(-d * 0.0007); let top = 1e9; g.beginPath(); g.moveTo(-10, H + 2);
+        for (let x = -10; x <= W + 10; x += 10) { const y = ST.yh + (ST.hc - K.seaH(ST.cx + (x - ST.x0) / sc, Z, t, u)) * sc; if (y < top) top = y; g.lineTo(x, y); }
+        g.lineTo(W + 10, H + 2); g.closePath(); if (top > H) continue; g.fillStyle = blend(blend(deep, '#1c5a66', 0.12 + 0.2 * rnd(j, 7)), haze, fog); g.fill(); g.strokeStyle = rgba('#e0eef6', (0.16 + 0.4 * (u[0][2] || 0) * rnd(j, 9)) * (1 - fog * 0.7)); g.lineWidth = max(0.7, min(3, sc * 0.9)); g.stroke(); }
     },
     water(g, yh, u, t) {
       const deep = u[1], c = `rgb(${deep.slice(0, 3).map(q => Math.round(c01(q) * 255)).join(',')})`, gr = g.createLinearGradient(0, yh, 0, H); gr.addColorStop(0, blend(c, '#9fb8c8', 0.45)); gr.addColorStop(0.2, c); gr.addColorStop(1, blend(c, '#000000', 0.45)); g.fillStyle = gr; g.fillRect(0, yh, W, H - yh);
@@ -377,17 +481,27 @@
   };
   /* Sprut der regnet treffer en flate (vann, is, stein): små ringer i bakkens perspektiv. o = { n, seed, col, a, zmax }. */
   K.splash = o => { o = o || {}; const g = K.g, T = K.T, n = o.n || 30, sd = o.seed || 61; g.save(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = o.col || '#cfe8ff'; g.lineWidth = 1; for (let i = 0; i < n; i++) { const life = 0.35 + rnd(i, sd) * 0.3, q = floor(T / life + rnd(i, sd + 1)), ph = (T / life + rnd(i, sd + 1)) % 1, Z = ST.cz + 40 + Math.pow(rnd(i * 3 + q, sd + 2), 1.6) * (o.zmax || 700), p = K.gp(ST.cx + (rnd(i * 5 + q, sd + 3) - 0.5) * 560 * (Z - ST.cz) / ST.f, Z); if (!p || p.y > H) continue; const r = (2 + ph * 9) * min(2.2, p.s); g.globalAlpha = c01((o.a == null ? 0.6 : o.a) * (1 - ph)); g.beginPath(); g.ellipse(p.x, p.y, r, r * 0.3, 0, 0, TAU); g.stroke(); if (ph < 0.3) g.fillRect(p.x, p.y - (0.3 - ph) * 16 * min(2, p.s), 1, 2); } g.restore(); };
-  /* Dråper på «linsa»: et forvrengningskart (P.warp) der hver dråpe bryter bildet som en liten linse. Dråpene lander, blir sittende litt og siger nedover.
-     o = { n, seed, a (styrke i piksler), size, life }. Kalles én gang per bilde; kartet tegnes på et lite lerret og lastes opp av fxgl.js. */
+  /* Dråper på «linsa»: et forvrengningskart (P.warp) der hver dråpe bryter bildet som en liten linse. Dråpene lander, blir sittende, og noen siger og
+     renner så nedover med et spor etter seg. o = { n, seed, a (styrke i piksler), size, life, run (andelen som renner), wet (0–1: hvor mange som er der) }.
+     Kalles én gang per bilde; kartet tegnes på et lite lerret og lastes opp av fxgl.js. Gir dråpene [{ x, y, r, a }] i bildets piksler (til K.lensShine). */
   let dropSpr = null, dropMap = null;
   K.lensDrops = o => {
-    o = o || {}; const T = K.T, n = o.n || 14, sd = o.seed || 71;
+    o = o || {}; const T = K.T, n = o.n || 14, sd = o.seed || 71, wet = o.wet == null ? 1 : o.wet, run = o.run == null ? 0.35 : o.run, list = [];
     if (!dropSpr) { dropSpr = document.createElement('canvas'); dropSpr.width = dropSpr.height = 48; const x = dropSpr.getContext('2d'), im = x.createImageData(48, 48); for (let y = 0; y < 48; y++) for (let xx = 0; xx < 48; xx++) { const dx = (xx - 23.5) / 24, dy = (y - 23.5) / 24, r = Math.hypot(dx, dy), k = r < 1 ? Math.pow(r, 1.5) : 0, i = (y * 48 + xx) * 4; im.data[i] = 128 + dx / (r || 1) * k * 127; im.data[i + 1] = 128 + dy / (r || 1) * k * 127; im.data[i + 2] = 0; im.data[i + 3] = r < 1 ? 255 * min(1, (1 - r) * 5) : 0; } x.putImageData(im, 0, 0); }
     if (!dropMap) { dropMap = document.createElement('canvas'); dropMap.width = 256; dropMap.height = 192; dropMap._v = 0; }
     const x = dropMap.getContext('2d'); x.globalCompositeOperation = 'copy'; x.fillStyle = 'rgb(128,128,0)'; x.fillRect(0, 0, 256, 192); x.globalCompositeOperation = 'source-over'; x.imageSmoothingEnabled = true;
-    for (let i = 0; i < n; i++) { const life = (o.life || 2.4) * (0.6 + rnd(i, sd)), q = floor(T / life + rnd(i, sd + 1)), ph = (T / life + rnd(i, sd + 1)) % 1, r = (o.size || 9) * (0.5 + rnd(i * 3 + q, sd + 2)), px = rnd(i * 5 + q, sd + 3) * 256, py = rnd(i * 7 + q, sd + 4) * 170 + ph * ph * 30; x.globalAlpha = c01(min(1, ph * 12) * (1 - ei(ph))); x.drawImage(dropSpr, px - r, py - r * 1.15, r * 2, r * 2.3); }
-    x.globalAlpha = 1; dropMap._v++; K.P.warp = { map: dropMap, a: o.a == null ? 9 : o.a }; return dropMap;
+    for (let i = 0; i < n; i++) {
+      if (rnd(i, sd + 9) > wet) continue;
+      const life = (o.life || 2.6) * (0.6 + rnd(i, sd)), cl = T / life + rnd(i, sd + 1), q = floor(cl), ph = cl - q, r = (o.size || 9) * (0.45 + 1.1 * rnd(i * 3 + q, sd + 2) * rnd(i * 3 + q, sd + 6)), px = rnd(i * 5 + q, sd + 3) * 256, runs = rnd(i * 11 + q, sd + 5) < run && r > (o.size || 9) * 0.5;
+      const k = runs ? max(0, ph - 0.42) / 0.58 : 0, py = rnd(i * 7 + q, sd + 4) * 176 + (runs ? k * k * (70 + r * 9) : ph * ph * 5), al = c01(min(1, ph * 14) * (runs ? 1 - k * k * k : 1 - ei(ph)));
+      if (al <= 0.01) continue;
+      if (runs && k > 0.02) { const L = min(k * k * (70 + r * 9), 60); x.globalAlpha = al * 0.55; x.drawImage(dropSpr, 14, 0, 20, 48, px - r * 0.42, py - L - r * 0.4, r * 0.84, L + r * 0.6); }
+      x.globalAlpha = al; x.drawImage(dropSpr, px - r, py - r * 1.15, r * 2, r * 2.3); list.push({ x: px * 2, y: py * 2, r: r * 2, a: al, k });
+    }
+    x.globalAlpha = 1; dropMap._v++; K.P.warp = { map: dropMap, a: o.a == null ? 9 : o.a }; K.drops = list; return list;
   };
+  /* Glansen på dråpene (tegnes i forgrunnen): en lys kant nederst der lyset samles, en mørk kant øverst og et lite glimt. list = det K.lensDrops ga. */
+  K.lensShine = (list, o) => { o = o || {}; const A = o.a == null ? 1 : o.a, col = o.col || '#d8ecf8'; for (const d of list || []) { if (d.x < -20 || d.x > W + 20 || d.y > H + 20) continue; K.blob(d.x, d.y - d.r * 0.5, d.r * 0.7, '#01060a', 0.22 * d.a * A, 0, 0.5); K.blob(d.x, d.y + d.r * 0.5, d.r * 0.55, col, 0.2 * d.a * A, 1, 0.42); K.blob(d.x - d.r * 0.26, d.y - d.r * 0.34, max(1, d.r * 0.14), '#ffffff', 0.5 * d.a * A, 1); } };
   /* En lysstråle fra (x, y) i retningen ang (0 = rett ned), len lang, w0 bred ved kilden og w1 i enden. */
   K.shaft = (x, y, ang, len, w0, w1, col, a) => { if (a <= 0.004) return; const g = K.g; g.save(); g.globalCompositeOperation = 'lighter'; g.translate(x, y); g.rotate(ang); const gr = g.createLinearGradient(0, 0, 0, len); gr.addColorStop(0, rgba(col, c01(a))); gr.addColorStop(1, rgba(col, 0)); g.fillStyle = gr; for (const k of [1, 0.55]) { g.globalAlpha = k === 1 ? 0.5 : 1; g.beginPath(); g.moveTo(-w0 * k / 2, 0); g.lineTo(w0 * k / 2, 0); g.lineTo(w1 * k / 2, len); g.lineTo(-w1 * k / 2, len); g.closePath(); g.fill(); } g.restore(); };
   /* Regnbue: en bue med sju bånd. k = hvor mye av buen som er tegnet (0–1). */

@@ -30,10 +30,11 @@ float fbm(vec2 p){float a=.5,s=0.;for(int i=0;i<4;i++){s+=a*vn(p);p=p*2.03+vec2(
      uCam = (zx, zy, zoom, rulling) · uSh = risting · uHeat = (styrke i piksler, midtlinje y, rekkevidde opp, rekkevidde ned) · uHm = 1 når varmekartet (uK) brukes
      uShock[i] = (x, y, radius, bredde), uShB[i] = (styrke i piksler, flattrykking i y) · uBulge = (x, y, radius, styrke: + bule, − klem)
      uWarp = (styrke i piksler, 0 = på linsa / 1 = i bildet) med kartet uD (rødt og grønt rundt 0,5) · uWav = bølgende rader · uRgb = fargesplitt
-     Bakken (materialet): uG = (forsvinningspunkt x, horisont y, brennvidde, kamerahøyde), uGC = (kamera X, kamera Z, tid, 0), uM[0..5] = materialets egne tall. */
+     Bakken (materialet): uG = (forsvinningspunkt x, horisont y, brennvidde, kamerahøyde), uGC = (kamera X, kamera Z, tid, 0), uM[0..7] = materialets egne tall
+     (uM[3..5] er ringer på bakken for alle materialene). */
   const SCENE = `uniform sampler2D uS,uK,uD;
 uniform vec4 uCam,uHeat,uBulge,uG,uGC;uniform vec2 uSh,uWarp;uniform float uT,uWav,uRgb,uHm;
-uniform vec4 uShock[4];uniform vec2 uShB[4];uniform vec4 uM[6];
+uniform vec4 uShock[4];uniform vec2 uShB[4];uniform vec4 uM[8];
 vec4 scn(vec2 s){return texture2D(uS,vec2(s.x/R.x,1.-s.y/R.y));}
 /* Bakken sett fra kameraet: xy = stedet på bakken (verdensenheter), z = avstanden fra kameraet, w = hvor mye bakke én piksel dekker i dybden. */
 vec4 gnd(vec2 s){float dy=max(s.y-uG.y,.6);float zr=uG.z*uG.w/dy;return vec4(uGC.x+(s.x-uG.x)*zr/uG.z,uGC.y+zr,zr,zr*zr/(uG.z*uG.w));}
@@ -132,6 +133,82 @@ vec3 mat(vec2 s){
   float hz=1.-exp(-g.z*uM[2].w);
   return mix(c,uM[2].rgb,hz*.8);
 }`;
+  /* HAV I UVÆR: hele scenen i ett, himmelen og sjøen. Sjøen er en flate med ekte høyde (dønninger som skjuler det som ligger bak dem), funnet ved å gå langs
+     synsstrålen til den treffer vannet. Den speiler himmelen (med lynet), er mørk der vi ser rett ned og lys der vi ser langs flata, har grønnblått lys i
+     tynne bølgetopper, skum på toppene og i striper etter vinden, ringer etter regnet og dis som tetner med regnet. En kjempebølge kan reise seg på tvers.
+     Høyden er den samme funksjonen som K.seaH i raidk.js (tallene MÅ være like begge steder), så figurer kan stå i vannet med riktig vannlinje.
+     uM[0] = (dønning i enheter, krapp sjø (bare i lyset, ikke i formen), skum, regn 0–1) · uM[1] = (uvær 0 = stille skumring … 1 = svart storm, lyn 0–1, lynets x på skjermen, vind i skummet)
+     uM[2] = (kjempebølgens Z, høyde, bredde, 0) · uM[3..5] = ringer (X, Z, radius, styrke); negativ styrke = lys under vannet med den radien
+     uM[6] = (lé nær kameraet: dønningen er uM[6].z ganger så stor nærmere enn uM[6].x og full fra uM[6].y) · uM[7] = (fargen på lyset under vannet, 0). */
+  mats.ocean = `float crest(float p){float s=.5+.5*sin(p);return 2.*s*s-.75;}
+float rogue(vec2 w){float u=(w.y-uM[2].x-w.x*w.x*.00035)/uM[2].z;return uM[2].y*exp(-u*u*(u<0.?5.:1.))*(1.+.07*sin(w.x*.013+2.));}
+float seaH(vec2 w,float t){
+  float a=uM[0].x*mix(uM[6].z,1.,smoothstep(uM[6].x,uM[6].y,w.y));
+  float h=a*(crest(w.y*.0142+w.x*.0052+t*.95+1.3*sin(w.x*.0031+t*.21))+.45*crest(w.y*.0243-w.x*.0124+t*1.32+2.1));
+  if(uM[2].y>0.)h+=rogue(w);
+  return h;
+}
+float chop(vec2 w,float t){return .16*sin(w.x*.07+w.y*.05+t*1.9)+.1*sin(w.y*.11-w.x*.09+t*2.6)+.07*sin(w.x*.19-w.y*.13+t*3.1);}
+float n2(vec2 p){return vn(p)*.65+vn(p*2.13+7.3)*.35;}
+vec3 hor(float st){return mix(vec3(.62,.56,.6),vec3(.33,.4,.46),st);}
+vec3 sky(vec3 d,float t,float q){
+  float st=uM[1].x,y=max(d.y,0.);
+  vec3 c=mix(hor(st),mix(vec3(.12,.17,.3),vec3(.02,.028,.045),st),pow(y,.38));
+  vec2 uv=d.xz/(y+.08)*.75+vec2(t*.021,t*.034);
+  float cl=fbm(uv),cov=mix(.62,.3,st),m=smoothstep(cov,cov+.28,cl),m2=q>.5?smoothstep(.35,.7,n2(uv*2.6+vec2(7.,t*.02))):.5;
+  vec3 cc=mix(vec3(.36,.37,.45),vec3(.045,.058,.078),st)*(.45+1.25*m2);
+  c=mix(c,cc,m*(.5+.45*st)*smoothstep(0.,.09,y+.012));
+  float fl=uM[1].y;if(fl>0.){float dx=d.x/(d.z+.2)-(uM[1].z-256.)/400.;c+=vec3(.6,.72,1.)*fl*exp(-dx*dx*4.5)*(.2+.8*m)*exp(-y*2.4);c+=vec3(.2,.25,.35)*fl*.35;}
+  float rc=uM[0].w;if(rc>0.&&q>.5)c*=1.-rc*.34*smoothstep(.42,.72,vn(vec2(d.x/(d.z+.2)*5.+t*.04,2.7)))*exp(-y*4.5);
+  return c;
+}
+vec3 mat(vec2 s){
+  float t=uGC.z;vec3 ro=vec3(uGC.x,uG.w,uGC.y),rd=vec3((s.x-uG.x)/uG.z,(uG.y-s.y)/uG.z,1.);
+  float A=uM[0].x,st=uM[1].x,hi=A*1.84+max(uM[2].y,0.)*1.08+.5,lo=-A*1.1-.5;
+  float d0=2.,d1=0.;
+  if(rd.y<0.){d0=max((ro.y-hi)/-rd.y,2.);d1=(ro.y-lo)/-rd.y;}else if(hi>ro.y)d1=(hi-ro.y)/max(rd.y,.0001);
+  d1=min(d1,5200.);float hit=-1.;
+  if(d1>d0){
+    float r=pow(d1/d0,1./34.),da=d0;
+    if(ro.y+rd.y*da<seaH(ro.xz+rd.xz*da,t))hit=da;
+    else{for(int i=0;i<34;i++){float db=da*r;if(ro.y+rd.y*db<seaH(ro.xz+rd.xz*db,t)){for(int j=0;j<4;j++){float dm=.5*(da+db);if(ro.y+rd.y*dm<seaH(ro.xz+rd.xz*dm,t))db=dm;else da=dm;}hit=.5*(da+db);break;}da=db;}
+      if(hit<0.&&rd.y<0.)hit=d1;}
+  }else if(rd.y<0.)hit=5200.;
+  vec3 dir=normalize(rd);
+  if(hit<0.)return sky(dir,t,1.);
+  vec2 w=ro.xz+rd.xz*hit;float h=seaH(w,t),rg=uM[2].y>0.?rogue(w):0.,e=max(.7,hit*.006),det=1.-clamp(hit/1000.,0.,1.);
+  float ca=(A*(.3+uM[0].y)*.5+.4)*det,cb=A*uM[0].y*det;
+  vec2 tw=vec2(t*.33,t*.5),wx=w+vec2(e,0.),wz=w+vec2(0.,e);
+  float hd=h+(n2(w*.07+tw)-.5)*ca+chop(w,t)*cb,hx=seaH(wx,t)+(n2(wx*.07+tw)-.5)*ca+chop(wx,t)*cb,hz=seaH(wz,t)+(n2(wz*.07+tw)-.5)*ca+chop(wz,t)*cb;
+  vec3 n=normalize(vec3(hd-hx,e,hd-hz));
+  float nv=max(dot(-dir,n),0.),F=.03+.97*pow(1.-nv,4.);
+  vec3 R=reflect(dir,n);R.y=abs(R.y)+.03;
+  vec3 refl=sky(normalize(R),t,0.);
+  float hn=(h-rg)/max(A,1.),top=uM[2].y>1.?rg/uM[2].y:0.,lite=.55+.45*(1.-st)+uM[1].y*.9;
+  vec3 deep=mix(vec3(.03,.13,.19),vec3(.012,.062,.09),st)*(1.+.5*uM[1].y);
+  vec3 sss=vec3(.04,.27,.27)*(smoothstep(.1,1.2,hn)+top*top*.9)*lite;
+  vec3 c=mix(deep+sss,refl,F)+hor(st)*.05*n.y;
+  float fn=fbm(w*.045+vec2(t*.25,t*.4)),fs=fbm(vec2(w.x*.011+w.y*.031,w.x*.052-w.y*.019)+t*.09);
+  float fo=smoothstep(.55,1.12,hn+(fn-.5)*1.1)+smoothstep(.54,.8,fs)*uM[1].w*(.3+.4*clamp(hn+.5,0.,1.))+smoothstep(.4,.6,fs)*smoothstep(-.3,.7,hn)*.3;
+  fo*=uM[0].z;
+  if(uM[2].y>1.){float sl=1.-n.y;fo+=smoothstep(.5,.85,vn(vec2(w.x*.045,h*.035-t*.7)))*smoothstep(.2,.55,sl)*top*.7+smoothstep(.8,.98,top)*(.6+.4*fn);}
+  fo=clamp(fo,0.,1.);fo*=mix(.62,.45+.55*smoothstep(.25,.7,vn(w*.3+t*.2)),det);
+  c=mix(c,vec3(.86,.93,.97)*lite+hor(st)*.2,fo);
+  if(uM[0].w>0.&&hit<200.){vec2 gp=w/3.2;vec2 ci=floor(gp);vec2 o=h22(ci);float ph=fract(t*(1.3+o.x*.9)+o.y);float rr=length(fract(gp)-.5-(o-.5)*.4);c+=vec3(.55,.66,.74)*(exp(-pow((rr-ph*.36)/.07,2.))*.5+exp(-rr*rr*90.)*(1.-ph))*(1.-ph)*step(o.x,uM[0].w*.6)*.34*(1.-hit/200.);}
+  for(int i=3;i<6;i++){vec4 q=uM[i];if(q.w>0.){float k=(length(w-q.xy)-q.z)/7.;c+=vec3(.7,.85,.95)*q.w*exp(-k*k)*.6;}else if(q.w<0.){vec2 dv=(w-q.xy)/q.z;c+=uM[7].rgb*(-q.w)*exp(-dot(dv,dv))*(1.-F*.6);}}
+  float fg=1.-exp(-hit*mix(.00028,.001,uM[0].w));
+  return mix(c,hor(st)*(.92+uM[1].y*.5),fg);
+}`;
+  /* DYPET: under vann, sett litt oppover. Overflaten er et lysende tak med lysmønstre som beveger seg, lysest rett over oss (resten speiler dypet), og
+     vannet mørkner nedover. uM[0] = (avstand opp til overflaten, lys 0–1, uro, 0) · uM[1] = (vannfargen rgb, 0) · uM[2] = (lysfargen rgb, 0). */
+  mats.deep = `vec3 mat(vec2 s){
+  float t=uGC.z;vec3 rd=normalize(vec3((s.x-uG.x)/uG.z,(uG.y-s.y)/uG.z,1.));
+  vec3 c=uM[1].rgb*(.2+.8*smoothstep(-.7,.55,rd.y));
+  if(rd.y>.02){float d=uM[0].x/rd.y;vec2 p=rd.xz*d+vec2(uGC.x,uGC.y);vec2 q=p*.016;
+    float n1=fbm(q+vec2(t*.16,t*.1)),n2=fbm(q*1.7-vec2(t*.12,t*.2)+5.);float k=clamp(1.-abs(n1-n2)*(3.4-uM[0].z),0.,1.);k=k*k*k;
+    c+=uM[2].rgb*uM[0].y*(k*1.1+.22)*smoothstep(.3,.95,rd.y)*exp(-d*.0035);}
+  return c;
+}`;
   /* ---------- Gløden, lysstrålene og finishen ---------- */
   const BRIGHT = 'uniform sampler2D uS;uniform vec2 uB;void main(){vec2 d=vec2(.5/512.,.5/384.);vec3 c=(texture2D(uS,v+d).rgb+texture2D(uS,v-d).rgb+texture2D(uS,v+vec2(d.x,-d.y)).rgb+texture2D(uS,v+vec2(-d.x,d.y)).rgb)*.25;float l=max(c.r,max(c.g,c.b));gl_FragColor=vec4(c*smoothstep(uB.x,uB.x+uB.y,l),1.);}';
   const BLUR = 'uniform sampler2D uS;uniform vec2 uD;void main(){vec3 c=texture2D(uS,v).rgb*.227;c+=(texture2D(uS,v+uD*1.385).rgb+texture2D(uS,v-uD*1.385).rgb)*.316;c+=(texture2D(uS,v+uD*3.231).rgb+texture2D(uS,v-uD*3.231).rgb)*.0703;gl_FragColor=vec4(c,1.);}';
@@ -205,7 +282,7 @@ void main(){
   const col = (c, a) => { if (typeof c !== 'string') return [c[0], c[1], c[2], a]; let h = c.replace('#', ''); if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; const n = parseInt(h, 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255, a]; };
   const up = (t, src) => { gl.bindTexture(gl.TEXTURE_2D, t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src); };
   const pass = (pg, target, binds) => { gl.bindFramebuffer(gl.FRAMEBUFFER, target ? target.f : null); gl.viewport(0, 0, target ? target.w : cv.width, target ? target.h : cv.height); binds.forEach((b, i) => { gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, b[1]); gl.uniform1i(pg.U[b[0]], i); }); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); };
-  const Z4 = [0, 0, 0, 0], S4 = new Float32Array(16), SB = new Float32Array(8), MU = new Float32Array(24);
+  const Z4 = [0, 0, 0, 0], S4 = new Float32Array(16), SB = new Float32Array(8), MU = new Float32Array(32);
   /* Tegner bildet src (2D-lerretet) gjennom kjeden og kopierer resultatet til out (2D-lerret). P = kameraet og effektene, T = tiden, fno = bildenummeret.
      Gir false hvis det ikke gikk (da tegner den som kaller, reserven). */
   G.draw = (out, src, P, T, fno, shx, shy) => {
@@ -225,7 +302,7 @@ void main(){
       gl.uniform4fv(U.uShock, S4); gl.uniform2fv(U.uShB, SB);
       const b = P.bulge; gl.uniform4f(U.uBulge, b ? b.x : 0, b ? b.y : 0, b ? b.r : 1, b ? b.a : 0);
       gl.uniform2f(U.uWarp, wm ? P.warp.a || 0 : 0, wm && P.warp.world ? 1 : 0);
-      if (m) { const g = m.g || [256, 146, 400, 52], c = m.c || [0, 0]; gl.uniform4f(U.uG, g[0], g[1], g[2], g[3]); gl.uniform4f(U.uGC, c[0], c[1], (m.t == null ? T : m.t) % 4000, 0); MU.fill(0); (m.u || []).forEach((r, i) => { if (i < 6) for (let j = 0; j < 4; j++) MU[i * 4 + j] = r[j] || 0; }); gl.uniform4fv(U.uM, MU); }
+      if (m) { const g = m.g || [256, 146, 400, 52], c = m.c || [0, 0]; gl.uniform4f(U.uG, g[0], g[1], g[2], g[3]); gl.uniform4f(U.uGC, c[0], c[1], (m.t == null ? T : m.t) % 4000, 0); MU.fill(0); (m.u || []).forEach((r, i) => { if (i < 8 && r) for (let j = 0; j < 4; j++) MU[i * 4 + j] = r[j] || 0; }); gl.uniform4fv(U.uM, MU); }
       pass(sc, fbo.a, [['uS', tex.s], ['uK', tex.k], ['uD', tex.d]]);
       const bloom = P.bloom || 0, rays = P.rays && P.rays.a > 0 ? P.rays : null;
       if (bloom > 0 || rays) {

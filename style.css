@@ -987,6 +987,9 @@ button.pill{font:inherit;font-size:11.5px;font-weight:600;color:var(--ink2)}butt
 .arena.dkrise::after{content:"";position:absolute;inset:0;pointer-events:none;animation:dkRise 1.3s ease-in forwards}
 /* I raid står den legendariske skarpt mot stedet bak: en tynn lys kant og en svak glød i fargen dens, uten den store pulserende glorien. */
 .arena.rv .bs.ace .spr{animation:none;filter:drop-shadow(0 0 1px rgba(255,255,255,.75)) drop-shadow(0 0 5px color-mix(in srgb,var(--cc) 50%,transparent))}
+/* Figurene i en arena (arena.js) tegnes på et lerret med stedets lys; bildet under skjules. Den legendariske trenger ikke glorien der. */
+.bs img.spr.lit0{opacity:0!important}
+.arena.rv .bs.ace .lit{filter:none}
 /* Raseriet: den legendariske gløder i sin egen farge resten av kampen, og kanten av banen pulserer. */
 @keyframes ragePulse{50%{filter:drop-shadow(0 0 12px var(--cc)) drop-shadow(0 0 4px #fff) saturate(1.5)}}
 .arena .bs.foe.rage .spr{animation:ragePulse .8s ease-in-out infinite;filter:drop-shadow(0 0 6px var(--cc)) saturate(1.3)}

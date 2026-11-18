@@ -427,6 +427,8 @@ async function legendIntro(B) {
   await pl.done; clearInterval(watch); document.removeEventListener('keydown', key);
   if (gone()) return stop();
   if (!started && !PACK.playing() && !MUSIC.playing()) battleMusic(B);
+  /* Filmen til en arena slutter i hvilestillingen. Bildet males på nytt, så animasjonen i kampen starter fra samme bilde. */
+  if (info.arena && BT.arena && !skipped) { const sp = $('#s-foe'); if (sp && sp.classList.contains('pre')) paintSprite('foe', 'ace pre'); }
   root.classList.add('d'); await T(240);
 }
 /* Dagens event: dine egne som får noe ut av det (laget først, så de sterkeste i boksen). */
@@ -978,7 +980,7 @@ function drawBattle() {
     <div class="bscreen t-${tier}"${kst(tr)}><div class="arena a-${tr.arena} v${tr.v} t-${tier} i${tr.int}${tr.th ? ' th-' + tr.th : ''}${scene || own ? ' has-scene' : ''}${tr.wild ? ' rv lg' + (tr.dk ? 'dk' : tr.leg) : ''}" id="arena" style="--ac:var(--t${tr.ty});--cc:${tr.cc || 'var(--t' + tr.ty + ')'}">
       <div class="cam" id="cam"><div class="world" id="world">${scene ? `<img class="scene" alt="" src="${scene}">` : ''}<div class="abg"></div>${own ? '<canvas class="fxc bgc evc" id="evc" width="512" height="384"></canvas>' : ''}<canvas class="fxc bgc" id="bgc" width="256" height="192"></canvas><canvas class="fxc amc" id="amc" width="512" height="384"></canvas><div class="plat pf"></div><div class="plat pm"></div></div></div><div class="dim"></div>
       ${tr.wild ? '' : `<div class="trn" id="trn">${tsprite(tr.img)}</div>`}
-      <div class="bs foe gone" id="s-foe"></div><div class="bs me gone" id="s-me"></div>${arn ? '<canvas class="fxc afc" id="afc" width="512" height="384"></canvas>' : ''}${tr.wild ? '<canvas class="fxc rfx" id="rfx" width="512" height="384"></canvas>' : ''}
+      <div class="bs foe gone" id="s-foe"></div>${arn && ARENA.defs[arn].mid ? '<canvas class="fxc amd" id="amd" width="512" height="384"></canvas>' : ''}<div class="bs me gone" id="s-me"></div>${arn ? '<canvas class="fxc afc" id="afc" width="512" height="384"></canvas>' : ''}${tr.wild ? '<canvas class="fxc rfx" id="rfx" width="512" height="384"></canvas>' : ''}
       <canvas class="fxc" id="fxc" width="256" height="192"></canvas><canvas class="fxc" id="axc" width="512" height="384"></canvas><div class="fx" id="fx"></div>
       <div class="hpb foe" id="b-foe" hidden></div><div class="hpb me" id="b-me" hidden></div>
     </div><button type="button" class="btext" id="btext" data-a="btap" aria-live="polite"><span id="btx"></span><i></i></button></div>
@@ -991,7 +993,7 @@ function drawBattle() {
   FX.hooks.glitch = ms => { const a = $('#arena'); if (!a) return; a.classList.add('glitch'); setTimeout(() => a.classList.remove('glitch'), ms); };
   /* Med egen luft dempes det vanlige showet, så det ikke blir for mye. BT.airO.k er styrken: den økes når den legendariske blir rasende. */
   const air = !!airId && !calm() && typeof CINE !== 'undefined' && CINE.has(airId);
-  if (BT.air) BT.air(); BT.arena = null; BT.airO = { cc: tr.cc || '#ffffff', k: 1, bg: $('#evc') };
+  if (BT.air) BT.air(); BT.arena = null; BT.airO = { cc: tr.cc || '#ffffff', k: 1, bg: $('#evc'), mid: $('#amd') };
   /* Arenaen (arena.js) tegner stedet selv, bak og foran figurene. Med «redusert bevegelse» står den som et stillbilde. */
   if (arn) { if (calm()) { BT.air = null; CINE.arenaStill($('#evc'), arn, 12, { cc: tr.cc, noFig: 1, plain: 1, pose: { cz: 1, k: 1 } }); } else BT.air = BT.arena = ARENA.run($('#evc'), $('#afc'), arn, BT.airO); }
   else { BT.air = air ? CINE.air($('#amc'), airId, BT.airO) : null; if (own && !air) CINE.bgStill($('#evc'), airId, 12, { cc: tr.cc }); }
