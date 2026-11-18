@@ -93,7 +93,7 @@ void main(){
        mønsteret i større mål og rundt sjøen (ingen søm foran), renner nedover veggen, noen svake lavastriper nederst, halv kontrast og et slør av dis.
      · Kantlyset fra lavaen ligger på sidene, ikke på flatene på toppen (sett skrått fikk de et oransje slør og skilte seg ikke fra lavaen).
      uSm = hvor avrundet, uRough = hvor ru, uCrust = størknet skorpe (tettere sprekker med glød i), uCk = hvor tydelige sprekkene og porene er (1 = fullt). */
-  const FS_ROCK = `varying vec3 vW, vN, vO; uniform vec3 uA, uB; uniform float uStr, uTop, uSm, uHot, uRough, uCrust, uFar, uCk, uSc, uEdge;
+  const FS_ROCK = `varying vec3 vW, vN, vO; uniform vec3 uA, uB; uniform float uStr, uTop, uSm, uHot, uRough, uCrust, uFar, uCk;
 ${COMMON}
 float hgt(vec2 s, float l2, float l3){ return fbm(s * 1.6) * .55 + fbm(s * 4.7 + 3.1) * .3 * l2 + vn(s * 12.) * .15 * l3; }
 void main(){
@@ -101,7 +101,7 @@ void main(){
   vec3 an = abs(Nf), U = vec3(1., 0., 0.), W = vec3(0., 0., 1.); vec2 sp = vW.xz;
   if (an.y < .66) { if (uFar > .5) { float rr = max(length(vW.xz), 1.); sp = vec2(atan(vW.x, -vW.z) * rr, vW.y); U = vec3(-vW.z, 0., vW.x) / rr; W = vec3(0., 1., 0.); }
     else if (an.x > an.z) { sp = vW.zy; U = vec3(0., 0., 1.); W = vec3(0., 1., 0.); } else { sp = vW.xy; W = vec3(0., 1., 0.); } }
-  float sc = mix(1., .22, uFar) * uSc, fw = max(length(dFdx(vW)), length(dFdy(vW))) * sc; vec2 s = sp * sc;
+  float sc = mix(1., .22, uFar), fw = max(length(dFdx(vW)), length(dFdy(vW))) * sc; vec2 s = sp * sc;
   float l2 = 1. - smoothstep(.07, .16, fw), l3 = 1. - smoothstep(.03, .07, fw), bk = 1. - smoothstep(.1, .35, fw);
   float h = hgt(s, l2, l3), e = .03; vec3 gr = (U * (hgt(s + vec2(e, 0.), l2, l3) - h) + W * (hgt(s + vec2(0., e), l2, l3) - h)) / e; gr -= N * dot(N, gr);
   vec3 Nb = normalize(N - gr * .3 * uRough * bk * (1. - .3 * uFar));
@@ -119,14 +119,11 @@ void main(){
   float cg = crk * (1. - smoothstep(0., .5 + 2.7 * uCrust, dy)) * (.35 + .65 * uCrust); col = mix(col, vec3(1., .42, .08) * (.7 + .5 * uGlow), cg * .85);
   float ls = abs(fbm(vec2(s.x * .45, vW.y * .0045 + 3.)) - .5), lst = (1. - smoothstep(.01, .045, ls)) * side * uFar * smoothstep(.55, .7, fbm(vec2(s.x * .15, 1.))) * (1. - smoothstep(2., 18., dy));
   col += vec3(.9, .22, .04) * lst * (.45 + .4 * uGlow);
-  /* Runde 10 («fortsatt for glatte»): på fjellveggene var mønsteret ganget inn i en nesten svart stein, så det ble borte. Lysere rygger og korn og mørkere søkk legges oppå
-     (dempet: rundt to tredeler av forgrunnens kontrast), og noen flere svake lavastriper lenger opp på veggen. */
-  float fd = (h - .5) * 2.4 + 2.2 * (dot(Nb, uKey) - dot(N, uKey)) - .9 * crk - .5 * pore; col += vec3(.2, .09, .065) * clamp(fd, -.6, 1.) * .42 * uFar * bk;
-  float ls2 = abs(fbm(vec2(s.x * .7 + 9., vW.y * .006)) - .5); col += vec3(.8, .2, .04) * (1. - smoothstep(.008, .035, ls2)) * side * uFar * smoothstep(.5, .66, fbm(vec2(s.x * .2, 4.))) * (1. - smoothstep(4., 30., dy)) * (.25 + .25 * uGlow);
+  /* Runde 10 («fortsatt for glatte») og runde 11 («akkurat for realistisk slik at det skiller seg litt»): lysere rygger og mørkere søkk oppå, så mønsteret synes også i den nesten
+     svarte steinen, men svakt (halvparten av runde 10) og uten de ekstra lavastripene. */
+  float fd = (h - .5) * 2.2 + 1.8 * (dot(Nb, uKey) - dot(N, uKey)) - .7 * crk; col += vec3(.2, .09, .065) * clamp(fd, -.6, 1.) * .2 * uFar * bk;
   float rim = pow(1. - max(dot(Nb, V), 0.), 3.);
   col += uRimC * rim * (dot(Nb, uRim) * .5 + .5) * uRimK * .5 * (.4 + .6 * side) + vec3(1., .38, .08) * rim * uGlow * .5 * (1. - smoothstep(0., 5., dy)) * (1. - .5 * uFar) * side;
-  /* uEdge (runde 10, de små steinene i lavaen: «ru tekstur, sprekker og glødende kanter»): omrisset gløder der lavaen er nær, sterkest nede ved lavaen. */
-  float eg = pow(1. - max(dot(N, V), 0.), 4.) * (1. - smoothstep(0., .35, dy)) * .8 + (1. - smoothstep(0., .045, dy)) * .6; col += vec3(1., .42, .1) * eg * uEdge * (.5 + .4 * uGlow);
   col = mix(col, uFogC, .12 * uFar);
   gl_FragColor = vec4(mix(col, uFogC, fogK(vW)), 1.);
 }`;
@@ -136,7 +133,9 @@ void main(){
      liggende bak og ikke tar blikket fra Groudon») og runde 10 («fortsatt for glatte»): teksturen var der, men under disen ble den borte (rundt ±13 % i lyset).
      Nå: rygger og knauser som renner nedover fjellet i to størrelser og korn (3D-støy på sirkelen og høyden, strukket langs fallet), lyset som faller ujevnt på dem,
      sprekker i to størrelser, flekker av mørkere og lysere stein, og flere størknede lavastriper (smale, mørkt rødoransje) ned fra krateret. Disen legges på først,
-     og teksturen oppå med rundt to tredeler av forgrunnens kontrast (rundt ±30 %, litt mindre der disen er tettest), og til slutt et tynt slør av dis. */
+     og teksturen oppå, og til slutt et tynt slør av dis.
+     Runde 11 (Jazz: «Fjellene bak ble akkurat for realistisk slik at det skiller seg litt»): skrudd ned til rundt halvparten (rundt ±15 %), uten det fine kornet og de fine
+     sprekkene, med ett sett lavastriper og litt mer dis: de store formene (rygger, renner) blir, detaljene som gjorde det fotografisk, er borte. */
   const FS_VOLC = `varying vec3 vW, vN; varying vec2 vUv; uniform vec3 uA, uB; uniform float uEr;
 ${COMMON}
 float fbm3(vec3 p){ float a = .5, s = 0.; for (int i = 0; i < 4; i++) { s += a * vn3(p); p = p * 2.03 + vec3(17.3, 9.1, 4.7); a *= .5; } return s; }
@@ -144,20 +143,20 @@ void main(){
   float a = vUv.x * 6.2832, v = vUv.y; vec2 c = vec2(cos(a), sin(a));
   vec3 Nf = normalize(cross(dFdx(vW), dFdy(vW))), Ns = normalize(vN); if (dot(Ns, Nf) < 0.) Ns = -Ns; vec3 N = normalize(mix(Nf, Ns, .7));
   float g1 = fbm(c * 9. + vec2(v * 1.3, 0.)), g2 = fbm(c * 24. + v * 2.), streak = fbm(vec2(c.x * 30. + g1 * 2., c.y * 30. + v * 2.5));
-  float fa = length(vec2(dFdx(vUv.x), dFdy(vUv.x))) * 6.2832, lf = 1. - smoothstep(.2, .45, fa * 60.), lf2 = 1. - smoothstep(.2, .45, fa * 150.);
+  float fa = length(vec2(dFdx(vUv.x), dFdy(vUv.x))) * 6.2832, lf = 1. - smoothstep(.2, .45, fa * 60.);
   vec3 q = vec3(c * 18., v * 5.);
-  float rg = smoothstep(.5, .95, 1. - abs(fbm3(q) * 2. - 1.)), rg2 = fbm3(q * vec3(2.6, 2.6, 2.2) + 7.), gn = vn3(vec3(c * 140., v * 34.));
-  float h = rg * .55 + (rg2 - .5) * .7 * lf + (gn - .5) * .3 * lf2;
+  float rg = smoothstep(.5, .95, 1. - abs(fbm3(q) * 2. - 1.)), rg2 = fbm3(q * vec3(2.6, 2.6, 2.2) + 7.);
+  float h = rg * .55 + (rg2 - .5) * .6 * lf;
   vec3 dpx = dFdx(vW), dpy = dFdy(vW), r1 = cross(dpy, N), r2 = cross(N, dpx); float det = dot(dpx, r1);
   vec3 Nb = normalize(abs(det) * N - sign(det) * (dFdx(h) * r1 + dFdy(h) * r2) * 5.); if (dot(Nb, N) < .35) Nb = N;
-  float k1 = abs(fbm3(vec3(c * 24., v * 8.) + 3.) - .5), k2 = abs(fbm3(vec3(c * 60., v * 18.) + 9.) - .5);
-  float crack = max((1. - smoothstep(.006, .03, k1)) * (1. - smoothstep(.3, .6, fa * 24.)), (1. - smoothstep(.006, .024, k2)) * .7 * lf);
-  float sk = abs(fbm3(vec3(c * 34., v * 1.6) + 5.) - .5), sk2 = abs(fbm3(vec3(c * 21., v * 1.1) + 13.) - .5);
-  float lstr = max((1. - smoothstep(.008, .04, sk)) * smoothstep(.3, .5, fbm3(vec3(c * 5., v * .8) + 2.)), (1. - smoothstep(.006, .03, sk2)) * .7) * smoothstep(.05, .5, v) * (1. - smoothstep(.3, .6, fa * 34.));
+  float k1 = abs(fbm3(vec3(c * 24., v * 8.) + 3.) - .5);
+  float crack = (1. - smoothstep(.006, .03, k1)) * (1. - smoothstep(.3, .6, fa * 24.));
+  float sk = abs(fbm3(vec3(c * 34., v * 1.6) + 5.) - .5);
+  float lstr = (1. - smoothstep(.008, .04, sk)) * smoothstep(.3, .5, fbm3(vec3(c * 5., v * .8) + 2.)) * smoothstep(.05, .5, v) * (1. - smoothstep(.3, .6, fa * 34.));
   float pa = fbm3(vec3(c * 6., v * 2.) + 4.);
   vec3 base = mix(uA, uB, smoothstep(.35, .7, streak * .6 + g2 * .4)) * (.7 + .6 * g1); base = mix(base, uB * 1.3, smoothstep(.5, .95, v) * .45);
   float lb = smoothstep(.2, .9, dot(Nb, uKey) * .5 + .5), l0 = smoothstep(.2, .9, dot(N, uKey) * .5 + .5);
-  float tx = (.72 + .62 * h) * (1. - .55 * crack) * (.72 + .56 * smoothstep(.3, .7, pa)) * (1. + 1.5 * (lb - l0));
+  float tx = (.8 + .45 * h) * (1. - .35 * crack) * (.82 + .36 * smoothstep(.3, .7, pa)) * (1. + 1.1 * (lb - l0));
   vec3 col = base * mix(uShC, uKeyC, l0);
   col += uRimC * pow(1. - max(dot(N, normalize(cameraPosition - vW)), 0.), 2.5) * (dot(N, uRim) * .5 + .5) * .35;
   float ch = abs(fbm(c * 5. + vec2(0., v * .6)) - .5), w = .01 + .018 * v;
@@ -165,11 +164,11 @@ void main(){
   float flow = .7 + .3 * sin(v * 60. - uTime * 3. + g1 * 9.);
   vec3 hot = mix(vec3(.7, .09, .02), vec3(1., .72, .2), smoothstep(.3, 1., v) * flow) * (.55 + .9 * min(uEr, 1.6));
   float fg = fogK(vW); col = mix(col, uFogC, fg);
-  col *= mix(1., tx, .74 - .14 * fg);   /* teksturen og stripene dempes av disen, men forsvinner ikke */
-  float dt = (rg - .5) * 1.1 + (rg2 - .5) * 1.3 * lf + (gn - .5) * .6 * lf2 + 2. * (lb - l0);
-  col += vec3(.2, .09, .065) * clamp(dt, -.6, 1.) * (.4 - .12 * fg);   /* ru stein som synes også der fjellet ligger i skygge: lysere rygger og korn, mørkere søkk */
-  col += vec3(.62, .14, .03) * lstr * (.36 + .3 * min(uEr, 1.)) * (1. - .4 * fg) * (.6 + .5 * pa) + vec3(.55, .12, .03) * crack * .14 * (1. - .5 * fg);
-  col = mix(col, uFogC, .08);
+  col *= mix(1., tx, .5 - .1 * fg);   /* teksturen og stripene dempes av disen, men forsvinner ikke */
+  float dt = (rg - .5) * 1.1 + (rg2 - .5) * 1.1 * lf + 1.6 * (lb - l0);
+  col += vec3(.2, .09, .065) * clamp(dt, -.6, 1.) * (.22 - .07 * fg);   /* ru stein som synes også der fjellet ligger i skygge: lysere rygger og korn, mørkere søkk */
+  col += vec3(.62, .14, .03) * lstr * (.26 + .3 * min(uEr, 1.)) * (1. - .4 * fg) * (.6 + .5 * pa) + vec3(.55, .12, .03) * crack * .08 * (1. - .5 * fg);
+  col = mix(col, uFogC, .12);
   col += hot * river * (1. - fg * .45) + vec3(1., .42, .08) * smoothstep(.84, 1., v) * (.35 + .7 * min(uEr, 1.6));
   gl_FragColor = vec4(col, 1.);
 }`;
@@ -424,7 +423,7 @@ void main(){
   const addBlend = () => ({ transparent: true, depthWrite: false, blending: T.CustomBlending, blendEquation: T.AddEquation, blendSrc: T.OneFactor, blendDst: T.OneFactor, blendEquationAlpha: T.AddEquation, blendSrcAlpha: T.ZeroFactor, blendDstAlpha: T.OneFactor });
   const softBlend = () => ({ transparent: true, depthWrite: false, blending: T.CustomBlending, blendEquation: T.AddEquation, blendSrc: T.OneFactor, blendDst: T.OneMinusSrcAlphaFactor, blendEquationAlpha: T.AddEquation, blendSrcAlpha: T.OneFactor, blendDstAlpha: T.OneMinusSrcAlphaFactor });
   const K = { sin, cos, PI, TAU, abs, max, min, floor, c01, mix, seg, io, eo, ei, back, spring, ant, hit, rnd, hex };
-  K.rockMat = o => sm(VS, FS_ROCK, { uA: uv(u3(o.a || '#3b2422')), uB: uv(u3(o.b || '#5a3a30')), uStr: uv(o.str == null ? 0.22 : o.str), uTop: uv(o.top || 0), uSm: uv(o.sm == null ? 0.7 : o.sm), uHot: uv(o.hot == null ? 1 : o.hot), uRough: uv(o.rough == null ? 1 : o.rough), uCrust: uv(o.crust || 0), uFar: uv(o.far || 0), uCk: uv(o.ck == null ? 1 : o.ck), uSc: uv(o.sc || 1), uEdge: uv(o.edge || 0) }, { side: T.DoubleSide });   /* hot: hvor høyt opp foten gløder (1 = 1,8 enheter), rough: hvor ru, crust: størknet skorpe, far: fjellvegg i bakgrunnen, ck: sprekker og porer (0–1), sc: hvor fint mønsteret er (små steiner: 3–4), edge: glødende kant mot lavaen */
+  K.rockMat = o => sm(VS, FS_ROCK, { uA: uv(u3(o.a || '#3b2422')), uB: uv(u3(o.b || '#5a3a30')), uStr: uv(o.str == null ? 0.22 : o.str), uTop: uv(o.top || 0), uSm: uv(o.sm == null ? 0.7 : o.sm), uHot: uv(o.hot == null ? 1 : o.hot), uRough: uv(o.rough == null ? 1 : o.rough), uCrust: uv(o.crust || 0), uFar: uv(o.far || 0), uCk: uv(o.ck == null ? 1 : o.ck) }, { side: T.DoubleSide });   /* hot: hvor høyt opp foten gløder (1 = 1,8 enheter), rough: hvor ru, crust: størknet skorpe, far: fjellvegg i bakgrunnen, ck: sprekker og porer (0–1) */
   K.cryMat = o => sm(VS, FS_CRY, { uA: uv(u3(o.a || '#7a1030')), uB: uv(u3(o.b || '#ff5a78')), uPulse: uv(0.5) });
   K.figMat = (map, o) => { o = o || {}; if (map) { map.colorSpace = T.NoColorSpace; map.magFilter = T.NearestFilter; map.minFilter = o.mip ? T.LinearMipmapLinearFilter : T.NearestFilter; map.generateMipmaps = !!o.mip; map.needsUpdate = true; }
     return sm(VS_FIG, FS_FIG, { map: uv(map), uUvOff: uv(new T.Vector2()), uId: uv(o.id || 255), uStone: uv(0), uStoneC: uv(u3('#8a7892')), uCrack: uv(0), uCrackR: uv(0), uCrackO: uv(new T.Vector3()), uCrackC: uv(u3('#ffe24a')), uSeam: uv(o.seam == null ? 0.2 : o.seam), uSeamOn: uv(o.seamOn == null ? 1 : o.seamOn), uHead: uv(new T.Vector3(1e4, 1e4, 0)),

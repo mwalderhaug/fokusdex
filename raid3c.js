@@ -85,10 +85,6 @@
   const DUCK = { Neck1: [0, -0.2, 0], Neck2: [0, -0.1, 0], Head: [0, -0.14, 0], Spine2: [0, -0.1, 0], Spine3: [0, -0.06, 0], '*Arm': [0, -0.3, 0.2] };
   const RAISE = { '*Arm': [0.85, 0.75, 1.0], Spine2: [0, 0.12, 0], Spine3: [0, 0.1, 0], Neck1: [0, 0.14, 0], Head: [0, 0.1, 0], Jaw: [0, -0.25, 0] };
   const SLAM = { '*Arm': [0.5, 0, 0.3], Spine1: [0, -0.14, 0], Spine2: [0, -0.2, 0], Spine3: [0, -0.16, 0], Neck1: [0, -0.1, 0], Head: [0, 0.12, 0], Jaw: [0, -0.4, 0] };
-  /* Skyggeovalen under din Pokémon i kampen (runde 10): som plattformene i Black/White, men bare en myk, mørk skygge. Flat og mørk i midten, myk ut mot kanten. */
-  const shadowOval = (g, x, y, rx, ry, a) => { g.save(); g.translate(x, y); g.scale(1, ry / rx); const gr = g.createRadialGradient(0, 0, 0, 0, 0, rx);
-    gr.addColorStop(0, `rgba(10,3,4,${a})`); gr.addColorStop(0.68, `rgba(10,3,4,${a * 0.95})`); gr.addColorStop(0.88, `rgba(12,4,4,${a * 0.42})`); gr.addColorStop(1, 'rgba(12,4,4,0)');
-    g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rx, 0, TAU); g.fill(); g.restore(); };
   const sq = (t, t0, f, d) => { const a = t - t0; return a < 0 ? 0 : Math.exp(-(d || 6) * a) * cos((f || 13) * a); };   /* fjæringen etter et nedslag */
   const NB = 10, blade = i => ({ x: (i % 2 ? 1 : -1) * (5.6 + i * 0.55), z: 15 + i * 4, h: 6.5 + i * 1.15, r: 1 + i * 0.09, t: GP + 0.07 + i * 0.105 });
   /* Kameraristen i Precipice Blades (Jazz 18.11, runde 8: «bygge seg opp mot et stort smell til slutt, gjerne med kamerarist»): et rykk for hver tagg, sterkere for hver,
@@ -377,15 +373,14 @@
       const FV = fig ? 52 : 50, cp = fig ? [-6.2, 1.65, 19.9] : [-8.2, 2.05, 24.7], aim = fig ? AFIG : AFOE, kq = fig ? 18.2 / 394 : 23.4 / 412, tg = [HOME[0] - 5, 3, HOME[2]];
       for (let i = 0; i < 14; i++) { K.cam(cp[0], cp[1], cp[2], tg[0], tg[1], tg[2], FV); const q = K.proj(HOME[0], 0, HOME[2]); tg[0] -= (aim[0] - q.x) * kq; tg[1] += (aim[1] - q.y) * kq; }
       S.cp = cp; S.tg = tg; S.fv = FV; K.cam(cp[0], cp[1], cp[2], tg[0], tg[1], tg[2], FV); const am = fig ? AMEF : AME, m = K.ray(am[0], am[1], 0.5); S.me = [m.x, 0.5, m.z];
-      /* Runde 10 (Jazz 18.11: «Steinflakene (det store under min Pokémon og de på sidene) er altfor store, glatte og kunstige og passer ikke inn. Fjern det store under min
-         Pokémon, og legg heller en myk, mørk skyggeoval under spriten, som plattformene i Black/White, så den ikke forsvinner i det oransje. Steinene på sidene skal være mye
-         mindre, delvis sunket i lavaen, med ru tekstur, sprekker og glødende kanter.»): ingen flak under din Pokémon (skyggeovalen tegnes i scene3). På hver side en liten klynge
-         ru basalt som stikker opp av lavaen (den største rundt 0,8 enheter bred, før 2,2), med fint korn, sprekker som gløder og en glødende kant der lavaen slikker. Klyngene
-         plasseres etter bildet, så de synes ved siden av din Pokémon i begge arenaene (før runde 10: et stort, glatt flak under og to flate flak på sidene). */
-      const sk = K.rockMat({ a: '#16100f', b: '#463631', str: 0.4, sm: 0.25, hot: 0.035, rough: 2.2, crust: 0.4, sc: 3.4, edge: 0.8 }), side = fig ? [[474, 330], [14, 296]] : [[454, 293], [16, 287]];
-      S.side = side.map(([px, py], j) => { const c = K.ray(px, py, 0);
-        [[0, 0, 0.42], [0.66, 0.38, 0.22], [-0.58, -0.26, 0.16]].forEach(([dx, dz, r], i) => { const b = K.boulder(r * (j ? 0.85 : 1), 81 + j * 7 + i, { j: 0.27, sy: 0.85, d: 2, mat: sk }); b.position.set(c.x + dx, -0.36 * r, c.z + dz); b.rotation.set(0.3 * i, 1.7 * i + j, 0.2); S.scene.add(b); });
-        return [c.x, c.z]; });
+      /* Runde 9: din Pokémon står på et flak av gråsvart lavastein, glatt som før, så den skilles fra lavaen (Jazz 18.11: «Dette er for mye og for teksturert ... Mer mot slik
+         det var før, bare tydelig at det er stein som man står på som skilles fra lavaen. Gjerne litt mer grå/svart da lavastein ser mer slik ut»). Ingen sprekker med glød, bare
+         en svak ruhet; lavaen lyser opp sidene og foten. Med figuren i 3D (der din Pokémon står nede til venstre og føttene er utenfor bildet) er flaket stort og flatt,
+         så det synes bak den nederste delen av spriten (størrelsen Jazz likte); ellers steinen fra før. */
+      const cm = K.rockMat({ a: '#15171b', b: '#474a51', str: 0.3, top: 0.6, sm: 0.65, hot: 0.05, rough: 0.35, ck: 0.15 });   /* kjølig grå: lyset og fargetonen i arenaen gjør den varmere */
+      if (fig) { const fc = K.ray(118, 300, 0); S.rock = K.boulder(4, 77, { flat: 1, sx: 1.25, sy: 0.07, sz: 1.15, cap: 0.3, j: 0.2, d: 3, mat: cm }); S.rock.position.set(fc.x, 0.04, fc.z); S.rock.rotation.y = 0.5; }
+      else { S.rock = K.boulder(2.1, 77, { flat: 1, sy: 0.26, cap: 0.45, j: 0.22, d: 3, mat: cm }); S.rock.position.set(m.x + 0.15, 0.05, m.z - 0.45); } S.scene.add(S.rock);
+      for (const [dx, dz, r, sd] of [[3.4, -2.6, 1.1, 81], [-3.2, -3.4, 0.8, 83]]) { const b = K.boulder(r, sd, { flat: 1, sy: 0.14, cap: 0.3, j: 0.24, mat: cm }); b.position.set(m.x + dx, 0.02, m.z + dz); S.scene.add(b); }
       /* Røyken som ligger over sjøen etter utbruddet: store, mørke dotter som driver med vinden, lyst opp nedenfra. */
       S.haze = K.pts(46, i => ({ p: [-70 + rnd(i, 141) * 150, 3 + rnd(i, 142) * 16, -64 + rnd(i, 143) * 74], v: [2.2 + rnd(i, 144) * 2.6, 0.25 + rnd(i, 145) * 0.5, 0.5], b: rnd(i, 146) * 14, l: 14, z: 30 + rnd(i, 147) * 44 }), { loop: 1, shade: 1, px: 60, sz0: 0.8, sz1: 1.5, near: 9, c: ['#6a3a26', '#3a221c', '#1c1211'], a: 0, fade: 0.6 }); S.scene.add(S.haze);
       if (fig) { const g = S.gr = K.figure(K.model('groudon'), { mip: 1 }), p = S.pg = K.figure(K.model('groudon_primal'), { hide: /MagmaLayer[12]/, mip: 1 }); S.scene.add(g.root); S.scene.add(p.root); S.figs.push(g, p);
@@ -448,11 +443,9 @@
         glow: { mask: 'seam', col: '#ff9a2c', a: (0.5 * p2 + 0.5 * hit(S.since('rage'), 0.5, 2.5)) * (0.8 + 0.2 * sin(t * 6)) },
         /* Din Pokémon (runde 9: «La lavaen gi den kantlys i stedet for å farge hele spriten oransje»): nøytralt grunnlys, bare litt varme nederst, og kantlys fra lavaen nedenfra og fra siden. */
         me: { amb: '#d4c6bc', sat: 0.97, lights: [{ col: '#ff6a1c', a: 0.16 + 0.08 * min(1.3, heat), h: 0.18 }], rim: [{ col: '#ffb060', dx: -1, dy: 1, a: 0.35 + 0.4 * sun }, { col: '#ff7a24', dx: 0, dy: -1, a: 0.9 }, { col: '#ff8c30', dx: -1, dy: -0.3, a: 0.55 }] } });
-      /* Din Pokémon på skyggeovalen (runde 10, som plattformene i Black/White): mørk i midten og myk i kanten, så spriten skilles fra lavaen, og skyggen kastet framover.
-         Med figuren i 3D er din Pokémon kuttet av bildekanten, så ovalen ligger langs kanten under den (toppen synes bak den nederste delen av spriten). */
-      { const q = id === AIDF ? [S.me[0] + 18, 394, 205, 84] : [S.me[0] + 4, S.me[1] + 3, 62 * S.mk, 18 * S.mk]; shadowOval(g, q[0], q[1], q[2], q[3], 0.88); }
-      if (C.cur.sps.me) C.monShadow(S.me[0], S.me[1] - 3, 1.6 * S.mk, { id: 'me', a: 0.45, len: 0.1, skew: -0.4, ft: S.ftm, col: '#0b0304' });
-      /* Stedet slår til: en søyle av lava spruter opp av sjøen ved steinene til høyre for din Pokémon (S.side[0]). */
+      /* Din Pokémon på flaket: skyggen kastet framover og kontaktskyggen under føttene. */
+      if (C.cur.sps.me) C.monShadow(S.me[0], S.me[1] - 3, 1.6 * S.mk, { id: 'me', a: 0.45, len: 0.1, skew: -0.4, ft: S.ftm, col: '#0b0304' }); C.contact(S.me[0], S.me[1] - 4, 60 * S.mk, { a: 0.85, col: '#0b0304', sy: 0.22 });
+      /* Stedet slår til: en søyle av lava spruter opp av sjøen ved flaket ditt. */
       if (fT < 1.4 && A) { const q = K.proj(A.me[0] + 3.4, 0, A.me[2] - 2.6), k = hit(fT, 0.38, 0.9); if (k > 0) { for (let j = 0; j < 9; j++) { const u = j / 8, fl = 0.7 + 0.3 * sin(t * (19 + j * 3) + j); C.blob(q.x + sin(t * 9 + j * 2) * 3 * j, q.y - u * 230 * (1 - (1 - k) * (1 - k)), (32 - u * 17) * (0.5 + 0.5 * k) * fl, u < 0.35 ? '#fff2c8' : u < 0.7 ? '#ffc050' : '#ff7a20', k * (0.9 - u * 0.4), 1, 1.5); } C.blob(q.x, q.y, 110 * k, '#ff7a2a', k, 1, 0.5); } }
       P.heat = 1.3 + 1.5 * min(1.3, heat) + 1.6 * sun; P.heatY = sn.hz; P.heatUp = 90 + 120 * sun; P.heatDn = 110 + 160 * sun;
       P.bloom = 0.3 + 0.1 * sun; P.bloomT = 0.78; P.grain = 0.035;   /* runde 9: mindre glød, så lavaen ikke blir tåke */ P.vig = 0.5 - 0.15 * sun + 0.12 * pk; P.vigc = '#0a0102'; P.grade = { tint: [1.04, 0.985 - 0.02 * pk, 0.93 - 0.04 * pk], con: 1.07, sat: 1.05 - 0.08 * pk, exp: 1.02 - 0.05 * pk };
