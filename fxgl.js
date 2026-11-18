@@ -205,7 +205,7 @@ void main(){
   const col = (c, a) => { if (typeof c !== 'string') return [c[0], c[1], c[2], a]; let h = c.replace('#', ''); if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; const n = parseInt(h, 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255, a]; };
   const up = (t, src) => { gl.bindTexture(gl.TEXTURE_2D, t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src); };
   const pass = (pg, target, binds) => { gl.bindFramebuffer(gl.FRAMEBUFFER, target ? target.f : null); gl.viewport(0, 0, target ? target.w : cv.width, target ? target.h : cv.height); binds.forEach((b, i) => { gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, b[1]); gl.uniform1i(pg.U[b[0]], i); }); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); };
-  const Z4 = [0, 0, 0, 0];
+  const Z4 = [0, 0, 0, 0], S4 = new Float32Array(16), SB = new Float32Array(8), MU = new Float32Array(24);
   /* Tegner bildet src (2D-lerretet) gjennom kjeden og kopierer resultatet til out (2D-lerret). P = kameraet og effektene, T = tiden, fno = bildenummeret.
      Gir false hvis det ikke gikk (da tegner den som kaller, reserven). */
   G.draw = (out, src, P, T, fno, shx, shy) => {
@@ -220,12 +220,12 @@ void main(){
       gl.useProgram(sc.p); const U = sc.U;
       gl.uniform4f(U.uCam, P.zx, P.zy, P.z, P.rot || 0); gl.uniform2f(U.uSh, shx || 0, shy || 0); gl.uniform1f(U.uT, T % 4000); gl.uniform1f(U.uWav, P.wav || 0); gl.uniform1f(U.uRgb, P.rgb || 0);
       gl.uniform4f(U.uHeat, P.heat || 0, P.heatY == null ? 150 : P.heatY, P.heatUp || 90, P.heatDn || 120); gl.uniform1f(U.uHm, hm ? 1 : 0);
-      const sk = P.shock || [], S4 = new Float32Array(16), SB = new Float32Array(8);
+      const sk = P.shock || []; S4.fill(0); SB.fill(0);
       for (let i = 0; i < 4 && i < sk.length; i++) { const q = sk[i]; S4[i * 4] = q.x; S4[i * 4 + 1] = q.y; S4[i * 4 + 2] = q.r; S4[i * 4 + 3] = q.w || 22; SB[i * 2] = q.a || 0; SB[i * 2 + 1] = q.sy || 1; }
       gl.uniform4fv(U.uShock, S4); gl.uniform2fv(U.uShB, SB);
       const b = P.bulge; gl.uniform4f(U.uBulge, b ? b.x : 0, b ? b.y : 0, b ? b.r : 1, b ? b.a : 0);
       gl.uniform2f(U.uWarp, wm ? P.warp.a || 0 : 0, wm && P.warp.world ? 1 : 0);
-      if (m) { const g = m.g || [256, 146, 400, 52], c = m.c || [0, 0]; gl.uniform4f(U.uG, g[0], g[1], g[2], g[3]); gl.uniform4f(U.uGC, c[0], c[1], (m.t == null ? T : m.t) % 4000, 0); const M = new Float32Array(24); (m.u || []).forEach((r, i) => { if (i < 6) for (let j = 0; j < 4; j++) M[i * 4 + j] = r[j] || 0; }); gl.uniform4fv(U.uM, M); }
+      if (m) { const g = m.g || [256, 146, 400, 52], c = m.c || [0, 0]; gl.uniform4f(U.uG, g[0], g[1], g[2], g[3]); gl.uniform4f(U.uGC, c[0], c[1], (m.t == null ? T : m.t) % 4000, 0); MU.fill(0); (m.u || []).forEach((r, i) => { if (i < 6) for (let j = 0; j < 4; j++) MU[i * 4 + j] = r[j] || 0; }); gl.uniform4fv(U.uM, MU); }
       pass(sc, fbo.a, [['uS', tex.s], ['uK', tex.k], ['uD', tex.d]]);
       const bloom = P.bloom || 0, rays = P.rays && P.rays.a > 0 ? P.rays : null;
       if (bloom > 0 || rays) {

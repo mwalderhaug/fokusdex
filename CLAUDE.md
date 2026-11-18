@@ -19,15 +19,16 @@ Teksten i appen er på engelsk. Kommentarene i koden er på norsk.
 ## Filene, i rekkefølgen fra index.html
 `look` (utseendet: lys eller mørk og fargesettet, lastes i `<head>` før alt annet) · `data`, `data2` (arter, angrep, typer) · `game` (lagringen `S`, `fresh`, `adopt`, `migrateNN`, XP, møter, butikken `SHOP`, pakkene `PACKS`,
 `FEATS`/`WN`, synken `GH`) · `battle` (kampmotoren) · `league` (ligaen `POOL`/`TCL`, Frontier, turneringen, raid: `LEG`, `RAIDX`, `raidRoll`,
-belønninger) · `bfx`, `ebx`, `ebxp` (effekter, EBDX-animasjoner) · `raid`, `raidf`, `raidx` (raidfilmer, entréer, stedene) · `bossf`, `darkf`
-(filmene til Ghetsis/Cynthia og Dark Mewtwo) · `pack` (henter ressurspakken) · `bui` (kampskjermen, resultatet, raidskjermene, regelkortet) ·
+belønninger) · `bfx`, `ebx`, `ebxp` (effekter, EBDX-animasjoner) · `raid`, `raidf`, `raidx` (raidfilmer, entréer, stedene) · `fxgl` (etterbehandling
+og bakkematerialer i WebGL), `raidk` (verktøykassa til filmene og arenaene), `arena` (arenarammeverket: `ARENA.def`), `raid2` (de store: arena og intro
+per art, fra steg 2) · `bossf`, `darkf` (filmene til Ghetsis/Cynthia og Dark Mewtwo) · `pack` (henter ressurspakken) · `bui` (kampskjermen, resultatet, raidskjermene, regelkortet) ·
 `music` · `help` (hjelp og guide) · `show` (raidvarselet, demoen/Sandbox, showcase) · `ui` (resten av grensesnittet, handlingene `A.*`, oppstart).
 `sw.js` er service workeren. `style.css` er all stil. Lærerangrepene `TUTMV` og egg-angrepene `EGGMV` i `data2.js` lages av `work/tools/tutors.js`, og `FACPW` (hver arts vurdering som leie-Pokémon i Battle Frontier, `facRate` i league.js) av `work/tools/facpow.js`: kjør den på nytt når sett, evner, skaderegningen eller vektene i vurderingen endres (`sim/t_c1.js` sier fra).
 
 ## Arbeidsmåten
 - Verktøyene ligger i `/home/claude/work` (eierens private repo, `dev/`). Ny økt: se under.
 - Endringer gjøres som små Python-patcher i `work/patch/` med `lib.py` (`patch(fil, [(gammel, ny)])`, der teksten må finnes nøyaktig én gang).
-  Gi dem navn etter bestillingen (`m1.py`, `m2.py` …). Etter hver: `sh work/chk.sh` skal si `ok: 20 filer` og ikke noe mer
+  Gi dem navn etter bestillingen (`m1.py`, `m2.py` …). Etter hver: `sh work/chk.sh` skal si `ok: 24 filer` og ikke noe mer
   (den leser alle skriptene samlet og kjører en røyktest av reglene; en linje som starter med `RØYK:` betyr at et navn er forsvunnet).
 - Regeltester: `cd work/sim && node <navn>.js` (skal si `alt ok`). Nettlesertester med Playwright: `cd work/pw && ./srv.sh && node t_<navn>.js`.
   Serveren stopper mellom svarene, så start den på nytt. Full regresjon: `work/pw/regress10.sh`.
@@ -49,5 +50,5 @@ belønninger) · `bfx`, `ebx`, `ebxp` (effekter, EBDX-animasjoner) · `raid`, `r
 
 ## Ny økt
 Klon appen til `/home/claude/fokusdex` og eierens private repo til `/home/claude/pokemon_save`, og kjør `sh /home/claude/pokemon_save/dev/setup.sh`.
-Les så `work/HANDOFF.md`, `work/MONDAY.md` hvis oppgaven er layout, raidkamper eller traileren, og `work/RAIDS.md` hvis den er
-raidintroer eller arenaene (der står også `pw/t_film.js`, som lager video av en film).
+Les så `work/HANDOFF.md`, `work/MONDAY.md` hvis oppgaven er layout, raidkamper eller traileren, og `work/RAIDS.md` og `work/STEG2.md` hvis den er
+raidintroer eller arenaene (verktøykassa, oppskriften for en ny art, og `pw/t_film.js`, som lager video av en film).
