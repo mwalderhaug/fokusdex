@@ -342,7 +342,7 @@
   G3D.def(AID, {
     len: 1e9, models: [],
     make(K, T) {
-      const S = crater(T); volcano(S, T, 1, { x: -52, z: -410, r: 215, h: 104 });
+      const S = crater(T); volcano(S, T, 1, { x: -52, z: -410, r: 205, h: 92 });
       /* Kameraet: lavt (1,7 over lavaen) og 19 enheter fra Groudon, så himmelen og vulkanen får plass over ham, dreid til plassen hans treffer AFOE.
          Flaket til din Pokémon legges der strålen gjennom AME treffer (tett på kameraet). Vulkanen står litt lenger unna enn i cutscenene, så hele fjellet og røyken synes. */
       const FV = 50, cp = [-6.8, 1.7, 21], tg = [HOME[0] - 5, 3, HOME[2]]; for (let i = 0; i < 14; i++) { K.cam(cp[0], cp[1], cp[2], tg[0], tg[1], tg[2], FV); const q = K.proj(HOME[0], 0, HOME[2]); tg[0] -= (AFOE[0] - q.x) * 19.4 / 412; tg[1] += (AFOE[1] - q.y) * 19.4 / 412; }
