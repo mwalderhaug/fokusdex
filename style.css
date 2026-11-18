@@ -2968,3 +2968,23 @@ button.wkch .wkcb{animation:wkbob 2.4s ease-in-out infinite}
 .wkdr{display:flex;gap:12px;align-items:flex-start;padding:7px 0}.wkdr .sp{display:flex;flex-direction:column;gap:2px;min-width:0}.wkdr b{font-size:15px}
 .wkendb{display:flex;gap:8px}.wkendb .btn{flex:1}
 @media (prefers-reduced-motion:reduce){.wkport-f,.main.wkwarp,.ov.wkwarpo,.wkint-c>*,.wkint-z span.on i,.wkch.shk .wkcb,.wkch.open.pop::before,.wkch.open.pop>*,.wkisw:not(.intro)>*{animation:none}.wkis canvas{transition:none}.wkch.open.pop::before{display:none}}
+
+/* Byttet i ligaen (v86): trinn 2 viser hvem som kan gå (merket med Partner og Legendary), trinn 3 byttet side om side med det du mister. */
+.trd{scroll-margin-top:14px}
+.rent .trd-tag{position:absolute;left:8px;top:8px;padding:2px 8px;border-radius:10px;font-size:10.5px;font-weight:700;letter-spacing:.02em;background:var(--goldsoft);color:var(--gold)}
+.rent.give button{box-shadow:0 0 0 1px color-mix(in srgb,var(--red) 40%,var(--line))}
+.trd-get{display:flex;align-items:center;gap:10px;padding:6px 12px;border-radius:16px;background:var(--card2);box-shadow:inset 0 0 0 1px var(--line)}
+.trd-q{color:var(--ink)}
+.trd-vs{display:grid;grid-template-columns:1fr auto 1fr;align-items:stretch;gap:6px}
+.trd-s{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;padding:10px 6px 12px;border-radius:16px;background:var(--card2);box-shadow:inset 0 0 0 1px var(--line);min-width:0}
+.trd-s.give{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--red) 60%,transparent)}
+.trd-s b{font-size:14.5px;line-height:1.2}
+.trd-ar{color:var(--ink3);font-size:20px;display:flex;align-self:center}
+.trd-warn{padding:10px 14px;border-radius:16px;background:color-mix(in srgb,var(--red) 11%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--red) 38%,transparent);font-size:13px;line-height:1.45;color:var(--ink2)}
+.trd-warn b{color:var(--red)}
+.trd-warn ul{margin:6px 0 0;padding-left:18px}.trd-warn li{list-style:disc}.trd-warn li::marker{color:var(--red)}
+.btn.trd-go{background:color-mix(in srgb,var(--red) 15%,transparent);box-shadow:inset 0 0 0 1.5px var(--red);color:var(--red)}
+/* Gaven 18.11 (backSheet i ui.js): Electivire som kom tilbake, med shiny-glitteret. */
+.gxb{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px}
+.gxb h2{margin:2px 0 0}
+.gxs{position:relative;display:inline-flex}

@@ -1538,6 +1538,21 @@ function giftCheck() {
   S.fpk = S.fpk || {}; GIFT.pk.forEach(k => { S.fpk[k] = (S.fpk[k] || 0) + 1; });
   S.gnote = 1; save(true); return true;
 }
+/* GAVE 18. NOV 2026 (bestilt av Jazz): kompisen byttet bort sin shiny Electivire på nivå 54 ved et uhell i et byttetilbud i ligaen (ett trykk på
+   laget tok byttet; v86 har bekreftelsen, se tradeCard i bui.js). Den gis tilbake til alle utenom eieren (Jazz: «Han er eneste som spiller utenom
+   meg») som har hatt en Electivire, ikke har en shiny Electivire nå, og startet før utgivelsen (første dag i loggen før GIFTE.by). Nye spillere og
+   den som aldri hadde en, får den altså ikke. Natur, trening og angrep den hadde, vet ikke appen: den kommer på nivå 54 med full IV (som alle shiny),
+   angrepene den kan på nivået, Naughty (+Attack, −Sp. Def: rører ikke spesialangrepene den har) og vanlig størrelse.
+   Én gang per lagring (S.gx = merket). Arket om den (backSheet i ui.js) vises én gang (S.gxn = Pokémonen). Aldri for eieren (isAdmin), i sandkassa,
+   eller før synken har valgt hvilken lagring som gjelder (GH uten ok, som i jFriend). */
+const GIFTE = { k: 'e1118', id: 466, lv: 54, nat: 4, by: '2026-11-19' };
+function giftBack() {
+  if (!S.started || S.gx === GIFTE.k || (typeof SBX !== 'undefined' && SBX) || typeof isAdmin !== 'function' || isAdmin() || (GH && !GH.ok)) return false;
+  const first = Object.keys(S.log || {}).sort()[0] || '';
+  if (!(S.caught || {})[GIFTE.id] || !first || first >= GIFTE.by || S.mons.some(m => m.id === GIFTE.id && m.sh)) return false;
+  const m = addMon(GIFTE.id, GIFTE.lv, 1, 0); m.nat = GIFTE.nat; delete m.sz;
+  S.gx = GIFTE.k; S.gxn = m.u; save(true); return true;
+}
 const raidTries = R => R && R.ev ? 1 : RAIDTRIES;
 /* RAIDINTROEN (reisen): etter den første kampen viser Deoxys seg. Den kan ikke slås, og det er meningen: den viser hva som finnes der ute.
    ev = 2, ett forsøk, nivå 100. S.humb = 1, så det vanlige første raidet (HUMB) ikke kommer i tillegg, og S.rwait = 0, så neste raid tar noen dager. */
