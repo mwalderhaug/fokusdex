@@ -215,7 +215,7 @@ const leagueTag = () => { const L = S.lad; return `${L.lap ? 'Lap ' + (L.lap + 1
 function raidCard() {
   const R = S.raid; if (!R || R.hid || !LEG[R.id]) return '';
   /* Har pakken en cutscene i 3D for denne, hentes bunten og modellen nå, så den er klar når kampen starter. */
-  try { if (typeof G3D !== 'undefined' && G3D.can() && G3D.has('c3:' + R.id) && raidOpen()) G3D.ready('c3:' + R.id).then(() => G3D.has('c3:' + R.id + 'a') && G3D.ready('c3:' + R.id + 'a')).catch(() => {}); } catch (_) {}
+  try { if (typeof G3D !== 'undefined' && G3D.can() && G3D.has('c3:' + R.id) && raidOpen()) G3D.ready('c3:' + R.id).then(() => { const a = () => G3D.has('c3:' + R.id + 'a') && G3D.ready('c3:' + R.id + 'a'); return G3D.has('c3:' + R.id + 'b') ? G3D.ready('c3:' + R.id + 'b').catch(a) : a(); }).catch(() => {}); } catch (_) {}
   const V = raidShow(R), L = V.L, open = raidOpen(), n = (R.tries || 0) + 1, last = n >= raidTries(R) && !R.ev;
   const btn = `<button type="button" class="btn gold wide" data-a="raid" style="margin-top:10px"${open ? '' : ' disabled'}>${open ? (last ? 'Challenge it · last attempt' : 'Challenge it') : 'Again tomorrow'}</button>`;
   if (!R.seen) return `<div class="card k-ultra raidc myst"><div class="pre-foe"><span class="raid-sp qm" aria-hidden="true"><i>?</i></span><div class="sp"><div class="sm">Legendary raid · attempt 1 of ${raidTries(R)}</div><b class="bossn">A legendary Pokémon</b><div class="sm tn">Who it is stays secret until you face it</div></div></div>${btn}</div>`;
@@ -263,6 +263,8 @@ const fxCue = (B, more) => (n, v) => {
   else if (n === 'cry') cry(B.foe[B.b].id, 0, 0.6);
   else if (more) more(n, v);
 };
+/* Med den legendariske som 3D-figur (ARENA.run med fig3) finnes ikke bildet kampskjermen ellers flytter på: hendelsen sies til arenaen, og figuren spiller den selv. */
+const fig3Mark = (n, v) => { const a = BT.arena; if (a && a.on && a.fig3 && a.mark) a.mark(n, v); };
 /* Hvor de to står, i effektenes 512 × 384, og hvor stor figuren til den legendariske er. */
 const fxAt = B => { const a = anc('foe', 0), m = anc('me', 0), ar = $('#arena'), sp = $('#s-foe'), cz = parseFloat(ar.style.getPropertyValue('--cz')) || 1.1, k = parseFloat(sp && sp.style.getPropertyValue('--k')) || 1; return { x: a.x * 2, y: a.y * 2, mx: m.x * 2, my: m.y * 2, cc: B.tr.cc || '#ffffff', s: 1.6 * k * cz }; };
 /* Entréen: figuren er malt skjult, effekten spilles over banen, og i det den viser seg får figuren sin egen bevegelse inn. Gir false når det ikke finnes noen egen entré. */
@@ -462,7 +464,10 @@ async function legendIntro(B) {
   if (gone()) return;
   if (c3) { id = id3; info = CINE.info(id); o.lv = f.lv; root.classList.add('c3'); C3SFX.forEach(n => PACK.warm(n));   /* også Primal-lydene: de trengs senere i kampen */
     /* Arenaen i 3D (samme sted som cutscenen) må stå klar når kampen starter. Primal-cutscenen hentes når kampen er i gang (ikke mens introen spiller). */
-    if (G3D.has(id3 + 'a')) await Promise.race([G3D.ready(id3 + 'a').catch(() => 0), T(2500)]); if (gone()) return; }
+    /* Med 3D-figuren i kampen ('b', begge modellene): den ventes på her. Kommer den ikke i tide, hentes arenaen uten figur ('a') som reserve, og 'b' brukes hvis den
+       rekker å bli klar til kampen starter. */
+    const rb = G3D.has(id3 + 'b') ? await Promise.race([G3D.ready(id3 + 'b').then(() => 1, () => 0), T(G3D.isReady(id3 + 'b') ? 300 : 4000).then(() => 0)]) : 0; if (gone()) return;
+    if (!rb && G3D.has(id3 + 'a')) await Promise.race([G3D.ready(id3 + 'a').catch(() => 0), T(2500)]); if (gone()) return; }
   /* Dark Mewtwo: den første kamplåta starter med forvandlingen (filmen) og går rett videre inn i kampen. Finnes den ikke i pakken, er alt som før. */
   const V = tr.dk ? PACK.special(/Villain/) : '', tk = V || PACK.trackFor(B), ready = CINE.prep(id, 6000);
   if (V) PACK.cue(V);
@@ -956,7 +961,7 @@ function seat(side) {
     const k = Math.min(k0, mw / (img.naturalWidth * 0.8 * cz), mh / (img.naturalHeight * 0.8 * cz));
     el.style.setProperty('--k', k.toFixed(3));
     if (!me) return;
-    const H = img.naturalHeight * 0.8 * k * cz, feet = (0.8 + 0.17 * cz) * 192, want = Math.max(152, 144 + 0.42 * H);
+    const H = img.naturalHeight * 0.8 * k * cz, feet = (0.8 + (ar.classList.contains('fig3') ? 0.377 : 0.17) * cz) * 192, want = Math.max(152, 144 + 0.42 * H);
     el.style.setProperty('--ly', (Math.max(0, feet - want) / 192 * 100).toFixed(2) + '%');
   };
   if (img.complete && img.naturalHeight) set(); else img.addEventListener('load', set, { once: true });
@@ -996,7 +1001,7 @@ async function primalCut(B, e) {
   const tm = setTimeout(() => { if (!gone() && !skipped) sk.hidden = false; }, 900); sk.addEventListener('click', skip);
   const key = k => { if (k.key === 'Enter' || k.key === ' ' || k.key === 'Escape') skip(); }; document.addEventListener('keydown', key);
   const watch = setInterval(() => { if (gone()) pl.stop(); }, 300);
-  await pl.done; clearInterval(watch); clearTimeout(tm); document.removeEventListener('keydown', key);
+  await pl.done; clearInterval(watch); clearTimeout(tm); document.removeEventListener('keydown', key); G3D.out = 0;   /* arenaen deler motoren med cutscenen: overgangen ut skal ikke følge med tilbake */
   if (arn) arn.pause(0);
   if (BT.B !== B) { root.remove(); return true; }
   /* Under det hvite: den nye formen står der når kampen kommer tilbake. */
@@ -1015,7 +1020,7 @@ async function megaShow(B, side, e) {
   if (e.primal && side === 'foe' && B.tr.wild && await primalCut(B, e)) return;
   const img = sp.querySelector('img,canvas'), h = Math.max(56, Math.min(230, img ? img.getBoundingClientRect().height : 90));
   const ring = cls => { const fx = document.createElement('i'); fx.className = 'megafx ' + cls + (e.primal ? ' primal' : ''); fx.style.setProperty('--h', h.toFixed(0) + 'px'); sp.appendChild(fx); return fx; };
-  ring('gather'); BSFX.mega(); buzz([30, 50, 30, 50, 30, 50, 220]); sp.classList.add('megaev');
+  ring('gather'); BSFX.mega(); buzz([30, 50, 30, 50, 30, 50, 220]); sp.classList.add('megaev'); if (side === 'foe') fig3Mark('mega', 1);
   await bwait(1150); if (BT.B !== B || !sp.isConnected) return;
   const keepCls = [...sp.classList].filter(c => !['bs', side, 'megaev', 'in', 'gone'].includes(c)).join(' ');
   if (!calm()) { const fxl = $('#fx'); if (fxl) { const d = document.createElement('i'); d.className = 'flashov'; d.style.background = '#fff'; d.style.animationDuration = '520ms'; fxl.append(d); setTimeout(() => d.remove(), 580); } }
@@ -1072,7 +1077,7 @@ function drawBattle() {
     <div class="bscreen t-${tier}"${kst(tr)}><div class="arena a-${tr.arena} v${tr.v} t-${tier} i${tr.int}${tr.th ? ' th-' + tr.th : ''}${scene || own ? ' has-scene' : ''}${tr.wild ? ' rv lg' + (tr.dk ? 'dk' : tr.leg) : ''}" id="arena" style="--ac:var(--t${tr.ty});--cc:${tr.cc || 'var(--t' + tr.ty + ')'}">
       <div class="cam" id="cam"><div class="world" id="world">${scene ? `<img class="scene" alt="" src="${scene}">` : ''}<div class="abg"></div>${own ? '<canvas class="fxc bgc evc" id="evc" width="512" height="384"></canvas>' : ''}<canvas class="fxc bgc" id="bgc" width="256" height="192"></canvas><canvas class="fxc amc" id="amc" width="512" height="384"></canvas><div class="plat pf"></div><div class="plat pm"></div></div></div><div class="dim"></div>
       ${tr.wild ? '' : `<div class="trn" id="trn">${tsprite(tr.img)}</div>`}
-      <div class="bs foe gone" id="s-foe"></div>${arn && ARENA.defs[arn].mid ? '<canvas class="fxc amd" id="amd" width="512" height="384"></canvas>' : ''}<div class="bs me gone" id="s-me"></div>${arn ? '<canvas class="fxc afc" id="afc" width="512" height="384"></canvas>' : ''}${tr.wild ? '<canvas class="fxc rfx" id="rfx" width="512" height="384"></canvas>' : ''}
+      <div class="bs foe gone" id="s-foe"></div>${arn && ARENA.defs[arn].fig3 ? '<div class="cam f3k"><div class="world" id="f3w"><canvas class="fxc" id="f3c" width="256" height="192"></canvas></div></div>' : ''}${arn && ARENA.defs[arn].mid ? '<canvas class="fxc amd" id="amd" width="512" height="384"></canvas>' : ''}<div class="bs me gone" id="s-me"></div>${arn ? '<canvas class="fxc afc" id="afc" width="512" height="384"></canvas>' : ''}${tr.wild ? '<canvas class="fxc rfx" id="rfx" width="512" height="384"></canvas>' : ''}
       <canvas class="fxc" id="fxc" width="256" height="192"></canvas><canvas class="fxc" id="axc" width="512" height="384"></canvas><div class="fx" id="fx"></div>
       <div class="hpb foe" id="b-foe" hidden></div><div class="hpb me" id="b-me" hidden></div>
     </div><button type="button" class="btext" id="btext" data-a="btap" aria-live="polite"><span id="btx"></span><i></i></button></div>
@@ -1085,8 +1090,10 @@ function drawBattle() {
   FX.hooks.glitch = ms => { const a = $('#arena'); if (!a) return; a.classList.add('glitch'); setTimeout(() => a.classList.remove('glitch'), ms); };
   /* Med egen luft dempes det vanlige showet, så det ikke blir for mye. BT.airO.k er styrken: den økes når den legendariske blir rasende. */
   const air = !!airId && !calm() && typeof CINE !== 'undefined' && CINE.has(airId);
-  if (BT.air) BT.air(); BT.arena = null; BT.airO = { cc: tr.cc || '#ffffff', k: 1, bg: $('#evc'), mid: $('#amd') };
+  if (BT.air) BT.air(); BT.arena = null; BT.airO = { cc: tr.cc || '#ffffff', k: 1, bg: $('#evc'), mid: $('#amd'), figc: $('#f3c'), figw: $('#f3w') };
   /* Arenaen (arena.js) tegner stedet selv, bak og foran figurene. Med «redusert bevegelse» står den som et stillbilde. */
+  /* Den legendariske som 3D-figur (raid3c.js, bare når pakken har modellene og de er klare): bildet i #s-foe skjules (boksen står), og de to står der figurene står i 3D-bildet (.arena.fig3). */
+  const f3 = arn && !calm() ? ARENA.defs[arn].fig3 : null; BT.airO.fig3 = !!(f3 && f3.ok()); $('#arena').classList.toggle('fig3', BT.airO.fig3);
   if (arn) { if (calm()) { BT.air = null; CINE.arenaStill($('#evc'), arn, 12, { cc: tr.cc, noFig: 1, plain: 1, pose: { cz: 1, k: 1 } }); } else BT.air = BT.arena = ARENA.run($('#evc'), $('#afc'), arn, BT.airO); }
   else { BT.air = air ? CINE.air($('#amc'), airId, BT.airO) : null; if (own && !air) CINE.bgStill($('#evc'), airId, 12, { cc: tr.cc }); }
   if (arn) Object.values(ARENA.defs[arn].ev || {}).forEach(E => (E.cues || []).forEach(q => { if (q[1] === 'sfx') PACK.warm(q[2]); }));
@@ -1381,6 +1388,7 @@ async function playAnim(B, e) {
   const side = e.side, sp = $('#s-' + side), m0 = e.mi >= 0 ? MOVES[e.mi] : STRUGGLE, m = e.ty != null && e.ty !== m0[1] ? Object.assign(m0.slice(), { 1: e.ty }) : m0, self = !!e.self, a = fxPos(side), b = self ? a : fxPos(opp(side)), kind = FX.kindOf(m), tier = mvTier(m, e), d = vec(a, b);
   BT.ty = m[1];
   const K = BT.atk = { side, m, kind, tier, self, n: 0, style: styleOf(m, kind, self), back: null, done: null };
+  if (side === 'foe') { if (e.away) fig3Mark('away', 0); fig3Mark('atk', self || e.charge ? 0.5 : 1); }
   /* Animasjonen fra Elite Battle DX hvis pakken har den: den styrer selv kamera, lys og bevegelser, så resten av scenen her hoppes over. */
   const xk = calm() ? '' : PACK.ebxFor(m);
   if (xk) {
@@ -1458,8 +1466,8 @@ async function playOne(B, e) {
     v.st = e.st; paintBox(side);
     if (e.fx) { if (!PACK.sfx({ brn: 'Status Burned', psn: 'Status Poisoned', par: 'Status Paralyzed', frz: 'Status Frozen' }[e.fx])) BSFX.ail(); if (!(await common({ slp: 'Sleep', psn: 'Poison', brn: 'Burn', par: 'Paralysis', frz: 'Frozen', conf: 'Confusion', seed: 'LeechSeed' }[e.fx], side))) { FX.status(e.fx, fxPos(side)); await bwait(520); } }
   }
-  else if (e.t === 'stat') { if (!PACK.sfx(e.up ? 'Stat Rise Up' : 'Stat Fall')) (e.up ? BSFX.up : BSFX.down)(); sp.classList.add(e.up ? 'sup' : 'sdn'); if (!(await common(e.up ? 'StatUp' : 'StatDown', side))) { FX.stat(fxPos(side), e.up); await bwait(520); } sp.classList.remove('sup', 'sdn'); }
-  else if (e.t === 'faint') { if (!PACK.sfx('In-Battle Faint No Health')) BSFX.faint(); cry(teamOf(side)[v.i].id, 0, 0.3); clearMot(sp); sp.classList.remove('ace'); sp.classList.add('faint'); await bwait(850); paintBox(side); $('#b-' + side).hidden = true; }
+  else if (e.t === 'stat') { if (!PACK.sfx(e.up ? 'Stat Rise Up' : 'Stat Fall')) (e.up ? BSFX.up : BSFX.down)(); sp.classList.add(e.up ? 'sup' : 'sdn'); if (side === 'foe') fig3Mark('stat', e.up ? 1 : -1); if (!(await common(e.up ? 'StatUp' : 'StatDown', side))) { FX.stat(fxPos(side), e.up); await bwait(520); } sp.classList.remove('sup', 'sdn'); }
+  else if (e.t === 'faint') { if (!PACK.sfx('In-Battle Faint No Health')) BSFX.faint(); cry(teamOf(side)[v.i].id, 0, 0.3); clearMot(sp); sp.classList.remove('ace'); sp.classList.add('faint'); if (side === 'foe') fig3Mark('faint'); await bwait(850); paintBox(side); $('#b-' + side).hidden = true; }
   else if (e.t === 'recall') { if (e.txt) await typeOut(e.txt); if (!PACK.sfx('In-Battle Recall Switch Pokeball')) BSFX.recall(); clearMot(sp); sp.classList.remove('ace', 'subd', 'away'); sp.classList.add('recall'); $('#b-' + side).hidden = true; await bwait(420); sp.classList.add('gone'); EBXP.unhide(side); }
   else if (e.t === 'send') {
     const team = teamOf(side), b = team[e.i], wild = side === 'foe' && !!B.tr.wild, ace = wild || (side === 'foe' && B.tr.boss && team.length > 1 && e.i === team.length - 1), big = ace && B.tr.int >= 4;
@@ -1486,7 +1494,7 @@ async function playOne(B, e) {
     await bwait(big ? 1100 : 620);
     sp.classList.remove('in', ...Object.values(ENTC));
   }
-  else if (e.t === 'vanish') { sp.classList.toggle('away', !!e.on); await bwait(260); clearMot(sp); EBXP.unhide(side); }
+  else if (e.t === 'vanish') { sp.classList.toggle('away', !!e.on); if (side === 'foe') fig3Mark('away', e.on ? 1 : 0); await bwait(260); clearMot(sp); EBXP.unhide(side); }
   else if (e.t === 'sub') { sp.classList.toggle('subd', !!e.on); await bwait(200); }
   else if (e.t === 'mega') await megaShow(B, side, e);
   /* Arceus bytter plate i raid: et lysglimt i typens farge, og figuren, typen og fargen byttes. */

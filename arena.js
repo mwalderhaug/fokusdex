@@ -35,7 +35,7 @@ const ARENA = (() => {
   A.mid = (id, S) => { const d = A.defs[id]; if (d.mid) d.mid(S); };
   A.front = (id, S) => { const d = A.defs[id]; if (d.front) d.front(S); };
   /* Lysblinket der et angrep treffer (alle arenaer får det): et kort skjær rundt den som ble truffet. Tegnes i front. */
-  const hitGlow = S => { for (const h of S.hits) { const k = (S.t - h.t) / 0.34; if (k < 0 || k >= 1) continue; const p = h.side === 'me' ? S.me : S.foe, y = p[1] - (h.side === 'me' ? 70 : 62); K.blob(p[0], y, (h.big ? 150 : 100) * (0.6 + 0.4 * k), h.big ? '#fff6e0' : '#ffffff', (1 - k) * (h.big ? 0.5 : 0.32), 1); } };
+  const hitGlow = S => { for (const h of S.hits) { const k = (S.t - h.t) / 0.34; if (k < 0 || k >= 1) continue; const p = h.side === 'me' ? S.me : S.foe, y = h.side === 'me' ? (S.fig3 ? min(p[1] - 70, 236) : p[1] - 70) : p[1] - 62;   /* med 3D-figuren står din egen under bildekanten: skjæret legges på det som synes */ K.blob(p[0], y, (h.big ? 150 : 100) * (0.6 + 0.4 * k), h.big ? '#fff6e0' : '#ffffff', (1 - k) * (h.big ? 0.5 : 0.32), 1); } };
 
   /* Den legendariske gløder selv (tegnene til Groudon og Kyogre): lyset setter glow = { mask (K.MASK), col, a }, og de pikslene tegnes lysende oppå figuren. */
   /* Den legendariske som 3D-figur (raid3d.js, G3D.sprite): lerretet dekker hele bildet i figurens piksler og flyttes i hele piksler. Tegnes skarpt, uten utjevning. */
@@ -62,7 +62,9 @@ const ARENA = (() => {
   A.run = (back, front, id, o) => {
     const d = A.defs[id]; o = o || {}; let on = true, raf = 0, slow = 0, skip = 0, last = 0, held = false; const t0 = performance.now(), ev = {}, hits = [], now = () => (performance.now() - t0) / 1000 + 100;
     I.need(d.use || []);
-    const cur = { id, f: d, sp: null, sps: {}, cc: o.cc || '#ffffff' }, mid = d.mid && o.mid ? o.mid : null, camEl = mid && back.closest ? back.closest('.cam') : null;
+    /* F3 (o.fig3 og d.fig3 = { foe, me }): den legendariske er 3D-figuren (raid3c.js). Da tegnes ikke bildet hennes her (kampskjermen skjuler det og beholder boksen), og mid trengs ikke. */
+    const F3 = o.fig3 && d.fig3 ? d.fig3 : null, val = {}, wEl = back.closest ? back.closest('.world') : null; let wtL = '';
+    const cur = { id, f: d, sp: null, sps: {}, cc: o.cc || '#ffffff' }, mid = d.mid && o.mid && !F3 ? o.mid : null, camEl = mid && back.closest ? back.closest('.cam') : null;
     const kOf = (D, def) => { try { return parseFloat(D.el.style.getPropertyValue('--k')) || def; } catch (_) { return def; } };
     const arEl = back.closest ? back.closest('.arena') : null, dom = { foe: { el: arEl && arEl.querySelector('#s-foe') }, me: { el: arEl && arEl.querySelector('#s-me') } };
     /* Kampens kamera (zoom rundt 45 %, 80 %) akkurat nå, også midt i en overgang. */
@@ -71,16 +73,20 @@ const ARENA = (() => {
       if (!on || !back.isConnected) return; raf = requestAnimationFrame(step); if (held) return;
       /* Holder ikke enheten 60 bilder i sekundet (målt over tid), tegnes annethvert bilde. */
       if (slow > 30 && (skip = !skip)) return;
-      const c0 = performance.now(), T = now(), S = state(T, { cc: cur.cc, ev, hits, p2: ev.rage == null ? 0 : eo(seg(T, ev.rage + 0.5, ev.rage + 3.2)), rage: ev.rage != null, ft: dom.foe.ft || 0, ftm: dom.me.ft || 0, fk: kOf(dom.foe, 1), mk: kOf(dom.me, 1.9) });
+      const c0 = performance.now(), T = now(), S = state(T, Object.assign({ cc: cur.cc, ev, hits, val, p2: ev.rage == null ? 0 : eo(seg(T, ev.rage + 0.5, ev.rage + 3.2)), rage: ev.rage != null, ft: dom.foe.ft || 0, ftm: dom.me.ft || 0, fk: kOf(dom.foe, 1), mk: kOf(dom.me, 1.9) }, F3 ? { fig3: 1, foe: F3.foe, me: F3.me } : null));
       const rs = K.gl() ? C.RS : 1, B = I.buf(rs), g = B.getContext('2d'), P = I.newP();
       g.setTransform(rs, 0, 0, rs, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.imageSmoothingEnabled = true; g.clearRect(0, 0, W, H);
       I.set(g, T, P, cur, rs);
       try { A.scene(id, S); } catch (e) { C.err = String(e && e.stack || e); }
       g.setTransform(1, 0, 0, 1, 0, 0); const L = P.light;
       if (!C.gpu(back, B)) { if (rs > 1) { C.RS = 1; return; } I.soften(B); I.present(back, B); }
-      if (cur.fig3) { const x = back.getContext('2d'), u = back.width / W; x.save(); x.setTransform(u, 0, 0, u, 0, 0); A.fig3(x, cur.fig3); x.restore(); }
+      /* I kampen med 3D-figuren (o.figc): figuren tegnes på sitt eget lerret i figurens piksler (256 × 192), som ligger over dempingen og effektene bak figurene, akkurat som
+         et vanlig bilde gjør, og følger kameraet til angrepene (o.figw får samme forskyvning som #world). Ellers (filmverkstedet): oppå bakgrunnen. */
+      if (cur.fig3 && F3 && o.figc) { const fc = o.figc, f = cur.fig3; if (fc.width !== f.cv.width) { fc.width = f.cv.width; fc.height = f.cv.height; } const x = fc.getContext('2d'); x.clearRect(0, 0, fc.width, fc.height); x.drawImage(f.cv, f.ox, f.oy);
+        if (o.figw && wEl) { const wt = wEl.style.transform || ''; if (wt !== wtL) o.figw.style.transform = wtL = wt; } }
+      else if (cur.fig3) { const x = back.getContext('2d'), u = back.width / W; x.save(); x.setTransform(u, 0, 0, u, 0, 0); A.fig3(x, cur.fig3); x.restore(); }
       /* Figurene med scenens lys (neste bilde av scenen får dem til skygger og speilbilder). */
-      cur.sp = litDom('foe', dom.foe.el, dom.foe, T, L, cur) || null; const spm = litDom('me', dom.me.el, dom.me, T, L, cur); if (spm) cur.sps.me = spm; else delete cur.sps.me;
+      cur.sp = F3 ? null : litDom('foe', dom.foe.el, dom.foe, T, L, cur) || null; const spm = litDom('me', dom.me.el, dom.me, T, L, cur); if (spm) cur.sps.me = spm; else delete cur.sps.me;
       if (mid && mid.isConnected) {
         if (mid.width !== back.width) { mid.width = back.width; mid.height = back.height; mid.style.imageRendering = 'auto'; }
         const f = mid.getContext('2d'), cz = camEl ? camZ() : 1, u = mid.width / W; f.setTransform(u, 0, 0, u, 0, 0); f.globalAlpha = 1; f.globalCompositeOperation = 'source-over'; f.clearRect(0, 0, W, H);
@@ -93,7 +99,7 @@ const ARENA = (() => {
         I.set(f, T, I.newP(), cur);
         try { A.front(id, S); hitGlow(S); } catch (e) { C.err = String(e && e.stack || e); }
       }
-      C.tick(); const cost = performance.now() - c0; slow = cost > 13 ? min(60, slow + 1) : max(0, slow - 0.25); last = ts;
+      C.tick(); const cost = performance.now() - c0; slow = cost > 13 ? min(60, slow + 1) : max(0, slow - 0.25); last = ts; stop.ms = stop.ms == null ? cost : stop.ms * 0.96 + cost * 0.04; stop.n = (stop.n || 0) + 1;
     };
     raf = requestAnimationFrame(step);
     const stop = () => { on = false; stop.on = false; cancelAnimationFrame(raf); for (const D of [dom.foe, dom.me]) { if (D.cv && D.cv.isConnected) D.cv.remove(); if (D.im) D.im.classList.remove('lit0'); } };
@@ -105,6 +111,8 @@ const ARENA = (() => {
       const tick = () => { const t = (performance.now() - s0) / 1000; for (const q of cues) if (!q.on && t >= q.t) { q.on = true; if (cue) try { cue(q.n, q.v); } catch (_) {} } if (t >= E.len || !on) return res(true); setTimeout(tick, 40); };
       tick();
     });
+    /* Det kampskjermen ellers gjør med bildet (angrep, besvimelse, stat, mega, away), sagt til scenen: S.since(navn) og S.val[navn]. Ingen lyd, ingen venting. */
+    stop.mark = (name, v) => { if (!on) return; ev[name] = now(); val[name] = v; }; stop.fig3 = !!F3;
     stop.hit = (side, big) => { if (!on) return; hits.push({ t: now(), side, big: !!big }); if (hits.length > 4) hits.shift(); };
     return stop;
   };

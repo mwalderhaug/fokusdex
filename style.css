@@ -1036,6 +1036,13 @@ button.pill{font:inherit;font-size:11.5px;font-weight:600;color:var(--ink2)}butt
    Din Pokémon står midt på den og er stor nok til at overkroppen vises over boksen (de små flyttes litt bakover, se seatMe). */
 .arena.has-scene .bs.foe{left:calc(45% + 28.6%*var(--cz));top:calc(80% - 28.5%*var(--cz))}
 .arena.has-scene .bs.me{left:calc(45% - 8%*var(--cz));top:calc(80% + 17%*var(--cz) - var(--ly,0%))}
+/* Den legendariske som 3D-figur (raid3c.js): figuren tegnes av arenaen, så bildet er usynlig og boksen står der figuren står (lavakanten, 362 × 228 av 512 × 384).
+   Din egen står nede til venstre og er kuttet av bildekanten, som i Black og White (132 × 452). */
+.arena.fig3 .bs.foe{left:calc(45% + 25.7%*var(--cz));top:calc(80% - 20.62%*var(--cz))}
+.arena.fig3 .bs.me{left:calc(45% - 19.22%*var(--cz));top:calc(80% + 37.7%*var(--cz) - var(--ly,0%))}
+.arena.fig3 .bs.foe .spr{opacity:0!important;animation:none!important}
+/* Laget til 3D-figuren: over dempingen og effektene bak figurene, under din egen. Følger kameraet som bakgrunnen (.cam og #world). */
+.cam.f3k{z-index:auto;pointer-events:none}.cam.f3k .world{z-index:auto}
 .arena.has-scene .trn{top:11%}
 @keyframes flashA{from{opacity:.85}to{opacity:0}}
 .flashov{position:absolute;inset:0;animation:flashA .25s ease-out forwards}

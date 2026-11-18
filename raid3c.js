@@ -325,7 +325,7 @@
   /* Filmene i CINE: samme grensesnitt som sprite-filmene (CINE.still, CINE.play), så verktøyene og avspilleren virker likt. gl: 1 = bildet går gjennom
      etterbehandlingen i fxgl.js (glød, varmeflimmer, lysstråler, fargetone, vignett), som filmene og arenaene fra steg 2.
      d = { spid, over (navnet tegnet i figurens oppløsning), cues, roar: t → tidspunktet brølet startet, fx(S, t, P, q, sn): cutscenens egne tillegg }. */
-  const reg = (id, d) => { const inf = G3D.info(id); C.film(id, { len: inf.len, R: inf.R, at: inf.at, hold: inf.hold, c3: 1, gl: 1, spid: d.spid, outc: '#ffffff', cues: d.cues, pre: () => G3D.ready(id),
+  const reg = (id, d) => { const inf = G3D.info(id); C.film(id, { len: inf.len, R: inf.R, at: inf.at, hold: inf.hold, c3: 1, gl: 1, spid: d.spid, swirl: d.swirl, outc: '#ffffff', cues: d.cues, pre: () => G3D.ready(id),
     draw(t, P, cur) { const g = C.g, c = G3D.isReady(id) ? G3D.frame(id, t, cur, CINE._.rs()) : null; if (!c) { CINE.err = 'g3d: ' + (G3D.err || 'not ready'); g.fillStyle = '#000'; g.fillRect(0, 0, 512, 384); return; } if (G3D.err) CINE.err = G3D.err;
       const S = G3D.S(id), q = G3D.post(id), sn = backdrop(S, t);
       g.imageSmoothingEnabled = true; g.drawImage(c, 0, 0, 512, 384);
@@ -364,7 +364,7 @@
   const arenaDef = fig => ({
     len: 1e9, models: fig ? ['groudon', 'groudon_primal'] : [],
     /* Jazz 18.11 (runde 8): bevegelsene i kampen i trinn (12–15 bilder i sekundet) mens arenaen og effektene går jevnt, og han står alltid på hele piksler. */
-    spr: fig ? { fps: 12.5, since: ['eT', 'fT', 'rT', 'pT', 'fh'] } : null,
+    spr: fig ? { fps: 12.5, since: ['eT', 'fT', 'rT', 'pT', 'fh', 'aT', 'dT', 'sT', 'mT'] } : null,
     make(K, T) {
       const S = crater(T); volcano(S, T, 1, fig ? null : { x: -52, z: -410, r: 205, h: 92 });
       /* Kameraet: lavt (2 over lavaen) og 23 enheter fra Groudon, så han (7 enheter over lavaen) blir rundt 125 piksler høy og får plass under toppen av bildet,
@@ -409,7 +409,8 @@
       return S;
     },
     /* o = arenaens tilstand: { p2 (raseriet, 0–1), eT, fT, rT, pT (sekunder siden kampen startet, stedet slo til, raseriet, Primal-forvandlingen var over),
-       hit: [x, z, alder] (ringen i lavaen), fh (sekunder siden den legendariske ble truffet) }. Raseriet gjør stedet varmere og vulkanen urolig; UTBRUDDET og røyken
+       hit: [x, z, alder] (ringen i lavaen), fh (sekunder siden den legendariske ble truffet), og fra kampskjermen (runde 20): aT og ak (sekunder siden den
+       gikk til angrep, og hvor hardt: 0,5 for angrep på seg selv), dT (besvimte), sT og sv (stat opp +1 eller ned −1), mT (lysringen uten cutscene), away (borte) }. Raseriet gjør stedet varmere og vulkanen urolig; UTBRUDDET og røyken
        kommer først når forvandlingen er over (pT), så arenaen står slik cutscenen sluttet. */
     act(S, t, o) {
       const U = K.U(), L = S.lava.material.uniforms, p2 = o.p2 || 0, eT = o.eT == null ? 99 : o.eT, fT = o.fT == null ? 99 : o.fT, rT = o.rT == null ? 99 : o.rT, pT = o.pT == null ? 1e9 : o.pT, pr = pT < 1e8, pk = pr ? eo(c01((pT + 2) / 3)) : 0, heat = 0.5 + 0.4 * p2 + 0.3 * pk;
@@ -429,15 +430,21 @@
       /* Figuren i 3D (prøven): den vanlige formen til forvandlingen er over, så Primal. Den puster, halen går, hodet følger rolig med, den blunker,
          brøler når kampen starter og når den er forvandlet, og rykker til når den blir truffet. */
       const f = pr ? S.pg : S.gr, fh = o.fh == null ? 99 : o.fh, fl = Math.exp(-5 * fh) * (fh < 99 ? 1 : 0), rt = -1, rw = rt < 0 || rt > 3 ? 0 : back(seg(rt, 0.15, 0.45), 2.4) * (1 - io(seg(rt, 1.6, 2.5)));
-      S.gr.root.visible = !pr; S.pg.root.visible = pr;
+      /* Kampskjermen (runde 20): angrepet har et forvarsel (dukker 0,2 s) og et utfall med overskudd (halve brølets stilling, forbi og tilbake), besvimelsen er at
+         hodet synker, øynene går igjen og den synker i lavaen (lavakanten følger, siden den regnes av høyden), og «borte» er angrep som Fly og Dig. */
+      const aT = o.aT == null ? 99 : o.aT, ak = o.ak == null ? 1 : o.ak, dT = o.dT == null ? 99 : o.dT, sT = o.sT == null ? 99 : o.sT, mT = o.mT == null ? 99 : o.mT;
+      const wd = aT < 98 ? kf(aT, [[0, 0], [0.2, 1, io], [0.3, 0, eo]]) : 0, th = aT < 98 ? back(seg(aT, 0.26, 0.44), 2.4) * (1 - io(seg(aT, 0.62, 1.05))) * ak : 0, dn = dT < 98 ? io(seg(dT, 0.1, 0.95)) : 0, gone = !!o.away || (dT >= 1 && dT < 98);
+      S.gr.root.visible = !pr && !gone; S.pg.root.visible = pr && !gone;
       /* Roten står fast (ellers kryper pikslene). Rykket ved treff er to hele piksler til siden annethvert trinn, og dukket ned er hele piksler (S.fo, flyttes på skjermen). */
-      const st = floor(t * 12.5 + 1e-6); f.root.position.set(HOME[0], pr ? PSY : HOME[1], HOME[2]); f.root.rotation.y = S.face + 0.05 * sin(t * 0.37);
-      S.fo = [fl > 0.25 ? (st % 2 ? 2 : -2) : 0, fh < 99 ? Math.round(3.2 * sq(fh, 0, 13, 5)) : 0];
+      const st = floor(t * 12.5 + 1e-6); f.root.position.set(HOME[0], (pr ? PSY : HOME[1]) - 9.5 * dn, HOME[2]); f.root.rotation.y = S.face + 0.05 * sin(t * 0.37);
+      S.fo = [(fl > 0.25 ? (st % 2 ? 2 : -2) : 0) + (th > 0.5 ? -2 : 0), (fh < 99 ? Math.round(3.2 * sq(fh, 0, 13, 5)) : 0) + (th > 0.5 ? 1 : 0)];   /* utfallet: to hele piksler mot din Pokémon */
       if (pr) f.add(PSTAND, 1); else f.add(STAT, 0.2); const br = 0.028 * sin(t * 2.4); f.add({ Spine1: [0, br, 0], Spine2: [0, br * 0.6, 0], Neck1: [0, 0.03 * sin(t * 0.9 + 1), 0.06 * sin(t * 0.55)], Head: [0, 0.02 * sin(t * 1.3), 0.03 * sin(t * 0.55 + 0.6)], Jaw: [0, -0.06 - 0.04 * sin(t * 2.4), 0], '*Arm': [0.03 * sin(t * 2.4 + 0.5), 0, 0] }, 1);
       for (let i = 1; i <= 5; i++) f.rot('Tail' + i, 0, 0, 0.055 * sin(t * 1.9 + i * 0.55));
-      f.add(pr ? PDUCK : DUCK, 0.8 * fl + kf(rt, [[-0.2, 0], [0.08, 0.9, io], [0.18, 0, eo]]) * (rt < 3 ? 1 : 0)); f.add(pr ? PROAR : ROAR, 0.75 * rw); f.rot('Jaw', 0, 0.045 * sin(t * 57) * rw, 0);
-      const E = f.mats.Eye1.uniforms; E.uUvOff.value.set(0, t % 4.6 < 0.12 ? 0.5 : rw > 0.2 || fl > 0.3 ? 0.75 : 0); E.uEmis.value = 0.5;
-      f.set('uStone', 0); f.set('uFlK', fl > 0.25 && st % 2 ? 0.55 : 0); f.set('uFlC', '#ffffff');
+      f.add(pr ? PDUCK : DUCK, 0.8 * fl + 0.7 * wd + 1.2 * dn + kf(rt, [[-0.2, 0], [0.08, 0.9, io], [0.18, 0, eo]]) * (rt < 3 ? 1 : 0)); f.add(pr ? PROAR : ROAR, 0.75 * rw + (pr ? 0.4 : 0.5) * th); f.rot('Jaw', 0, 0.045 * sin(t * 57) * rw, 0);
+      const E = f.mats.Eye1.uniforms; E.uUvOff.value.set(0, dn > 0.3 || t % 4.6 < 0.12 ? 0.5 : rw > 0.2 || fl > 0.3 || th > 0.2 ? 0.75 : 0); E.uEmis.value = 0.5;
+      /* Blinkene følger trinnene: treffet hvitt, stat opp varmt og ned kaldt (annethvert trinn i 0,45 s), og lysringen uten cutscene: hvit til formen byttes, så ut av det hvite. */
+      const sf = sT < 0.45 && st % 2 ? 0.5 : 0, mw = mT < 98 ? (pr ? 1 - seg(pT, 0, 0.6) : io(seg(mT, 0, 0.7))) : 0, hf = fl > 0.25 && st % 2 ? 0.55 : 0;
+      f.set('uStone', 0); f.set('uFlK', max(hf, sf, mw)); f.set('uFlC', mw > 0 || hf >= sf ? '#ffffff' : o.sv < 0 ? '#5a86e0' : '#ffd27a');
       f.set('uCrack', pr ? 0.95 + 0.2 * sin(t * 4.2) + 0.5 * rw : 0); if (pr) for (const m in f.mats) if (f.mats[m].uniforms.uCrackC) lerpC(f.mats[m].uniforms.uCrackC, '#ffc626', '#fff2a8', 0.4 * rw);
     },
     shots: [[0, S => { K.cam(S.cp[0], S.cp[1], S.cp[2], S.tg[0], S.tg[1], S.tg[2], S.fv); S.post.vig = 0; if (S.gr) { S.post.ink2 = S.pg.root.visible ? 0.55 : 0.9; S.post.inkz = 0.16;   /* runde 12: strekene inni (FS_SPR trekker fra hellingen, så terskelen er lav og lik for begge formene) */ } }]],
@@ -445,11 +452,13 @@
   G3D.def(AID, arenaDef(0)); G3D.def(AIDF, arenaDef(1)); G3D.meF = AMEF;   /* filmverkstedet flytter din Pokémon hit når 3D-figuren står i arenaen */
   if (typeof ARENA !== 'undefined' && ARENA.defs[383]) {
     const d = ARENA.defs[383], sc0 = d.scene, mid0 = d.mid, fr0 = d.front, bl = C.blend; let on3 = false, lastT = 1e18;
-    const aid = () => G3D.fig3 && G3D.isReady(AIDF) ? AIDF : AID;
+    /* 3D-figuren velges per kamp (S.fig3 fra ARENA.run, satt av kampskjermen når 'b' er klar); G3D.fig3 er bryteren til filmverkstedet. */
+    const aid = S => ((S && S.fig3) || G3D.fig3) && G3D.isReady(AIDF) ? AIDF : AID;
+    d.fig3 = { foe: AFIG, me: AMEF, ok: () => G3D.isReady(AIDF) };
     const scene3 = S => {
-      const g = C.g, P = C.P, t = S.t, p2 = S.p2, id = aid(), pT = S.since('primal'), fT = S.since('field'), A = G3D.S(id), fh = G3D.fhAt != null ? (t >= G3D.fhAt ? t - G3D.fhAt : 99) : S.hits.filter(q => q.side !== 'me').map(q => t - q.t).filter(q => q >= 0).sort((a, b) => a - b)[0];   /* G3D.fhAt: filmverkstedet setter tidspunktet for et treff */
+      const g = C.g, P = C.P, t = S.t, p2 = S.p2, id = aid(S), V = S.val || {}, pT = S.since('primal'), fT = S.since('field'), A = G3D.S(id), fh = G3D.fhAt != null ? (t >= G3D.fhAt ? t - G3D.fhAt : 99) : S.hits.filter(q => q.side !== 'me').map(q => t - q.t).filter(q => q >= 0).sort((a, b) => a - b)[0];   /* G3D.fhAt: filmverkstedet setter tidspunktet for et treff */
       const hs = S.hits.length ? S.hits[S.hits.length - 1] : null, hit3 = hs && A ? (hs.side === 'me' ? [A.me[0], A.me[2] - 3, t - hs.t] : [HOME[0], HOME[2] + 3, t - hs.t]) : null;
-      const c = G3D.frame(id, t, { p2, eT: S.since('enter'), fT, rT: S.since('rage'), pT, hit: hit3, fh }, CINE._.rs()); if (!c) return sc0(S);
+      const c = G3D.frame(id, t, { p2, eT: S.since('enter'), fT, rT: S.since('rage'), pT, hit: hit3, fh, aT: S.since('atk'), ak: V.atk, dT: S.since('faint'), sT: S.since('stat'), sv: V.stat, mT: S.since('mega'), away: V.away }, CINE._.rs()); if (!c) return sc0(S);
       const pk = A.pk || 0, heat = 0.5 + 0.4 * p2 + 0.3 * pk, sun = A.sun, sn = backdrop(A, t); g.imageSmoothingEnabled = true; g.drawImage(c, 0, 0, 512, 384);
       if (id === AIDF) C.cur.sp = null;   /* prøven: figuren er 3D-figuren, så Gen 5-bildet tegnes ikke */
       C.cur.fig3 = id === AIDF ? G3D.sprite(id) : null;   /* 3D-figuren som sprite: arena.js legger den oppå etter etterbehandlingen (A.fig3) */
@@ -476,8 +485,8 @@
       const w = 62 * S.fk; C.blob(S.foe[0], y + 3, w * 1.5, '#ff6a1c', 0.4, 1, 0.14);
       for (let i = 0; i < 16; i++) { const u = (i + 0.5) / 16 - 0.5, fl = 0.5 + 0.5 * sin(t * (7 + rnd(i, 5) * 9) + i * 2.1), r = (4 + rnd(i, 6) * 7) * (0.6 + 0.4 * fl); C.blob(S.foe[0] + u * w * 2.3 + sin(t * 3 + i) * 2, y + 1 - r * 0.3 * fl, r, i % 3 ? '#ffb040' : '#fff2c8', 0.45 + 0.4 * fl, 1, 0.55); }
       mid0(S); };
-    d.scene = S => { if (S.film) return sc0(S); if (S.t < lastT || !on3) on3 = G3D.isReady(AID); lastT = S.t; return on3 ? scene3(S) : sc0(S); };
+    d.scene = S => { if (S.film) return sc0(S); if (S.t < lastT || !on3) on3 = G3D.isReady(aid(S)); lastT = S.t; return on3 ? scene3(S) : sc0(S); };
     d.ev.primal = { len: 0.1, cues: [] };
-    d.mid = S => !on3 || S.film ? mid0(S) : aid() === AIDF ? null : mid3(S); d.front = S => fr0(S);
+    d.mid = S => !on3 || S.film ? mid0(S) : aid(S) === AIDF ? null : mid3(S); d.front = S => fr0(S);
   }
 })();
