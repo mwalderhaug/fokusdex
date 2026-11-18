@@ -692,6 +692,9 @@ const LNO = {
   'Something new can happen in the League and the World Tournament.': 'Noe nytt kan skje i League og World Tournament.',
   'The grass moves now: catch the same Pokémon in a row and see what happens.': 'Gresset rører seg nå: fang den samme Pokémonen flere ganger på rad og se hva som skjer.',
   'A shiny shows the moment you meet it.': 'En shiny vises i det øyeblikket du møter den.',
+  'Something new opens on Fridays, after Done for today: the Expedition.': 'Noe nytt åpner på fredager, etter Done for today: ekspedisjonen.',
+  'The more days you study in a week, the further it takes you.': 'Jo flere dager du studerer i løpet av en uke, jo lenger kommer du.',
+  'New prizes that cannot be bought in the Shop.': 'Nye premier som ikke kan kjøpes i Shop.',
   'Battles point out where to tap to see what the foe is weak to.': 'Kampene viser hvor du trykker for å se hva motstanderen er svak mot.',
   'Size and training are easier to read on a Pokémon\'s card.': 'Størrelse og trening er lettere å lese på kortet til en Pokémon.',
   'Bug fixes.': 'Feilrettinger.',
@@ -884,7 +887,7 @@ function jFriend() {
 const has = k => !!(S.ulk && S.ulk[k]);
 /* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
    Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
-const WNV = 77, WN = ['The Battle Frontier has rare balls, and a rating that shows how good each rental really is.', 'Something new can happen in the League and the World Tournament.', 'The grass moves now: catch the same Pokémon in a row and see what happens.', 'A shiny shows the moment you meet it.'];
+const WNV = 78, WN = ['Something new opens on Fridays, after Done for today: the Expedition.', 'The more days you study in a week, the further it takes you.', 'New prizes that cannot be bought in the Shop.'];
 /* Første linje for dem som går reisen (whatsNew i ui.js). */
 const WNJ = 'Your journey: new things now open one study day at a time. See the card on the Focus page.';
 function featCheck() { S.ulk = S.ulk || {}; if (!jOn()) return 0; let ch = 0; for (const [k, d] of JOURNEY) if (!S.ulk[k] && (S.jd || 0) >= d) { S.ulk[k] = 1; ch = 1; } return ch; }
