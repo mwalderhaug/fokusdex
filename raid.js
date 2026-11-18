@@ -313,7 +313,7 @@ const CINE = (() => {
         /* o.warp: fra sekunder i låta til sekunder i filmen, når filmen spilles til en annen låt enn den er lagt på. */
         if (o.warp) t = o.warp(t);
         /* Cutscenene i 3D går ut med sin egen overgang (virvel og hvitt blink, G3D.out), mens handlingen fortsetter. */
-        if (skipAt >= 0 && f.c3 && typeof G3D !== 'undefined') { const k = (performance.now() - skipAt) / 850; G3D.out = c01(k); frame(out, t); if (k >= 1) return end(); raf = requestAnimationFrame(step); return; }
+        if (skipAt >= 0 && f.c3 && f.swirl !== 0 && typeof G3D !== 'undefined') { const k = (performance.now() - skipAt) / 850; G3D.out = c01(k); frame(out, t); if (k >= 1) return end(); raf = requestAnimationFrame(step); return; }
         if (skipAt >= 0) { const k = (performance.now() - skipAt) / 280; frame(out, min(t, f.len - 0.02)); const x = out.getContext('2d'); x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = c01(k); x.fillStyle = f.outc || '#fff'; x.fillRect(0, 0, out.width, out.height); x.globalAlpha = 1; if (k >= 1) return end(); raf = requestAnimationFrame(step); return; }
         /* f.hold: filmen slutter ikke av seg selv. Etter len står den og venter (o.onhold sier fra én gang), til skip() kalles. */
         if (t >= f.len && !f.hold) { frame(out, f.len); return end(); }

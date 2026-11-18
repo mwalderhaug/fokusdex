@@ -21,7 +21,7 @@ const G3D = (() => {
   const hit = (t, t0, d) => t < t0 ? 0 : max(0, 1 - (t - t0) / (d || 0.4));
   const rnd = (i, s) => { const x = sin(i * 127.1 + (s || 0) * 311.7 + 0.5) * 43758.5453; return x - floor(x); };
   const hex = h => { const n = parseInt(h.replace('#', ''), 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; };
-  let T = null, R = null, cv = null, rtE = null, rtF = null, post = null, postScene = null, postCam = null, cam = null, bootJob = null, U = null, rsNow = 0;
+  let T = null, R = null, cv = null, rtE = null, rtF = null, post = null, postScene = null, postCam = null, cam = null, bootJob = null, U = null, rsNow = 0, lastKey = '';
 
   /* ---------- GLSL ---------- */
   const COMMON = `
@@ -53,7 +53,7 @@ void main(){ vUv = uv + uUvOff; vO = vec3(position.x, position.z, -position.y) *
   #include <skinning_vertex>
   vec4 w = modelMatrix * vec4(transformed, 1.); vW = w.xyz; vN = normalize(mat3(modelMatrix) * objectNormal); gl_Position = projectionMatrix * viewMatrix * w; }`;
   const FS_FIG = `varying vec3 vW, vN, vO; varying vec2 vUv; uniform sampler2D map;
-uniform float uId, uStone, uCrack, uCrackR, uSeam, uSeamOn, uEmis, uFlK, uB1, uB2, uMask, uVor, uGl, uCw, uHalo, uSpill; uniform vec3 uCrackC, uCrackO, uFlC, uStoneC, uMul, uHead; uniform vec2 uTx;
+uniform float uId, uStone, uCrack, uCrackR, uSeam, uSeamOn, uEmis, uFlK, uB1, uB2, uMask, uVor, uGl, uCw, uHalo, uSpill, uWk, uWh; uniform vec3 uCrackC, uCrackO, uFlC, uStoneC, uMul, uHead; uniform vec2 uTx;
 ${COMMON}
 void main(){
   vec4 tx = texture2D(map, vUv); vec3 base = tx.rgb; float lum = dot(base, vec3(.3, .59, .11));
@@ -78,12 +78,14 @@ void main(){
   float ln = max(seam, vc) * fr * uCrack, hl = max((1. - smoothstep(uSeam - .05, uSeam + .05, l2)) * uSeamOn, vh) * fr;
   col += uCrackC * (hl * uHalo + uSpill * fr) * (1. - ln);
   col = mix(col, uCrackC, ln);
+  /* Der han går ned i lavaen, gløder han: tre harde trinn fra hvitgult ved overflaten til ingenting (uWh over den). */
+  float wb = floor(clamp(1. - (vW.y - uLavaY) / uWh, 0., 1.) * 2. + .8) / 2.; col = mix(col, mix(vec3(1., .4, .07), vec3(1., .8, .32), wb) * (.6 + .6 * base), wb * uWk * (1. - .45 * st));
   col = mix(col, uFlC, uFlK);
   float fg = floor(fogK(vW) * 6. + .5) / 6.;
   gl_FragColor = vec4(mix(col, uFogC, fg), uId / 255.);
 }`;
   /* Stein (omgivelsene, mykt): lagdeling og korn, lys fra nøkkelen, glød nedenfra, glødende fot der den står i lavaen, kantlys og dis. uSm = hvor avrundet. */
-  const FS_ROCK = `varying vec3 vW, vN, vO; uniform vec3 uA, uB; uniform float uStr, uTop, uSm;
+  const FS_ROCK = `varying vec3 vW, vN, vO; uniform vec3 uA, uB; uniform float uStr, uTop, uSm, uHot;
 ${COMMON}
 void main(){
   vec3 Nf = normalize(cross(dFdx(vW), dFdy(vW))), Ns = normalize(vN); if (dot(Ns, Nf) < 0.) Ns = -Ns; vec3 N = normalize(mix(Nf, Ns, uSm)), V = normalize(cameraPosition - vW);
@@ -91,7 +93,7 @@ void main(){
   vec3 base = mix(uA, uB, smoothstep(.35, .65, n1)) * (.8 + .4 * n2); base = mix(base, uB * 1.2, smoothstep(.6, .9, N.y) * uTop);
   vec3 col = base * mix(uShC, uKeyC, smoothstep(.3, .85, dot(N, uKey) * .5 + .5));
   float ug = underK(N, vW, .6); col += uLavaC * ug * ug * uGlow * .9;
-  float hot = 1. - smoothstep(0., 1.8, vW.y - uLavaY); col += vec3(1., .4, .07) * hot * hot * uGlow;
+  float hot = 1. - smoothstep(0., 1.8 * uHot, vW.y - uLavaY); col += vec3(1., .4, .07) * hot * hot * uGlow;
   col += uRimC * pow(1. - max(dot(N, V), 0.), 3.) * (dot(N, uRim) * .5 + .5) * uRimK * .5;
   gl_FragColor = vec4(mix(col, uFogC, fogK(vW)), 1.);
 }`;
@@ -149,7 +151,9 @@ void main(){
   temp = max(temp, open * (.42 + .38 * skin + .12 * heat) * (1. - .62 * smoothstep(.45, .7, fbm(pp * 5. + vec2(t * .04, -t * .03)))));
   float rg = 0.; for (int i = 0; i < 4; i++) { vec4 r = uRing[i]; if (r.w > 0.) rg = max(rg, r.w * (1. - smoothstep(0., .5 + r.z * .07, abs(length(vW.xz - r.xy) - r.z)))); }
   temp += rg * (.45 + .55 * max(max(body, f2), open));
-  float wd = uWade.w * (1. - smoothstep(uWade.z * .25, uWade.z, length(vW.xz - uWade.xy))); temp = max(temp, wd * (.6 + .4 * skin)); open = max(open, wd * .8);
+  float dw = length(vW.xz - uWade.xy), wd = min(1., uWade.w) * (1. - smoothstep(uWade.z * .3, uWade.z, dw)), rip = .5 + .5 * sin(dw * 1.7 - t * 2.6 + fbm(vW.xz * .35 + t * .05) * 3.2);
+  temp = max(temp, wd * (.56 + .26 * skin + .26 * rip * (.4 + .6 * uWade.w))); open = max(open, wd * .95);
+  temp += max(0., uWade.w - 1.) * (1. - smoothstep(0., uWade.z * .45, dw)) * .35;
   vec3 c = crust * (1. - open * .8) + ramp(temp) * uBri;
   float lod = clamp(fw / (cell * .42), 0., 1.);
   c = mix(c, ramp(.1 + .3 * min(heat, 1.2) + .1 * vn(vec2(w.x / 190. + t * .03, dist / 600.))) * uBri, lod * lod);
@@ -181,6 +185,18 @@ ${COMMON}
 void main(){ vec3 N = normalize(cross(dFdx(vW), dFdy(vW))); float tn = tone3(dot(N, uKey), -.1, .45);
   vec3 lit = mix(uShC, uKeyC, tn); lit = mix(lit, vec3(dot(lit, vec3(.34, .33, .33))) * vec3(.99, .96, 1.05), uGrey);
   vec3 col = uC * lit + uLavaC * floor(underK(N, vW, .25) * 4. + .5) / 4. * uGlow * .25 * (1. - uGrey * .6); col = mix(col, uC * (.8 + .5 * tn), uEm);
+  gl_FragColor = vec4(col, uId / 255.); }`;
+  /* Krystallen (piksler): hver fasett sin tone, noen blanke. uAl < 1: rastrert gjennomsiktig (det som står inni, skimtes). uDark: den mørkner til nesten svart.
+     uCrk: sprekker av lys som brer seg fra forsiden (uCrkR) før den knuses. */
+  const FS_GEM = `varying vec3 vW, vO; uniform vec3 uA, uB, uD, uCrkC; uniform float uId, uAl, uDark, uCrk, uCrkR;
+${COMMON}
+void main(){ if (uAl < bayer(gl_FragCoord.xy)) discard;
+  vec3 N = normalize(cross(dFdx(vW), dFdy(vW))), V = normalize(cameraPosition - vW); float d = dot(N, normalize(uKey + vec3(.1, .3, .6))) * .5 + .5, f = h21(floor(N.xy * 9. + .5) + floor(N.z * 9. + .5) * 7.3);
+  vec3 col = mix(uA, uB, clamp(floor((d * .7 + f * .5) * 4.) / 3., 0., 1.)); col = mix(col, vec3(1., .95, 1.), step(1.02, d * .62 + f * .52));
+  col += uB * step(.62, 1. - max(dot(N, V), 0.)) * .35;
+  col = mix(col, uD * (.55 + .9 * f) + uB * .1 * step(.9, f), uDark);
+  vec2 q = vO.xy * 1.6 + vO.z * .9; q += (vec2(vn(q * 2.1), vn(q * 2.1 + 7.)) - .5) * .7; vec3 v = voro(q); float cr = (1. - smoothstep(.04, .1, v.y - v.x)) * step(distance(vO, vec3(0., 0., 1.)) + (vn(q * 3.) - .5) * .5, uCrkR);
+  col = mix(col, uCrkC, cr * uCrk);
   gl_FragColor = vec4(col, uId / 255.); }`;
   /* Lys som legges oppå (ring på bakken, glød mot kameraet): bare farge. */
   const FS_ADD = `varying vec2 vUv; uniform vec3 uC; uniform float uA, uMode;
@@ -244,11 +260,11 @@ void main(){
   const addBlend = () => ({ transparent: true, depthWrite: false, blending: T.CustomBlending, blendEquation: T.AddEquation, blendSrc: T.OneFactor, blendDst: T.OneFactor, blendEquationAlpha: T.AddEquation, blendSrcAlpha: T.ZeroFactor, blendDstAlpha: T.OneFactor });
   const softBlend = () => ({ transparent: true, depthWrite: false, blending: T.CustomBlending, blendEquation: T.AddEquation, blendSrc: T.OneFactor, blendDst: T.OneMinusSrcAlphaFactor, blendEquationAlpha: T.AddEquation, blendSrcAlpha: T.OneFactor, blendDstAlpha: T.OneMinusSrcAlphaFactor });
   const K = { sin, cos, PI, TAU, abs, max, min, floor, c01, mix, seg, io, eo, ei, back, spring, ant, hit, rnd, hex };
-  K.rockMat = o => sm(VS, FS_ROCK, { uA: uv(u3(o.a || '#3b2422')), uB: uv(u3(o.b || '#5a3a30')), uStr: uv(o.str == null ? 0.22 : o.str), uTop: uv(o.top || 0), uSm: uv(o.sm == null ? 0.7 : o.sm) }, { side: T.DoubleSide });
+  K.rockMat = o => sm(VS, FS_ROCK, { uA: uv(u3(o.a || '#3b2422')), uB: uv(u3(o.b || '#5a3a30')), uStr: uv(o.str == null ? 0.22 : o.str), uTop: uv(o.top || 0), uSm: uv(o.sm == null ? 0.7 : o.sm), uHot: uv(o.hot == null ? 1 : o.hot) }, { side: T.DoubleSide });   /* hot: hvor høyt opp foten gløder (1 = 1,8 enheter) */
   K.cryMat = o => sm(VS, FS_CRY, { uA: uv(u3(o.a || '#7a1030')), uB: uv(u3(o.b || '#ff5a78')), uPulse: uv(0.5) });
   K.figMat = (map, o) => { o = o || {}; if (map) { map.colorSpace = T.NoColorSpace; map.magFilter = T.NearestFilter; map.minFilter = T.NearestFilter; map.generateMipmaps = false; map.needsUpdate = true; }
     return sm(VS_FIG, FS_FIG, { map: uv(map), uUvOff: uv(new T.Vector2()), uId: uv(o.id || 255), uStone: uv(0), uStoneC: uv(u3('#8a7892')), uCrack: uv(0), uCrackR: uv(0), uCrackO: uv(new T.Vector3()), uCrackC: uv(u3('#ffe24a')), uSeam: uv(o.seam == null ? 0.2 : o.seam), uSeamOn: uv(o.seamOn == null ? 1 : o.seamOn), uHead: uv(new T.Vector3(1e4, 1e4, 0)),
-      uEmis: uv(o.emis || 0), uTx: uv(new T.Vector2(1.6 / ((map && map.image && map.image.width) || 512), 1.6 / ((map && map.image && map.image.height) || 512))), uVor: uv(0), uGl: uv(1), uCw: uv(1), uHalo: uv(0), uSpill: uv(0), uOs: uv(o.os || 0.0254), uFlK: uv(0), uFlC: uv(u3('#ffffff')), uB1: uv(-0.1), uB2: uv(0.45), uMask: uv(o.mask || 0), uMul: uv(u3('#ffffff')) }, o.mask ? Object.assign(addBlend(), { side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 }) : { side: T.DoubleSide }); };
+      uEmis: uv(o.emis || 0), uTx: uv(new T.Vector2(1.6 / ((map && map.image && map.image.width) || 512), 1.6 / ((map && map.image && map.image.height) || 512))), uVor: uv(0), uGl: uv(1), uCw: uv(1), uHalo: uv(0), uSpill: uv(0), uWk: uv(0), uWh: uv(1.15), uOs: uv(o.os || 0.0254), uFlK: uv(0), uFlC: uv(u3('#ffffff')), uB1: uv(-0.1), uB2: uv(0.45), uMask: uv(o.mask || 0), uMul: uv(u3('#ffffff')) }, o.mask ? Object.assign(addBlend(), { side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 }) : { side: T.DoubleSide }); };
   /* Kampestein: en kule dyttet ut og inn etter frø. Normalen peker ut fra midten, så den skygges som en rund stein. */
   const jitter = (geo, amt, seed, fn) => { const p = geo.attributes.position, nn = geo.attributes.normal; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), h = Math.round(x * 31.7) * 3 + Math.round(y * 17.3) * 7 + Math.round(z * 23.9) * 13, k = 1 + (rnd(h, seed) - 0.5) * 2 * amt; let v = [x * k, y * k, z * k]; if (fn) v = fn(v[0], v[1], v[2]); p.setXYZ(i, v[0], v[1], v[2]); if (nn) { const l = Math.hypot(x, y, z) || 1; nn.setXYZ(i, x / l, y / l, z / l); } } p.needsUpdate = true; geo.computeBoundingSphere(); return geo; };
   K.boulder = (r, seed, o) => { o = o || {}; const g = jitter(new T.IcosahedronGeometry(r, o.d == null ? 2 : o.d), o.j == null ? 0.2 : o.j, seed, (x, y, z) => [x * (o.sx || 1), min((y < 0 && o.flat ? y * 0.25 : y) * (o.sy || 1), o.cap == null ? 1e9 : o.cap), z * (o.sz || 1)]); return new T.Mesh(g, o.mat); };
@@ -290,6 +306,9 @@ void main(){
         d.scale.setScalar(s || 1e-6); d.updateMatrix(); m.setMatrixAt(i, d.matrix); }
       m.instanceMatrix.needsUpdate = true; m.visible = live > 0; return live; };
     return m; };
+  /* Krystallen som kapsler ham inn: en ujevn, fasettert kule (radius 1, skaler den). */
+  K.gem = o => { o = o || {}; const g = jitter(new T.IcosahedronGeometry(1, 1), 0.07, o.seed || 4, (x, y, z) => [x, y * 1.06, z * 0.96]).toNonIndexed();
+    const m = new T.Mesh(g, sm(VS, FS_GEM, { uA: uv(u3(o.a || '#c81e8c')), uB: uv(u3(o.b || '#ff9adf')), uD: uv(u3(o.d || '#1a0c1c')), uCrkC: uv(u3(o.crk || '#ffe24a')), uId: uv(o.id || 190), uAl: uv(1), uDark: uv(0), uCrk: uv(0), uCrkR: uv(0) }, { side: T.FrontSide })); m.frustumCulled = false; m.layers.set(1); return m; };
   /* Lys oppå: mode 0 ring (flat på bakken), 1 glød (vend den mot kameraet med K.face). */
   K.light = (mode, col, o) => { o = o || {}; const g = mode === 0 ? new T.RingGeometry(0.6, 1, 40, 1).rotateX(-PI / 2) : new T.PlaneGeometry(1, 1);
     if (mode === 0) { const u = g.attributes.uv, p = g.attributes.position; for (let i = 0; i < u.count; i++) u.setXY(i, 0, (Math.hypot(p.getX(i), p.getZ(i)) - 0.6) / 0.4); }
@@ -312,9 +331,12 @@ void main(){
       at(n, v) { return bones[n].getWorldPosition(v || new T.Vector3()); },
       set(k, val) { for (const m in mats) { const u = mats[m].uniforms[k]; if (!u) continue; if (u.value && u.value.isColor) u.value.setRGB(...(typeof val === 'string' ? hex(val) : val)); else if (u.value && u.value.set && Array.isArray(val)) u.value.set(...val); else u.value = val; } return F; } };
     return F; };
-  const models = new Map();
-  K.model = n => models.get(n);
-  const loadModel = n => models.has(n) ? Promise.resolve(models.get(n)) : G.src(n + '.glb').then(u => { if (!u) throw new Error('no model ' + n); return fetch(u); }).then(r => r.arrayBuffer()).then(b => new T.GLTFLoader().parseAsync(b, '')).then(g => { models.set(n, g); return g; });
+  /* Modellene: fila hentes én gang (bufs), men tolkes på nytt for hver cutscene, for K.figure bytter materialene og flytter modellen inn i scenen sin.
+     K.model(navn) gir utgaven til cutscenen som bygges akkurat nå (curM settes av G.ready rundt make). */
+  const bufs = new Map(); let curM = null;
+  K.model = n => curM ? curM[n] : null;
+  const loadBuf = n => { if (!bufs.has(n)) bufs.set(n, G.src(n + '.glb').then(u => { if (!u) throw new Error('no model ' + n); return fetch(u); }).then(r => r.arrayBuffer()).catch(e => { bufs.delete(n); throw e; })); return bufs.get(n); };
+  const loadModel = n => loadBuf(n).then(b => new T.GLTFLoader().parseAsync(b, ''));
 
   /* ---------- Cutscenene ---------- G3D.def(id, { len, fps, models, make(K, T) → S, act(S, t, o), shots: [[start, fn(S, u, tau, t)]] }).
      S.scene er scenen, S.figs figurene. act er skuespillet (én sammenhengende handling), shots er kameraene som klipper mellom bilder av den.
@@ -325,18 +347,20 @@ void main(){
   G.info = id => DEF[id] ? { len: DEF[id].len, hold: DEF[id].hold || 0, R: DEF[id].R || 0, at: DEF[id].at || 0 } : null;
   G.ready = id => jobs[id] || (jobs[id] = (async () => {
     const D = DEF[id]; if (!D || !G.can()) throw new Error('no 3d');
-    await G.boot(); await Promise.all((D.models || []).map(loadModel));
-    D.S = D.make(K, T); D.S.post = {}; G.frame(id, 0, {}); if (G.err) throw new Error(G.err);
+    await G.boot(); const M = {}; await Promise.all((D.models || []).map(n => loadModel(n).then(g => { M[n] = g; })));
+    curM = M; try { D.S = D.make(K, T); } finally { curM = null; } D.S.post = {}; G.frame(id, 0, {}); if (G.err) throw new Error(G.err);
     return true;
   })().catch(e => { G.err = String(e && e.stack || e); jobs[id] = null; throw e; }));
   G.isReady = id => !!(DEF[id] && DEF[id].S && !G.dead);
   const P0 = () => ({ sh: 0, fl: 0, flc: '#ffffff', fade: 0, fadec: '#000000', heat: 0, heatY: 60, spd: 0, spx: 128, spy: 96, spr: 0.3, swirl: 0, vig: 0.5, ink: 1 });
   /* Kameraet: fra, mot, synsvinkel, og en helling (roll) for lave, skjeve vinkler. */
-  K.cam = (px, py, pz, tx, ty, tz, fov, roll) => { cam.position.set(px, py, pz); cam.up.set(0, 1, 0); cam.lookAt(tx, ty, tz); if (roll) cam.rotateZ(roll); if (cam.fov !== (fov || 40)) { cam.fov = fov || 40; cam.updateProjectionMatrix(); } };
+  K.cam = (px, py, pz, tx, ty, tz, fov, roll) => { cam.position.set(px, py, pz); cam.up.set(0, 1, 0); cam.lookAt(tx, ty, tz); if (roll) cam.rotateZ(roll); if (cam.fov !== (fov || 40)) { cam.fov = fov || 40; cam.updateProjectionMatrix(); } cam.updateMatrixWorld(true); };   /* matrisene med en gang, så K.proj og K.ray gjelder dette bildet */
   K.U = () => U; K.face = m => { m.quaternion.copy(cam.quaternion); return m; }; K.camPos = () => cam.position;
   /* Et punkt i verden → filmens piksler (512 × 384). z > 1 = bak kameraet. */
   const pv = () => new T.Vector3();
   K.proj = (x, y, z) => { const v = pv().set(x, y, z).project(cam); return { x: (v.x * 0.5 + 0.5) * 512, y: (0.5 - v.y * 0.5) * 384, z: v.z }; };
+  /* Motsatt vei: der strålen gjennom en piksel (512 × 384) treffer planet i høyden y. */
+  K.ray = (px, py, y) => { cam.updateMatrixWorld(true); const a = cam.position, d = pv().set(px / 256 - 1, 1 - py / 192, 0.5).unproject(cam).sub(a).normalize(), k = (y - a.y) / d.y; return { x: a.x + d.x * k, y, z: a.z + d.z * k, k }; };
   /* Det 2D-bakteppet trenger: horisonten rett fram på skjermen (x, y), hellingen, piksler per radian, og hvor kameraet ser (yaw 0 = mot −Z). */
   G.view = () => { const d = cam.getWorldDirection(pv()), yaw = Math.atan2(d.x, -d.z), p = cam.position, a = K.proj(p.x + sin(yaw) * 1e5, p.y, p.z - cos(yaw) * 1e5), b = K.proj(p.x + sin(yaw + 0.05) * 1e5, p.y, p.z - cos(yaw + 0.05) * 1e5);
     return { x: a.x, y: a.y, ang: Math.atan2(b.y - a.y, b.x - a.x), ppr: Math.hypot(b.x - a.x, b.y - a.y) / 0.05, yaw, pitch: Math.asin(c01(d.y * 0.5 + 0.5) * 2 - 1), cx: p.x, cy: p.y, cz: p.z }; };
@@ -346,8 +370,11 @@ void main(){
     const D = DEF[id], S = D && D.S; if (!S || G.dead) return null;
     try {
       scale(rs || 1);
-      const fps = D.fps || 30, tq = floor(t * fps + 1e-6) / fps, P = S.post = P0(); U.uTime.value = tq;
+      const fps = D.fps || 30, tq = floor(t * fps + 1e-6) / fps;
       o = Object.assign({}, o || {}, { out: (o && o.out) || G.out || 0 });
+      /* Samme bilde som sist (filmen går i 30 bilder i sekundet, skjermen ofte i 60): lerretet står som det er. */
+      const key = id + '|' + floor(tq * fps + 0.5) + '|' + (rs || 1) + '|' + o.out.toFixed(3); if (key === lastKey && !D.live) return cv; lastKey = '';
+      const P = S.post = P0(); U.uTime.value = tq;
       for (const f of S.figs || []) f.clear();
       D.act(S, tq, o); for (const f of S.figs || []) f.apply();
       let si = 0; for (let i = 0; i < D.shots.length; i++) if (tq >= D.shots[i][0] - 1e-6) si = i;
@@ -360,7 +387,7 @@ void main(){
       U.uPs.value = rsNow || 1; cam.layers.set(0); R.setRenderTarget(rtE); R.clear(); R.render(S.scene, cam);
       cam.layers.set(1); R.setRenderTarget(rtF); R.clear(); R.render(S.scene, cam);
       R.setRenderTarget(null); R.clear(); R.render(postScene, postCam);
-      G.err = '';
+      G.err = ''; lastKey = key;
     } catch (e) { G.err = String(e && e.stack || e); }
     return cv;
   };

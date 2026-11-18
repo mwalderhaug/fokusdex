@@ -58,7 +58,7 @@ const ARENA = (() => {
   /* ---------- Kampen ---------- back = lerretet bak figurene, front = lerretet foran, o.mid = lerretet mellom figurene. o = { cc, k, mid } (BT.airO i bui.js).
      Gir en funksjon som stopper arenaen, med ev(navn, cue) (spiller en hendelse og gir et løfte), hit(side, big) og on. */
   A.run = (back, front, id, o) => {
-    const d = A.defs[id]; o = o || {}; let on = true, raf = 0, slow = 0, skip = 0, last = 0; const t0 = performance.now(), ev = {}, hits = [], now = () => (performance.now() - t0) / 1000 + 100;
+    const d = A.defs[id]; o = o || {}; let on = true, raf = 0, slow = 0, skip = 0, last = 0, held = false; const t0 = performance.now(), ev = {}, hits = [], now = () => (performance.now() - t0) / 1000 + 100;
     I.need(d.use || []);
     const cur = { id, f: d, sp: null, sps: {}, cc: o.cc || '#ffffff' }, mid = d.mid && o.mid ? o.mid : null, camEl = mid && back.closest ? back.closest('.cam') : null;
     const kOf = (D, def) => { try { return parseFloat(D.el.style.getPropertyValue('--k')) || def; } catch (_) { return def; } };
@@ -66,7 +66,7 @@ const ARENA = (() => {
     /* Kampens kamera (zoom rundt 45 %, 80 %) akkurat nå, også midt i en overgang. */
     const camZ = () => { try { const m = getComputedStyle(camEl).transform, q = /matrix\(([-\d.e]+)/.exec(m || ''); return q ? +q[1] || 1 : 1; } catch (_) { return 1; } };
     const step = ts => {
-      if (!on || !back.isConnected) return; raf = requestAnimationFrame(step);
+      if (!on || !back.isConnected) return; raf = requestAnimationFrame(step); if (held) return;
       /* Holder ikke enheten 60 bilder i sekundet (målt over tid), tegnes annethvert bilde. */
       if (slow > 30 && (skip = !skip)) return;
       const c0 = performance.now(), T = now(), S = state(T, { cc: cur.cc, ev, hits, p2: ev.rage == null ? 0 : eo(seg(T, ev.rage + 0.5, ev.rage + 3.2)), rage: ev.rage != null, ft: dom.foe.ft || 0, ftm: dom.me.ft || 0, fk: kOf(dom.foe, 1), mk: kOf(dom.me, 1.9) });
@@ -94,7 +94,7 @@ const ARENA = (() => {
     };
     raf = requestAnimationFrame(step);
     const stop = () => { on = false; stop.on = false; cancelAnimationFrame(raf); for (const D of [dom.foe, dom.me]) { if (D.cv && D.cv.isConnected) D.cv.remove(); if (D.im) D.im.classList.remove('lit0'); } };
-    stop.on = true; stop.id = id;
+    stop.on = true; stop.id = id; stop.pause = v => { held = !!v; };   /* på vent mens en cutscene spilles over kampen */
     /* En hendelse fra kampen: 'enter' (kampen starter), 'field' (stedet slår til), 'rage' (halv HP: fase 2). cue(navn, verdi) gir lyd og risting. */
     stop.ev = (name, cue) => new Promise(res => {
       if (!on) return res(false); const E = (d.ev || {})[name] || { len: 0.6 }; ev[name] = now();

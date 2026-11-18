@@ -203,15 +203,22 @@ function cryBuf(id) {
   return p;
 }
 window.cryCount = 0;
-function cry(id, delay = 0, vol = 0.45) {
+const CRYDEEP = 0.78;   /* hvor langt ned brølet legges i cutscenene (1 = uendret) */
+/* deep: brølet i cutscenene (Jazz 18.11): lagt ned i tonehøyde, med mer bass og et lag en oktav under. I kampen brukes det vanlige. */
+function cry(id, delay = 0, vol = 0.45, deep = 0) {
   if (!S.sound || !S.cries || !id || !ac()) return;
   const t0 = performance.now();
   cryBuf(id).then(buf => {
     const a = ac(), src = a.createBufferSource(), g = a.createGain();
     /* Skrikene er tatt opp med svært ulik styrke (de nyeste er mye sterkere enn de eldste), så hvert skrik jevnes til samme nivå før volumet legges på. */
     const L = loudOf(buf), norm = L > -90 ? Math.max(0.12, Math.min(2, Math.pow(10, (-18 - L) / 20))) : 0.4;
-    src.buffer = buf; g.gain.value = Math.min(1.6, vol * norm * Math.pow((S.cvol == null ? 70 : S.cvol) / 100, 1.6) * 4.27); src.connect(g); g.connect(fxBus() || a.destination);
-    src.start(a.currentTime + Math.max(0, delay - (performance.now() - t0)) / 1000);
+    src.buffer = buf; g.gain.value = Math.min(1.6, vol * norm * Math.pow((S.cvol == null ? 70 : S.cvol) / 100, 1.6) * 4.27); g.connect(fxBus() || a.destination);
+    const at = a.currentTime + Math.max(0, delay - (performance.now() - t0)) / 1000;
+    if (deep) { const lo = a.createBiquadFilter(), hi = a.createBiquadFilter(), sub = a.createBufferSource(), lp = a.createBiquadFilter(), sg = a.createGain();
+      lo.type = 'lowshelf'; lo.frequency.value = 240; lo.gain.value = 8; hi.type = 'lowpass'; hi.frequency.value = 5200; src.playbackRate.value = CRYDEEP; src.connect(lo); lo.connect(hi); hi.connect(g);
+      sub.buffer = buf; sub.playbackRate.value = CRYDEEP / 2; lp.type = 'lowpass'; lp.frequency.value = 300; sg.gain.value = 1.2; sub.connect(lp); lp.connect(sg); sg.connect(g); sub.start(at); g.gain.value *= 0.85; }
+    else src.connect(g);
+    src.start(at);
     window.cryCount++;
   }).catch(() => {});
 }

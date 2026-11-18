@@ -163,7 +163,7 @@ const leagueTag = () => { const L = S.lad; return `${L.lap ? 'Lap ' + (L.lap + 1
 function raidCard() {
   const R = S.raid; if (!R || R.hid || !LEG[R.id]) return '';
   /* Har pakken en cutscene i 3D for denne, hentes bunten og modellen nå, så den er klar når kampen starter. */
-  try { if (typeof G3D !== 'undefined' && G3D.can() && G3D.has('c3:' + R.id) && raidOpen()) G3D.ready('c3:' + R.id).catch(() => {}); } catch (_) {}
+  try { if (typeof G3D !== 'undefined' && G3D.can() && G3D.has('c3:' + R.id) && raidOpen()) G3D.ready('c3:' + R.id).then(() => G3D.has('c3:' + R.id + 'a') && G3D.ready('c3:' + R.id + 'a')).catch(() => {}); } catch (_) {}
   const V = raidShow(R), L = V.L, open = raidOpen(), n = (R.tries || 0) + 1, last = n >= raidTries(R) && !R.ev;
   const btn = `<button type="button" class="btn gold wide" data-a="raid" style="margin-top:10px"${open ? '' : ' disabled'}>${open ? (last ? 'Challenge it · last attempt' : 'Challenge it') : 'Again tomorrow'}</button>`;
   if (!R.seen) return `<div class="card k-ultra raidc myst"><div class="pre-foe"><span class="raid-sp qm" aria-hidden="true"><i>?</i></span><div class="sp"><div class="sm">Legendary raid · attempt 1 of ${raidTries(R)}</div><b class="bossn">A legendary Pokémon</b><div class="sm tn">Who it is stays secret until you face it</div></div></div>${btn}</div>`;
@@ -408,7 +408,9 @@ async function legendIntro(B) {
      nivået og venter på Continue; så virvel og hvitt blink, og rett inn i kampen. Lar den seg ikke hente i tide, går sprite-filmen som før. */
   const id3 = 'c3:' + tr.leg, c3 = !tr.dk && !calm() && typeof G3D !== 'undefined' && G3D.can() && CINE.has(id3) && await Promise.race([G3D.ready(id3).then(() => true, () => false), T(G3D.isReady(id3) ? 300 : 12000).then(() => false)]);
   if (gone()) return;
-  if (c3) { id = id3; info = CINE.info(id); o.lv = f.lv; root.classList.add('c3'); }
+  if (c3) { id = id3; info = CINE.info(id); o.lv = f.lv; root.classList.add('c3');
+    /* Arenaen i 3D (samme sted som cutscenen) må stå klar når kampen starter. Primal-cutscenen hentes når kampen er i gang (ikke mens introen spiller). */
+    if (G3D.has(id3 + 'a')) await Promise.race([G3D.ready(id3 + 'a').catch(() => 0), T(2500)]); if (gone()) return; }
   /* Dark Mewtwo: den første kamplåta starter med forvandlingen (filmen) og går rett videre inn i kampen. Finnes den ikke i pakken, er alt som før. */
   const V = tr.dk ? PACK.special(/Villain/) : '', tk = V || PACK.trackFor(B), ready = CINE.prep(id, 6000);
   if (V) PACK.cue(V);
@@ -425,9 +427,9 @@ async function legendIntro(B) {
   let stop = () => {};
   if (started) music(''); else { PACK.music(''); stop = epicIntro('ultra', info.R); }
   root.classList.add('on'); sfx.appear(); buzz([40, 60, 40]);
-  const cue = n => { if (gone()) return; if (n === 'cry') { cry(f.id, 0, 0.6); buzz([80, 40, 260]); if (!started) battleMusic(B); } else if (n === 'boom') buzz([90, 60, 90, 60, 240]); else if (n === 'thud') buzz(45); else buzz(18); };
+  const cue = n => { if (gone()) return; if (n === 'cry') { cry(f.id, 0, c3 ? 0.8 : 0.6, c3 ? 1 : 0); buzz([80, 40, 260]); if (!started) battleMusic(B); } else if (n === 'boom') buzz([90, 60, 90, 60, 240]); else if (n === 'thud') buzz(45); else buzz(18); };
   const go = $('#lgigo'), pl = CINE.play(cv, id, Object.assign({ clock: () => started ? PACK.clock() : -1, cue, warp: V && started ? dkWarp : null, onhold: () => { if (gone() || skipped) return; if (sk) sk.hidden = true; if (go) go.hidden = false; } }, o)), sk = $('#lgiskip');
-  let skipped = false; const skip = () => { if (skipped) return; skipped = true; sfx.tap(); stop(); if (c3) { if (sk) sk.hidden = true; if (go) go.hidden = true; cry(f.id, 0, 0.6); buzz([80, 40, 260]); } pl.skip(); };
+  let skipped = false; const skip = () => { if (skipped) return; skipped = true; sfx.tap(); stop(); if (c3) { if (sk) sk.hidden = true; if (go) go.hidden = true; cry(f.id, 0, 0.7, 1); buzz([80, 40, 260]); } pl.skip(); };
   setTimeout(() => { if (!gone() && sk && !skipped && (!go || go.hidden)) sk.hidden = false; }, 1200); if (sk) sk.addEventListener('click', skip); if (go) go.addEventListener('click', skip);
   const key = e => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') skip(); }; document.addEventListener('keydown', key);
   const watch = setInterval(() => { if (gone()) pl.stop(); }, 300);
@@ -437,6 +439,7 @@ async function legendIntro(B) {
   /* Filmen til en arena slutter i hvilestillingen. Bildet males på nytt, så animasjonen i kampen starter fra samme bilde. */
   if (info.arena && BT.arena && !skipped) { const sp = $('#s-foe'); if (sp && sp.classList.contains('pre')) paintSprite('foe', 'ace pre'); }
   root.classList.add('d'); await T(c3 ? 430 : 240); if (c3) G3D.out = 0;
+  if (c3 && G3D.has(id3 + 'p')) setTimeout(() => { if (BT.B === B) G3D.ready(id3 + 'p').catch(() => {}); }, 3500);
 }
 /* Dagens event: dine egne som får noe ut av det (laget først, så de sterkeste i boksen). */
 function evWho(e, n) {
@@ -922,12 +925,41 @@ function paintSprite(side, cls) {
   const b = teamOf(side)[BT.v[side].i], el = $('#s-' + side);
   if (el) { el.className = 'bs ' + side + ' ' + (cls || ''); el.dataset.k = sprK(side, b).toFixed(3); el.style.setProperty('--k', el.dataset.k); el.innerHTML = spr(b.id, { ani: 1, sh: b.sh, back: side === 'me', mega: b.mega, it: b.src && b.src.item }); el.dataset.shd = b.shd ? '1' : ''; if (side === 'foe' && BT.B && BT.B.rage) el.classList.add('rage'); if (side === 'foe' && BT.B && BT.B.sin) { el.classList.add('sin'); dkEyes(el); } camFit(); }
 }
+/* Primal Reversion i et raid som cutscene i 3D (raid3c.js, 'c3:<art>p'; bare når pakken har 3D-filene): krystallen, Ω-tegnet, den knuses, og vulkanen bryter ut.
+   Den kan hoppes over. Bildet og boksen byttes mens skjermen er dekket, og cutscenen ender i et hvitt blink rett tilbake til kampen.
+   Gir false når den ikke kan spilles (da går lysringen som før). */
+async function primalCut(B, e) {
+  const id = 'c3:' + e.id + 'p', T = ms => new Promise(r => setTimeout(r, ms)), host = $('#ov');
+  if (calm() || !host || typeof G3D === 'undefined' || typeof CINE === 'undefined' || !G3D.can() || !CINE.has(id)) return false;
+  if (!await Promise.race([G3D.ready(id).then(() => true, () => false), T(G3D.isReady(id) ? 400 : 3500).then(() => false)])) return false;
+  await CINE.prep(id, 3000); if (BT.B !== B) return false;
+  const root = document.createElement('div'); root.className = 'lgi c3 pcut'; root.id = 'pcut'; root.style.zIndex = 80; root.style.setProperty('--cc', B.tr.cc || '#fff');
+  root.innerHTML = '<div class="lgi-s"><canvas class="lgi-cv" id="pcutcv" width="512" height="384"></canvas></div><button type="button" class="lgi-skip" id="pcutskip" hidden>Skip</button>';
+  host.appendChild(root); const cv = root.querySelector('canvas'), sk = root.querySelector('button'), gone = () => BT.B !== B || !root.isConnected, f = teamOf('foe')[BT.v.foe.i];
+  const arn = BT.arena && BT.arena.on && BT.arena.pause ? BT.arena : null; if (arn) arn.pause(1);   /* arenaen står stille under cutscenen */
+  BSFX.mega(); buzz([30, 50, 30, 50, 30, 50, 220]);
+  const base = fxCue(B), cue = (n, v) => { if (gone()) return; if (n === 'cry') { cry(e.id, 0, 0.8, 1); buzz([80, 40, 260]); } else base(n, v); };
+  const pl = CINE.play(cv, id, { name: B.tr.n, cc: B.tr.cc, cue }); requestAnimationFrame(() => root.classList.add('on'));
+  let skipped = false; const skip = () => { if (skipped) return; skipped = true; sfx.tap(); sk.hidden = true; pl.skip(); };
+  const tm = setTimeout(() => { if (!gone() && !skipped) sk.hidden = false; }, 900); sk.addEventListener('click', skip);
+  const key = k => { if (k.key === 'Enter' || k.key === ' ' || k.key === 'Escape') skip(); }; document.addEventListener('keydown', key);
+  const watch = setInterval(() => { if (gone()) pl.stop(); }, 300);
+  await pl.done; clearInterval(watch); clearTimeout(tm); document.removeEventListener('keydown', key);
+  if (arn) arn.pause(0);
+  if (BT.B !== B) { root.remove(); return true; }
+  /* Under det hvite: den nye formen står der når kampen kommer tilbake. */
+  const sp = $('#s-foe'); if (sp) { const keep = [...sp.classList].filter(c => !['bs', 'foe', 'megaev', 'megain', 'in', 'gone'].includes(c)).join(' '); paintSprite('foe', keep); paintBox('foe'); }
+  if (skipped && f) cry(f.id, 0.05, 0.5);
+  shake(520, 4); root.classList.add('d'); await T(440); root.remove();
+  return true;
+}
 /* Mega Evolution på skjermen: lyset samler seg om Pokémonen mens den blir hvit, og når det slipper, står den nye formen der. Bildet, navnet og
    typene byttes i det lyset er på sitt sterkeste. */
 async function megaShow(B, side, e) {
   let sp = $('#s-' + side); if (!sp) return;
   await say(e.txt, 500);
   if (BT.B !== B || !sp.isConnected) return;
+  if (e.primal && side === 'foe' && B.tr.wild && await primalCut(B, e)) return;
   const img = sp.querySelector('img,canvas'), h = Math.max(56, Math.min(230, img ? img.getBoundingClientRect().height : 90));
   const ring = cls => { const fx = document.createElement('i'); fx.className = 'megafx ' + cls + (e.primal ? ' primal' : ''); fx.style.setProperty('--h', h.toFixed(0) + 'px'); sp.appendChild(fx); return fx; };
   ring('gather'); BSFX.mega(); buzz([30, 50, 30, 50, 30, 50, 220]); sp.classList.add('megaev');
