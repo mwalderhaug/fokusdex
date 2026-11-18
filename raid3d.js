@@ -89,6 +89,25 @@ void main(){
   col += uRimC * pow(1. - max(dot(N, V), 0.), 3.) * (dot(N, uRim) * .5 + .5) * uRimK * .5;
   gl_FragColor = vec4(mix(col, uFogC, fogK(vW)), 1.);
 }`;
+  /* Vulkanen: mørk basalt med renner nedover (støy strukket langs fallet), lysere aske mot toppen, og lavaelver som følger rennene fra krateret
+     (uEr = hvor sterkt utbruddet er). vUv = (rundt fjellet 0–1, høyden 0–1). Støyen regnes på en sirkel, så den har ingen søm. */
+  const FS_VOLC = `varying vec3 vW, vN; varying vec2 vUv; uniform vec3 uA, uB; uniform float uEr;
+${COMMON}
+void main(){
+  float a = vUv.x * 6.2832, v = vUv.y; vec2 c = vec2(cos(a), sin(a));
+  vec3 Nf = normalize(cross(dFdx(vW), dFdy(vW))), Ns = normalize(vN); if (dot(Ns, Nf) < 0.) Ns = -Ns; vec3 N = normalize(mix(Nf, Ns, .7));
+  float g1 = fbm(c * 9. + vec2(v * 1.3, 0.)), g2 = fbm(c * 24. + v * 2.), streak = fbm(vec2(c.x * 30. + g1 * 2., c.y * 30. + v * 2.5));
+  vec3 base = mix(uA, uB, smoothstep(.35, .7, streak * .6 + g2 * .4)) * (.7 + .6 * g1); base = mix(base, uB * 1.3, smoothstep(.5, .95, v) * .45);
+  vec3 col = base * mix(uShC, uKeyC, smoothstep(.25, .85, dot(N, uKey) * .5 + .5));
+  col += uRimC * pow(1. - max(dot(N, normalize(cameraPosition - vW)), 0.), 2.5) * (dot(N, uRim) * .5 + .5) * .35;
+  float ch = abs(fbm(c * 5. + vec2(0., v * .6)) - .5), w = .01 + .018 * v;
+  float river = (1. - smoothstep(w, w * 2.8, ch)) * smoothstep(.1 + .42 * (1. - min(uEr, 1.)), 1., v + fbm(c * 3.) * .35);
+  float flow = .7 + .3 * sin(v * 60. - uTime * 3. + g1 * 9.);
+  vec3 hot = mix(vec3(.7, .09, .02), vec3(1., .72, .2), smoothstep(.3, 1., v) * flow) * (.55 + .9 * min(uEr, 1.6));
+  float fg = fogK(vW); col = mix(col, uFogC, fg);
+  col += hot * river * (1. - fg * .45) + vec3(1., .42, .08) * smoothstep(.84, 1., v) * (.35 + .7 * min(uEr, 1.6));
+  gl_FragColor = vec4(col, 1.);
+}`;
   /* Krystaller: fasetter, ett blikk, lys i kantene og innenfra. */
   const FS_CRY = `varying vec3 vW; uniform vec3 uA, uB; uniform float uPulse;
 ${COMMON}
@@ -158,7 +177,7 @@ void main(){ float a = uA;
 }`;
   /* Etterpasset: omgivelsene (tE, full oppløsning) og figuren (tF, 256 × 192, nærmeste piksel) settes sammen etter dybden. Dybden til omgivelsene leses
      midt i figurens piksel, så hver store piksel enten synes eller er skjult (lavaen kutter beina, stein står foran). Konturen: figurens piksel får
-     blekk når naboen ikke er figur, eller ligger et sprang lenger bak (en arm foran kroppen). Så fartsstreker og virvelen ut (Black/White). */
+     blekk når naboen ikke er figur, eller ligger et sprang lenger bak (en arm foran kroppen). Så gnister utover fra et punkt (brølet) og virvelen ut (Black/White). */
   const FS_POST = `uniform sampler2D tE, tED, tF, tFD; uniform vec2 uRes, uLo, uNF; uniform vec3 uInk; uniform vec4 uSpd, uInkD; uniform float uInkK, uSwirl, uFrame;
 float h21(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float lin(float z){ return 2. * uNF.x * uNF.y / (uNF.y + uNF.x - (z * 2. - 1.) * (uNF.y - uNF.x)); }
@@ -170,7 +189,9 @@ void main(){
         if (abs(idn - id) > .5) { if (idn < .5 || dn > dF) e = 1.; } else if (id > 127.5 && dn - dF > uInkD.z + dF * uInkD.w) es = 1.; }
       float ik = uInkK * (1. - smoothstep(uNF.y * .12, uNF.y * .2, dF)); vec3 fc = f.rgb; fc = mix(fc, fc * .32 + uInk * .25, es * ik); fc = mix(fc, uInk, e * ik); c = vec4(fc, 1.); } }
   vec2 px = uv * uLo, r = (px - uSpd.xy) / uLo.y; float ang = atan(r.y, r.x), rr = length(r);
-  if (uSpd.z > 0.) { float w = h21(vec2(floor(ang * 56. / 6.2832), floor(uFrame * .5))); if (w > 1. - uSpd.z * .3 && rr > uSpd.w + h21(vec2(w, 3.)) * .3) c = mix(c, vec4(1.), .92); }
+  /* Gnister utover fra et punkt: tynne, korte, oransje streker som flyr ut (ikke tykke hvite kiler: Jazz 18.11). Lys legges oppå. */
+  if (uSpd.z > 0.) { float bn = ang * 150. / 6.2832, w = h21(vec2(floor(bn), 7.)), ph = fract(w * 7.3 + uFrame * .04 * (.6 + w)), r0 = uSpd.w + ph * 1.15;
+    if (w > 1. - uSpd.z * .5 && abs(fract(bn) - .5) < .17 && rr > r0 && rr < r0 + .05 + .13 * w) c.rgb += vec3(1., .5, .16) * (1. - ph) * .85 * uSpd.z; }
   if (uSwirl > 0.) { vec2 s = (px - uLo * .5) / uLo.y; float a2 = atan(s.y, s.x) + uSwirl * 5. - length(s) * 3.2, wd = fract(a2 * 7. / 6.2832), cut = uSwirl * 1.25 - (1. - length(s) * 1.1) * .25;
     if (wd < cut) c = vec4(mix(vec3(.82, .74, 1.), vec3(1.), step(wd, cut * .6)), 1.); }
   gl_FragColor = c;
@@ -227,6 +248,14 @@ void main(){
         pos.push(cos(a) * rr, o.y0 + v * hh + (j === M ? rnd(ia, o.seed + 5) * o.h * 0.18 : 0), sin(a) * rr); } }
     for (let i = 0; i < N; i++) for (let j = 0; j < M; j++) { const p = i * (M + 1) + j, q = p + M + 1; idx.push(p, p + 1, q, q, p + 1, q + 1); }
     const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); g.computeBoundingSphere(); return new T.Mesh(g, o.mat); };
+  /* Vulkanen: en bred, slak kjegle som blir brattere mot toppen, med ujevnt omriss, renner og en brutt kraterkant (lavere på den ene siden). */
+  K.volcano = o => { const N = o.n || 96, M = o.m || 30, pos = [], uvs = [], idx = [], sd = o.seed || 5, cr = o.crater || 0.07;
+    for (let j = 0; j <= M; j++) { const v = j / M; for (let i = 0; i <= N; i++) { const ia = i % N, a = ia / N * TAU, lobes = 1 + 0.16 * sin(a * 3 + sd) + 0.1 * sin(a * 7 + sd * 2.3) + 0.06 * sin(a * 13 + 1.7), gully = 0.05 * sin(a * 31 + sin(a * 5) * 3) * (1 - v) + 0.03 * sin(a * 57 + v * 9) * (1 - v * 0.6);
+      const rr = (o.r * Math.pow(1 - v, 1.65) * lobes + o.r * cr) * (1 + gully), notch = j === M ? -o.h * 0.08 * max(0, sin(a * 2 + 1.1)) + (rnd(ia, sd) - 0.5) * o.h * 0.04 : 0;
+      pos.push(cos(a) * rr, v * o.h + notch, sin(a) * rr); uvs.push(i / N, v); } }
+    for (let j = 0; j < M; j++) for (let i = 0; i < N; i++) { const p = j * (N + 1) + i, q = p + N + 1; idx.push(p, q, p + 1, q, q + 1, p + 1); }
+    const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(uvs, 2)); g.setIndex(idx); g.computeVertexNormals(); g.computeBoundingSphere();
+    return new T.Mesh(g, sm(VS, FS_VOLC, { uA: uv(u3(o.a || '#140c0e')), uB: uv(u3(o.b || '#33211d')), uEr: uv(0.3) }, { side: T.DoubleSide })); };
   K.lava = o => { o = o || {}; return new T.Mesh(new T.PlaneGeometry(o.size || 900, o.size || 900).rotateX(-PI / 2), sm(VS, FS_LAVA, { uRing: uv([0, 1, 2, 3].map(() => new T.Vector4())), uWade: uv(new T.Vector4()), uHeat: uv(1.2), uK: uv(o.k || 16), uCell: uv(o.cell || 84), uCw: uv(o.cw || 0.05), uBri: uv(0.95) })); };
   /* Partikler. init(i) gir { p, v, s: frø, b: fødsel (s), l: levetid (s), z: størrelse }. o.pix: harde piksler i figurens oppløsning, o.add: lys, ellers røyk. */
   K.pts = (n, init, o) => { o = o || {}; const P = new Float32Array(n * 3), V = new Float32Array(n * 3), S = new Float32Array(n * 4);
