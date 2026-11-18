@@ -218,6 +218,7 @@ const CINE = (() => {
     heat: 0, heatY: 150, heatUp: 90, heatDn: 120, heatMask: null, shock: null, bulge: null, warp: null, bloom: 0, bloomT: 0.62, rays: null, grade: null, mono: 0, monoT: 0.42, vig: 0, vigc: '#000', grain: 0, melt: 0, film: 0, mat: null });
   let tmpA = null, tmpB = null;
   function present(out, B) {
+    if (out.width !== W && out.dataset && out.dataset.rs) { out.width = W; out.height = H; delete out.dataset.rs; out.style.imageRendering = ''; }
     const o = out.getContext('2d'); o.setTransform(1, 0, 0, 1, 0, 0); o.globalAlpha = 1; o.globalCompositeOperation = 'source-over'; o.imageSmoothingEnabled = false; o.fillStyle = '#000'; o.fillRect(0, 0, W, H);
     const sx = P.sh ? (rnd(frameNo, 1) - 0.5) * 2 * P.sh : 0, sy = P.sh ? (rnd(frameNo, 2) - 0.5) * 2 * P.sh : 0;
     const cam = () => { o.translate(P.zx + sx, P.zy + sy); if (P.rot) o.rotate(P.rot); o.scale(P.z, P.z); o.translate(-P.zx, -P.zy); };
@@ -268,24 +269,33 @@ const CINE = (() => {
     const f = filmOf(id); o = o || {}; const sps = {};
     /* o.team = laget som møter (bossfilmene viser det som skygger): bildene hentes sammen med filmens egne. */
     for (const s of (f.sps || []).concat(o.team || [])) if (!(s in sps)) sps[s] = await Promise.race([loadSprite(s), new Promise(r => setTimeout(() => r(null), 30))]);
-    cur = { id, f, sp: await Promise.race([loadSprite(f.spid || id), new Promise(r => setTimeout(() => r(null), 30))]), sps, cc: o.cc || '#ffffff', name: o.name || '', cap: o.cap || 'Legendary Pokémon', lv: o.lv || 0, team: o.team || null };
+    cur = { id, f, sp: await Promise.race([loadSprite(f.spid || id), new Promise(r => setTimeout(() => r(null), 30))]), sps, cc: o.cc || '#ffffff', name: o.name || '', cap: o.cap || 'Legendary Pokémon', lv: o.lv || 0, team: o.team || null, pose: o.pose || null };
     if (!B) { B = document.createElement('canvas'); B.width = W; B.height = H; }
   }
   /* Tegner ett bilde av filmen på lerretet out. */
   function frame(out, t) {
-    const glf = !!cur.f.gl;
-    T = t; frameNo = floor(t * 60); P = newP(); g = B.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.imageSmoothingEnabled = true;
+    const glf = !!cur.f.gl, rs = glf && typeof FXGL !== 'undefined' && FXGL.ok() ? C.RS : 1;
+    if (B.width !== W * rs) { B.width = W * rs; B.height = H * rs; } rsNow = rs;
+    T = t; frameNo = floor(t * 60); P = newP(); g = B.getContext('2d'); g.setTransform(rs, 0, 0, rs, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.imageSmoothingEnabled = true;
     if (glf) g.clearRect(0, 0, W, H); else { g.fillStyle = '#000'; g.fillRect(0, 0, W, H); }
     try { cur.f.draw(T, P, cur); } catch (e) { C.err = String(e && e.stack || e); }
     g.setTransform(1, 0, 0, 1, 0, 0);
-    if (glf) { if (C.gpu(out, B)) return; soften(B); }
+    if (glf) { if (C.gpu(out, B)) return; if (rs > 1) { C.RS = 1; return frame(out, t); } soften(B); }
     present(out, B);
   }
   /* Bildet B gjennom WebGL (fxgl.js) og ut på lerretet out. Gir false når WebGL ikke er der (da tegnes reserven). */
-  C.gpu = (out, B2) => { if (typeof FXGL === 'undefined' || !FXGL.ok()) return false; const sx = P.sh ? (rnd(frameNo, 1) - 0.5) * 2 * P.sh : 0, sy = P.sh ? (rnd(frameNo, 2) - 0.5) * 2 * P.sh : 0; return FXGL.draw(out, B2, P, T, frameNo, sx, sy); };
+  C.gpu = (out, B2) => {
+    if (typeof FXGL === 'undefined' || !FXGL.ok()) return false; const sx = P.sh ? (rnd(frameNo, 1) - 0.5) * 2 * P.sh : 0, sy = P.sh ? (rnd(frameNo, 2) - 0.5) * 2 * P.sh : 0;
+    if (out.width !== B2.width) { out.width = B2.width; out.height = B2.height; if (out.dataset) out.dataset.rs = 1; } if (out.style && out.style.imageRendering !== 'auto') out.style.imageRendering = 'auto';
+    return FXGL.draw(out, B2, P, T, frameNo, sx, sy);
+  };
+  /* Oppløsningen filmer og arenaer med WebGL tegnes i, som et tall ganger 512 × 384 (se arena.js for hvordan den velges). rsNow = den som gjelder i bildet som tegnes nå. */
+  C.RS = 1; let rsNow = 1, fpsLow = 0;
   /* Bilder i sekundet i filmen eller arenaen som går nå (vises med ?fps=1). */
   C.fps = 0; let fpsN = 0, fpsT = 0;
-  C.tick = () => { const n = performance.now(); fpsN++; if (n - fpsT >= 1000) { C.fps = Math.round(fpsN * 1000 / (n - fpsT)); fpsN = 0; fpsT = n; if (C.onfps) C.onfps(C.fps); } };
+  C.tick = () => { const n = performance.now(); fpsN++; if (n - fpsT >= 1000) { const gap = n - fpsT > 1500; C.fps = Math.round(fpsN * 1000 / (n - fpsT)); fpsN = 0; fpsT = n; if (C.onfps) C.onfps(C.fps);
+    /* Holder ikke enheten farten i den høye oppløsningen, går den ned til 512 × 384 resten av økta. */
+    if (!gap && C.RS > 1 && C.fps < 42) { if (++fpsLow >= 2) { C.RS = 1; fpsLow = 0; } } else fpsLow = 0; } };
   /* Til testing: ett bilde på et bestemt tidspunkt. */
   C.still = async (out, id, t, o) => { C.err = ''; await C.prep(id, 8000); await setCur(id, o); frame(out, t); return C.err || ''; };
   /* Spiller filmen på lerretet. o = { name, cap, lv, cc, clock() (sekunder siden låta startet, eller −1), cue(navn) (lyd og rystelse i mobilen), fast }.
@@ -300,7 +310,7 @@ const CINE = (() => {
         let t = (performance.now() - t0) / 1000; const ck = o.clock ? o.clock() : -1; if (ck >= 0 && abs(ck - t) < 1.5) t = ck;
         /* o.warp: fra sekunder i låta til sekunder i filmen, når filmen spilles til en annen låt enn den er lagt på. */
         if (o.warp) t = o.warp(t);
-        if (skipAt >= 0) { const k = (performance.now() - skipAt) / 280; frame(out, min(t, f.len - 0.02)); const x = out.getContext('2d'); x.globalAlpha = c01(k); x.fillStyle = f.outc || '#fff'; x.fillRect(0, 0, W, H); x.globalAlpha = 1; if (k >= 1) return end(); raf = requestAnimationFrame(step); return; }
+        if (skipAt >= 0) { const k = (performance.now() - skipAt) / 280; frame(out, min(t, f.len - 0.02)); const x = out.getContext('2d'); x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = c01(k); x.fillStyle = f.outc || '#fff'; x.fillRect(0, 0, out.width, out.height); x.globalAlpha = 1; if (k >= 1) return end(); raf = requestAnimationFrame(step); return; }
         if (t >= f.len) { frame(out, f.len); return end(); }
         frame(out, t); C.tick();
         for (const q of cues) if (!q.on && t >= q.t) { q.on = true; if (o.cue) try { o.cue(q.n); } catch (_) {} }
@@ -362,7 +372,8 @@ const CINE = (() => {
   C.airStill = (out, id, t, o) => { const f = filmOf(id); if (!f || !f.air) return; T = t; frameNo = floor(T * 60); P = newP(); cur = { id, f, sp: null, sps: {}, cc: (o && o.cc) || '#fff' }; g = out.getContext('2d'); g.setTransform(out.width / W, 0, 0, out.height / H, 0, 0); g.clearRect(0, 0, W, H); f.air(T, (o && o.k) || 1, cur.cc); };
 
   /* Til raidk.js og arena.js: motorens indre. draw(out, f, t, o, fn) tegner ett bilde med en annen tegner enn filmens egen. */
-  C._ = { loadSprite, need, art, tinted, sprs, filmOf, newP, present, soften, setCur, set: (g2, t, p, c) => { g = g2; T = t; frameNo = floor(t * 60); P = p; cur = c; }, buf: () => { if (!B) { B = document.createElement('canvas'); B.width = W; B.height = H; } return B; } };
+  C._ = { loadSprite, need, art, tinted, sprs, filmOf, newP, present, soften, setCur, set: (g2, t, p, c, rs) => { g = g2; T = t; frameNo = floor(t * 60); P = p; cur = c; rsNow = rs || 1; }, rs: () => rsNow,
+    buf: rs => { if (!B) B = document.createElement('canvas'); rs = rs || 1; if (B.width !== W * rs) { B.width = W * rs; B.height = H * rs; } return B; } };
   /* Verktøyene filmene bruker (filmene ligger i raidf.js). */
   C.kit = { W, H, TAU, PI, sin, cos, abs, max, min, floor, c01, mix, seg, hit, pulse, io, eo, ei, back, rnd, hex, rgba, blend, fill, lin, glow, im, has, tintArt, mulArt, cover, strip, spr, aura, sprH, bolt, rays, ring, wave, poly, rect, beam, stars, dust, fog, txt, fontN, vig, card, shatter, onAux, film, fx,
     get T() { return T; }, get P() { return P; }, get g() { return g; }, get cur() { return cur; } };

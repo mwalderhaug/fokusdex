@@ -313,7 +313,7 @@
   /* Den svarte sola: en skive med en krans av oransje ild. */
   const blackSun = (t, x, y, r, a) => { if (a <= 0) return; rays(x, y, { n: 22, rot: t * 0.2, col: '#ff7a1a', a: 0.45 * a, r0: r * 0.9, r1: r * 3.4, wid: 0.34 }); rays(x, y, { n: 22, rot: -t * 0.13, col: '#ffd070', a: 0.25 * a, r0: r * 0.9, r1: r * 2.4, wid: 0.18 }); glow(x, y, r * 2.2, '#ff5a14', 0.7 * a, 1); ring(x, y, r * 1.04, { col: '#ffd070', w: 5, a }); K.g.save(); K.g.globalAlpha = c01(a); K.g.fillStyle = '#030106'; K.g.beginPath(); K.g.arc(x, y, r, 0, TAU); K.g.fill(); K.g.restore(); };
   const dVoid = (t, heat) => { lin(['#04020a', '#0e0618', '#1a0a14', '#020104']); im('vortex', 256, 180, { s: 1.3, r: -t * 0.1, a: 0.5, add: 'screen' }); im('redswirl', 256, 180, { s: 1.6, r: t * 0.2, a: 0.2 + heat * 0.3, add: 1 }); dust('up', { n: 30, seed: 4, cols: ['#ff8a2a', '#5a3a7a'], a: 0.5 + heat * 0.3, spd: 1 + heat }); };
-  /* ================= KYOGRE og GROUDON =================
+  /* ================= KYOGRE (og motivene Groudon delte med den) =================
      Fire dempede slag (0.31, 1.56, 2.79, 4.01), en trommevirvel fra 4.92, utbruddet på 5.26, tre slag (8.46, 8.93, 9.54) og et siste på 10.16.
      Begge begynner som i åpningen av Emerald: en svart kjempe i mørket, med tegn som lyser sterkere og rødere for hvert slag. */
   const KB = [0.31, 1.56, 2.79, 4.01], KH = [8.46, 8.93, 9.54];
@@ -358,43 +358,7 @@
   });
   /* Sprekker med lava i bakken: lyn som ligger stille og gløder. n = hvor mange som har åpnet seg. */
   const lava = (n, y0, a, seedo) => { for (let i = 0; i < n; i++) { const x = rnd(i, 11 + (seedo || 0)) * 560 - 24, yy = y0 + rnd(i, 12) * (H - y0 - 6); bolt(x, yy, x + (rnd(i, 13) - 0.5) * 260, yy + (rnd(i, 14) - 0.3) * 60, { seed: i * 7 + 2, col: '#ff5a1a', core: '#ffe08a', w: 2 + rnd(i, 15) * 2, a, jag: 0.3, depth: 4, br: 1 }); } };
-  film(383, { len: 12.5, R: 5.26, use: ['em_groudon0', 'em_groudon1', 'em_groudon2', 'em_groudon3', 'em_groudon4', 'groudon', 'sun', 'fireband', 'smoke', 'evilbg', 'cracks', 'curtain1', 'shine2'],
-    cues: [[0.31, 'thud'], [1.56, 'thud'], [2.79, 'thud'], [4.01, 'thud'], [5.26, 'boom'], [5.26, 'cry'], [10.16, 'thud']],
-    draw(t, P, c) {
-      const fire = mulArt('curtain1', '#ff7a1a');
-      if (t < 5.26) {
-        P.bars = 1; if (t < 0.31) return;
-        const fl = hits(t, KB, 0.7), n = KB.filter(q => t >= q).length, x = mix(-120, 262, eo(seg(t, 0.3, 5.2))), s = 2.3 + seg(t, 0.3, 5.26) * 1.0, roll = seg(t, 4.92, 5.26);
-        lin(['#050101', '#120302', '#2a0802', '#5a1404']); im('evilbg', 256, 192, { a: 0.5 }); glow(256, 420, 330, '#ff5a1a', 0.5 + fl * 0.3, 1);
-        /* Kjempen kommer gående. Hvert steg får bakken til å sprekke. */
-        const idx = min(4, max(0, n)), a = seg(t, 0.3, 1.2), y = 212 + abs(sin(t * 2.55)) * -6; im('em_groudon' + idx, x, y, { s, a, px: 1 }); if (fl > 0) im('em_groudon' + idx, x, y, { s: s * 1.02, a: fl * 0.8, add: 1, px: 1 });
-        poly([[0, 300], [W, 292], [W, H], [0, H]], '#070202'); lava(2 + n * 4 + floor(roll * 8), 300, 0.75 + fl * 0.25);
-        if (fire) im(fire, 256, 392, { s: 1.1, ay: 1, a: 0.25 + n * 0.08 + roll * 0.4, add: 1, sx: 1 + 0.03 * sin(t * 7) });
-        dust('ember', { n: 30 + n * 14, seed: 4, cols: ['#ff7a2a', '#ffd070', '#ff3a1a'], a: 0.9, spd: 1 + n * 0.3 }); dust('ash', { n: 30, seed: 8, cols: ['#4a3a34', '#2a2220'], a: fl * 0.9 + 0.2, spd: 2 });
-        fill('#ffb060', roll * roll * 0.5); vig(0.65, '#0a0100');
-        P.sh = fl * 8 + roll * 10; P.wav = 1.2 + n * 0.5; P.z = 1 + roll * 0.14; P.zy = 230; return;
-      }
-      /* Utbruddet, og solen som svir. */
-      const bt = hits(t, KH.concat([10.16]), 0.5), k = seg(t, 5.26, 5.9), y = 196 + sin(t * 1.3) * 3, s = 3.2, ghost = mulArt('groudon', '#ff5a2a');
-      lin(['#fff2c0', '#ffb040', '#e85a14', '#5a1404']); im('fireband', 256, 150, { s: 1.7, a: 0.35, add: 1 });
-      const sx = 256, sy = 70; rays(sx, sy, { n: 20, rot: t * 0.1, col: '#fff6d0', a: 0.5, r1: 560, wid: 0.4 }); glow(sx, sy, 260, '#fff6d0', 0.9, 1); im('sun', sx, sy, { s: 3.4, px: 1 }); im('shine2', sx, sy, { s: 3 + sin(t * 2) * 0.2, a: 0.8, add: 1, r: t * 0.2 });
-      if (ghost) im(ghost, 256 + 20, 250 - k * 30, { s: 1.25 + (t - 5.26) * 0.01, a: 0.3 * k, add: 1 });
-      poly([[0, 290], [120, 276], [300, 284], [W, 270], [W, H], [0, H]], '#120402'); lava(16, 284, 0.95, 3);
-      /* Lava som spruter opp for hvert slag. */
-      for (const [q, x] of [[5.26, 256], [5.5, 110], [5.7, 410], [8.46, 150], [8.93, 370], [9.54, 256]]) { const d = hit(t, q, 1.1); if (d > 0) { beam(x, 26 * d + 6, 284 - (1 - d * d) * 260, 300, '#ff6a1a', d, '#ffe9a0'); for (let i = 0; i < 16; i++) { const ph = 1 - d, an = -PI / 2 + (rnd(i, q * 9) - 0.5) * 1.6, r = ph * 260; rect(x + cos(an) * r, 284 + sin(an) * r + ph * ph * 200, 5, 5, i % 2 ? '#ffd070' : '#ff5a1a', d, 1); } glow(x, 284, 80 * d, '#ff7a2a', d, 1); } }
-      glow(256, y, 190, '#ff5a1a', 0.3 + bt * 0.25, 1); aura(256, y, s, '#ffb060', 4 + bt * 3, 0.35 + bt * 0.3); spr(256, y, s, { ay: 0.56 });
-      if (fire) im(fire, 256, 394, { s: 1.15, ay: 1, a: 0.5 + bt * 0.3, add: 1, sx: 1 + 0.03 * sin(t * 7) });
-      dust('ember', { n: 80, seed: 4, cols: ['#ff7a2a', '#ffd070', '#ff3a1a'], a: 1, spd: 2 });
-      wave(5.26, 256, 284, { col: '#fff2c0', r: 560, d: 0.9, w: 16, sy: 0.5 }); wave(10.16, 256, 200, { col: '#ffd070', r: 560, d: 0.9 });
-      vig(0.45, '#2a0600'); card(10.16, { col: '#ff6a2a' });
-      P.sh = hit(t, 5.26, 1.3) * 16 + bt * 7; P.fl = max(hit(t, 5.26, 0.5), hit(t, 10.16, 0.2) * 0.6, seg(t, 12.25, 12.5)); P.fc = '#fff2d0'; P.wav = 1.6; P.z = 1 + (1 - k) * 0.12; P.zy = 230;
-    },
-    air(t, k) {
-      const fire = mulArt('curtain1', '#ff7a1a'); fill('#ff7a1a', 0.07 * k, 1); rays(256, -40, { n: 14, rot: t * 0.05, col: '#fff2c0', a: 0.16 * k, r1: 520, wid: 0.4 });
-      if (fire) im(fire, 256, 400, { s: 1.1, ay: 1, a: 0.3 * k, add: 1, sx: 1 + 0.03 * sin(t * 7) }); lava(5, 340, 0.6 * k, 3);
-      dust('ember', { n: 40, seed: 4, cols: ['#ff7a2a', '#ffd070', '#ff3a1a'], a: 0.85 * k, spd: 1.3 }); vig(0.4 * k, '#2a0600');
-    }
-  });
+  /* Groudon har ny arena og film fra steg 2: se raid2.js. */
 
   /* ================= DIALGA og PALKIA =================
      Låta braker løs på 0.29 og har tre tydelige tak: 5.46, 6.63 og 8.63 (så 9.29, og 11.63 der kampen starter).

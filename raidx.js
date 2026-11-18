@@ -290,13 +290,7 @@
   });
   /* Kyogre – havet i uvær. */
   set(382, ['#9ac8e8', '#2a5a8a', '#0a2238'], ['em_cloudL', 'em_cloudR', 'smoke'], [0.35, '#020a14'], t => { storm(t, 0.35, 0.3); sea(t, HZ, 8, ['#12304a', '#0e3a6a', '#0a2a50']); lin([[0, 'rgba(2,10,20,0)'], [1, 'rgba(2,10,20,.6)']], 1, 250, 384); const q = floor(t * 0.8), ph = (t * 0.8) % 1; if (ph < 0.18 && rnd(q, 3) > 0.4) { bolt(rnd(q, 1) * W, -10, rnd(q, 2) * W, HZ, { seed: q * 3, col: '#9fd0ff', w: 2, a: 1 - ph / 0.18, br: 2 }); fill('#9fd0ff', (0.18 - ph) * 0.8); } });
-  /* Groudon – magmakammeret. */
-  set(383, ['#c07a40', '#4a2010', '#140602'], ['fireband', 'smoke'], [0.45, '#140200'], t => {
-    lin(['#0a0200', '#2a0800', '#5a1400', '#1a0400']); im('fireband', 256, HZ - 4, { s: 1.4, a: 0.6 + 0.2 * sin(t * 1.3), add: 1 }) || glow(256, HZ, 300, '#ff5a14', 0.5, 1);
-    for (let i = 0; i < 9; i++) { const x = i * 70 - 20 + rnd(i, 3) * 30, h = 40 + rnd(i, 4) * 80; poly([[x - 26, 0], [x + 26, 0], [x + 6, h], [x - 4, h * 0.8]], '#120502'); }
-    ground(HZ, '#3a1206', '#080201'); lava(11, HZ + 14, 0.75 + 0.2 * sin(t * 1.7), 0); glow(256, 384, 300, '#ff5a14', 0.3 + 0.08 * sin(t * 2), 1);
-    dust('ember', { n: 50, seed: 4, cols: ['#ff7a2a', '#ffd070'], a: 0.8, spd: 1.2 }); fog('smoke', { n: 4, seed: 5, a: 0.25, spd: 10, s: 2, y0: 10, y1: 110 });
-  });
+  /* Groudon – arenaen ligger i raid2.js (arena.js). */
   /* Dialga og Palkia – Spear Pillar: søylene på fjelltoppen, med tiden (urverket) eller rommet (nettet) i himmelen bak. */
   set(483, ['#d0dcf8', '#5a70a8', '#141e3a'], ['space'], [0.4, '#02040f'], t => {
     im('space', 256, 192) || lin(['#02030c', '#0a1238', '#02030c']); lin([[0, 'rgba(10,30,90,0)'], [1, 'rgba(60,110,220,.5)']], 1, 30, HZ); stars({ n: 90, seed: 6, a: 0.8, cols: ['#fff', '#9fd0ff'] });

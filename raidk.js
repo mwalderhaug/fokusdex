@@ -103,28 +103,45 @@
            a, add, flip, r, sx, sy, tf [a, b, c, d] (egen matrise, til skygge og speilbilde), mask (bare disse pikslene, se K.MASK: brukes med col og add),
            col (silhuett), dark (0–1 mørklegging, darkc fargen), lit [{ col, a, h (andel av høyden), top }] (lys nedenfra eller ovenfra),
            rim { col, dx, dy, a } (kantlys: dx, dy er retningen lyset går), cut (alt under denne linja i bildet skjules: lava, vann, tåke),
-           fx(X, w, h, ax, ay) (egen tegning i figurens egne piksler) }. Lys og kanter regnes i figurens egne piksler, så de følger pikseltegningen. */
+           fx(X, w, h, ax, ay, m) (egen tegning i figurens egne piksler, m = forstørringen), hq (1, 2 eller 4: forstørring med EPX; ellers velges den etter størrelsen) }.
+     Lys og kanter regnes i figurens egne piksler, så de følger pikseltegningen. */
+  /* Forstørring av pikseltegninger uten grove klosser (EPX): hver piksel blir fire, og hjørnene mot en skrå kant får nabofargen, så skrå linjer blir
+     jevnere uten at tegningen blir uskarp. Brukes når figuren tegnes stort (nærbilder i filmene). To runder gir fire ganger størrelsen. */
+  const epx = (src, w, h) => {
+    const sv = new Uint32Array(src.data.buffer), out = new ImageData(w * 2, h * 2), d = new Uint32Array(out.data.buffer), w2 = w * 2;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = y * w + x, p = sv[i], A = y > 0 ? sv[i - w] : p, D = y < h - 1 ? sv[i + w] : p, Cc = x > 0 ? sv[i - 1] : p, B = x < w - 1 ? sv[i + 1] : p, o = y * 2 * w2 + x * 2;
+      d[o] = Cc === A && Cc !== D && A !== B ? A : p; d[o + 1] = A === B && A !== Cc && B !== D ? B : p; d[o + w2] = D === Cc && D !== B && Cc !== A ? Cc : p; d[o + w2 + 1] = B === D && B !== A && D !== Cc ? D : p; }
+    return out;
+  };
+  let sR = null; const hqC = new Map();
+  const hqOf = (key, src, sx, sy, sw, sh, n) => {
+    let d = hqC.get(key); if (d !== undefined) return d;
+    try { if (!sR) { sR = document.createElement('canvas'); sR.width = sR.height = 160; } if (sR.width < sw || sR.height < sh) { sR.width = max(sR.width, sw); sR.height = max(sR.height, sh); } const x = sR.getContext('2d', { willReadFrequently: true }); x.clearRect(0, 0, sw, sh); x.drawImage(src, sx, sy, sw, sh, 0, 0, sw, sh); d = x.getImageData(0, 0, sw, sh); d = epx(d, sw, sh); if (n >= 4) d = epx(d, sw * 2, sh * 2); } catch (_) { d = null; }
+    if (hqC.size > 5) hqC.delete(hqC.keys().next().value); hqC.set(key, d); return d;
+  };
   const mon = (x, y, s, o) => {
     o = o || {}; const cur = K.cur, sp = o.id ? cur.sps[o.id] : cur.sp; if (!sp) return null;
-    const a = o.a == null ? 1 : c01(o.a), A = sp.ani && !o.still ? sp.ani : null, ky = s * (o.sy || 1); let src, sx, sy, sw, sh, ax, ay;
-    if (A) { const fi = o.fi != null ? ((floor(o.fi) % A.n) + A.n) % A.n : frameAt(A, o.ft == null ? K.T : o.ft); src = A.sheet; sx = (fi % A.cols) * A.cw; sy = floor(fi / A.cols) * A.ch; sw = A.cw; sh = A.ch; ax = o.box ? A.m + A.gw / 2 - A.x0 : A.m + A.bw / 2; ay = o.box ? A.m + A.gh - A.y0 : A.m + A.bh; }
+    const a = o.a == null ? 1 : c01(o.a), A = sp.ani && !o.still ? sp.ani : null, ky = s * (o.sy || 1); let src, sx, sy, sw, sh, ax, ay, fi = -1;
+    if (A) { fi = o.fi != null ? ((floor(o.fi) % A.n) + A.n) % A.n : frameAt(A, o.ft == null ? K.T : o.ft); src = A.sheet; sx = (fi % A.cols) * A.cw; sy = floor(fi / A.cols) * A.ch; sw = A.cw; sh = A.ch; ax = o.box ? A.m + A.gw / 2 - A.x0 : A.m + A.bw / 2; ay = o.box ? A.m + A.gh - A.y0 : A.m + A.bh; }
     else { src = sp.cv; sx = sp.bx; sy = sp.by; sw = sp.bw; sh = sp.bh; ax = sw / 2; ay = sh; }
     const M = { w: sw * s, h: ay * ky, top: y - ay * ky, sw, sh, ax, ay }; if (a < 0.004) return M;
     if (o.mask) { src = maskOf(sp, A, o.mask); if (!src) return M; }
+    /* Tegnes figuren stort, forstørres pikseltegningen først (to eller fire ganger), og lys og kanter regnes i den forstørrede. */
+    const big = s * C._.rs(), want = o.hq != null ? o.hq : sp.clean === false ? 1 : big >= 3.1 ? 4 : big >= 2.3 ? 2 : 1, hd = want > 1 ? hqOf(`${o.id || cur.id}|${fi}|${o.mask || ''}|${want}`, src, sx, sy, sw, sh, want) : null, m = hd ? want : 1;
     let img = src, ix = sx, iy = sy;
-    if (o.col || o.lit || o.rim || o.dark || o.cut != null || o.fx) {
-      const X = small(sw, sh, 0); X.drawImage(src, sx, sy, sw, sh, 0, 0, sw, sh); X.globalCompositeOperation = 'source-atop';
-      if (o.col) { X.fillStyle = o.col; X.fillRect(0, 0, sw, sh); }
-      if (o.dark) { X.globalAlpha = c01(o.dark); X.fillStyle = o.darkc || '#000'; X.fillRect(0, 0, sw, sh); X.globalAlpha = 1; }
-      for (const L of [].concat(o.lit || [])) { const hh = ay * (L.h || 0.6), gr = X.createLinearGradient(0, L.top ? 0 : ay, 0, L.top ? hh : ay - hh); gr.addColorStop(0, rgba(L.col, L.a == null ? 0.5 : L.a)); gr.addColorStop(1, rgba(L.col, 0)); X.fillStyle = gr; X.fillRect(0, 0, sw, sh); }
-      if (o.rim) { const r = o.rim, Y = small(sw, sh, 1); Y.drawImage(src, sx, sy, sw, sh, 0, 0, sw, sh); Y.globalCompositeOperation = 'destination-out'; Y.drawImage(src, sx, sy, sw, sh, r.dx || 0, r.dy == null ? 1 : r.dy, sw, sh); Y.globalCompositeOperation = 'source-in'; Y.fillStyle = r.col; Y.fillRect(0, 0, sw, sh); X.globalAlpha = c01(r.a == null ? 0.9 : r.a); X.drawImage(sB, 0, 0, sw, sh, 0, 0, sw, sh); X.globalAlpha = 1; }
-      if (o.fx) { X.save(); o.fx(X, sw, sh, ax, ay); X.restore(); }
-      if (o.cut != null) { const row = ay - (y - o.cut) / ky; if (row < sh) { X.globalCompositeOperation = 'destination-out'; X.globalAlpha = 1; X.fillStyle = '#000'; X.fillRect(0, max(0, row), sw, sh); } }
+    if (m > 1 || o.col || o.lit || o.rim || o.dark || o.cut != null || o.fx) {
+      const X = small(sw * m, sh * m, 0), w2 = sw * m, h2 = sh * m; if (hd) X.putImageData(hd, 0, 0); else X.drawImage(src, sx, sy, sw, sh, 0, 0, sw, sh); X.globalCompositeOperation = 'source-atop';
+      if (o.col) { X.fillStyle = o.col; X.fillRect(0, 0, w2, h2); }
+      if (o.dark) { X.globalAlpha = c01(o.dark); X.fillStyle = o.darkc || '#000'; X.fillRect(0, 0, w2, h2); X.globalAlpha = 1; }
+      for (const L of [].concat(o.lit || [])) { const hh = ay * (L.h || 0.6) * m, gr = X.createLinearGradient(0, L.top ? 0 : ay * m, 0, L.top ? hh : ay * m - hh); gr.addColorStop(0, rgba(L.col, L.a == null ? 0.5 : L.a)); gr.addColorStop(1, rgba(L.col, 0)); X.fillStyle = gr; X.fillRect(0, 0, w2, h2); }
+      if (o.rim) { const r = o.rim, Y = small(w2, h2, 1); Y.drawImage(sA, 0, 0, w2, h2, 0, 0, w2, h2); Y.globalCompositeOperation = 'source-in'; Y.fillStyle = r.col; Y.fillRect(0, 0, w2, h2); Y.globalCompositeOperation = 'destination-out'; Y.drawImage(sA, 0, 0, w2, h2, (r.dx || 0) * m, (r.dy == null ? 1 : r.dy) * m, w2, h2); X.globalAlpha = c01(r.a == null ? 0.9 : r.a); X.drawImage(sB, 0, 0, w2, h2, 0, 0, w2, h2); X.globalAlpha = 1; }
+      if (o.fx) { X.save(); o.fx(X, w2, h2, ax * m, ay * m, m); X.restore(); }
+      if (o.cut != null) { const row = (ay - (y - o.cut) / ky) * m; if (row < h2) { X.globalCompositeOperation = 'destination-out'; X.globalAlpha = 1; X.fillStyle = '#000'; X.fillRect(0, max(0, row), w2, h2); } }
       img = sA; ix = 0; iy = 0;
     }
-    const g = K.g; g.save(); g.imageSmoothingEnabled = false; g.globalAlpha = a; if (o.add) g.globalCompositeOperation = o.add === 1 ? 'lighter' : o.add;
+    const g = K.g; g.save(); g.imageSmoothingEnabled = m > 1; g.globalAlpha = a; if (o.add) g.globalCompositeOperation = o.add === 1 ? 'lighter' : o.add;
     g.translate(Math.round(x), Math.round(y)); if (o.tf) g.transform(o.tf[0], o.tf[1], o.tf[2], o.tf[3], 0, 0); if (o.r) g.rotate(o.r); g.scale((o.flip ? -1 : 1) * s * (o.sx || 1), ky);
-    g.drawImage(img, ix, iy, sw, sh, -ax, -ay, sw, sh); g.restore(); return M;
+    g.drawImage(img, ix, iy, sw * m, sh * m, -ax, -ay, sw, sh); g.restore(); return M;
   };
   K.mon = mon;
   /* Glød rundt figuren: silhuetten i fargen, stemplet i en ring rundt. */
@@ -142,6 +159,17 @@
     for (let i = 0; i < l.length; i++) { const q = l[i], d = rnd(i, sd), kk = c01((k - d * 0.5) / 0.5), e = 1 - eo(kk), an = rnd(i, sd + 1) * TAU, R2 = spr * (0.4 + rnd(i, sd + 2)) * e; if (kk <= 0) continue; g.fillStyle = o.col && kk < 0.9 ? o.col : q[2]; g.fillRect(Math.round(x + (q[0] - ax) * s + cos(an + e * 3) * R2), Math.round(y + (q[1] - ay) * s + sin(an + e * 3) * R2 * 0.7), sz, sz); }
     g.restore();
   };
+  /* Myke former som bølger, slår med vingene eller klemmes sammen: figuren tegnes i striper som forskyves hver for seg.
+     o.fn(v, fi) gir [dx, dy, bredde] for stripa i høyden v (0 = toppen, 1 = føttene), i figurens egne piksler. o.n = antall striper. Virker dårlig på bein. */
+  K.monWarp = (x, y, s, o) => {
+    o = o || {}; const cur = K.cur, sp = o.id ? cur.sps[o.id] : cur.sp; if (!sp) return; const A = sp.ani || null, g = K.g, n = o.n || 24; let src, sx, sy, sw, sh, ax, ay;
+    if (A) { const fi = o.fi != null ? ((floor(o.fi) % A.n) + A.n) % A.n : frameAt(A, o.ft == null ? K.T : o.ft); src = A.sheet; sx = (fi % A.cols) * A.cw; sy = floor(fi / A.cols) * A.ch; sw = A.cw; sh = A.ch; ax = A.m + A.bw / 2; ay = A.m + A.bh; } else { src = sp.cv; sx = sp.bx; sy = sp.by; sw = sp.bw; sh = sp.bh; ax = sw / 2; ay = sh; }
+    g.save(); g.imageSmoothingEnabled = false; g.globalAlpha = c01(o.a == null ? 1 : o.a); g.translate(Math.round(x), Math.round(y)); g.scale((o.flip ? -1 : 1) * s, s);
+    for (let i = 0; i < n; i++) { const y0 = floor(i * sh / n), y1 = floor((i + 1) * sh / n), q = o.fn((i + 0.5) / n, i) || [0, 0, 1], w = sw * (q[2] == null ? 1 : q[2]); g.drawImage(src, sx, sy + y0, sw, y1 - y0, -ax * (q[2] == null ? 1 : q[2]) + q[0], -ay + y0 + q[1], w, y1 - y0 + 0.5); }
+    g.restore();
+  };
+  /* Ettersynsbilder: fn(tid, styrke) kalles for n tidligere øyeblikk (eldst først), så en figur i fart får et spor etter seg. */
+  K.echo = (n, dt, fn) => { for (let i = n; i >= 1; i--) fn(K.T - i * dt, 1 - i / (n + 1)); };
   /* Tunge steg: kroppen løftes før hvert steg og faller på det. times = når føttene treffer. Gir { y (løft i piksler), sq (klem 0–1), k (0–1 siden forrige steg), i, hit }. */
   K.stomp = (t, times, o) => {
     o = o || {}; const lift = o.lift == null ? 7 : o.lift, pre = o.pre || 0.42; let y = 0, sq = 0, i = -1, k = 1, ht = 0;
@@ -171,7 +199,7 @@
      Uten WebGL tegnes en enklere bakke her. o = { t (materialets egen tid), soft (myk overgang i horisonten, piksler) }. */
   K.ground = (kind, u, o) => {
     o = o || {}; const g = K.g, P = K.P, yh = ST.yh; P.mat = { k: kind, g: [ST.x0, yh, ST.f, ST.hc], c: [ST.cx, ST.cz], t: o.t, u };
-    g.save(); g.setTransform(1, 0, 0, 1, 0, 0);
+    const rs = C._.rs(); g.save(); g.setTransform(rs, 0, 0, rs, 0, 0);
     if (K.gl()) { g.globalCompositeOperation = 'destination-out'; const sf = o.soft || 0; if (sf) { const gr = g.createLinearGradient(0, yh - sf, 0, yh); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, '#000'); g.fillStyle = gr; g.fillRect(0, yh - sf, W, sf); } g.fillStyle = '#000'; g.fillRect(0, yh, W, H - yh + 2); }
     else if (GND[kind]) GND[kind](g, yh, u, o.t == null ? K.T : o.t);
     g.restore();
@@ -213,48 +241,61 @@
     if (o.rim) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = c01(o.ra == null ? 0.5 : o.ra); g.strokeStyle = o.rim; g.lineWidth = 1.5; g.beginPath(); pts.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.stroke(); }
     g.restore(); return pts;
   };
-  /* Vulkan: en kjegle med krater, lavaelver nedover siden og glød i krateret. er = utbruddet (0 = ulmer, 1 = fullt utbrudd).
-     o = { seed, c0, c1, lava (0–1 hvor mye elvene lyser), er, t }. Gir krateret { x, y, w }. */
+  /* Vulkan: et fjell med lange, hule sider, en skulder, og et krater med en kant som er brutt ned mot oss, så gløden syns. Ryggene og rennene nedover
+     sidene er skygget, og lavaen renner i myke strømmer som følger rennene, bredest øverst. er = utbruddet (0 = ulmer, 1 = fullt utbrudd).
+     o = { seed, c0 (øverst), c1 (foten), glow (lysfargen), lava (0–1 hvor mye strømmene lyser), er, t, rivers, haze (disfargen ved foten) }. Gir krateret { x, y, w }. */
   K.volcano = (x, y, w, h, o) => {
-    o = o || {}; const g = K.g, t = o.t == null ? K.T : o.t, sd = o.seed || 7, cw = w * 0.11, top = y - h, er = o.er || 0, lv = o.lava == null ? 1 : o.lava;
-    const side = (dir, k) => x + dir * (cw + (w / 2 - cw) * Math.pow(k, 1.55)) + (fbm1(k * 6 + dir * 9, sd, 3) - 0.5) * w * 0.035 * k;
-    g.save(); const gr = g.createLinearGradient(0, top, 0, y); gr.addColorStop(0, o.c0 || '#1c0d0c'); gr.addColorStop(1, o.c1 || '#0c0607'); g.fillStyle = gr;
-    g.beginPath(); g.moveTo(side(-1, 1), y + 2); for (let i = 20; i >= 0; i--) g.lineTo(side(-1, i / 20), top + h * (i / 20)); for (let i = 0; i <= 6; i++) g.lineTo(x - cw + cw * 2 * i / 6, top + (i % 2 ? 3 : 0) + (rnd(i, sd) - 0.5) * 4); for (let i = 0; i <= 20; i++) g.lineTo(side(1, i / 20), top + h * (i / 20)); g.lineTo(side(1, 1), y + 2); g.closePath(); g.fill();
-    g.clip(); g.globalCompositeOperation = 'lighter';
-    /* Lyset fra krateret nedover sidene, og elvene: knekkede linjer som følger kjeglen, med lysprikker som renner nedover. */
-    K.blob(x, top + 4, w * 0.3, '#ff4a10', (0.3 + 0.35 * er) * lv, 1, 0.8);
+    o = o || {}; const g = K.g, t = o.t == null ? K.T : o.t, sd = o.seed || 7, cw = w * 0.085, top = y - h, er = o.er || 0, lv = o.lava == null ? 1 : o.lava, gl = o.glow || '#ff4a10', N = 44;
+    /* Omrisset: venstre side lengre og slakere enn høyre, med en skulder til høyre. u = 0 i krateret, 1 ved foten. */
+    const prof = (dir, u) => { const half = w * (dir < 0 ? 0.56 : 0.46), base = Math.pow(u, dir < 0 ? 1.7 : 1.5), sh = dir > 0 ? 0.06 * Math.exp(-Math.pow((u - 0.46) / 0.13, 2)) : 0; return [x + dir * (cw + (half - cw) * (base + (fbm1(u * 5 + dir * 9, sd, 3) - 0.5) * 0.05 * u)), top + h * (u - sh) + (dir < 0 ? 0 : h * 0.05 * (1 - u))]; };
+    const L = [], Rr = []; for (let i = 0; i <= N; i++) { L.push(prof(-1, i / N)); Rr.push(prof(1, i / N)); }
+    const rim = []; for (let i = 0; i <= 8; i++) { const k = i / 8; rim.push([mix(L[0][0], Rr[0][0], k), mix(L[0][1], Rr[0][1], k) + sin(k * PI) * h * 0.075 + (rnd(i, sd) - 0.5) * 1.6]); }
+    const outline = () => { g.beginPath(); g.moveTo(L[N][0], y + 3); for (let i = N; i >= 0; i--) g.lineTo(L[i][0], L[i][1]); rim.forEach(q => g.lineTo(q[0], q[1])); for (let i = 0; i <= N; i++) g.lineTo(Rr[i][0], Rr[i][1]); g.lineTo(Rr[N][0], y + 3); g.closePath(); };
+    g.save(); const gr = g.createLinearGradient(0, top, 0, y); gr.addColorStop(0, o.c0 || '#1c0d0c'); gr.addColorStop(0.7, o.c1 || '#0c0607'); gr.addColorStop(1, blend(o.c1 || '#0c0607', o.haze || '#3a1008', 0.5)); g.fillStyle = gr; outline(); g.fill();
+    g.clip();
+    /* Rygger og renner: striper fra toppen og ned, vekselvis i skygge og lys fra gløden. */
+    for (let i = 0; i < 30; i++) { const a = (i + rnd(i, sd + 1) * 0.7) / 30, dir = a < 0.5 ? -1 : 1, sp = Math.abs(a - 0.5) * 2, x0 = x + dir * cw * sp * 0.9, x1 = x + dir * w * 0.56 * Math.pow(sp, 0.8) + (rnd(i, sd + 2) - 0.5) * 14, wd = 2 + rnd(i, sd + 3) * 7, litS = i % 2 === 0;
+      g.globalAlpha = litS ? 0.07 + 0.1 * lv : 0.3; g.fillStyle = litS ? gl : '#040203'; g.beginPath(); g.moveTo(x0, top + 3); g.quadraticCurveTo(mix(x0, x1, 0.4) + dir * 6, top + h * 0.5, x1 - wd, y + 2); g.lineTo(x1 + wd, y + 2); g.quadraticCurveTo(mix(x0, x1, 0.4) + dir * 6 + wd * 0.4, top + h * 0.5, x0 + 1, top + 3); g.closePath(); g.fill(); }
+    g.globalAlpha = 1; g.globalCompositeOperation = 'lighter';
+    /* Gløden fra krateret nedover toppen. */
+    K.blob(x, top + h * 0.08, w * 0.3, gl, (0.26 + 0.2 * min(1.3, er)) * lv, 1, 0.7); K.blob(x, top + h * 0.05, cw * 1.8, '#ffb040', (0.3 + 0.25 * min(1, er)) * lv, 1, 0.6);
+    /* Lavastrømmene: myke kurver, brede og hvitgule øverst, smalere og rødere nedover, med lys som renner. */
     const nR = o.rivers || 4;
     for (let r = 0; r < nR; r++) {
-      const dir = r % 2 ? 1 : -1, sp = 0.12 + rnd(r, sd + 3) * 0.75, len = (0.45 + rnd(r, sd + 4) * 0.5) * min(1, 0.5 + lv * 0.5 + er * 0.3), pts = [];
-      for (let i = 0; i <= 14; i++) { const k = i / 14 * len, xx = x + dir * (cw * 0.5 + (w / 2 - cw) * Math.pow(k, 1.55) * sp) + (fbm1(k * 9 + r * 5, sd + 5, 3) - 0.5) * w * 0.07 * k; pts.push([xx, top + 2 + h * k]); }
-      for (const [lw, col, al] of [[5, '#ff3c0a', 0.25], [2, '#ff7a1c', 0.8], [0.9, '#ffe08a', 0.9]]) { g.globalAlpha = c01(al * lv * (0.8 + 0.2 * sin(t * 2 + r))); g.strokeStyle = col; g.lineWidth = lw; g.lineJoin = 'round'; g.beginPath(); pts.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.stroke(); }
-      for (let d = 0; d < 3; d++) { const ph = (t * (0.16 + 0.05 * r) + d / 3 + r * 0.37) % 1, q = pts[min(14, floor(ph * 14))]; K.blob(q[0], q[1], 5, '#ffe9a8', (1 - ph) * lv * 0.9, 1); }
+      const dir = r % 2 ? 1 : -1, sp = 0.1 + rnd(r, sd + 3) * 0.72, len = (0.5 + rnd(r, sd + 4) * 0.5) * min(1, 0.5 + lv * 0.5 + er * 0.3), pts = [];
+      for (let i = 0; i <= 12; i++) { const k = i / 12 * len; pts.push([x + dir * (cw * 0.3 + (w * 0.5 - cw) * Math.pow(k, 1.5) * sp) + (fbm1(k * 3.2 + r * 5, sd + 5, 2) - 0.5) * w * 0.1 * k, top + h * 0.06 + h * k * 0.97]); }
+      const curve = (i0, i1) => { g.beginPath(); g.moveTo(pts[i0][0], pts[i0][1]); for (let i = i0 + 1; i < i1; i++) g.quadraticCurveTo(pts[i][0], pts[i][1], (pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2); g.lineTo(pts[i1][0], pts[i1][1]); };
+      g.lineCap = 'round'; g.lineJoin = 'round'; const pu = 0.82 + 0.18 * sin(t * 2 + r);
+      g.strokeStyle = gl; g.globalAlpha = c01(0.16 * lv * pu); g.lineWidth = 9; curve(0, 12); g.stroke();
+      for (let sgm = 0; sgm < 4; sgm++) { const i0 = sgm * 3, k = sgm / 3; g.strokeStyle = blend('#ffd98a', '#ff5a14', k); g.globalAlpha = c01((0.85 - k * 0.3) * lv * pu); g.lineWidth = 3.4 - k * 1.8; curve(i0, i0 + 3); g.stroke(); if (k < 0.5) { g.strokeStyle = '#fff6d8'; g.globalAlpha = c01(0.8 * lv * (1 - k * 1.6)); g.lineWidth = 1.2; curve(i0, i0 + 3); g.stroke(); } }
+      for (let d = 0; d < 3; d++) { const ph = (t * (0.14 + 0.04 * r) + d / 3 + r * 0.37) % 1, q = pts[min(12, floor(ph * 12))]; K.blob(q[0], q[1], 5.5, '#ffe9a8', (1 - ph) * lv * 0.8, 1); }
     }
     g.restore();
-    return { x, y: top, w: cw * 2 };
+    /* Kanten mot himmelen får et svakt lys fra utbruddet, og foten glir over i disen. */
+    g.save(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = gl; g.lineWidth = 1.6; g.globalAlpha = c01((0.1 + 0.25 * min(1, er)) * lv); g.beginPath(); for (let i = 16; i >= 0; i--) i === 16 ? g.moveTo(L[i][0], L[i][1]) : g.lineTo(L[i][0], L[i][1]); rim.forEach(q => g.lineTo(q[0], q[1])); for (let i = 0; i <= 16; i++) g.lineTo(Rr[i][0], Rr[i][1]); g.stroke(); g.restore();
+    return { x, y: top + h * 0.05, w: cw * 2 };
   };
-  /* Det som kastes ut av et krater: en fontene av lava og glødende klumper i buer. er = styrken (0–1,5). o = { n, seed, hgt, wide, t }. */
+  /* Det som kastes ut av et krater: en fontene av lava og glødende klumper som faller i buer, hver med en hale. er = styrken (0–1,5). o = { n, seed, hgt, wide, t }. */
   K.erupt = (x, y, er, o) => {
-    if (er <= 0.01) return; o = o || {}; const g = K.g, t = o.t == null ? K.T : o.t, n = o.n || 46, sd = o.seed || 11, hg = (o.hgt || 120) * (0.5 + 0.5 * min(1.4, er)), wd = o.wide || 1;
-    g.save(); g.globalCompositeOperation = 'lighter';
-    K.blob(x, y - 6, 26 + 30 * er, '#ff5a14', 0.6 * min(1, er), 1); K.blob(x, y - hg * 0.3, 14 + 12 * er, '#ffd070', 0.75 * min(1, er), 1, 2.2);
+    if (er <= 0.01) return; o = o || {}; const g = K.g, t = o.t == null ? K.T : o.t, n = o.n || 46, sd = o.seed || 11, hg = (o.hgt || 120) * (0.5 + 0.5 * min(1.4, er)), wd = o.wide || 1, e1 = min(1, er * 1.2);
+    K.blob(x, y - 6, 22 + 18 * er, '#ff5a14', 0.45 * min(1, er), 1);
+    for (let j = 0; j < 10; j++) { const u = j / 9, fl = 0.72 + 0.28 * sin(t * (17 + j * 3.1) + j * 2), yy = y - hg * 0.66 * u * (0.55 + 0.45 * min(1.4, er)) * (0.9 + 0.1 * sin(t * 6 + j)); K.blob(x + sin(t * 8 + j * 1.7) * (1 + j * 0.9) * wd, yy, (9.5 - u * 4.5) * (0.7 + 0.4 * min(1.3, er)) * fl, u < 0.25 ? '#fff6d0' : u < 0.6 ? '#ffd070' : '#ff8a24', (0.8 - u * 0.35) * e1, 1, 1.7); }
     for (let i = 0; i < n; i++) {
-      const a = rnd(i, sd), b = rnd(i, sd + 1), c = rnd(i, sd + 2), life = 1.1 + c * 1.5, ph = ((t / life + b) % 1), vx = (a - 0.5) * 2 * (20 + 70 * c) * wd, vy = -(1.2 + 1.4 * rnd(i, sd + 3)) * hg, tt = ph * life, gy = 1.9 * hg;
-      const px = x + vx * tt, py = y + vy * tt + 0.5 * gy * tt * tt; if (py > y + 30) continue;
-      const k = 1 - ph, sz = (1.5 + c * 2.5) * (0.6 + 0.5 * er), px0 = x + vx * (tt - 0.07), py0 = y + vy * (tt - 0.07) + 0.5 * gy * (tt - 0.07) * (tt - 0.07);
-      g.globalAlpha = c01(k * 1.4 * min(1, er)); g.strokeStyle = k > 0.55 ? '#ffe9a0' : k > 0.25 ? '#ff8a24' : '#c8300a'; g.lineWidth = sz; g.lineCap = 'round'; g.beginPath(); g.moveTo(px0, py0); g.lineTo(px, py); g.stroke();
+      const a = rnd(i, sd), b = rnd(i, sd + 1), c = rnd(i, sd + 2), life = 1.1 + c * 1.5, ph = ((t / life + b) % 1), vx = (a - 0.5) * 2 * (20 + 70 * c) * wd, vy = -(1.2 + 1.4 * rnd(i, sd + 3)) * hg, gy = 1.9 * hg, k = 1 - ph, sz = (1.2 + c * 2) * (0.6 + 0.5 * er);
+      for (let q = 0; q < 4; q++) { const tt = ph * life - q * 0.035, px = x + vx * tt, py = y + vy * tt + 0.5 * gy * tt * tt; if (tt < 0 || py > y + 30) continue; K.blob(px, py, sz * (2.3 - q * 0.45), q === 0 ? (k > 0.55 ? '#fff0c0' : '#ffb040') : k > 0.4 ? '#ff8a24' : '#d83a0c', c01(k * 1.5 * e1) * (1 - q * 0.22), 1); }
     }
-    g.restore();
   };
-  /* Røyksøyle som velter opp. o = { n, h, w0, w1, wind, seed, spd, hot (fargen nederst, lyst opp av gløden), c (røykfargen), a, t, sy }. */
+  /* Røyksøyle som velter opp. o = { n, h, w0, w1, wind, seed, spd, hot (fargen nederst, lyst opp av gløden), ha (hvor sterkt), c (røykfargen), top (skyggen øverst på hver sky), a, t, sy }. */
   K.plume = (x, y, o) => {
     o = o || {}; const g = K.g, t = o.t == null ? K.T : o.t, n = o.n || 26, sd = o.seed || 5, hh = o.h || 150, A = o.a == null ? 1 : o.a, l = [];
     if (A <= 0.004) return;
     for (let i = 0; i < n; i++) l.push([(i / n + t * (o.spd || 0.05) * (0.8 + 0.4 * rnd(i, sd))) % 1, i]);
     l.sort((p, q) => q[0] - p[0]);
     for (const [ph, i] of l) { const r = (o.w0 || 12) + ((o.w1 || 70) - (o.w0 || 12)) * Math.pow(ph, 0.8) * (0.7 + 0.6 * rnd(i, sd + 1)), px = x + (o.wind || 0) * ph * ph * hh + sin(i * 2.4 + t * 0.4) * r * 0.5 + (rnd(i, sd + 2) - 0.5) * r * 0.8, py = y - ph * hh, al = A * min(1, ph * 7) * (1 - ei(ph)) * 0.8;
-      K.blob(px, py, r, blend(o.c || '#1a1214', o.hot || '#b8340c', Math.pow(1 - ph, 2.4) * 0.9), al, 0, o.sy || 0.85); if (o.hot && ph < 0.5) K.blob(px, py + r * 0.4, r * 0.7, o.hot, al * (0.5 - ph) * 0.9, 1, 0.6); }
+      K.blob(px, py, r, blend(o.c || '#1a1214', o.hot || '#b8340c', Math.pow(1 - ph, 2.4) * 0.9), al, 0, o.sy || 0.85); if (o.hot && ph < 0.6) K.blob(px - r * 0.15, py + r * 0.42, r * 0.72, o.hot, al * (0.6 - ph) * (o.ha == null ? 0.9 : o.ha), 1, 0.55); if (o.top) K.blob(px + r * 0.2, py - r * 0.34, r * 0.6, o.top, al * 0.5, 0, 0.7); }
   };
+  /* Ruiner: en søyle med rifler (fra stedsverktøyene i raidx.js). K.column(x, yb, bredde, høyde, lys, mørk, brukket). */
+  if (C.stage && C.stage.column) K.column = C.stage.column;
   /* Tåkebånd mellom lagene: et bånd som driver sidelengs. o = { h, col, a, seed, spd, n, add }. */
   K.fogBand = (y, o) => { o = o || {}; const t = K.T, hh = o.h || 40, n = o.n || 7, sd = o.seed || 21, A = o.a == null ? 0.6 : o.a; for (let i = 0; i < n; i++) { const wv = 150 + rnd(i, sd) * 170, x = ((rnd(i, sd + 1) * (W + 400) + t * (o.spd == null ? 8 : o.spd) * (0.5 + rnd(i, sd + 2))) % (W + 400)) - 200; K.blob(x, y + (rnd(i, sd + 3) - 0.5) * hh * 0.6, wv, o.col || '#20202a', A * (0.5 + 0.5 * rnd(i, sd + 4)), o.add, hh / wv * (0.6 + 0.5 * rnd(i, sd + 5))); } };
   /* Grantrær i en rekke. o = { y, n, seed, h, col, snow, x0, x1, jit }. */
@@ -300,6 +341,17 @@
   };
   /* Sprut der regnet treffer en flate (vann, is, stein): små ringer i bakkens perspektiv. o = { n, seed, col, a, zmax }. */
   K.splash = o => { o = o || {}; const g = K.g, T = K.T, n = o.n || 30, sd = o.seed || 61; g.save(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = o.col || '#cfe8ff'; g.lineWidth = 1; for (let i = 0; i < n; i++) { const life = 0.35 + rnd(i, sd) * 0.3, q = floor(T / life + rnd(i, sd + 1)), ph = (T / life + rnd(i, sd + 1)) % 1, Z = ST.cz + 40 + Math.pow(rnd(i * 3 + q, sd + 2), 1.6) * (o.zmax || 700), p = K.gp(ST.cx + (rnd(i * 5 + q, sd + 3) - 0.5) * 560 * (Z - ST.cz) / ST.f, Z); if (!p || p.y > H) continue; const r = (2 + ph * 9) * min(2.2, p.s); g.globalAlpha = c01((o.a == null ? 0.6 : o.a) * (1 - ph)); g.beginPath(); g.ellipse(p.x, p.y, r, r * 0.3, 0, 0, TAU); g.stroke(); if (ph < 0.3) g.fillRect(p.x, p.y - (0.3 - ph) * 16 * min(2, p.s), 1, 2); } g.restore(); };
+  /* Dråper på «linsa»: et forvrengningskart (P.warp) der hver dråpe bryter bildet som en liten linse. Dråpene lander, blir sittende litt og siger nedover.
+     o = { n, seed, a (styrke i piksler), size, life }. Kalles én gang per bilde; kartet tegnes på et lite lerret og lastes opp av fxgl.js. */
+  let dropSpr = null, dropMap = null;
+  K.lensDrops = o => {
+    o = o || {}; const T = K.T, n = o.n || 14, sd = o.seed || 71;
+    if (!dropSpr) { dropSpr = document.createElement('canvas'); dropSpr.width = dropSpr.height = 48; const x = dropSpr.getContext('2d'), im = x.createImageData(48, 48); for (let y = 0; y < 48; y++) for (let xx = 0; xx < 48; xx++) { const dx = (xx - 23.5) / 24, dy = (y - 23.5) / 24, r = Math.hypot(dx, dy), k = r < 1 ? Math.pow(r, 1.5) : 0, i = (y * 48 + xx) * 4; im.data[i] = 128 + dx / (r || 1) * k * 127; im.data[i + 1] = 128 + dy / (r || 1) * k * 127; im.data[i + 2] = 0; im.data[i + 3] = r < 1 ? 255 * min(1, (1 - r) * 5) : 0; } x.putImageData(im, 0, 0); }
+    if (!dropMap) { dropMap = document.createElement('canvas'); dropMap.width = 256; dropMap.height = 192; dropMap._v = 0; }
+    const x = dropMap.getContext('2d'); x.globalCompositeOperation = 'copy'; x.fillStyle = 'rgb(128,128,0)'; x.fillRect(0, 0, 256, 192); x.globalCompositeOperation = 'source-over'; x.imageSmoothingEnabled = true;
+    for (let i = 0; i < n; i++) { const life = (o.life || 2.4) * (0.6 + rnd(i, sd)), q = floor(T / life + rnd(i, sd + 1)), ph = (T / life + rnd(i, sd + 1)) % 1, r = (o.size || 9) * (0.5 + rnd(i * 3 + q, sd + 2)), px = rnd(i * 5 + q, sd + 3) * 256, py = rnd(i * 7 + q, sd + 4) * 170 + ph * ph * 30; x.globalAlpha = c01(min(1, ph * 12) * (1 - ei(ph))); x.drawImage(dropSpr, px - r, py - r * 1.15, r * 2, r * 2.3); }
+    x.globalAlpha = 1; dropMap._v++; K.P.warp = { map: dropMap, a: o.a == null ? 9 : o.a }; return dropMap;
+  };
   /* En lysstråle fra (x, y) i retningen ang (0 = rett ned), len lang, w0 bred ved kilden og w1 i enden. */
   K.shaft = (x, y, ang, len, w0, w1, col, a) => { if (a <= 0.004) return; const g = K.g; g.save(); g.globalCompositeOperation = 'lighter'; g.translate(x, y); g.rotate(ang); const gr = g.createLinearGradient(0, 0, 0, len); gr.addColorStop(0, rgba(col, c01(a))); gr.addColorStop(1, rgba(col, 0)); g.fillStyle = gr; for (const k of [1, 0.55]) { g.globalAlpha = k === 1 ? 0.5 : 1; g.beginPath(); g.moveTo(-w0 * k / 2, 0); g.lineTo(w0 * k / 2, 0); g.lineTo(w1 * k / 2, len); g.lineTo(-w1 * k / 2, len); g.closePath(); g.fill(); } g.restore(); };
   /* Regnbue: en bue med sju bånd. k = hvor mye av buen som er tegnet (0–1). */
@@ -337,7 +389,7 @@
     }
     if (lv) { txtF(lv, 256, y + 27, 19, 2, '#000', 0.8 * seg(t, 0.3, 0.55)); txtF(lv, 256, y + 26, 19, 2, '#ecd2b8', seg(t, 0.3, 0.55)); }
     g.restore();
-    if (t > 0.1 && t < 0.5) { K.rect(0, top + dy, W, bot - top, '#ffb060', (1 - seg(t, 0.1, 0.5)) * 0.3, 1); for (let i = 0; i < 14; i++) { const k = seg(t, 0.12, 0.7), an = -PI * (0.1 + 0.8 * rnd(i, 31)), d = k * (40 + rnd(i, 32) * 70); K.blob(60 + rnd(i, 33) * 392 + cos(an) * d * 0.4, bot + sin(an) * d * 0.5, 10 + k * 16, '#3a2a26', (1 - k) * 0.5); } }
+    if (t > 0.1 && t < 0.7) { K.blob(256, y - 14, 230, '#ff6a1c', (1 - seg(t, 0.1, 0.5)) * 0.3, 1, 0.22); for (let i = 0; i < 14; i++) { const k = seg(t, 0.12, 0.7), an = -PI * (0.1 + 0.8 * rnd(i, 31)), d = k * (40 + rnd(i, 32) * 70); K.blob(60 + rnd(i, 33) * 392 + cos(an) * d * 0.4, bot + sin(an) * d * 0.5, 10 + k * 16, '#3a2a26', (1 - k) * 0.5); } }
   };
   /* VANN: skriften ligger i overflaten, med krusninger som går ut fra den og drypp fra bokstavene. */
   PLATE.water = ({ t, y, col, name, cap, lv }) => {
@@ -359,12 +411,19 @@
     if (lv) txtF(lv, 256, y + 26, 19, 2, '#e8f8ff', seg(t, 0.3, 0.6));
   };
   /* Skalabildet: en liten trener sett bakfra, i silhuett, som viser hvor stor den legendariske er. (x, y) = føttene, h = høyden.
-     o = { col, rim (lysfargen på kanten mot lyset), ra, wind (−1..1: skjerfet), flip }. */
+     o = { col, rim (lysfargen på kanten mot lyset), ra, wind (−1..1: skjerfet), lean (helning), flip }. */
   K.trainer = (x, y, h, o) => {
-    o = o || {}; const g = K.g, u = h / 24, t = K.T, c = o.col || '#06060a', w = o.wind || 0, R = (a, b, cc, d) => g.fillRect(Math.round(a * u), Math.round(b * u), Math.max(1, Math.round(cc * u)), Math.max(1, Math.round(d * u)));
-    g.save(); g.translate(Math.round(x), Math.round(y)); if (o.flip) g.scale(-1, 1); g.globalAlpha = c01(o.a == null ? 1 : o.a);
-    const body = () => { R(-3, -9, 2.6, 9); R(0.4, -9, 2.6, 9); R(-3.6, -17, 7.2, 8.6); R(-5, -16.6, 1.8, 7); R(3.2, -16.6, 1.8, 7); R(-2.6, -15.6, 5.2, 5.6); g.beginPath(); g.arc(0, -19.6 * u, 2.9 * u, 0, TAU); g.fill(); R(-3, -22.6, 6, 1.8); R(-1, -23.6, 3.6, 1.4); const sw = sin(t * 5) * 0.6 + w * 2; g.beginPath(); g.moveTo(-2 * u, -17.6 * u); g.lineTo((-2 + w * 7) * u, (-16.6 + sw) * u); g.lineTo((-2 + w * 6.4) * u, (-15.2 + sw) * u); g.lineTo(-2 * u, -16.2 * u); g.closePath(); g.fill(); };
-    if (o.rim) { g.fillStyle = o.rim; g.save(); g.translate(u * 0.9, -u * 0.5); g.globalAlpha *= c01(o.ra == null ? 0.9 : o.ra); body(); g.restore(); }
+    o = o || {}; const g = K.g, u = h / 24, t = K.T, c = o.col || '#06060a', w = o.wind || 0;
+    g.save(); g.translate(Math.round(x), Math.round(y)); if (o.flip) g.scale(-1, 1); if (o.lean) g.rotate(o.lean); g.scale(u, u); g.globalAlpha = c01(o.a == null ? 1 : o.a);
+    /* Tegnet i 24 enheter fra føttene (0) til toppen av hodet (−24): bein litt fra hverandre, jakke, sekk, armer ut fra kroppen, hode med hårtust, og et skjerf i vinden. */
+    const body = () => {
+      g.beginPath(); g.moveTo(-3.4, 0); g.lineTo(-2.9, -9.4); g.lineTo(-0.3, -9.4); g.lineTo(-0.9, 0); g.closePath(); g.fill(); g.beginPath(); g.moveTo(0.9, 0); g.lineTo(0.3, -9.4); g.lineTo(2.9, -9.4); g.lineTo(3.4, 0); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(-3.2, -9); g.lineTo(-3.9, -16.6); g.quadraticCurveTo(0, -18.6, 3.9, -16.6); g.lineTo(3.2, -9); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(-3.8, -16.4); g.lineTo(-5.6, -10.4); g.lineTo(-4.5, -10); g.lineTo(-2.9, -15); g.closePath(); g.fill(); g.beginPath(); g.moveTo(3.8, -16.4); g.lineTo(5.6, -10.4); g.lineTo(4.5, -10); g.lineTo(2.9, -15); g.closePath(); g.fill();
+      g.fillRect(-2.5, -16, 5, 5.6); g.beginPath(); g.arc(0, -20.2, 2.9, 0, TAU); g.fill(); g.beginPath(); g.moveTo(-2.6, -21.6); g.quadraticCurveTo(-0.4, -25.2, 3.1, -22.4); g.lineTo(2.6, -20.6); g.closePath(); g.fill();
+      const sw = sin(t * 5) * 0.7; g.beginPath(); g.moveTo(-1.6, -17.9); g.quadraticCurveTo(w * 4, -18.6 + sw, w * 8, -16.8 + sw * 1.6); g.lineTo(w * 7.4, -15.4 + sw * 1.4); g.quadraticCurveTo(w * 3.4, -16.8 + sw, -1.6, -16.4); g.closePath(); g.fill();
+    };
+    if (o.rim) { g.fillStyle = o.rim; g.save(); g.translate(0.8, -0.5); g.globalAlpha *= c01(o.ra == null ? 0.9 : o.ra); body(); g.restore(); }
     g.fillStyle = c; body(); g.restore();
   };
   /* Fartsstreker ut fra et punkt (til treffbildet og store slag). o = { n, seed, col, r0, a, w }. */

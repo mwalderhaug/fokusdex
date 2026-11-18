@@ -10,7 +10,7 @@
    Shaderne er skrevet her, uten kode fra andre. */
 const FXGL = (() => {
   const G = { err: '', on: false, n: 0 }, W = 512, H = 384;
-  let cv = null, gl = null, lost = false, tried = false, quad = null;
+  let cv = null, gl = null, lost = false, tried = false, quad = null, RS = 1;
   const progs = {}, mats = {}, tex = {}, fbo = {};
   const HEAD = `#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -66,22 +66,25 @@ vec3 mat(vec2 s){
   vec4 g=gnd(s);vec2 w=g.xy;float t=uGC.z,heat=uM[0].x,sp=uM[0].y,cell=uM[0].z;
   vec2 p=w/cell;
   vec2 fl=vec2(fbm(p*.33+vec2(0.,t*.02*sp)),fbm(p*.33+vec2(5.2,-t*.017*sp)))-.5;
-  vec2 pp=p+fl*1.25+vec2(t*.01,t*.026)*sp;
+  vec2 wg=(vec2(vn(p*3.7+2.),vn(p*3.7+9.))-.5)*.24;
+  vec2 pp=p+fl*1.25+wg+vec2(t*.01,t*.026)*sp;
   vec3 V=voro(pp);float e=V.y-V.x;
   float mf=fbm(p*.2+vec2(t*.012,-t*.009)*sp+7.);
-  float open=smoothstep(.67-.2*heat,.78-.2*heat,mf);
-  float cw=max(uM[0].w*(1.+.55*heat),1.3*g.w/cell);
-  float core=1.-smoothstep(0.,cw*.42,e),body=1.-smoothstep(cw*.3,cw*1.15,e),halo=1.-smoothstep(cw,cw*5.5,e);
-  vec3 V2=voro(pp*3.1+11.);float fine=(1.-smoothstep(0.,max(cw*1.2,3.*g.w/cell),V2.y-V2.x))*(1.-clamp(g.w/(cell*.12),0.,1.));
-  float tx=fbm(pp*6.+V.z*20.);
-  vec3 crust=vec3(.042,.03,.03)+vec3(.05,.034,.03)*tx+vec3(.028,.012,.004)*V.z;
+  float open=smoothstep(.67-.14*heat,.78-.14*heat,mf);
+  float px=g.w/cell;
+  float cw=max(uM[0].w*(.5+1.*vn(pp*2.1+V.z*7.))*(1.+.55*heat),1.3*px);
+  float core=1.-smoothstep(0.,cw*.42,e),body=1.-smoothstep(cw*.3,cw*1.15,e),halo=1.-smoothstep(cw,cw*6.,e);
+  vec3 V2=voro(pp*2.7+11.);float e2=V2.y-V2.x;float f2=(1.-smoothstep(0.,max(cw*.9,2.6*px),e2))*(1.-clamp(px/.1,0.,1.));
+  vec3 V3=voro(pp*6.9+3.);float f3=(1.-smoothstep(0.,max(cw*1.1,6.*px),V3.y-V3.x))*(1.-clamp(px/.04,0.,1.));
+  float tx=fbm(pp*6.+V.z*20.),rope=abs(sin(fbm(pp*3.+V.z*9.)*14.+pp.x*2.));
+  vec3 crust=(vec3(.04,.028,.028)+vec3(.05,.034,.03)*tx+vec3(.026,.012,.004)*V.z)*(.74+.26*rope)*(.55+.45*smoothstep(cw,cw*2.6,e));
   float pulse=.84+.16*sin(t*1.7+V.z*40.+p.x);
   float temp=core*(.86+.16*heat)+body*(.46+.17*heat)*pulse+halo*(.09+.08*heat);
-  temp=max(temp,fine*(.3+.22*heat));
+  temp=max(temp,f2*(.42+.2*heat)*(.6+.4*V2.z));temp=max(temp,f3*(.2+.16*heat));
   float skin=fbm(pp*2.3+vec2(t*.085,t*.05)*sp);
-  float pool=open*(.46+.34*skin+.2*heat)*(1.-.5*smoothstep(.5,.72,fbm(pp*5.+vec2(t*.04,-t*.03))));
+  float pool=open*(.42+.38*skin+.12*heat)*(1.-.62*smoothstep(.45,.7,fbm(pp*5.+vec2(t*.04,-t*.03))));
   temp=max(temp,pool);
-  temp+=rings(w,cell*.16)*(.3+.7*max(body,open));
+  temp+=rings(w,cell*.16)*(.3+.7*max(max(body,f2),open));
   vec3 c=crust*(1.-open*.8)+ramp(temp)*uM[1].x*mix(uM[1].z,1.,smoothstep(30.,280.,g.z));
   float lod=clamp(g.w/(cell*.42),0.,1.);
   vec3 far=ramp(.12+.4*min(heat,1.2)+.08*vn(vec2(w.x/190.+t*.03,g.z/600.)))*uM[1].x;
@@ -130,7 +133,7 @@ vec3 mat(vec2 s){
   return mix(c,uM[2].rgb,hz*.8);
 }`;
   /* ---------- Gløden, lysstrålene og finishen ---------- */
-  const BRIGHT = 'uniform sampler2D uS;uniform vec2 uB;void main(){vec3 c=texture2D(uS,v).rgb;float l=max(c.r,max(c.g,c.b));gl_FragColor=vec4(c*smoothstep(uB.x,uB.x+uB.y,l),1.);}';
+  const BRIGHT = 'uniform sampler2D uS;uniform vec2 uB;void main(){vec2 d=vec2(.5/512.,.5/384.);vec3 c=(texture2D(uS,v+d).rgb+texture2D(uS,v-d).rgb+texture2D(uS,v+vec2(d.x,-d.y)).rgb+texture2D(uS,v+vec2(-d.x,d.y)).rgb)*.25;float l=max(c.r,max(c.g,c.b));gl_FragColor=vec4(c*smoothstep(uB.x,uB.x+uB.y,l),1.);}';
   const BLUR = 'uniform sampler2D uS;uniform vec2 uD;void main(){vec3 c=texture2D(uS,v).rgb*.227;c+=(texture2D(uS,v+uD*1.385).rgb+texture2D(uS,v-uD*1.385).rgb)*.316;c+=(texture2D(uS,v+uD*3.231).rgb+texture2D(uS,v-uD*3.231).rgb)*.0703;gl_FragColor=vec4(c,1.);}';
   const RAYS = 'uniform sampler2D uS;uniform vec4 uR;void main(){vec2 c=vec2(uR.x/R.x,1.-uR.y/R.y);vec2 d=(v-c)*uR.z/20.;vec3 a=vec3(0.);vec2 p=v;float w=1.;for(int i=0;i<20;i++){a+=texture2D(uS,p).rgb*w;p-=d;w*=.94;}gl_FragColor=vec4(a*.085,1.);}';
   /* uTint = (farge ganges inn, metning) · uLift = (farge legges til, kontrast) · uMono = (styrke, terskel) · uVig = (farge, styrke) · uFl og uFade = (farge, styrke)
@@ -178,7 +181,7 @@ void main(){
     gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     for (const k of Object.keys(progs)) delete progs[k];
     tex.s = mkTex(0, 0); tex.k = mkTex(0, 0); tex.d = mkTex(0, 0); tex.kv = tex.dv = -1;
-    fbo.a = mkFbo(W, H); fbo.b = mkFbo(W / 2, H / 2); fbo.c = mkFbo(W / 4, H / 4); fbo.d = mkFbo(W / 4, H / 4); fbo.e = mkFbo(W / 8, H / 8); fbo.f = mkFbo(W / 8, H / 8); fbo.r = mkFbo(W / 4, H / 4);
+    fbo.a = mkFbo(W * RS, H * RS); fbo.b = mkFbo(W / 2, H / 2); fbo.c = mkFbo(W / 4, H / 4); fbo.d = mkFbo(W / 4, H / 4); fbo.e = mkFbo(W / 8, H / 8); fbo.f = mkFbo(W / 8, H / 8); fbo.r = mkFbo(W / 4, H / 4);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     prog('bright', BRIGHT); prog('blur', BLUR); prog('rays', RAYS); prog('final', FINAL); prog('scene', SCENE);
   }
@@ -201,13 +204,15 @@ void main(){
   G.has = name => !!mats[name];
   const col = (c, a) => { if (typeof c !== 'string') return [c[0], c[1], c[2], a]; let h = c.replace('#', ''); if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; const n = parseInt(h, 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255, a]; };
   const up = (t, src) => { gl.bindTexture(gl.TEXTURE_2D, t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src); };
-  const pass = (pg, target, binds) => { gl.bindFramebuffer(gl.FRAMEBUFFER, target ? target.f : null); gl.viewport(0, 0, target ? target.w : W, target ? target.h : H); binds.forEach((b, i) => { gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, b[1]); gl.uniform1i(pg.U[b[0]], i); }); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); };
+  const pass = (pg, target, binds) => { gl.bindFramebuffer(gl.FRAMEBUFFER, target ? target.f : null); gl.viewport(0, 0, target ? target.w : cv.width, target ? target.h : cv.height); binds.forEach((b, i) => { gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, b[1]); gl.uniform1i(pg.U[b[0]], i); }); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); };
   const Z4 = [0, 0, 0, 0];
   /* Tegner bildet src (2D-lerretet) gjennom kjeden og kopierer resultatet til out (2D-lerret). P = kameraet og effektene, T = tiden, fno = bildenummeret.
      Gir false hvis det ikke gikk (da tegner den som kaller, reserven). */
   G.draw = (out, src, P, T, fno, shx, shy) => {
     if (!G.ok()) return false;
     try {
+      /* Oppløsningen følger bildet som kommer inn (512 × 384 ganger 1, 1,5 eller 2). Gløden regnes alltid i samme lave oppløsning. */
+      const rs = src.width / W; if (rs !== RS) { RS = rs; cv.width = W * rs; cv.height = H * rs; gl.deleteFramebuffer(fbo.a.f); gl.deleteTexture(fbo.a.t); fbo.a = mkFbo(W * rs, H * rs); gl.bindFramebuffer(gl.FRAMEBUFFER, null); }
       const m = P.mat && mats[P.mat.k] ? P.mat : null, sc = m ? prog('scene:' + m.k, '#define MAT\n' + SCENE.replace('//MAT', mats[m.k])) : prog('scene', SCENE);
       up(tex.s, src);
       const hm = P.heat > 0 && P.heatMask ? P.heatMask : null; if (hm && tex.kv !== (hm._v || 0)) { up(tex.k, hm); tex.kv = hm._v || 0; }

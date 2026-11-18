@@ -214,6 +214,7 @@ const fxAt = B => { const a = anc('foe', 0), m = anc('me', 0), ar = $('#arena'),
 /* Entréen: figuren er malt skjult, effekten spilles over banen, og i det den viser seg får figuren sin egen bevegelse inn. Gir false når det ikke finnes noen egen entré. */
 async function raidEntry(B) {
   const tr = B.tr, sp = $('#s-foe'), cv = $('#rfx'), b = B.foe[B.b], kind = entKind(tr), name = 'in:' + kind;
+  if (sp && BT.arena && BT.arena.on) { textAway(); sp.classList.remove('pre', 'gone'); sp.classList.add('ace'); cry(b.id, 60, 0.45); await BT.arena.ev('enter', fxCue(B)); return true; }
   if (!cv || !sp || calm() || typeof CINE === 'undefined' || !CINE.fxInfo(name)) return false;
   const f = CINE.FILM[tr.leg], sid = tr.dk ? 'dk' + tr.leg : (f && f.spid) || tr.leg, inf = CINE.fxInfo(name);
   await CINE.fxPrep(name, sid); if (BT.B !== B || !sp.isConnected) return true;
@@ -226,12 +227,13 @@ async function raidEntry(B) {
 }
 /* Stedet kjemper med: teksten skrives mens hendelsen spilles over banen. Raseriet blir stående: glød rundt den legendariske, og sterkere luft resten av kampen. */
 async function envFx(B, e) {
-  const cv = $('#rfx'), name = 'ev:' + e.k, ok = !!cv && !calm() && typeof CINE !== 'undefined' && !!CINE.fxInfo(name);
+  const cv = $('#rfx'), name = 'ev:' + e.k, arn = BT.arena && BT.arena.on ? BT.arena : null, ok = !arn && !!cv && !calm() && typeof CINE !== 'undefined' && !!CINE.fxInfo(name);
   if (e.k === 'rage') { const fo = $('#s-foe'), ar = $('#arena'); if (fo) fo.classList.add('rage'); if (ar) ar.classList.add('raging'); if (BT.airO) BT.airO.k = 1.5; }
   const tx = e.s ? typeOut(e.s) : null;
-  if (ok) await CINE.fx(cv, name, Object.assign(fxAt(B), { cue: fxCue(B) }));
+  if (arn) await arn.ev(e.k === 'rage' ? 'rage' : 'field', fxCue(B));
+  else if (ok) await CINE.fx(cv, name, Object.assign(fxAt(B), { cue: fxCue(B) }));
   if (tx) await tx;
-  await bwait(ok ? 320 : 800);
+  await bwait(ok || arn ? 320 : 800);
 }
 /* ---------- Dark Mewtwo: to låter og forvandlingen (bildene ligger i darkf.js, reglene i darkShift i league.js) ----------
    Kampen mot Dark Mewtwo har sin egen låt, som spilles én gang (pakka: «Villain's Ascent»). Den starter i det forvandlingen starter (filmen, rett etter
@@ -391,13 +393,15 @@ async function bossFilm(B) {
   root.classList.add('d'); await T(240);
   return true;
 }
+/* Kampvinkelen (--cz, som camFit) og størrelsen den legendariske får (som sprK) når kampen starter: filmene som ender i arenaen, bruker dem. */
+const foePose = B => { const f = B.foe[0], m = B.me[0], h = Math.max(htOf(f.id, f.mega), m ? htOf(m.id, m.mega) : 0); return { cz: h <= 1.6 ? 1.1 : h >= 4 ? 1 : 1.1 - 0.1 * (h - 1.6) / 2.4, k: hK(htOf(f.id, f.mega)) }; };
 /* Filmen når en legendarisk Pokémon viser seg (raid.js og raidf.js). Hver av de store har sin egen, lagt på slagene i låta si, og trioene og de mindre har
    roligere filmer. Låta starter med filmen og fortsetter inn i kampen. Filmen kan hoppes over. Med «redusert bevegelse» vises bare et stillbilde. */
 async function legendIntro(B) {
   const tr = B.tr, f = B.foe[0], id = tr.dk ? 'dk' + tr.leg : tr.leg, info = typeof CINE !== 'undefined' ? CINE.info(id) : null, T = ms => new Promise(r => setTimeout(r, ms));
   if (!info) { battleMusic(B); return; }
   ov(`<div class="lgi" id="lgi" style="--cc:${tr.cc}"><div class="lgi-s"><canvas class="lgi-cv" id="lgicv" width="512" height="384"></canvas></div><i class="lgi-wait"></i><button type="button" class="lgi-skip" id="lgiskip" hidden>Skip</button></div>`, 'battle vsov');
-  const root = $('#lgi'), cv = $('#lgicv'), gone = () => BT.B !== B || !root.isConnected, o = { name: tr.n, cap: tr.title, lv: 0, cc: tr.cc };
+  const root = $('#lgi'), cv = $('#lgicv'), gone = () => BT.B !== B || !root.isConnected, o = { name: tr.n, cap: tr.title, lv: 0, cc: tr.cc, pose: foePose(B) };
   /* Dark Mewtwo: den første kamplåta starter med forvandlingen (filmen) og går rett videre inn i kampen. Finnes den ikke i pakken, er alt som før. */
   const V = tr.dk ? PACK.special(/Villain/) : '', tk = V || PACK.trackFor(B), ready = CINE.prep(id, 6000);
   if (V) PACK.cue(V);
@@ -967,14 +971,14 @@ const calm = () => { try { return matchMedia('(prefers-reduced-motion: reduce)')
 function drawBattle() {
   const B = BT.B, tr = B.tr, tier = TIER(tr.kind);
   /* De legendariske og klasse 9 har sin egen luft over banen (raidf.js): tåke, lyn, glør, snøstorm … De legendariske har også sitt eget sted bak plattformene (raidx.js). */
-  const airId = tr.wild ? (tr.dk ? 'dk' + tr.leg : tr.leg) : tr.kind === 'supreme' && B.mode !== 'fac' ? 's:' + tr.n : 0, ainf = airId && typeof CINE !== 'undefined' ? CINE.info(airId) : null, own = !!(ainf && ainf.bg);
+  const airId = tr.wild ? (tr.dk ? 'dk' + tr.leg : tr.leg) : tr.kind === 'supreme' && B.mode !== 'fac' ? 's:' + tr.n : 0, ainf = airId && typeof CINE !== 'undefined' ? CINE.info(airId) : null, arn = tr.wild && !tr.dk && typeof ARENA !== 'undefined' && ARENA.has(tr.leg) ? tr.leg : 0, own = !!arn || !!(ainf && ainf.bg);
   /* Med eget sted står de to som i trenerkampene (oppstillingen til banebildene), og plattformene tegnes sammen med stedet. */
   const scene = own ? '' : PACK.now(PACK.sceneFor(B));
   ov(`<div class="btop k-${tier}"${kst(tr)}><span class="pill tn">${esc(B.raid && raidDom(tr) ? raidDom(tr).n : battleTag(B))}</span><span class="btn-n"><b class="${tr.boss ? 'bossn' : ''}">${esc(who(tr))}</b></span>${B.ev && evNow() ? `<span class="pill evp" style="--ec:${evInfo(evNow()).c}">${esc(evInfo(evNow()).n)}</span>` : ''}${SBX && B.mode !== 'lab' ? '<span class="pill sbxp">Sandbox</span>' : ''}${B.exh ? '<button type="button" class="pill exx" id="exx" data-a="exexit">Exit</button>' : ''}</div>
     <div class="bscreen t-${tier}"${kst(tr)}><div class="arena a-${tr.arena} v${tr.v} t-${tier} i${tr.int}${tr.th ? ' th-' + tr.th : ''}${scene || own ? ' has-scene' : ''}${tr.wild ? ' rv lg' + (tr.dk ? 'dk' : tr.leg) : ''}" id="arena" style="--ac:var(--t${tr.ty});--cc:${tr.cc || 'var(--t' + tr.ty + ')'}">
       <div class="cam" id="cam"><div class="world" id="world">${scene ? `<img class="scene" alt="" src="${scene}">` : ''}<div class="abg"></div>${own ? '<canvas class="fxc bgc evc" id="evc" width="512" height="384"></canvas>' : ''}<canvas class="fxc bgc" id="bgc" width="256" height="192"></canvas><canvas class="fxc amc" id="amc" width="512" height="384"></canvas><div class="plat pf"></div><div class="plat pm"></div></div></div><div class="dim"></div>
       ${tr.wild ? '' : `<div class="trn" id="trn">${tsprite(tr.img)}</div>`}
-      <div class="bs foe gone" id="s-foe"></div><div class="bs me gone" id="s-me"></div>${tr.wild ? '<canvas class="fxc rfx" id="rfx" width="512" height="384"></canvas>' : ''}
+      <div class="bs foe gone" id="s-foe"></div><div class="bs me gone" id="s-me"></div>${arn ? '<canvas class="fxc afc" id="afc" width="512" height="384"></canvas>' : ''}${tr.wild ? '<canvas class="fxc rfx" id="rfx" width="512" height="384"></canvas>' : ''}
       <canvas class="fxc" id="fxc" width="256" height="192"></canvas><canvas class="fxc" id="axc" width="512" height="384"></canvas><div class="fx" id="fx"></div>
       <div class="hpb foe" id="b-foe" hidden></div><div class="hpb me" id="b-me" hidden></div>
     </div><button type="button" class="btext" id="btext" data-a="btap" aria-live="polite"><span id="btx"></span><i></i></button></div>
@@ -987,8 +991,11 @@ function drawBattle() {
   FX.hooks.glitch = ms => { const a = $('#arena'); if (!a) return; a.classList.add('glitch'); setTimeout(() => a.classList.remove('glitch'), ms); };
   /* Med egen luft dempes det vanlige showet, så det ikke blir for mye. BT.airO.k er styrken: den økes når den legendariske blir rasende. */
   const air = !!airId && !calm() && typeof CINE !== 'undefined' && CINE.has(airId);
-  if (BT.air) BT.air(); BT.airO = { cc: tr.cc || '#ffffff', k: 1, bg: $('#evc') }; BT.air = air ? CINE.air($('#amc'), airId, BT.airO) : null;
-  if (own && !air) CINE.bgStill($('#evc'), airId, 12, { cc: tr.cc });
+  if (BT.air) BT.air(); BT.arena = null; BT.airO = { cc: tr.cc || '#ffffff', k: 1, bg: $('#evc') };
+  /* Arenaen (arena.js) tegner stedet selv, bak og foran figurene. Med «redusert bevegelse» står den som et stillbilde. */
+  if (arn) { if (calm()) { BT.air = null; CINE.arenaStill($('#evc'), arn, 12, { cc: tr.cc, noFig: 1, plain: 1, pose: { cz: 1, k: 1 } }); } else BT.air = BT.arena = ARENA.run($('#evc'), $('#afc'), arn, BT.airO); }
+  else { BT.air = air ? CINE.air($('#amc'), airId, BT.airO) : null; if (own && !air) CINE.bgStill($('#evc'), airId, 12, { cc: tr.cc }); }
+  if (arn) Object.values(ARENA.defs[arn].ev || {}).forEach(E => (E.cues || []).forEach(q => { if (q[1] === 'sfx') PACK.warm(q[2]); }));
   /* Lydene til entréen og stedets hendelser hentes nå. */
   if (tr.wild && typeof CINE !== 'undefined' && typeof raidDom === 'function') for (const n of ['in:' + entKind(tr), 'ev:' + domKey(tr), 'ev:rage']) ((CINE.FXS[n] || {}).cues || []).forEach(q => { if (q[1] === 'sfx') PACK.warm(q[2]); });
   FX.show($('#bgc'), calm() ? 0 : air ? (tr.wild ? 0 : 4) : tr.int, tr.ty, tr);
@@ -1336,6 +1343,7 @@ async function playOne(B, e) {
       const pos = fxPos(side), n = K ? K.n++ : 0, ef = e.e;
       if (!PACK.sfx(ef > 1 ? 'Hit Super Effective' : ef < 1 ? 'Hit Weak Not Very Effective' : 'Hit Normal Damage', 1)) { if (ef > 1) BSFX.hitS(); else if (ef < 1) BSFX.hitW(); else BSFX.hit(); }
       if (e.crit) BSFX.crit();
+      if (BT.arena && BT.arena.on) BT.arena.hit(side, ef > 1 || !!e.crit);
       FX.hit(pos, K && MVPAL[K.m[0]] != null ? MVPAL[K.m[0]] : BT.ty, ef, e.crit, tier, n); buzz(ef > 1 ? [40, 30, 60] : 25);
       /* Treff-stopp: et øyeblikk der alt står stille og målet lyser hvitt. Lengst for supereffektive og kritiske treff. */
       const fz = calm() || e.sub ? 0 : ((ef > 1 ? 95 : ef < 1 ? 0 : 50) + tier * 22 + (e.crit ? 50 : 0)) * (n ? 0.45 : 1) / spdF();
@@ -1368,8 +1376,8 @@ async function playOne(B, e) {
     if (!wild) await typeOut(e.txt);
     if (BT.B !== B || !sp.isConnected || !$('#b-' + side)) return;
     clearMot(sp); $('#b-' + side).hidden = true;
-    /* Bildet males skjult med en gang, så det hentes mens ballen er i lufta. */
-    paintSprite(side, 'gone');
+    /* Bildet males skjult med en gang, så det hentes mens ballen er i lufta. I en arena står den legendariske der alt (malt i startBattle). */
+    if (!(wild && sp.classList.contains('pre'))) paintSprite(side, 'gone');
     if (!wild) await tossBall(side);
     await sprReady(side, 1500); if (BT.B !== B || !sp.isConnected) return;
     if (wild && await raidEntry(B)) { if (BT.B !== B || !sp.isConnected) return; if (!PACK.playing() && !MUSIC.playing()) music(musicKey(B)); }
@@ -1523,6 +1531,7 @@ async function startBattle(B) {
   await prep; await Promise.race([pre, new Promise(r => setTimeout(r, 2000))]);
   if (BT.B !== B) return;
   drawBattle(); drawMenu(); packHint(); dkStart(B);
+  if (BT.arena && B.tr.wild) paintSprite('foe', 'ace pre');
   await bwait(350);
   await say(B.tr.wild ? (/^The /.test(B.tr.title) ? `${B.tr.n}, ${B.tr.title.replace(/^The /, 'the ')}, appeared!` : `The ${B.tr.title.replace(' Pokémon', '').toLowerCase()} ${B.tr.n} appeared!`) : `${who(B.tr)} wants to battle!`);
   if (BT.B !== B || !$('#arena')) return;

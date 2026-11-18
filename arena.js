@@ -17,6 +17,9 @@ const ARENA = (() => {
   A.has = id => !!A.defs[id];
   /* Plassene i bildet (512 × 384, før kampens kamera zoomer): den legendariske og din egen. */
   A.FOE = [377, 198]; A.ME = [190, 372];
+  /* Størrelsen den legendariske får i kampen: pose = { cz, k } fra kampen (foePose i bui.js), med samme tak som kampskjermen setter (seat i bui.js),
+     så den aldri kuttes av kanten eller toppen. sp = bildet (med animasjonen, som har målene til GIF-ruta). */
+  A.fit = (pose, sp) => { const an = sp && sp.ani, w = an ? an.gw : sp ? sp.cv.width : 96, h = an ? an.gh : sp ? sp.cv.height : 96, cz = pose.cz, fx = 256 * (0.45 + 0.286 * cz), fy = 192 * (0.8 - 0.285 * cz); return { cz, k: min(pose.k, max(60, min(150, 2 * (256 - fx) - 6)) / (w * 0.8 * cz), max(50, min(106, fy - 5)) / (h * 0.8 * cz)), km: pose.km || 1.9 }; };
   /* En tilstand. ev = { navn: tidspunkt }, o = egne tall. */
   const state = (t, o) => { const S = Object.assign({ t, film: false, cc: '#ffffff', p2: 0, hits: [], ev: {}, foe: A.FOE, me: A.ME }, o || {}); S.since = n => S.ev[n] == null ? 1e9 : S.t - S.ev[n]; return S; };
   A.state = state;
@@ -37,12 +40,12 @@ const ARENA = (() => {
       /* Holder ikke enheten 60 bilder i sekundet (målt over tid), tegnes annethvert bilde. */
       if (slow > 30 && (skip = !skip)) return;
       const c0 = performance.now(), T = now(), S = state(T, { cc: cur.cc, ev, hits, p2: ev.rage == null ? 0 : eo(seg(T, ev.rage + 0.5, ev.rage + 3.2)), rage: ev.rage != null });
-      const B = I.buf(), g = B.getContext('2d'), P = I.newP();
-      g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.imageSmoothingEnabled = true; g.clearRect(0, 0, W, H);
-      I.set(g, T, P, cur);
+      const rs = K.gl() ? C.RS : 1, B = I.buf(rs), g = B.getContext('2d'), P = I.newP();
+      g.setTransform(rs, 0, 0, rs, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.imageSmoothingEnabled = true; g.clearRect(0, 0, W, H);
+      I.set(g, T, P, cur, rs);
       try { A.scene(id, S); } catch (e) { C.err = String(e && e.stack || e); }
       g.setTransform(1, 0, 0, 1, 0, 0);
-      if (!C.gpu(back, B)) { I.soften(B); I.present(back, B); }
+      if (!C.gpu(back, B)) { if (rs > 1) { C.RS = 1; return; } I.soften(B); I.present(back, B); }
       if (front && front.isConnected) {
         const f = front.getContext('2d'); f.setTransform(front.width / W, 0, 0, front.height / H, 0, 0); f.globalAlpha = 1; f.globalCompositeOperation = 'source-over'; f.imageSmoothingEnabled = true; f.clearRect(0, 0, W, H);
         I.set(f, T, I.newP(), cur);
@@ -72,14 +75,15 @@ const ARENA = (() => {
     const me = o.me && !o.noFig ? await I.loadSprite('back/' + o.me) : null;
     const T = t + 100, ev = {}; Object.keys(o.ev || {}).forEach(k => { ev[k] = T - o.ev[k]; }); if (o.rage && ev.rage == null) ev.rage = T - 30;
     const S = state(T, { cc: o.cc || '#ffffff', ev, hits: o.hit ? [{ t: T - 0.08, side: o.hit, big: true }] : [], p2: ev.rage == null ? 0 : eo(seg(T, ev.rage + 0.5, ev.rage + 3.2)), rage: ev.rage != null });
-    const cur = { id, f: d, sp, sps: me ? { me } : {}, cc: S.cc }, B = I.buf(), g = B.getContext('2d'), P = I.newP();
-    g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.imageSmoothingEnabled = true; g.clearRect(0, 0, W, H);
-    I.set(g, T, P, cur); try { A.scene(id, S); } catch (e) { C.err = String(e && e.stack || e); } g.setTransform(1, 0, 0, 1, 0, 0);
+    const rs = K.gl() ? C.RS : 1, cur = { id, f: d, sp, sps: me ? { me } : {}, cc: S.cc }, B = I.buf(rs), g = B.getContext('2d'), P = I.newP();
+    g.setTransform(rs, 0, 0, rs, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.imageSmoothingEnabled = true; g.clearRect(0, 0, W, H);
+    I.set(g, T, P, cur, rs); try { A.scene(id, S); } catch (e) { C.err = String(e && e.stack || e); } g.setTransform(1, 0, 0, 1, 0, 0);
     if (!tmp) { tmp = document.createElement('canvas'); tmp.width = W; tmp.height = H; }
     if (!C.gpu(tmp, B)) { I.soften(B); I.present(tmp, B); }
-    const x = out.getContext('2d'), pose = o.pose || d.pose || { cz: 1.1, k: 1 }, cz = pose.cz, u = out.width / W;
+    if (out.width !== W * rs && !o.keep) { out.width = W * rs; out.height = H * rs; }
+    const x = out.getContext('2d'), pose = o.noFig ? (o.pose || { cz: 1, k: 1 }) : A.fit(o.pose || d.pose || { cz: 1.1, k: 1 }, sp), cz = pose.cz, u = out.width / W;
     x.setTransform(u, 0, 0, u, 0, 0); x.globalAlpha = 1; x.globalCompositeOperation = 'source-over'; x.imageSmoothingEnabled = false; x.fillStyle = '#000'; x.fillRect(0, 0, W, H);
-    x.save(); x.translate(230.4, 307.2); x.scale(cz, cz); x.translate(-230.4, -307.2); x.drawImage(tmp, 0, 0);
+    x.save(); x.translate(230.4, 307.2); x.scale(cz, cz); x.translate(-230.4, -307.2); x.imageSmoothingEnabled = true; x.drawImage(tmp, 0, 0, W, H); x.imageSmoothingEnabled = false;
     I.set(x, T, I.newP(), cur);
     if (sp) K.mon(A.FOE[0], A.FOE[1], 1.6 * pose.k, { box: 1, ft: o.ft == null ? 0 : o.ft });
     if (me) K.mon(A.ME[0], A.ME[1], 1.6 * (pose.km || 1.9), { id: 'me' });
@@ -89,5 +93,10 @@ const ARENA = (() => {
     return C.err || '';
   };
   C.arena = id => A.defs[id] || null;
+  /* Oppløsningen (CINE.RS): halvannen gang 512 × 384 på skjermer med høy tetthet (telefoner og nyere Mac-er), ellers 512 × 384. ?rs=2 i adressen overstyrer (testing).
+     raid.js går ned til 1 hvis enheten ikke holder farten. */
+  try { const q = /[?&]rs=([\d.]+)/.exec(location.search); C.RS = q ? max(1, min(2, +q[1])) : (window.devicePixelRatio || 1) >= 2 ? 1.5 : 1; } catch (_) {}
+  /* Bildetelleren: ?fps=1 i adressen viser bilder i sekundet for filmen eller arenaen som går, og om WebGL er i bruk. */
+  try { if (/[?&]fps=1/.test(location.search)) C.onfps = n => { let el = document.getElementById('fpsm'); if (!el) { el = document.createElement('div'); el.id = 'fpsm'; el.style.cssText = 'position:fixed;left:6px;top:6px;z-index:99999;font:700 12px ui-monospace,monospace;color:#9f9;background:rgba(0,0,0,.6);padding:2px 6px;border-radius:6px;pointer-events:none'; document.body.appendChild(el); } el.textContent = n + ' fps · ' + (typeof FXGL !== 'undefined' && FXGL.on ? 'gl' : '2d'); }; } catch (_) {}
   return A;
 })();
