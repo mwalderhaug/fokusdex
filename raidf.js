@@ -654,7 +654,7 @@
     Latios: [2.62, 4.5], Jirachi: [2.87, 4.5], Crescent: [7.47, 4.5], Manaphy: [0.27, 4.5], Shaymin: [7.01, 4.5], Victini: [3.71, 4.5], Swords: [3.07, 4.5],
     Forces: [3.21, 4.5], Meloetta: [28.05, 4.5], Genesect: [6.32, 4.5], Lugia: [8.3, 4.6], 'Ho-oh': [4.6, 4.5], Mewtwo: [5.1, 4.47], Heatran: [2.2, 4.49], Rayquaza: [0.9, 4.34], Deoxys: [0, 3.91], Uxie: [1.0, 4.49], Entei: [0.3, 4.61], Reshiram: [1.9, 4.49], Cobalion: [1.4, 4.43] };
   const CALM = {
-    144: ['loc_icepath', '#04122a', 0.35, 'ice', 'fall', 'Birds'], 145: ['', '#000', 0, 'bolt', 'fall', 'Birds'], 146: ['loc_mortar', '#2a0600', 0.3, 'fire', 'fall', 'Birds'], 151: ['loc_ilexday', '#1a0a2a', 0.25, 'dream', 'orbit', 'Mew'],
+    145: ['', '#000', 0, 'bolt', 'fall', 'Birds'], 146: ['loc_mortar', '#2a0600', 0.3, 'fire', 'fall', 'Birds'], 151: ['loc_ilexday', '#1a0a2a', 0.25, 'dream', 'orbit', 'Mew'],
     243: ['loc_burned', '#0a0a04', 0.25, 'bolt', 'dash', 'Raikou'], 244: ['loc_burned', '#1a0400', 0.25, 'fire', 'dash', 'Entei'], 245: ['loc_tohjo', '#041a2a', 0.35, 'water', 'dash', 'Suicune'], 251: ['loc_ilex', '#000', 0, 'forest', 'orbit', 'Celebi'],
     377: ['loc_alph', '#1a0e04', 0.3, 'regi', 'dots', 'Regis'], 378: ['loc_icepath', '#04122a', 0.5, 'regi', 'dots', 'Regis'], 379: ['loc_alph', '#0a0e14', 0.45, 'regi', 'dots', 'Regis'], 486: ['loc_alph', '#14140a', 0.35, 'regi', 'dots', 'Regigigas'],
     380: ['loc_dragonsden', '#0a1a3a', 0.3, 'wind', 'dash', 'Latios'], 381: ['loc_dragonsden', '#0a1a3a', 0.3, 'wind', 'dash', 'Latios'], 385: ['', '#000', 0, 'star', 'fall', 'Jirachi'],

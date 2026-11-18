@@ -320,8 +320,8 @@
      Animasjonen: finnene står rett opp i bildene 12,0–12,6 s (spranget og brølet), svømmetaket er 10,9–11,5 s (stupet), og den ender på første bilde. */
   const KB = GB, KE = GE, KL = [6.49, 7.72], KK = GK, KRV = GR, KD = 11.4, KU = 12.63, KFN = GF;
   /* Skyggen under overflaten (akt 1): en mørk kropp med lysende tegn, lagt flatt i vannet. */
-  const kShade = (X, Z, k, a, col, ft) => { const p = K.gp(X, Z, 0); if (!p || a <= 0.01) return; const s = 1.6 * k * p.s; K.blob(p.x, p.y, 170 * p.s * k, '#010810', 0.5 * a, 0, 0.3);
-    K.mon(p.x, p.y + 26 * p.s * k, s, { ft, col: '#020c18', a: 0.42 * a, tf: [1, 0, -0.55, 0.36] }); K.mon(p.x, p.y + 26 * p.s * k, s, { ft, mask: 'red', col, add: 1, a, tf: [1, 0, -0.55, 0.36] }); };
+  const kShade = (X, Z, k, a, col, ft) => { const p = K.gp(X, Z, 0); if (!p || a <= 0.01) return; const s = 1.6 * k * p.s; K.blob(p.x, p.y, 190 * p.s * k, '#010810', 0.42 * a, 0, 0.3);
+    K.mon(p.x, p.y + 26 * p.s * k, s, { ft, col: '#020c18', a: 0.26 * a, tf: [1, 0, -0.55, 0.36] }); K.mon(p.x, p.y + 26 * p.s * k, s, { ft, mask: 'red', col, add: 1, a, tf: [1, 0, -0.55, 0.36] }); };
   /* Et lyn fra skyene ned i sjøen ved x (skjermen), styrke k. */
   const kStrike = (x, k, sd, t) => { if (k <= 0.02) return; const y = K.st.yh; K.bolt(x + (rnd(sd, 3) - 0.5) * 140, -14, x, y - 1, { seed: sd * 7 + floor(t * 24) % 3, col: '#a8c8ff', core: '#ffffff', w: 2.4, a: k, br: 4, depth: 5 }); K.blob(x, y, 110, '#dce8ff', 0.6 * k, 1, 0.3); };
   /* Sprut: hvite klumper og dråper som kastes ut fra (x, y). k = 1 → 0 (alder), R = hvor langt. */
@@ -383,7 +383,7 @@
           glow: a1 ? 0.25 + 0.3 * bt : lit3 ? 0.22 + 0.14 * kn + 0.6 * kk : t < KU ? 0.6 * hit(t, KRV, 1.4) : kf(t, [[KU, 0.6], [13.9, 0.16]]),
           gx: a1 ? mix(300, 20, io(seg(t, 0.3, 4.4))) : lit3 || t < KU ? kX : KX, gz: a1 ? mix(950, 70, io(seg(t, 0.3, 4.4))) : lit3 || t < KU ? kZ + 30 : KZ - 6, gr: a1 ? 130 : lit3 ? 150 : 120, glc: lit3 ? [0.12, 0.5, 0.95, 0] : null });
         ARENA.scene(382, S); const u = S.u;
-        kCrest(wall, t, seg(t, 7.2, 8.6));
+        kCrest(wall, t, seg(t, 7.2, 8.6) * (1 - seg(t, 11.1, KD)));
         /* Lynene filmen selv ber om (i akt 1 bare lysglimt inne i skyene). */
         if (fb[0] > 0.02) kStrike(fb[1], fb[0], floor(fb[2] * 10), t);
         /* Skalabildet: en trener på et skjær i forgrunnen, sett bakfra, mens havet reiser seg. */

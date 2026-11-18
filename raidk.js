@@ -559,7 +559,11 @@
   PLATE.frost = ({ t, y, col, name, cap, lv }) => {
     const g = K.g, e = eo(seg(t, 0, 0.5)), slam = seg(t, 0.15, 0.5);
     g.save(); g.globalAlpha = e; const gr = g.createLinearGradient(0, y - 66, 0, y + 40); gr.addColorStop(0, 'rgba(210,235,255,0)'); gr.addColorStop(0.25, 'rgba(14,34,62,.74)'); gr.addColorStop(0.8, 'rgba(14,34,62,.74)'); gr.addColorStop(1, 'rgba(210,235,255,0)'); g.fillStyle = gr; g.fillRect(0, y - 66, W, 106); g.restore();
-    for (let i = 0; i < 26; i++) { const sd = i % 2, x0 = sd ? 470 - rnd(i, 91) * 20 : 42 + rnd(i, 91) * 20, yy = y - 58 + rnd(i, 92) * 90, L = (20 + rnd(i, 93) * 70) * eo(seg(t, 0.05 + rnd(i, 94) * 0.3, 0.9)), an = (sd ? PI : 0) + (rnd(i, 95) - 0.5) * 0.9; if (L > 1) K.bolt(x0, yy, x0 + cos(an) * L, yy + sin(an) * L, { seed: i * 5 + 1, col: '#bfe6ff', core: '#ffffff', w: 0.9, a: 0.7, depth: 3, jag: 0.22, br: 2 }); }
+    g.save(); g.lineCap = 'round'; g.strokeStyle = '#eaf6ff';
+    for (let i = 0; i < 22; i++) { const sd = i % 2, x0 = sd ? 476 - rnd(i, 91) * 16 : 36 + rnd(i, 91) * 16, yy = y - 60 + rnd(i, 92) * 94, L = (26 + rnd(i, 93) * 62) * eo(seg(t, 0.05 + rnd(i, 94) * 0.3, 0.9)), an = (sd ? PI : 0) + (rnd(i, 95) - 0.5) * 0.8; if (L < 2) continue; const x1 = x0 + cos(an) * L, y1 = yy + sin(an) * L, nb = floor(L / 6);
+      g.globalAlpha = 0.75; g.lineWidth = 1.3; g.beginPath(); g.moveTo(x0, yy); g.lineTo(x1, y1); g.stroke(); g.globalAlpha = 0.55; g.lineWidth = 0.8; g.beginPath();
+      for (let j = 1; j < nb; j++) { const u = j / nb, bx = mix(x0, x1, u), by = mix(yy, y1, u), bl = L * 0.3 * (1 - u * 0.8); for (const dq of [0.95, -0.95]) { g.moveTo(bx, by); g.lineTo(bx + cos(an + dq) * bl, by + sin(an + dq) * bl); } } g.stroke(); }
+    g.restore();
     txtF(cap, 256, y - 38, 17, 5, blend(col, '#ffffff', 0.6), seg(t, 0.1, 0.45));
     if (slam > 0) { const lg = g.createLinearGradient(0, y - 40, 0, y + 6); lg.addColorStop(0, '#ffffff'); lg.addColorStop(0.6, '#d8f0ff'); lg.addColorStop(1, '#8ac4f0'); txtF(name, 258, y + 3, 52, 3, 'rgba(4,16,40,.85)', slam); txtF(name, 256, y, 52, 3, lg, slam); }
     if (lv) txtF(lv, 256, y + 26, 19, 2, '#e8f8ff', seg(t, 0.3, 0.6));
