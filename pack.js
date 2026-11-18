@@ -284,7 +284,7 @@ const PACK = (() => {
   /* Korte lyder (angrep, treff, status) dekodes og spilles gjennom appens vanlige lydutgang, så volumknappen gjelder. Gir false hvis lyden ikke er klar. */
   /* Den siste lyden som ble startet, så angrepslyden kan klippes når animasjonen er over (sfxTrim). */
   let last = null;
-  const sfxCut = (h, sec) => { try { const t = h.t0 + Math.max(0.15, sec); h.g.gain.cancelScheduledValues(t); h.g.gain.setValueAtTime(h.v, t); h.g.gain.linearRampToValueAtTime(0.0001, t + 0.16); h.s.stop(t + 0.2); } catch (_) {} };
+  const sfxCut = (h, sec, f) => { try { const t = h.t0 + Math.max(f ? 0.03 : 0.15, sec), q = f || 0.16; h.g.gain.cancelScheduledValues(t); h.g.gain.setValueAtTime(h.v, t); h.g.gain.linearRampToValueAtTime(0.0001, t + q); h.s.stop(t + q + 0.04); } catch (_) {} };   /* f: egen uttoning (korte smell) */
   P.sfxTrim = sec => { const h = last; if (!h || !S.bfast || typeof AC === 'undefined' || !AC || AC.currentTime - h.t0 > 0.12 || h.len <= sec + 0.2) return; sfxCut(h, sec); };
   /* ANGREPSLYDEN FØLGER ANIMASJONEN (i begge hastigheter). Klippene i pakken er 2–4,7 s lange, og animasjonene 1–2 s: før spilte hvert klipp ut, så
      lyden fra forrige angrep (og det før) lå under det neste og under musikken, som en maskin som går. Nå er det én angrepslyd om gangen: en ny demper
@@ -295,19 +295,25 @@ const PACK = (() => {
   P.mvEnd = (h, sec) => { if (h) sfxFade(h, sec == null ? 0.35 : sec); };
   P.sfxPath = name => (P.ok && P.man.sfx && P.man.sfx[name]) || '';
   P.warm = name => { const f = P.sfxPath(name); if (!f || bufs.has(f) || !S.sound) return; bufs.set(f, null); P.url(f).then(u => u && fetch(u)).then(r => r && r.arrayBuffer()).then(b => b && ac() && AC.decodeAudioData(b)).then(d => { if (d) bufs.set(f, d); else bufs.delete(f); }).catch(() => bufs.delete(f)); };
-  P.sfx = (name, vol) => {
+  /* Hvor lyden faktisk begynner: lydene fra spillene har gjerne en tiendedels sekund stillhet først. Første sted den når 2 % av toppen. Regnes én gang per lyd. */
+  const onsetOf = d => { if (d._on != null) return d._on; try { const x = d.getChannelData(0); let pk = 0; for (let i = 0; i < x.length; i++) { const a = Math.abs(x[i]); if (a > pk) pk = a; } let i = 0; while (i < x.length && Math.abs(x[i]) < pk * 0.02) i++; return (d._on = Math.max(0, i / d.sampleRate - 0.004)); } catch (_) { return (d._on = 0); } };
+  /* op (valgfritt, til cutscenene): at = sekunder fra nå, rate = fart (under 1 er dypere og lengre), len = sekunder før den tones ut (fade = over hvor lang tid), off = sekunder inn i lyden,
+     trim = hopp over stillheten først, keep = ikke krymp den i FAST (det er ikke et angrep). */
+  P.sfxReady = name => { const f = P.sfxPath(name); return !!(f && bufs.get(f)); };
+  P.sfx = (name, vol, op) => {
     const f = P.sfxPath(name), d = f && bufs.get(f);
     if (!f || !S.sound) return false;
     if (!d) { P.warm(name); return false; }
+    op = op || {};
     /* Lydene i pakken er tatt opp mye sterkere enn musikken. Hver lyd får derfor et tak: det sterkeste øyeblikket skal ikke ligge over SFXCAP (LUFS),
        som er så vidt over musikknivået. Svake lyder løftes ikke, så de stille effektene forblir stille. */
     try {
-      const o = out(); if (!o) return false; const s = AC.createBufferSource(), g = AC.createGain(), L = loudOf(d), v = (vol == null ? 0.8 : vol) * (L > SFXCAP ? Math.pow(10, (SFXCAP - L) / 20) : 1), t = AC.currentTime;
+      const o = out(); if (!o) return false; const s = AC.createBufferSource(), g = AC.createGain(), L = loudOf(d), v = (vol == null ? 0.8 : vol) * (L > SFXCAP ? Math.pow(10, (SFXCAP - L) / 20) : 1), t = AC.currentTime + (op.at || 0);
       /* I FAST spilles kamplydene litt raskere og får et tak på lengden, så de ikke henger igjen inn i neste trekk (sfxFast i bui.js). */
-      const F = typeof sfxFast === 'function' ? sfxFast() : null;
-      s.buffer = d; g.gain.setValueAtTime(v, t); if (F) s.playbackRate.value = F.rate; s.connect(g); g.connect(o); s.start();
-      last = { s, g, v, t0: t, len: d.duration / (F ? F.rate : 1) };
-      if (F && last.len > F.max + 0.2) sfxCut(last, F.max);
+      const F = !op.keep && typeof sfxFast === 'function' ? sfxFast() : null, rate = (op.rate || 1) * (F ? F.rate : 1), off = Math.max(0, Math.min(d.duration - 0.05, (op.off || 0) + (op.trim ? onsetOf(d) : 0)));
+      s.buffer = d; g.gain.setValueAtTime(v, t); s.playbackRate.value = rate; s.connect(g); g.connect(o); s.start(t, off);
+      last = { s, g, v, t0: t, len: (d.duration - off) / rate };
+      if (op.len && last.len > op.len + (op.fade || 0.2)) sfxCut(last, op.len, op.fade); else if (F && last.len > F.max + 0.2) sfxCut(last, F.max);
       return true;
     } catch (_) { return false; }
   };

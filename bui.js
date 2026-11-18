@@ -76,11 +76,9 @@ const BSFX = {
   up: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.05, 0.07, 0.035)),
   down: () => [784, 659, 523, 392].forEach((f, i) => tone(f, i * 0.05, 0.07, 0.035)),
   /* Cutscenene i 3D (Jazz 18.11: «taggene opp må få en passende lydeffekt på hver tagg»): rise = forvarselet mens han løfter armene (d sekunder), slam = slaget i bakken,
-     spike = én tagg som skyter opp (k 0–1 ut i rekka: de siste er størst og nærmest, så de er dypere og sterkere; den aller siste får et drønn etter seg). */
+     Taggene selv og Primal-forvandlingen: C3SND under (runde 8). */
   rise: d => { tone(42, 0, d, 0.13, 'sawtooth', 110); tone(63, d * 0.3, d * 0.7, 0.07, 'square', 190); noise(d * 0.2, d * 0.8, 0.1, 240, 1500); },
   slam: () => { noise(0, 0.9, 0.3, 700, 60); tone(84, 0, 0.8, 0.3, 'sine', 30); tone(126, 0.02, 0.35, 0.14, 'sawtooth', 44); noise(0.03, 0.3, 0.15, 3600, 400); },
-  spike: k => { const v = 0.17 + 0.13 * k; noise(0, 0.07, v, 5200 - 2200 * k, 900); noise(0.03, 0.26 + 0.14 * k, v * 0.9, 1500 - 500 * k, 140); tone(170 - 70 * k, 0, 0.24 + 0.12 * k, v, 'sawtooth', 46); tone(2100 - 500 * k, 0.005, 0.08, 0.05, 'square', 620);
-    if (k >= 1) { noise(0.02, 0.85, 0.24, 800, 60); tone(70, 0, 0.85, 0.26, 'sine', 28); } },
   beat: () => { tone(58, 0, 0.16, 0.12, 'sine', 40); tone(52, 0.24, 0.2, 0.1, 'sine', 36); },
   dread: () => { noise(0, 1.3, 0.07, 140, 60); tone(46, 0, 1.3, 0.07, 'sawtooth', 30); },
   /* Mega Evolution: lyset samler seg (stigende toner), og så slipper det. megaArm = knappen slås på. */
@@ -94,6 +92,52 @@ const BSFX = {
   ace: () => { noise(0, 0.9, 0.09, 200, 5000); tone(80, 0, 0.9, 0.08, 'sawtooth', 640); [392, 523, 659, 784, 1047].forEach((f, i) => tone(f, 0.5 + i * 0.07, 0.2, 0.05, 'square')); },
   win: () => [523, 523, 523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.11, 0.16, 0.05, 'triangle')),
   lose: () => [392, 370, 349, 330, 262].forEach((f, i) => tone(f, i * 0.2, 0.3, 0.05, 'triangle'))
+};
+/* LYDENE I CUTSCENENE I 3D (raid3c.js, signalene i cues). Pakken først (lydene fra spillene, med tidspunkt, fart og lengde), og en innebygd reserve uten pakken.
+   Jazz 18.11 (runde 8): taggene i Precipice Blades var «altfor puslete»: hver tagg et tungt smell med dyp rumling under, sterkere og dypere for hver, og et stort
+   smell til slutt. Primal-forvandlingen fikk lyd der krystallen dannes, der den mørkner og tegnet lyser, og der den knuses. Hver gir mønsteret til vibrasjonen (buzz).
+   C3SFX: lydene fra pakken, som varmes opp (dekodes) før introen, så de er klare når de trengs (PACK.sfx spiller bare det som er dekodet). */
+const C3SFX = ['Rock Blast 1hit', 'Magnitude', 'Self Destruct', 'Rock Smash', 'Power Gem', 'Light Screen', 'Shadow Force', 'Rock Polish', 'Shell Smash', 'Ice Shard'];
+const c3p = (n, v, o) => typeof PACK !== 'undefined' && PACK.sfx(n, v, Object.assign({ keep: 1 }, o));
+const c3h = i => { const x = Math.sin(i * 127.1 + 0.5) * 43758.5453; return x - Math.floor(x); };
+const C3SND = {
+  /* Én tagg som skyter opp (k 0–1 ut i rekka; de siste er nærmest og størst): et skarpt, tungt smell (pakken: Rock Blast, dypere og sterkere for hver) og et dypt
+     dunk under. Den siste får det store smellet (blast). */
+  spike: k => { k = Math.max(0, Math.min(1, k || 0));
+    /* Hvert smell er kort (rundt 0,15 s), så taggene høres hver for seg over rumlingen, og fra den første til den siste 7 dB sterkere og dypere. Holdt under
+       begrenseren i lydgrafen (over rundt −8 dBFS blir alle like sterke): fra rundt −13 til −9 dBFS, og det store smellet til slutt mot taket, lenger og dypere. Målt med lufs_slag.py. */
+    const g = Math.pow(10, k * 7 / 20);
+    if (!c3p('Rock Blast 1hit', 0.27 * g, { rate: 1 - 0.22 * k, len: 0.1 + 0.05 * k, fade: 0.08, trim: 1 })) { noise(0, 0.06, 0.3 * g, 4200 - 1600 * k, 1100); noise(0.008, 0.16 + 0.05 * k, 0.33 * g, 1500 - 500 * k, 160); tone(230 - 90 * k, 0, 0.1, 0.1 * g, 'square', 70); }
+    tone(112 - 46 * k, 0, 0.22 + 0.1 * k, 0.08 + 0.14 * k, 'sine', 36); noise(0, 0.16 + 0.06 * k, 0.13 * g, 700, 110);
+    if (k >= 1) C3SND.blast(); return k >= 1 ? [120, 40, 260] : [30 + Math.round(40 * k)]; },
+  /* Rumlingen under hele rekka, fra slaget til etter den siste taggen (d sekunder): jordskjelvet fra pakken lagt dypere (Magnitude), og et dypt drønn som vokser. */
+  quake: d => { d = d || 1.6; if (!c3p('Magnitude', 0.42, { rate: 0.8, len: d, trim: 1 })) { swellN(0, d, 0.16, 260, 70, 0.08); swellN(0.2, d - 0.2, 0.12, 140, 50, 0.5); }
+    tone(41, 0, d + 0.4, 0.16, 'sine', 31); swell(58, 0, d * 0.75, 0.07, 'sine', 44); swellN(0, d * 0.75, 0.08, 90, 160); return [20, 40, 20, 40, 20, 40, 20, 40]; },
+  /* Slaget i bakken før taggene: litt svakere enn i resten av kampen, så rekka kan bygge seg opp fra det (den gamle slam var like sterk som den siste taggen). */
+  slam: () => { noise(0, 0.6, 0.17, 700, 60); tone(84, 0, 0.7, 0.18, 'sine', 30); tone(126, 0.02, 0.3, 0.08, 'sawtooth', 44); noise(0.03, 0.25, 0.09, 3600, 400); return [90, 60, 240]; },
+  /* Det store smellet til slutt (den siste taggen, rett foran linsa): eksplosjonen fra pakken (Self Destruct), et dypt fall i bassen og et skarpt knall på toppen. */
+  blast: () => { if (!c3p('Self Destruct', 1, { off: 1.02, len: 1.8 })) BSFX.mv('boom', 3); c3p('Rock Smash', 1, { rate: 0.75, len: 1.3, trim: 1 });
+    tone(74, 0, 1.7, 0.4, 'sine', 24); swellN(0, 1.5, 0.3, 760, 40, 0.02); noise(0.004, 0.3, 0.22, 5200, 700); return [120, 40, 300]; },
+  /* Primal: lyset samler seg om ham (0 til d, der krystallen står): det stiger og glitrer (pakken: Power Gem, lagt så glitringen treffer d). */
+  gather: d => { d = d || 1.75; if (!c3p('Power Gem', 0.85, { at: Math.max(0, d - 1.66) })) { swellN(0, d, 0.26, 900, 7000); swell(523, d * 0.4, d * 0.6, 0.08, 'triangle', 1568); }
+    swell(220, 0, d, 0.035, 'triangle', 660); swell(55, 0, d, 0.08, 'sine', 82); return [20, 60, 20, 60, 20, 60]; },
+  /* Krystallen står der (ut av lyset) og faller på plass: en klang av krystall (pakken: Light Screen) og et lite dunk når den lander. */
+  gem: () => { const pk = c3p('Light Screen', 0.85, { len: 1.1, trim: 1 }); if (!pk) noise(0, 0.5, 0.14, 6000, 9000);
+    [1568, 2349, 3136, 4699].forEach((f, i) => tone(f, i * 0.008, 1.3 - i * 0.22, (0.045 - i * 0.008) * (pk ? 1 : 1.8), i % 2 ? 'sine' : 'triangle'));
+    tone(140, 0.14, 0.28, 0.16, 'sine', 62); noise(0.14, 0.14, 0.09, 1400, 300); return [50, 40, 90]; },
+  /* Den mørkner (d sekunder): et mørkt drag nedover (pakken: Shadow Force) og en lav drone. */
+  dark: d => { d = d || 0.8; if (!c3p('Shadow Force', 0.85, { off: 0.72, len: d + 0.5 })) { swellN(0, d + 0.2, 0.34, 2200, 180, 0.3); tone(196, 0, d + 0.3, 0.06, 'sawtooth', 62); }
+    tone(330, 0, d + 0.4, 0.05, 'sawtooth', 82); tone(55, 0, d + 0.8, 0.14, 'sine', 41); return [30, 80, 30, 80]; },
+  /* Tegnet tennes: en dyp gongong og et lyst glimt (pakken: Rock Polish). */
+  sign: () => { if (!c3p('Rock Polish', 0.8, { off: 0.62, len: 0.95 })) { tone(1760, 0, 0.7, 0.04, 'triangle'); tone(2637, 0.02, 0.6, 0.03, 'sine'); }
+    tone(55, 0, 2.3, 0.22, 'sine', 52); tone(110, 0, 1.9, 0.13, 'sine', 108); tone(165, 0, 1.4, 0.07, 'triangle', 162); tone(277, 0.01, 1.1, 0.04, 'sine', 274); noise(0, 0.26, 0.1, 2400, 7200); return [80, 40, 200]; },
+  /* Sprekkene brer seg (d sekunder til den knuses): knitring som tetner, og en spenning som stiger. */
+  crack: d => { d = d || 1.1; for (let i = 0; i < 16; i++) { const u = 1 - Math.pow(1 - i / 15, 1.7), a = u * (d - 0.05); noise(a, 0.035, 0.08 + 0.1 * u, 5200 + 1800 * c3h(i), 2400); tone(2200 + 1600 * c3h(i + 40), a, 0.025, 0.035 + 0.025 * u, 'square'); }
+    swellN(0, d, 0.16, 500, 3600); swell(98, 0, d, 0.08, 'sawtooth', 196); return [15, 50, 15, 40, 15, 30, 15, 20, 15]; },
+  /* Den knuses: et knus av krystall (pakken: Shell Smash), skår som klirrer etterpå (Ice Shard), og et dypt drønn under. */
+  shatter: () => { if (!c3p('Shell Smash', 1, { off: 1.12, len: 1.1 })) { noise(0, 0.38, 0.55, 7200, 2400); noise(0.02, 0.6, 0.3, 3000, 900); }
+    if (!c3p('Ice Shard', 0.75, { at: 0.06, off: 0.6, len: 1.9 })) for (let i = 0; i < 18; i++) tone(2800 + 4200 * c3h(i + 9), 0.06 + 0.95 * c3h(i + 77) * c3h(i + 3), 0.09, 0.05 * (1 - i / 22), i % 3 ? 'sine' : 'triangle');
+    tone(66, 0, 1.3, 0.3, 'sine', 27); swellN(0, 1.1, 0.24, 900, 60, 0.02); return [120, 40, 90, 40, 260]; },
 };
 /* I FAST krympes de innebygde kamplydene like mye som animasjonene, så ingen lyd henger igjen inn i neste trekk. Seier, tap og de store
    øyeblikkene (Mega Evolution, introer) spilles som de er. */
@@ -414,7 +458,7 @@ async function legendIntro(B) {
      nivået og venter på Continue; så virvel og hvitt blink, og rett inn i kampen. Lar den seg ikke hente i tide, går sprite-filmen som før. */
   const id3 = 'c3:' + tr.leg, c3 = !tr.dk && !calm() && typeof G3D !== 'undefined' && G3D.can() && CINE.has(id3) && await Promise.race([G3D.ready(id3).then(() => true, () => false), T(G3D.isReady(id3) ? 300 : 12000).then(() => false)]);
   if (gone()) return;
-  if (c3) { id = id3; info = CINE.info(id); o.lv = f.lv; root.classList.add('c3');
+  if (c3) { id = id3; info = CINE.info(id); o.lv = f.lv; root.classList.add('c3'); C3SFX.forEach(n => PACK.warm(n));   /* også Primal-lydene: de trengs senere i kampen */
     /* Arenaen i 3D (samme sted som cutscenen) må stå klar når kampen starter. Primal-cutscenen hentes når kampen er i gang (ikke mens introen spiller). */
     if (G3D.has(id3 + 'a')) await Promise.race([G3D.ready(id3 + 'a').catch(() => 0), T(2500)]); if (gone()) return; }
   /* Dark Mewtwo: den første kamplåta starter med forvandlingen (filmen) og går rett videre inn i kampen. Finnes den ikke i pakken, er alt som før. */
@@ -433,7 +477,7 @@ async function legendIntro(B) {
   let stop = () => {};
   if (started) music(''); else { PACK.music(''); stop = epicIntro('ultra', info.R); }
   root.classList.add('on'); sfx.appear(); buzz([40, 60, 40]);
-  const cue = (n, v) => { if (gone()) return; if (n === 'cry') { cry(f.id, 0, c3 ? 0.8 : 0.6, c3 ? 1 : 0); buzz([80, 40, 260]); if (!started) battleMusic(B); } else if (n === 'spike') { BSFX.spike(v || 0); buzz(v >= 1 ? [60, 30, 160] : 24); } else if (n === 'slam') { BSFX.slam(); buzz([90, 60, 240]); } else if (n === 'rise') { BSFX.rise(v || 1); buzz([20, 60, 20, 60, 20]); } else if (n === 'boom') buzz([90, 60, 90, 60, 240]); else if (n === 'thud') buzz(45); else buzz(18); };
+  const cue = (n, v) => { if (gone()) return; if (n === 'cry') { cry(f.id, 0, c3 ? 0.8 : 0.6, c3 ? 1 : 0); buzz([80, 40, 260]); if (!started) battleMusic(B); } else if (C3SND[n]) buzz(C3SND[n](v) || 30); else if (n === 'slam') { BSFX.slam(); buzz([90, 60, 240]); } else if (n === 'rise') { BSFX.rise(v || 1); buzz([20, 60, 20, 60, 20]); } else if (n === 'boom') buzz([90, 60, 90, 60, 240]); else if (n === 'thud') buzz(45); else buzz(18); };
   const go = $('#lgigo'), pl = CINE.play(cv, id, Object.assign({ clock: () => started ? PACK.clock() : -1, cue, warp: V && started ? dkWarp : null, onhold: () => { if (gone() || skipped) return; if (sk) sk.hidden = true; if (go) go.hidden = false; } }, o)), sk = $('#lgiskip');
   let skipped = false; const skip = () => { if (skipped) return; skipped = true; sfx.tap(); stop(); if (c3) { const held = go && !go.hidden; if (sk) sk.hidden = true; if (go) go.hidden = true; if (!held) { cry(f.id, 0, 0.7, 1); buzz([80, 40, 260]); } } pl.skip(); };   /* Continue: brølet er over, ikke et nytt inn i kampen. Skip midt i filmen: brølet han ellers ville gitt */
   setTimeout(() => { if (!gone() && sk && !skipped && (!go || go.hidden)) sk.hidden = false; }, 1200); if (sk) sk.addEventListener('click', skip); if (go) go.addEventListener('click', skip);
@@ -943,8 +987,8 @@ async function primalCut(B, e) {
   root.innerHTML = '<div class="lgi-s"><canvas class="lgi-cv" id="pcutcv" width="512" height="384"></canvas></div><button type="button" class="lgi-skip" id="pcutskip" hidden>Skip</button>';
   host.appendChild(root); const cv = root.querySelector('canvas'), sk = root.querySelector('button'), gone = () => BT.B !== B || !root.isConnected, f = teamOf('foe')[BT.v.foe.i];
   const arn = BT.arena && BT.arena.on && BT.arena.pause ? BT.arena : null; if (arn) arn.pause(1);   /* arenaen står stille under cutscenen */
-  BSFX.mega(); buzz([30, 50, 30, 50, 30, 50, 220]);
-  const base = fxCue(B), cue = (n, v) => { if (gone()) return; if (n === 'cry') { cry(e.id, 0, 0.8, 1); buzz([80, 40, 260]); } else base(n, v); };
+  C3SFX.forEach(n => PACK.warm(n)); buzz([30, 50, 30, 50]);   /* lydene til forvandlingen er signalene i cutscenen (C3SND), ikke den vanlige Mega-lyden */
+  const base = fxCue(B), cue = (n, v) => { if (gone()) return; if (n === 'cry') { cry(e.id, 0, 0.8, 1); buzz([80, 40, 260]); } else if (C3SND[n]) buzz(C3SND[n](v) || 30); else base(n, v); };
   const pl = CINE.play(cv, id, { name: B.tr.n, cc: B.tr.cc, cue }); requestAnimationFrame(() => root.classList.add('on'));
   let skipped = false; const skip = () => { if (skipped) return; skipped = true; sfx.tap(); sk.hidden = true; pl.skip(); };
   const tm = setTimeout(() => { if (!gone() && !skipped) sk.hidden = false; }, 900); sk.addEventListener('click', skip);

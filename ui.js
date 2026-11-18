@@ -150,6 +150,31 @@ function noise(at, d, v = 0.05, f1 = 2400, f2 = 500) {
     s.connect(f); f.connect(g); g.connect(m); s.start(t); s.stop(t + d + 0.05);
   } catch (_) {}
 }
+/* Som tone og noise, men med en egen kurve: lyden stiger jevnt til v over andelen a av d (a = 1: den svulmer helt til slutt og slipper så), og dør så ut
+   resten av tiden. Støyen går i sløyfe, så den kan vare lenge. Til det som bygger seg opp (lyset som samler seg, spenningen før noe brister) og lange, dype rumlinger. */
+function swell(f, at, d, v = 0.05, type = 'sine', f2 = 0, a = 1) {
+  if (!S.sound) return;
+  try {
+    const m = out(); if (!m) return;
+    at *= SFXT; d *= SFXT;
+    const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime + at, ta = t + Math.max(0.01, d * a), te = t + d + (a >= 1 ? 0.14 : 0);
+    o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, ta); g.gain.exponentialRampToValueAtTime(0.0001, te);
+    o.connect(g); g.connect(m); o.start(t); o.stop(te + 0.02);
+  } catch (_) {}
+}
+function swellN(at, d, v = 0.05, f1 = 600, f2 = 3000, a = 1) {
+  if (!S.sound) return;
+  try {
+    const m = out(); if (!m) return;
+    at *= SFXT; d *= SFXT;
+    if (!NB) { NB = AC.createBuffer(1, AC.sampleRate * 0.6, AC.sampleRate); const ch = NB.getChannelData(0); for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1; }
+    const s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain(), t = AC.currentTime + at, ta = t + Math.max(0.01, d * a), te = t + d + (a >= 1 ? 0.12 : 0);
+    s.buffer = NB; s.loop = true; f.type = 'bandpass'; f.Q.value = 1.2; f.frequency.setValueAtTime(f1, t); f.frequency.exponentialRampToValueAtTime(f2, t + d);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, ta); g.gain.exponentialRampToValueAtTime(0.0001, te);
+    s.connect(f); f.connect(g); g.connect(m); s.start(t); s.stop(te + 0.05);
+  } catch (_) {}
+}
 const seq = (notes, step, d, v, type) => notes.forEach((f, i) => tone(f, i * step, d, v, type));
 /* Egne lyder i Gen 5-stil: korte pulsbølger, raske arpeggioer og litt støy. Hver type trykk har sin egen lyd. */
 const sfx = {

@@ -38,6 +38,8 @@ const ARENA = (() => {
   const hitGlow = S => { for (const h of S.hits) { const k = (S.t - h.t) / 0.34; if (k < 0 || k >= 1) continue; const p = h.side === 'me' ? S.me : S.foe, y = p[1] - (h.side === 'me' ? 70 : 62); K.blob(p[0], y, (h.big ? 150 : 100) * (0.6 + 0.4 * k), h.big ? '#fff6e0' : '#ffffff', (1 - k) * (h.big ? 0.5 : 0.32), 1); } };
 
   /* Den legendariske gløder selv (tegnene til Groudon og Kyogre): lyset setter glow = { mask (K.MASK), col, a }, og de pikslene tegnes lysende oppå figuren. */
+  /* Den legendariske som 3D-figur (raid3d.js, G3D.sprite): lerretet dekker hele bildet i figurens piksler og flyttes i hele piksler. Tegnes skarpt, uten utjevning. */
+  A.fig3 = (x, f) => { if (!f || !f.cv) return; const s = W / f.cv.width, sm = x.imageSmoothingEnabled; x.imageSmoothingEnabled = false; x.drawImage(f.cv, f.ox * s, f.oy * s, W, H); x.imageSmoothingEnabled = sm; };
   A.glow = (x, y, s, G, o) => { if (G && G.a > 0.01) K.mon(x, y, s, Object.assign({}, o, { mask: G.mask, col: G.col, add: 1, a: G.a })); };
   /* En figur på kampskjermen (el = #s-foe eller #s-me), tegnet på et eget lerret med scenens lys. D = det arenaen husker om siden. Gir bildet (sp) når det tegnes. */
   const litDom = (side, el, D, T, L, cur) => {
@@ -76,6 +78,7 @@ const ARENA = (() => {
       try { A.scene(id, S); } catch (e) { C.err = String(e && e.stack || e); }
       g.setTransform(1, 0, 0, 1, 0, 0); const L = P.light;
       if (!C.gpu(back, B)) { if (rs > 1) { C.RS = 1; return; } I.soften(B); I.present(back, B); }
+      if (cur.fig3) { const x = back.getContext('2d'), u = back.width / W; x.save(); x.setTransform(u, 0, 0, u, 0, 0); A.fig3(x, cur.fig3); x.restore(); }
       /* Figurene med scenens lys (neste bilde av scenen får dem til skygger og speilbilder). */
       cur.sp = litDom('foe', dom.foe.el, dom.foe, T, L, cur) || null; const spm = litDom('me', dom.me.el, dom.me, T, L, cur); if (spm) cur.sps.me = spm; else delete cur.sps.me;
       if (mid && mid.isConnected) {
@@ -125,6 +128,7 @@ const ARENA = (() => {
     const x = out.getContext('2d'), u = out.width / W;
     x.setTransform(u, 0, 0, u, 0, 0); x.globalAlpha = 1; x.globalCompositeOperation = 'source-over'; x.imageSmoothingEnabled = false; x.fillStyle = '#000'; x.fillRect(0, 0, W, H);
     x.save(); x.translate(230.4, 307.2); x.scale(cz, cz); x.translate(-230.4, -307.2); x.imageSmoothingEnabled = true; x.drawImage(tmp, 0, 0, W, H); x.imageSmoothingEnabled = false;
+    if (cur.fig3) A.fig3(x, cur.fig3);
     const L = P.light, Pf = I.newP(); Pf.light = o.nolight ? null : L; I.set(x, T, Pf, cur);
     if (sp) { K.mon(A.FOE[0], A.FOE[1], 1.6 * pose.k, { box: 1, ft: o.ft == null ? 0 : o.ft, hq: 1 }); if (L && !o.nolight) A.glow(A.FOE[0], A.FOE[1], 1.6 * pose.k, L.glow, { box: 1, ft: o.ft == null ? 0 : o.ft, hq: 1 }); }
     if (d.mid && !o.plain) { S.back = tmp; S.cz = cz; try { A.mid(id, S); } catch (e) { C.err = String(e && e.stack || e); } }

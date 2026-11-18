@@ -127,36 +127,41 @@ void main(){
   float hot = 1. - smoothstep(0., 1.5, vW.y - uLavaY); col += vec3(1., .4, .1) * hot * hot * uGlow * .8;
   gl_FragColor = vec4(mix(col, uFogC, fogK(vW)), 1.);
 }`;
-  /* Lavasjøen: samme materiale som arenaen (mats.lava i fxgl.js: flak som driver, sprekker i tre nivåer, åpne renner), her på et plan i 3D.
-     uK = verktøykassas mål per enhet her. Ringer ved nedslag (uRing) og glød rundt det som står i lavaen (uWade) er lagt til. */
-  const FS_LAVA = `varying vec3 vW; uniform vec4 uRing[4]; uniform vec4 uWade; uniform float uHeat, uK, uCell, uCw, uBri;
+  /* Lavasjøen (Jazz 18.11, runde 8): smeltet, oransje lava over hele flaten, ingen mørk skorpe med sprekker. Bare steinflakene (egne steiner i scenen) er mørke.
+     · Mønsteret (lv): store varmere og kjøligere felt, mørkere hud i flekker med tau i (avkjølt, mørk rødoransje, ikke svart) og lyse renner.
+     · Strømmen: mønsteret flyter langs et felt som peker mest fra vulkanen mot kameraet og svinger litt, i to faser som tones over i hverandre (flytkart), så det
+       flyter i det uendelige uten at formene strekkes ut, og de mørke og lyse partiene flytter på seg som på ekte lava (rundt 0,6 enheter i sekundet).
+     · Pusten: store flater gløder sterkere og svakere, langsomt (rundt 9 s) og i hver sin takt.
+     · Boblene (uPop: x, z, takt, fase): stedet gløder opp like før, og en lysende ring brer seg når klumpene spretter opp (partiklene i raid3c.js, samme takt).
+     Fine detaljer tones ut på avstand (fd, lod). uK = verktøykassas mål per enhet. Ringer ved nedslag (uRing) og kulpen rundt det som står i lavaen (uWade). */
+  const FS_LAVA = `varying vec3 vW; uniform vec4 uRing[4]; uniform vec4 uWade; uniform vec4 uPop[12]; uniform float uHeat, uK, uCell, uCw, uBri;
 ${COMMON}
 vec3 ramp(float x){ vec3 c = vec3(.028, .006, .002); c = mix(c, vec3(.4, .028, .0), smoothstep(0., .3, x)); c = mix(c, vec3(.98, .24, .02), smoothstep(.24, .6, x)); c = mix(c, vec3(1., .66, .14), smoothstep(.56, .92, x)); return mix(c, vec3(1., .95, .72), smoothstep(.9, 1.35, x)); }
+float lv(vec2 r, float t, float fd, float px){
+  float big = fbm(r * .7 + vec2(0., t * .015)), mid = fbm(r * 1.9 + 5.2 - vec2(t * .02, 0.));
+  float skin = smoothstep(.44, .68, fbm(r * 1.3 + vec2(2., 6.) + big * .8));
+  float rope = (.5 + .5 * sin(r.y * 12. + big * 7. + mid * 4.)) * fd;
+  float ch = abs(fbm(r * 1.1 + vec2(11., 4.)) - .5), vw = .035 + .03 * mid + 1.6 * px, vein = (1. - smoothstep(vw * .3, vw, ch)) * (1. - .6 * skin);
+  float tp = .7 + .3 * (big - .5) + .12 * (mid - .5) - .2 * skin - .07 * rope * skin;
+  return mix(tp, .96, vein * .85);
+}
 void main(){
-  vec2 w = vW.xz * uK; float t = uTime, heat = uHeat, cell = uCell, dist = length(cameraPosition - vW) * uK; vec2 p = w / cell;
-  vec2 fl = vec2(fbm(p * .33 + vec2(0., t * .02)), fbm(p * .33 + vec2(5.2, -t * .017))) - .5, wg = (vec2(vn(p * 3.7 + 2.), vn(p * 3.7 + 9.)) - .5) * .24;
-  vec2 pp = p + fl * 1.25 + wg + vec2(t * .01, t * .026); vec3 V = voro(pp); float e = V.y - V.x;
-  float open = smoothstep(.67 - .14 * heat, .78 - .14 * heat, fbm(p * .2 + vec2(t * .012, -t * .009) + 7.));
-  float fw = max(length(dFdx(w)), length(dFdy(w))), px = fw / cell;
-  float cw = max(uCw * (.5 + vn(pp * 2.1 + V.z * 7.)) * (1. + .55 * heat), 1.3 * px);
-  float core = 1. - smoothstep(0., cw * .42, e), body = 1. - smoothstep(cw * .3, cw * 1.15, e), halo = 1. - smoothstep(cw, cw * 6., e);
-  vec3 V2 = voro(pp * 2.7 + 11.); float f2 = (1. - smoothstep(0., max(cw * .9, 2.6 * px), V2.y - V2.x)) * (1. - clamp(px / .1, 0., 1.));
-  vec3 V3 = voro(pp * 6.9 + 3.); float f3 = (1. - smoothstep(0., max(cw * 1.1, 6. * px), V3.y - V3.x)) * (1. - clamp(px / .04, 0., 1.));
-  float tx = fbm(pp * 6. + V.z * 20.), rope = abs(sin(fbm(pp * 3. + V.z * 9.) * 14. + pp.x * 2.));
-  vec3 crust = (vec3(.04, .028, .028) + vec3(.05, .034, .03) * tx + vec3(.026, .012, .004) * V.z) * (.74 + .26 * rope) * (.55 + .45 * smoothstep(cw, cw * 2.6, e));
-  float pulse = .84 + .16 * sin(t * 1.7 + V.z * 40. + p.x);
-  float temp = core * (.86 + .16 * heat) + body * (.46 + .17 * heat) * pulse + halo * (.09 + .08 * heat);
-  temp = max(temp, f2 * (.42 + .2 * heat) * (.6 + .4 * V2.z)); temp = max(temp, f3 * (.2 + .16 * heat));
-  float skin = fbm(pp * 2.3 + vec2(t * .085, t * .05));
-  temp = max(temp, open * (.42 + .38 * skin + .12 * heat) * (1. - .62 * smoothstep(.45, .7, fbm(pp * 5. + vec2(t * .04, -t * .03)))));
-  float rg = 0.; for (int i = 0; i < 4; i++) { vec4 r = uRing[i]; if (r.w > 0.) rg = max(rg, r.w * (1. - smoothstep(0., .5 + r.z * .07, abs(length(vW.xz - r.xy) - r.z)))); }
-  temp += rg * (.45 + .55 * max(max(body, f2), open));
-  float dw = length(vW.xz - uWade.xy), wd = min(1., uWade.w) * (1. - smoothstep(uWade.z * .3, uWade.z, dw)), rip = .5 + .5 * sin(dw * 1.7 - t * 2.6 + fbm(vW.xz * .35 + t * .05) * 3.2);
-  temp = max(temp, wd * (.56 + .26 * skin + .26 * rip * (.4 + .6 * uWade.w))); open = max(open, wd * .95);
+  vec2 w = vW.xz * uK; float t = uTime, heat = uHeat, cell = uCell; vec2 p = w / cell;
+  float fw = max(length(dFdx(w)), length(dFdy(w))), px = fw / cell, fd = 1. - clamp(px / .07, 0., 1.);
+  vec2 q = p * .55, fl = vec2(.18, .62) + (vec2(fbm(q * .3 + 1.3), fbm(q * .3 + 8.1)) - .5) * 1.1;
+  float ph = t * .09, f0 = fract(ph), f1 = fract(ph + .5), wa = 1. - abs(2. * f0 - 1.);
+  float temp = mix(lv(q - fl * f1 * 1.1 + vec2(3.7, 1.9), t, fd, px), lv(q - fl * f0 * 1.1, t, fd, px), wa);
+  temp += .07 * sin(t * .7 + fbm(p * .1 + 3.3) * 7.) + .08 * (heat - 1.);
+  for (int i = 0; i < 12; i++) { vec4 s = uPop[i]; if (s.z <= 0.) continue; float a = mod(t + s.w, s.z), d = length(vW.xz - s.xy);
+    temp += .3 * smoothstep(s.z - .5, s.z, a) * (1. - smoothstep(0., 1.1, d)) + (a < .8 ? .5 * (1. - a / .8) * (1. - smoothstep(.15 + a * 2.4, .6 + a * 2.8, d)) : 0.); }
+  float rg = 0.; for (int i = 0; i < 4; i++) { vec4 g = uRing[i]; if (g.w > 0.) rg = max(rg, g.w * (1. - smoothstep(0., .5 + g.z * .07, abs(length(vW.xz - g.xy) - g.z)))); }
+  temp += rg * .42;
+  float dw = length(vW.xz - uWade.xy), wd = min(1., uWade.w) * (1. - smoothstep(uWade.z * .3, uWade.z, dw)), rip = .5 + .5 * sin(dw * 1.7 - t * 2.2 + fbm(vW.xz * .35 + t * .05) * 3.2);
+  temp = max(temp, wd * (.8 + .14 * rip * (.4 + .6 * uWade.w)));
   temp += max(0., uWade.w - 1.) * (1. - smoothstep(0., uWade.z * .45, dw)) * .35;
-  vec3 c = crust * (1. - open * .8) + ramp(temp) * uBri;
+  vec3 c = ramp(temp) * uBri;
   float lod = clamp(fw / (cell * .42), 0., 1.);
-  c = mix(c, ramp(.1 + .3 * min(heat, 1.2) + .1 * vn(vec2(w.x / 190. + t * .03, dist / 600.))) * uBri, lod * lod);
+  c = mix(c, ramp(.62 + .08 * (heat - 1.) + .05 * vn(vec2(w.x / 190. + t * .02, length(cameraPosition - vW) * uK / 600.))) * uBri, lod * lod);
   gl_FragColor = vec4(mix(c, uFogC, fogK(vW)), 1.);
 }`;
   /* Partikler (punkter): banen regnes ut i skyggeleggeren fra frø, fart og tiden, så det ikke finnes noen tilstand. uLoop = 1: evig strøm (glør),
@@ -208,18 +213,18 @@ void main(){ float a = uA;
   /* Etterpasset: omgivelsene (tE, full oppløsning) og figuren (tF, 256 × 192, nærmeste piksel) settes sammen etter dybden. Dybden til omgivelsene leses
      midt i figurens piksel, så hver store piksel enten synes eller er skjult (lavaen kutter beina, stein står foran). Konturen: figurens piksel får
      blekk når naboen ikke er figur, eller ligger et sprang lenger bak (en arm foran kroppen). Så gnister utover fra et punkt (brølet) og virvelen ut (Black/White). */
-  const FS_POST = `uniform sampler2D tE, tED, tF, tFD; uniform vec2 uRes, uLo, uNF; uniform vec3 uInk; uniform vec4 uSpd, uInkD; uniform float uInkK, uInkO, uSwirl, uFrame;
+  const FS_POST = `uniform sampler2D tE, tED, tF, tFD; uniform vec2 uRes, uLo, uNF; uniform vec3 uInk; uniform vec4 uSpd, uInkD; uniform float uInkK, uInkO, uSwirl, uFrame, uFig;
 float h21(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float lin(float z){ return 2. * uNF.x * uNF.y / (uNF.y + uNF.x - (z * 2. - 1.) * (uNF.y - uNF.x)); }
 void main(){
   vec2 uv = gl_FragCoord.xy / uRes, tuv = (floor(uv * uLo) + .5) / uLo; vec4 c = texture2D(tE, uv), f = texture2D(tF, tuv); float id = floor(f.a * 255. + .5);
-  if (id > .5) { float dF = lin(texture2D(tFD, tuv).x), dE = lin(texture2D(tED, tuv).x);
+  if (uFig > .5 && id > .5) { float dF = lin(texture2D(tFD, tuv).x), dE = lin(texture2D(tED, tuv).x);
     if (dF < dE + .03 + dE * .002) { float e = 0., es = 0.;
       for (int i = 0; i < 4; i++) { vec2 o = i == 0 ? vec2(1., 0.) : i == 1 ? vec2(-1., 0.) : i == 2 ? vec2(0., 1.) : vec2(0., -1.); vec2 u2 = tuv + o / uLo; float idn = floor(texture2D(tF, u2).a * 255. + .5), dn = lin(texture2D(tFD, u2).x);
-        if (abs(idn - id) > .5) { if (idn < .5 || dn > dF) e = 1.; } else if (id > 127.5 && dn - dF > uInkD.z + dF * uInkD.w) es = 1.; }
+        if (abs(idn - id) > .5 && min(idn, id) < 253.5) { if (idn < .5 || dn > dF) e = 1.; } else if (id > 127.5 && dn - dF > uInkD.z + dF * uInkD.w) es = 1.; }
       float ik = uInkK * (1. - smoothstep(uNF.y * .12, uNF.y * .2, dF)); vec3 fc = f.rgb; fc = mix(fc, fc * .32 + uInk * .25, es * ik); fc = mix(fc, uInk, e * ik); c = vec4(fc, 1.); } }
-  else if (uInkO > 0.) { float dE = lin(texture2D(tED, tuv).x), k = 0.;   /* kant UTENFOR figuren (uInkO): pikselen ved siden av figuren får blekk, så omrisset blir to piksler */
-    for (int i = 0; i < 4; i++) { vec2 o = i == 0 ? vec2(1., 0.) : i == 1 ? vec2(-1., 0.) : i == 2 ? vec2(0., 1.) : vec2(0., -1.); vec2 u2 = tuv + o / uLo; if (texture2D(tF, u2).a > .995) { float dn = lin(texture2D(tFD, u2).x); if (dn < dE + .03 + dE * .002) k = 1.; } }
+  else if (uFig > .5 && uInkO > 0.) { float dE = lin(texture2D(tED, tuv).x), k = 0.;   /* kant UTENFOR figuren (uInkO): pikselen ved siden av figuren får blekk, så omrisset blir to piksler */
+    for (int i = 0; i < 4; i++) { vec2 o = i == 0 ? vec2(1., 0.) : i == 1 ? vec2(-1., 0.) : i == 2 ? vec2(0., 1.) : vec2(0., -1.); vec2 u2 = tuv + o / uLo; if (texture2D(tF, u2).a > .993) { float dn = lin(texture2D(tFD, u2).x); if (dn < dE + .03 + dE * .002) k = 1.; } }
     c.rgb = mix(c.rgb, uInk, k * uInkO); }
   vec2 px = uv * uLo, r = (px - uSpd.xy) / uLo.y; float ang = atan(r.y, r.x), rr = length(r);
   /* Gnister utover fra et punkt: tynne, korte, oransje streker som flyr ut (ikke tykke hvite kiler: Jazz 18.11). Lys legges oppå. */
@@ -228,6 +233,51 @@ void main(){
   if (uSwirl > 0.) { vec2 s = (px - uLo * .5) / uLo.y; float a2 = atan(s.y, s.x) + uSwirl * 5. - length(s) * 3.2, wd = fract(a2 * 7. / 6.2832), cut = uSwirl * 1.25 - (1. - length(s) * 1.1) * .25;
     if (wd < cut) c = vec4(mix(vec3(.82, .74, 1.), vec3(1.), step(wd, cut * .6)), 1.); }
   gl_FragColor = c;
+}`;
+
+  /* Spritepasset (arenaen i kampen, Jazz 18.11 runde 8: «ser ut som et filter»): figuren gjøres om til en sprite i sitt eget rutenett (256 × 192, samme pikselstørrelse
+     som en frontsprite i arenaen), og legges oppå bildet etter etterbehandlingen, som spritene. For hver piksel ses 5 × 5 naboer: hvilke som er figur og synlige
+     (ikke bak lavaen eller en stein), og hvor dype de er.
+     · Rent omriss: en synlig piksel med høyst én synlig nabo (av åtte) tas bort (løse piksler, spisser av én piksel), og et hakk med tre naboer fylles.
+     · Én hel piksel kontur UTENFOR silhuetten (ingen blekk inni kanten, så tynne ting som klør og pigger beholder fargen), og ikke langs lavakanten.
+     · En løs enkeltpiksel (tennene, lyset på en piggspiss) som ikke ligner noen av naboene, får naboenes farge. Øyet (id 254) røres ikke: ansiktet er hellig.
+     · Strekene inni (der en del ligger foran en annen) beholdes, men bare når streken er mer enn én piksel lang.
+     · Lavakanten: den nederste synlige raden over lavaen gløder (én rad), og omrisset stopper der (han står I lavaen, like dypt som før).
+     Ut: farge og dekning (0 eller 1), ingen halvgjennomsiktige kanter. */
+  const FS_SPR = `uniform sampler2D tF, tFD, tED; uniform vec2 uLo, uNF; uniform vec3 uInk, uLvC; uniform vec4 uInkD; uniform float uTol;
+float lin(float z){ return 2. * uNF.x * uNF.y / (uNF.y + uNF.x - (z * 2. - 1.) * (uNF.y - uNF.x)); }
+float lum(vec3 c){ return dot(c, vec3(.3, .59, .11)); }
+void main(){
+  vec2 p0 = floor(gl_FragCoord.xy); float V[25], D[25]; vec3 C[25];
+  for (int j = 0; j < 5; j++) for (int i = 0; i < 5; i++) { int k = j * 5 + i; vec2 q = p0 + vec2(float(i - 2), float(j - 2)), uv = (q + .5) / uLo; float st = 0., dF = 1e6; vec3 c = vec3(0.);
+    if (q.x >= 0. && q.y >= 0. && q.x < uLo.x && q.y < uLo.y) { vec4 f = texture2D(tF, uv); float id = floor(f.a * 255. + .5); c = f.rgb;
+      if (id > 249.5) { dF = lin(texture2D(tFD, uv).x); float dE = lin(texture2D(tED, uv).x); st = dF < dE + uTol + dE * .001 ? (id > 254.5 ? 1. : 3.) : 2.; } }
+    V[k] = st; D[k] = dF; C[k] = c; }
+  float Cm[9], L[9];
+  for (int j = 1; j <= 3; j++) for (int i = 1; i <= 3; i++) { int k = j * 5 + i; float n8 = 0., n4 = 0., ln = 0.;
+    for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { if (x == 0 && y == 0) continue; int q = k + y * 5 + x; float v = V[q] == 1. || V[q] == 3. ? 1. : 0.; n8 += v;
+      if (x == 0 || y == 0) { n4 += v; if (v > .5 && D[q] - D[k] > uInkD.z + D[k] * uInkD.w) ln = 1.; } }
+    bool vk = V[k] == 1. || V[k] == 3.; int m = (j - 1) * 3 + i - 1;
+    Cm[m] = (vk && n8 > 1.5) || (!vk && V[k] != 2. && n4 > 2.5) ? 1. : 0.; L[m] = V[k] == 1. ? ln : 0.; }
+  vec4 o = vec4(0.);
+  if (Cm[4] > .5) {
+    vec3 c = C[12], avg = vec3(0.); float nv = 0., sim = 0.;
+    for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { if (x == 0 && y == 0) continue; int q = 12 + y * 5 + x; if (V[q] == 1. || V[q] == 3.) { nv += 1.; avg += C[q]; if (abs(lum(C[q]) - lum(c)) < .1 && distance(C[q], c) < .2) sim += 1.; } }
+    avg /= max(nv, 1.);
+    if (V[12] != 1. && V[12] != 3.) c = avg; else if (V[12] == 1. && nv > 1.5 && sim < .5) c = avg;
+    float ln = L[4] * max(max(max(L[0], L[1]), max(L[2], L[3])), max(max(L[5], L[6]), max(L[7], L[8])));
+    c = mix(c, c * .32 + uInk * .25, ln);
+    /* Lavakanten: den nederste synlige raden over lavaen gløder (én rad, Jazz 18.11: dybden er en «veldig liten justering», han skal ikke synke). */
+    if (V[7] == 2.) c = mix(c, uLvC, .5);
+    o = vec4(c, 1.);
+  } else if (V[12] != 2.) {
+    /* Omrisset: én piksel utenfor, men ikke ved siden av lavakanten (der går han ned i lavaen, ikke ut av bildet). */
+    vec3 a = vec3(0.); float n = 0.;
+    for (int m = 0; m < 4; m++) { int q = m == 0 ? 7 : m == 1 ? 11 : m == 2 ? 13 : 17, cm = m == 0 ? 1 : m == 1 ? 3 : m == 2 ? 5 : 7;
+      if (Cm[cm] > .5 && !(q >= 10 && V[q - 5] == 2.)) { a += C[q]; n += 1.; } }
+    if (n > .5) o = vec4(uInk + .16 * a / n, 1.);
+  }
+  gl_FragColor = o;
 }`;
 
   /* ---------- Oppstart: bunten fra pakken, tegneren og de to lerretene i minnet ---------- */
@@ -250,7 +300,7 @@ void main(){
     U = { uTime: uv(0), uPs: uv(1), uLavaY: uv(0), uGlow: uv(1), uGlowH: uv(14), uRimK: uv(1), uKey: uv(new T.Vector3(0.4, 0.8, 0.45).normalize()), uKeyC: uv(u3('#fff2e0')), uShC: uv(u3('#3a1a22')),
       uRim: uv(new T.Vector3(0, 0.3, -1).normalize()), uRimC: uv(u3('#ffb040')), uLavaC: uv(u3('#ff6a14')), uFogC: uv(u3('#6a1c08')), uFog: uv(new T.Vector3(60, 300, 0.8)) };
     post = new T.ShaderMaterial({ depthTest: false, depthWrite: false, vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0., 1.); }', fragmentShader: FS_POST,
-      uniforms: { tE: uv(rtE.texture), tED: uv(de), tF: uv(rtF.texture), tFD: uv(dt), uRes: uv(new T.Vector2(512, 384)), uLo: uv(new T.Vector2(G.W, G.H)), uNF: uv(new T.Vector2(0.5, 900)), uInk: uv(u3('#1c0a0c')), uInkK: uv(1), uInkO: uv(0), uInkD: uv(new T.Vector4(0.05, 0.004, 0.5, 0.03)), uSpd: uv(new T.Vector4()), uSwirl: uv(0), uFrame: uv(0) } });
+      uniforms: { tE: uv(rtE.texture), tED: uv(de), tF: uv(rtF.texture), tFD: uv(dt), uRes: uv(new T.Vector2(512, 384)), uLo: uv(new T.Vector2(G.W, G.H)), uNF: uv(new T.Vector2(0.5, 900)), uInk: uv(u3('#1c0a0c')), uInkK: uv(1), uInkO: uv(0), uInkD: uv(new T.Vector4(0.05, 0.004, 0.5, 0.03)), uSpd: uv(new T.Vector4()), uSwirl: uv(0), uFrame: uv(0), uFig: uv(1) } });
     postScene = new T.Scene(); const tri = new T.Mesh(new T.BufferGeometry().setAttribute('position', new T.BufferAttribute(new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]), 3)), post); tri.frustumCulled = false; postScene.add(tri);
     postCam = new T.Camera(); scale(1);
     return true;
@@ -265,7 +315,7 @@ void main(){
   const K = { sin, cos, PI, TAU, abs, max, min, floor, c01, mix, seg, io, eo, ei, back, spring, ant, hit, rnd, hex };
   K.rockMat = o => sm(VS, FS_ROCK, { uA: uv(u3(o.a || '#3b2422')), uB: uv(u3(o.b || '#5a3a30')), uStr: uv(o.str == null ? 0.22 : o.str), uTop: uv(o.top || 0), uSm: uv(o.sm == null ? 0.7 : o.sm), uHot: uv(o.hot == null ? 1 : o.hot) }, { side: T.DoubleSide });   /* hot: hvor høyt opp foten gløder (1 = 1,8 enheter) */
   K.cryMat = o => sm(VS, FS_CRY, { uA: uv(u3(o.a || '#7a1030')), uB: uv(u3(o.b || '#ff5a78')), uPulse: uv(0.5) });
-  K.figMat = (map, o) => { o = o || {}; if (map) { map.colorSpace = T.NoColorSpace; map.magFilter = T.NearestFilter; map.minFilter = T.NearestFilter; map.generateMipmaps = false; map.needsUpdate = true; }
+  K.figMat = (map, o) => { o = o || {}; if (map) { map.colorSpace = T.NoColorSpace; map.magFilter = T.NearestFilter; map.minFilter = o.mip ? T.LinearMipmapLinearFilter : T.NearestFilter; map.generateMipmaps = !!o.mip; map.needsUpdate = true; }
     return sm(VS_FIG, FS_FIG, { map: uv(map), uUvOff: uv(new T.Vector2()), uId: uv(o.id || 255), uStone: uv(0), uStoneC: uv(u3('#8a7892')), uCrack: uv(0), uCrackR: uv(0), uCrackO: uv(new T.Vector3()), uCrackC: uv(u3('#ffe24a')), uSeam: uv(o.seam == null ? 0.2 : o.seam), uSeamOn: uv(o.seamOn == null ? 1 : o.seamOn), uHead: uv(new T.Vector3(1e4, 1e4, 0)),
       uEmis: uv(o.emis || 0), uTx: uv(new T.Vector2(1.6 / ((map && map.image && map.image.width) || 512), 1.6 / ((map && map.image && map.image.height) || 512))), uVor: uv(0), uGl: uv(1), uCw: uv(1), uHalo: uv(0), uSpill: uv(0), uWk: uv(0), uWh: uv(1.15), uOs: uv(o.os || 0.0254), uFlK: uv(0), uFlC: uv(u3('#ffffff')), uB1: uv(-0.1), uB2: uv(0.45), uMask: uv(o.mask || 0), uMul: uv(u3('#ffffff')) }, o.mask ? Object.assign(addBlend(), { side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 }) : { side: T.DoubleSide }); };
   /* Kampestein: en kule dyttet ut og inn etter frø. Normalen peker ut fra midten, så den skygges som en rund stein. */
@@ -289,7 +339,7 @@ void main(){
     for (let j = 0; j < M; j++) for (let i = 0; i < N; i++) { const p = j * (N + 1) + i, q = p + N + 1; idx.push(p, q, p + 1, q, q + 1, p + 1); }
     const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(uvs, 2)); g.setIndex(idx); g.computeVertexNormals(); g.computeBoundingSphere();
     return new T.Mesh(g, sm(VS, FS_VOLC, { uA: uv(u3(o.a || '#140c0e')), uB: uv(u3(o.b || '#33211d')), uEr: uv(0.3) }, { side: T.DoubleSide })); };
-  K.lava = o => { o = o || {}; return new T.Mesh(new T.PlaneGeometry(o.size || 900, o.size || 900).rotateX(-PI / 2), sm(VS, FS_LAVA, { uRing: uv([0, 1, 2, 3].map(() => new T.Vector4())), uWade: uv(new T.Vector4()), uHeat: uv(1.2), uK: uv(o.k || 16), uCell: uv(o.cell || 84), uCw: uv(o.cw || 0.05), uBri: uv(0.95) })); };
+  K.lava = o => { o = o || {}; return new T.Mesh(new T.PlaneGeometry(o.size || 900, o.size || 900).rotateX(-PI / 2), sm(VS, FS_LAVA, { uRing: uv([0, 1, 2, 3].map(() => new T.Vector4())), uWade: uv(new T.Vector4()), uPop: uv(Array.from({ length: 12 }, () => new T.Vector4())), uHeat: uv(1.2), uK: uv(o.k || 16), uCell: uv(o.cell || 84), uCw: uv(o.cw || 0.05), uBri: uv(0.95) })); };
   /* Partikler. init(i) gir { p, v, s: frø, b: fødsel (s), l: levetid (s), z: størrelse }. o.pix: harde piksler i figurens oppløsning, o.add: lys, ellers røyk. */
   K.pts = (n, init, o) => { o = o || {}; const P = new Float32Array(n * 3), V = new Float32Array(n * 3), S = new Float32Array(n * 4);
     for (let i = 0; i < n; i++) { const q = init(i); P.set(q.p, i * 3); V.set(q.v || [0, 0, 0], i * 3); S.set([q.s == null ? rnd(i, 77) : q.s, q.b || 0, q.l || 1, q.z || 1], i * 4); }
@@ -323,7 +373,7 @@ void main(){
   K.figure = (gltf, o) => { o = o || {}; const root = gltf.scene, bones = {}, rest = {}, acc = {}, mats = {}, ex = {};
     root.traverse(q => { if (q.isBone) { bones[q.name] = q; rest[q.name] = [q.rotation.x, q.rotation.y, q.rotation.z, q.position.x, q.position.y, q.position.z]; }
       if (q.isMesh) { q.frustumCulled = false; q.layers.set(1); const n = q.material.name || q.name; if (o.hide && o.hide.test(n + ' ' + q.name)) { q.visible = false; return; }
-        const k = /Mask/.test(n) ? 'mask' : n; q.material = mats[k] || (mats[k] = K.figMat(q.material.map, Object.assign({ id: o.id || 255 }, /Eye/.test(n) ? { seamOn: 0, emis: 0.35 } : /BodyB1|^BodyB$/.test(n) ? { seamOn: 0 } : /Mask/.test(n) ? { mask: 1 } : {}))); if (/Mask/.test(n)) q.renderOrder = 5; } });
+        const k = /Mask/.test(n) ? 'mask' : n; q.material = mats[k] || (mats[k] = K.figMat(q.material.map, Object.assign({ id: o.id || 255, mip: o.mip && !/Eye|Mask/.test(n) }, /Eye/.test(n) ? { id: (o.id || 255) - 1, seamOn: 0, emis: 0.35 } : /BodyB1|^BodyB$/.test(n) ? { seamOn: 0 } : /Mask/.test(n) ? { mask: 1 } : {}))); if (/Mask/.test(n)) q.renderOrder = 5; } });
     const names = Object.keys(bones), list = k => ex[k] || (ex[k] = k[0] === '*' ? ['L' + k.slice(1), 'R' + k.slice(1)].filter(n => bones[n]) : bones[k] ? [k] : []);
     const holder = new T.Group(); holder.add(root);
     const F = { root: holder, bones, mats, rest,
@@ -341,7 +391,8 @@ void main(){
   const loadBuf = n => { if (!bufs.has(n)) bufs.set(n, G.src(n + '.glb').then(u => { if (!u) throw new Error('no model ' + n); return fetch(u); }).then(r => r.arrayBuffer()).catch(e => { bufs.delete(n); throw e; })); return bufs.get(n); };
   const loadModel = n => loadBuf(n).then(b => new T.GLTFLoader().parseAsync(b, ''));
 
-  /* ---------- Cutscenene ---------- G3D.def(id, { len, fps, models, make(K, T) → S, act(S, t, o), shots: [[start, fn(S, u, tau, t)]] }).
+  /* ---------- Cutscenene ---------- G3D.def(id, { len, fps, models, make(K, T) → S, act(S, t, o), shots: [[start, fn(S, u, tau, t)]], spr }).
+     spr = { fps, since }: figuren som sprite i kampen (se G.frame og FS_SPR). act setter da S.fo = [x, y], hvor mange hele piksler den flyttes (rykk, dukk).
      S.scene er scenen, S.figs figurene. act er skuespillet (én sammenhengende handling), shots er kameraene som klipper mellom bilder av den.
      S.post er det kameraet ber om for bildet: sh risting, fl/flc blink, fade/fadec, heat/heatY varmeflimmer, vig, spd fartsstreker (spx, spy, spr), swirl. */
   const DEF = {}, jobs = {};
@@ -369,31 +420,56 @@ void main(){
     return { x: a.x, y: a.y, ang: Math.atan2(b.y - a.y, b.x - a.x), ppr: Math.hypot(b.x - a.x, b.y - a.y) / 0.05, yaw, pitch: Math.asin(c01(d.y * 0.5 + 0.5) * 2 - 1), cx: p.x, cy: p.y, cz: p.z }; };
   /* Tegner ett bilde av cutscenen på tidspunktet t (sekunder) på motorens eget lerret (gjennomsiktig der himmelen er), og gir lerretet.
      o = { name, lv, cap, cc }, rs = filmens oppløsning (1 eller 1,5). */
+  /* Stillingen på tidspunktet t: skuespillet (act), benene, og kameraet i bildet (shots) som gjelder. Gir P (det kameraet ber om). */
+  const poseAt = (D, S, t, o) => {
+    const P = S.post = P0(); U.uTime.value = t;
+    for (const f of S.figs || []) f.clear(); U.uFog.value.set(60, 300, 0.8);
+    D.act(S, t, o); for (const f of S.figs || []) f.apply();
+    let si = 0; for (let i = 0; i < D.shots.length; i++) if (t >= D.shots[i][0] - 1e-6) si = i;
+    const s0 = D.shots[si][0], s1 = si + 1 < D.shots.length ? D.shots[si + 1][0] : D.len; S.shot = si;
+    D.shots[si][1](S, c01((t - s0) / max(1e-6, s1 - s0)), t - s0, t);
+    if (o.out > 0) { P.swirl = max(P.swirl, c01(o.out * 1.25)); P.fl = max(P.fl, seg(o.out, 0.62, 1)); P.flc = '#ffffff'; }
+    S.scene.updateMatrixWorld(true); cam.updateMatrixWorld(true); return P;
+  };
+  /* Spritepasset (FS_SPR) ut på et vanlig lerret (D.fcv, 256 × 192): figuren slik den står i dette trinnet, renset og med omriss. */
+  let rtS = null, sprM = null, sprScene = null, sbuf = null;
+  const spritePass = (D, P) => {
+    if (!rtS) { rtS = new T.WebGLRenderTarget(G.W, G.H, { minFilter: T.NearestFilter, magFilter: T.NearestFilter, generateMipmaps: false, depthBuffer: false });
+      sprM = new T.ShaderMaterial({ depthTest: false, depthWrite: false, vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0., 1.); }', fragmentShader: FS_SPR,
+        uniforms: { tF: uv(rtF.texture), tFD: uv(rtF.depthTexture), tED: uv(rtE.depthTexture), uLo: uv(new T.Vector2(G.W, G.H)), uNF: uv(new T.Vector2(0.5, 900)), uInk: uv(u3('#1c0a0c')), uLvC: uv(u3('#ffb436')), uInkD: uv(new T.Vector4(0, 0, 0.5, 0.03)), uTol: uv(0.03) } });
+      sprScene = new T.Scene(); const tri = new T.Mesh(new T.BufferGeometry().setAttribute('position', new T.BufferAttribute(new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]), 3)), sprM); tri.frustumCulled = false; sprScene.add(tri); sbuf = new Uint8Array(G.W * G.H * 4); }
+    const u = sprM.uniforms; u.uNF.value.set(cam.near, cam.far); u.uInkD.value.z = P.inkz == null ? 0.5 : P.inkz; u.tED.value = rtE.depthTexture;
+    R.setRenderTarget(rtS); R.clear(); R.render(sprScene, postCam); R.readRenderTargetPixels(rtS, 0, 0, G.W, G.H, sbuf);
+    if (!D.fcv) { D.fcv = document.createElement('canvas'); D.fcv.width = G.W; D.fcv.height = G.H; D.fim = D.fcv.getContext('2d').createImageData(G.W, G.H); }
+    const d = D.fim.data, rw = G.W * 4; for (let y = 0; y < G.H; y++) d.set(sbuf.subarray((G.H - 1 - y) * rw, (G.H - y) * rw), y * rw);   /* WebGL leser nedenfra og opp */
+    D.fcv.getContext('2d').putImageData(D.fim, 0, 0);
+  };
   G.frame = (id, t, o, rs) => {
     const D = DEF[id], S = D && D.S; if (!S || G.dead) return null;
     try {
       scale(rs || 1);
-      const fps = D.fps || 30, tq = floor(t * fps + 1e-6) / fps;
+      const fps = D.fps || 30, tq = floor(t * fps + 1e-6) / fps, sp = D.spr;
       o = Object.assign({}, o || {}, { out: (o && o.out) || G.out || 0 });
       /* Samme bilde som sist (filmen går i 30 bilder i sekundet, skjermen ofte i 60): lerretet står som det er. */
       const key = id + '|' + floor(tq * fps + 0.5) + '|' + (rs || 1) + '|' + o.out.toFixed(3); if (key === lastKey && !D.live) return cv; lastKey = '';
-      const P = S.post = P0(); U.uTime.value = tq;
-      for (const f of S.figs || []) f.clear(); U.uFog.value.set(60, 300, 0.8);
-      D.act(S, tq, o); for (const f of S.figs || []) f.apply();
-      let si = 0; for (let i = 0; i < D.shots.length; i++) if (tq >= D.shots[i][0] - 1e-6) si = i;
-      const s0 = D.shots[si][0], s1 = si + 1 < D.shots.length ? D.shots[si + 1][0] : D.len; S.shot = si;
-      D.shots[si][1](S, c01((tq - s0) / max(1e-6, s1 - s0)), tq - s0, tq);
-      if (o.out > 0) { P.swirl = max(P.swirl, c01(o.out * 1.25)); P.fl = max(P.fl, seg(o.out, 0.62, 1)); P.flc = '#ffffff'; }
-      S.scene.updateMatrixWorld(true); cam.updateMatrixWorld(true);
+      /* D.spr (arenaen i kampen): figuren er en sprite. Den regnes i trinn (sp.fps bilder i sekundet) og bare når trinnet skifter, med hendelsene (sp.since:
+         sekunder siden) regnet tilbake til trinnet, så den står helt stille mellom trinnene. Omgivelsene regnes for hvert bilde, så de går jevnt. */
+      const fs = sp ? floor(t * sp.fps + 1e-6) : -1, fnew = !!sp && fs !== D.fs; let Pf = null;
+      if (fnew) { const tf = fs / sp.fps, dt = t - tf, of = Object.assign({}, o); for (const k of sp.since || []) if (of[k] != null && of[k] < 98) of[k] -= dt;
+        S.fo = [0, 0]; Pf = Object.assign({}, poseAt(D, S, tf, of)); D.fo = S.fo.slice(); cam.layers.set(1); R.setRenderTarget(rtF); R.clear(); R.render(S.scene, cam); }
+      const P = poseAt(D, S, tq, o);
       const pu = post.uniforms, fn = floor(tq * fps);
-      pu.uSpd.value.set(P.spx, G.H - P.spy, P.spd, P.spr); pu.uSwirl.value = P.swirl; pu.uInkK.value = P.ink; pu.uInkO.value = P.ink2 || 0; pu.uInkD.value.z = P.inkz == null ? 0.5 : P.inkz; pu.uFrame.value = fn; pu.uNF.value.set(cam.near, cam.far);
+      pu.uSpd.value.set(P.spx, G.H - P.spy, P.spd, P.spr); pu.uSwirl.value = P.swirl; pu.uInkK.value = P.ink; pu.uInkO.value = P.ink2 || 0; pu.uInkD.value.z = P.inkz == null ? 0.5 : P.inkz; pu.uFrame.value = fn; pu.uNF.value.set(cam.near, cam.far); pu.uFig.value = sp ? 0 : 1;
       U.uPs.value = rsNow || 1; cam.layers.set(0); R.setRenderTarget(rtE); R.clear(); R.render(S.scene, cam);
-      cam.layers.set(1); R.setRenderTarget(rtF); R.clear(); R.render(S.scene, cam);
+      if (!sp) { cam.layers.set(1); R.setRenderTarget(rtF); R.clear(); R.render(S.scene, cam); }
+      else if (fnew) { spritePass(D, Pf); D.fs = fs; }
       R.setRenderTarget(null); R.clear(); R.render(postScene, postCam);
       G.err = ''; lastKey = key;
     } catch (e) { G.err = String(e && e.stack || e); }
     return cv;
   };
+  /* Figuren som sprite (D.spr): lerretet (256 × 192, som hele bildet), og hvor mange hele piksler den er flyttet (ox, oy). Tegnes oppå arenaen etter etterbehandlingen. */
+  G.sprite = id => { const D = DEF[id]; return D && D.spr && D.fcv ? { cv: D.fcv, ox: D.fo ? D.fo[0] : 0, oy: D.fo ? D.fo[1] : 0 } : null; };
   /* Tekst i figurens lave oppløsning: tegnes på et lite lerret, alfa gjøres hard, og en mørk kant legges rundt. Gir lerretet (256 × 192). */
   let tcv = null, tx = null;
   G.text = fn => { if (!tcv) { tcv = document.createElement('canvas'); tcv.width = G.W; tcv.height = G.H; tx = tcv.getContext('2d', { willReadFrequently: true }); }

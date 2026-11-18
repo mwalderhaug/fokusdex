@@ -33,6 +33,12 @@
     S.spl = [0, 1, 2, 3].map(k => add(K.pts(46, i => { const a = rnd(i, 80 + k) * TAU, v = 2 + rnd(i, 81 + k) * 6; return { p: [cos(a) * (k ? 1.4 : 3.4), 0.1, sin(a) * (k ? 1.4 : 3)], v: [cos(a) * v, 6 + rnd(i, 82 + k) * 9, sin(a) * v], b: rnd(i, 83) * 0.2, l: 0.9 + rnd(i, 84) * 0.6, z: 0.8 + rnd(i, 85) * 1.1 }; }, { t0: -1e5, add: 1, g: 26, px: 60, c: ['#fff0a0', '#ff9a20', '#d83a0a'], floor: 0, fade: 0.85 })));
     S.drip = add(K.pts(40, i => ({ p: [(rnd(i, 90) - 0.5) * 5.4, 1.2 + rnd(i, 91) * 4.6, (rnd(i, 92) - 0.5) * 4.4], v: [0, -0.6, 0], b: rnd(i, 93) * 1.2, l: 0.6 + rnd(i, 94) * 0.5, z: 0.5 + rnd(i, 95) * 0.5 }), { loop: 1, add: 1, g: 20, px: 60, c: ['#ffe070', '#ff8a18', '#d83a0a'], floor: 0, fade: 0.95 }));
     S.ring = add(K.light(0, '#ffd070'));
+    /* Lavaen bobler (Jazz 18.11, runde 8: «lavapartikler som hopper opp ulike plasser i ny og ne»): tolv steder ute i sjøen, hvert med sin takt (5–11 s) og fase.
+       Der gløder lavaen opp like før, og sju klumper spretter opp og faller tilbake i den (de forsvinner når de når overflaten). Ikke der han står, og ikke ved steinen din. */
+    const POP = []; for (let i = 0; POP.length < 12 && i < 300; i++) { const x = (rnd(i, 401) - 0.5) * 76, z = -36 + rnd(i, 402) * 56; if ((abs(x) < 8 && z > -5 && z < 11) || (x < -1 && x > -18 && z > 9)) continue; POP.push([x, z, 5 + rnd(i, 403) * 6, rnd(i, 404) * 11]); }
+    S.lava.material.uniforms.uPop.value.forEach((v, i) => { const q = POP[i]; if (q) v.set(q[0], q[1], q[2], q[3]); });
+    S.pop = add(K.pts(POP.length * 7, i => { const q = POP[floor(i / 7)], a = rnd(i, 411) * TAU, h = 0.4 + rnd(i, 412) * 2.2; return { p: [q[0] + cos(a) * 0.35, 0.1, q[1] + sin(a) * 0.35], v: [cos(a) * h, 5 + rnd(i, 413) * 5, sin(a) * h], b: q[3], l: q[2], z: 0.8 + rnd(i, 414) * 1.3 }; },
+      { loop: 1, add: 1, g: 22, px: 60, floor: 0, near: 6, c: ['#ffc860', '#ff6a14', '#a82806'], fade: 0.97 }));
     S.fx = (pts, t0, x, y, z) => { pts.position.set(x, y, z); pts.material.uniforms.uT0.value = t0; };
     return S;
   }
@@ -81,6 +87,9 @@
   const SLAM = { '*Arm': [0.5, 0, 0.3], Spine1: [0, -0.14, 0], Spine2: [0, -0.2, 0], Spine3: [0, -0.16, 0], Neck1: [0, -0.1, 0], Head: [0, 0.12, 0], Jaw: [0, -0.4, 0] };
   const sq = (t, t0, f, d) => { const a = t - t0; return a < 0 ? 0 : Math.exp(-(d || 6) * a) * cos((f || 13) * a); };   /* fjæringen etter et nedslag */
   const NB = 10, blade = i => ({ x: (i % 2 ? 1 : -1) * (5.6 + i * 0.55), z: 15 + i * 4, h: 6.5 + i * 1.15, r: 1 + i * 0.09, t: GP + 0.07 + i * 0.105 });
+  /* Kameraristen i Precipice Blades (Jazz 18.11, runde 8: «bygge seg opp mot et stort smell til slutt, gjerne med kamerarist»): et rykk for hver tagg, sterkere for hver,
+     og et kraftig rist på den siste (som også bærer inn i neste bilde). */
+  const bladeSh = t => { let s = 0; for (let i = 0; i < NB; i++) { const k = i / (NB - 1); s += (0.6 + 2.6 * k) * hit(t, blade(i).t, 0.2); } return s + 7 * hit(t, blade(NB - 1).t, 0.9); };
   const col3 = (u, k, a, b, c) => { if (k < 0.5) lerpC(u, a, b, k * 2); else lerpC(u, b, c, k * 2 - 2 + 1); };
   /* Brølets effekt (Jazz 18.11: «ikke tykke streker»): tynne gnister ut fra kjeften, lydbølger som brer seg fra den (forvrengningsringer i fxgl.js) og et rykk i bildet. */
   const mouth = (S, t0, t) => { const j = S.gr.at('Jaw'), m = K.proj(j.x, j.y, j.z); S.post.spx = m.x / 2; S.post.spy = m.y / 2; S.post.spr = 0.1; S.post.spd = 0.9 * S.rw * hit(t, t0, 2.4); S.mouth = m; };
@@ -173,10 +182,10 @@
       /* 5 Motlys: lavt og langt foran, med vulkanen bak ham. Armene løftes (forvarsel). */
       [GV, (S, u) => { K.cam(2 - u * 2, 1.6, 31 - u * 5, -1.5, 8.2 - u, 0, 44); }],
       /* 6 Slaget: steinspydene skyter opp mot kameraet, ett for ett, og det siste rett foran linsa. */
-      [GP - 0.04, (S, u, a, t) => { K.cam(0.7, 1.5, 53.2, 0, 5, 3, 50, 0.04); S.post.sh = 3.5 * hit(t, GP, 0.5) + 1.6 * hit(t, GP + 0.5, 0.6); S.post.fl = seg(t, GW - 0.16, GW - 0.02); S.post.flc = '#fff4d0'; S.post.spd = hit(t, GP, 0.45); S.post.spx = 128; S.post.spy = 110; }],
+      [GP - 0.04, (S, u, a, t) => { K.cam(0.7, 1.5, 53.2, 0, 5, 3, 50, 0.04); S.post.sh = 3.5 * hit(t, GP, 0.5) + bladeSh(t); S.post.fl = seg(t, GW - 0.16, GW - 0.02); S.post.flc = '#fff4d0'; S.post.spd = hit(t, GP, 0.45); S.post.spx = 128; S.post.spy = 110; }],
       /* 7 Det siste brølet, i ett langt bilde nedenfra: han trekker pusten og brøler, navnet og nivået kommer opp, og kameraet glir sakte mens han venter på Continue. */
       [GW, (S, u, a, t) => { const k = io(seg(t, GW, GX)), w = 0.05 * sin(max(0, t - GX) * 0.21); K.cam(mix(2.8, 1.8, k) + sin(w) * 2, 1.3, mix(21, 16.5, k), -1.6, mix(5, 6.9, k), 2.5, 50, -0.04);
-        S.post.fl = max(1 - seg(t, GW, GW + 0.25), 0.3 * hit(t, GX, 0.15)); S.post.flc = '#fff4d0'; S.post.sh = 4 * hit(t, GX, 1.2) + 0.7 * S.rw; mouth(S, GX, t); S.post.heat = 0.6 + 0.6 * S.rw; }],
+        S.post.fl = max(1 - seg(t, GW, GW + 0.25), 0.3 * hit(t, GX, 0.15)); S.post.flc = '#fff4d0'; S.post.sh = 4 * hit(t, GX, 1.2) + 0.7 * S.rw + 6 * hit(t, blade(NB - 1).t, 0.9); mouth(S, GX, t); S.post.heat = 0.6 + 0.6 * S.rw; }],
     ],
   });
 
@@ -324,13 +333,13 @@
       if (d.roar) roarFx(S, t, P, d.roar(t));
       if (S.boom > 0.02 && sn.cq > 0.05) P.rays = { x: sn.cx, y: sn.cy, a: 0.55 * S.boom, len: 0.9 }; else if (S.sun > 0.3 && sn.y > -80 && sn.y < 300) P.rays = { x: sn.x, y: sn.y, a: 0.7 * (S.sun - 0.3), len: 0.85 };
       if (d.fx) d.fx(S, t, P, q, sn); } }); };
-  reg('c3:383', { spid: 383, over: (x, t, o) => plate(x, t - (GX + 0.6), o), cues: [[GL[0], 'thud'], [GL[1], 'thud'], [GT[0], 'thud'], [GT[2], 'thud'], [GC, 'cry'], [GC + 0.05, 'boom'], [GA, 'rise', GP - GA], [GP, 'slam'], [GX, 'cry']].concat(Array.from({ length: NB }, (_, i) => [blade(i).t, 'spike', i / (NB - 1)])), roar: t => t < GX ? GC : GX,
+  reg('c3:383', { spid: 383, over: (x, t, o) => plate(x, t - (GX + 0.6), o), cues: [[GL[0], 'thud'], [GL[1], 'thud'], [GT[0], 'thud'], [GT[2], 'thud'], [GC, 'cry'], [GC + 0.05, 'boom'], [GA, 'rise', GP - GA], [GP, 'slam'], [GP, 'quake', blade(NB - 1).t - GP + 0.7], [GX, 'cry']].concat(Array.from({ length: NB }, (_, i) => [blade(i).t, 'spike', i / (NB - 1)])), roar: t => t < GX ? GC : GX,
     /* Mens lyset i steinen stiger: mer glød, og stråler ut fra brystet (lyset siver ut av sprekkene, som i Omega Ruby). */
     fx(S, t, P) { const h = S.heat || 0; if (h <= 0) return; P.bloom += 0.34 * h * h + 0.1 * (S.pul || 0) * h;
       if (h > 0.25 && S.shot === 1) { const c = S.gr.at('Spine3'), m = K.proj(c.x, c.y, c.z); if (m.z < 1) P.rays = { x: m.x, y: m.y, a: 2.6 * (h - 0.25) / 0.75 + 0.5 * (S.pul || 0), len: 0.6 }; } } });
   /* Primal-forvandlingen: Ω-tegnet tegnes i figurens oppløsning på krystallen (midt på den, sett fra kameraet), og stråler ut fra det. Ingen virvel ut (swirl: 0). */
   const gemAt = () => { const c = K.proj(GEM[0], GEM[1], GEM[2]), e = K.proj(GEM[0], GEM[1] + GEMR, GEM[2]); return { x: c.x / 2, y: c.y / 2, r: abs(c.y - e.y) / 2, z: c.z }; };
-  reg('c3:383p', { spid: 383, swirl: 0, cues: [[0, 'rumble'], [PT.G1, 'thud'], [PT.O, 'boom'], [PT.K, 'rumble'], [PT.S, 'boom'], [PT.S + 0.1, 'hit'], [PT.R, 'cry'], [PT.R + 0.05, 'boom'], [PT.R + 0.7, 'boom']].concat(BOMBS.map(b => [PT.R + b[0], 'thud'])), roar: () => PT.R,
+  reg('c3:383p', { spid: 383, swirl: 0, cues: [[0, 'gather', PT.G1], [PT.G1, 'gem'], [PT.D0, 'dark', PT.D1 - PT.D0], [PT.O, 'sign'], [PT.K, 'crack', PT.S - PT.K], [PT.S, 'shatter'], [PT.R, 'cry'], [PT.R + 0.05, 'boom'], [PT.R + 0.7, 'boom']].concat(BOMBS.map(b => [PT.R + b[0], 'thud'])), roar: () => PT.R,
     over(x, t, o) { const S = G3D.S('c3:383p'); let on = false;
       if (S.om > 0 && S.shot === 1) { const q = gemAt(); if (q.z < 1 && (t - PT.O > 0.22 || floor(t * 30) % 2)) { omega(x, Math.round(q.x), Math.round(q.y + q.r * 0.04), q.r * 0.6 * (0.94 + 0.06 * S.om), S.om); on = true; } }
       return plate(x, t - PT.P, { name: o.name, cap: 'Primal Reversion', om: 1 }) || on; },
@@ -349,6 +358,8 @@
      (G3D.fig3): kampskjermen er ikke koblet på ennå (treff, angrep og besvimelse eies av bildet i kampen). */
   const arenaDef = fig => ({
     len: 1e9, models: fig ? ['groudon', 'groudon_primal'] : [],
+    /* Jazz 18.11 (runde 8): bevegelsene i kampen i trinn (12–15 bilder i sekundet) mens arenaen og effektene går jevnt, og han står alltid på hele piksler. */
+    spr: fig ? { fps: 12.5, since: ['eT', 'fT', 'rT', 'pT', 'fh'] } : null,
     make(K, T) {
       const S = crater(T); volcano(S, T, 1, fig ? null : { x: -52, z: -410, r: 205, h: 92 });
       /* Kameraet: lavt (2 over lavaen) og 23 enheter fra Groudon, så han (7 enheter over lavaen) blir rundt 125 piksler høy og får plass under toppen av bildet,
@@ -364,7 +375,7 @@
       for (const [dx, dz, r, sd] of [[3.4, -2.6, 1.1, 81], [-3.2, -3.4, 0.8, 83]]) { const b = K.boulder(r, sd, { flat: 1, sy: 0.14, cap: 0.3, j: 0.24, mat: rm }); b.position.set(m.x + dx, 0.02, m.z + dz); S.scene.add(b); }
       /* Røyken som ligger over sjøen etter utbruddet: store, mørke dotter som driver med vinden, lyst opp nedenfra. */
       S.haze = K.pts(46, i => ({ p: [-70 + rnd(i, 141) * 150, 3 + rnd(i, 142) * 16, -64 + rnd(i, 143) * 74], v: [2.2 + rnd(i, 144) * 2.6, 0.25 + rnd(i, 145) * 0.5, 0.5], b: rnd(i, 146) * 14, l: 14, z: 30 + rnd(i, 147) * 44 }), { loop: 1, shade: 1, px: 60, sz0: 0.8, sz1: 1.5, near: 9, c: ['#6a3a26', '#3a221c', '#1c1211'], a: 0, fade: 0.6 }); S.scene.add(S.haze);
-      if (fig) { const g = S.gr = K.figure(K.model('groudon')), p = S.pg = K.figure(K.model('groudon_primal'), { hide: /MagmaLayer[12]/ }); S.scene.add(g.root); S.scene.add(p.root); S.figs.push(g, p);
+      if (fig) { const g = S.gr = K.figure(K.model('groudon'), { mip: 1 }), p = S.pg = K.figure(K.model('groudon_primal'), { hide: /MagmaLayer[12]/, mip: 1 }); S.scene.add(g.root); S.scene.add(p.root); S.figs.push(g, p);
         g.set('uGl', 0.5); p.set('uGl', 0.8); g.set('uWk', 0.7); p.set('uWk', 0.7); p.root.scale.setScalar(PSC);   /* Primal er 1,56 ganger så høy: krympet her, ellers går hodet ut av bildet */
         S.face = Math.atan2(m.x - HOME[0], m.z - HOME[2]) - 0.36; }   /* trekvart forfra, dreid mot din Pokémon nede til venstre (som motstanderne i Black/White) */   /* på skrå som i Omega Ruby: dreid mot venstre i bildet, så vi ser ham trekvart forfra */
       return S;
@@ -391,12 +402,14 @@
          brøler når kampen starter og når den er forvandlet, og rykker til når den blir truffet. */
       const f = pr ? S.pg : S.gr, fh = o.fh == null ? 99 : o.fh, fl = Math.exp(-5 * fh) * (fh < 99 ? 1 : 0), rt = -1, rw = rt < 0 || rt > 3 ? 0 : back(seg(rt, 0.15, 0.45), 2.4) * (1 - io(seg(rt, 1.6, 2.5)));
       S.gr.root.visible = !pr; S.pg.root.visible = pr;
-      f.root.position.set(HOME[0] + 0.05 * sin(t * 47) * fl, (pr ? PSY : HOME[1]) - 0.3 * sq(fh, 0, 13, 5) * (fh < 99 ? 1 : 0), HOME[2] - 0.5 * fl); f.root.rotation.y = S.face + 0.05 * sin(t * 0.37);
+      /* Roten står fast (ellers kryper pikslene). Rykket ved treff er to hele piksler til siden annethvert trinn, og dukket ned er hele piksler (S.fo, flyttes på skjermen). */
+      const st = floor(t * 12.5 + 1e-6); f.root.position.set(HOME[0], pr ? PSY : HOME[1], HOME[2]); f.root.rotation.y = S.face + 0.05 * sin(t * 0.37);
+      S.fo = [fl > 0.25 ? (st % 2 ? 2 : -2) : 0, fh < 99 ? Math.round(3.2 * sq(fh, 0, 13, 5)) : 0];
       if (!pr) f.add(STAT, 0.2); const br = 0.028 * sin(t * 2.4); f.add({ Spine1: [0, br, 0], Spine2: [0, br * 0.6, 0], Neck1: [0, 0.03 * sin(t * 0.9 + 1), 0.06 * sin(t * 0.55)], Head: [0, 0.02 * sin(t * 1.3), 0.03 * sin(t * 0.55 + 0.6)], Jaw: [0, -0.06 - 0.04 * sin(t * 2.4), 0], '*Arm': [0.03 * sin(t * 2.4 + 0.5), 0, 0] }, 1);
       for (let i = 1; i <= 5; i++) f.rot('Tail' + i, 0, 0, 0.055 * sin(t * 1.9 + i * 0.55));
       f.add(pr ? PDUCK : DUCK, 0.8 * fl + kf(rt, [[-0.2, 0], [0.08, 0.9, io], [0.18, 0, eo]]) * (rt < 3 ? 1 : 0)); f.add(pr ? PROAR : ROAR, 0.75 * rw); f.rot('Jaw', 0, 0.045 * sin(t * 57) * rw, 0);
       const E = f.mats.Eye1.uniforms; E.uUvOff.value.set(0, t % 4.6 < 0.12 ? 0.5 : rw > 0.2 || fl > 0.3 ? 0.75 : 0); E.uEmis.value = 0.5;
-      f.set('uStone', 0); f.set('uFlK', 0.5 * fl * (floor(t * 30) % 2)); f.set('uFlC', '#ffffff');
+      f.set('uStone', 0); f.set('uFlK', fl > 0.25 && st % 2 ? 0.55 : 0); f.set('uFlC', '#ffffff');
       f.set('uCrack', pr ? 0.95 + 0.2 * sin(t * 4.2) + 0.5 * rw : 0); if (pr) for (const m in f.mats) if (f.mats[m].uniforms.uCrackC) lerpC(f.mats[m].uniforms.uCrackC, '#ffc626', '#fff2a8', 0.4 * rw);
     },
     shots: [[0, S => { K.cam(S.cp[0], S.cp[1], S.cp[2], S.tg[0], S.tg[1], S.tg[2], S.fv); S.post.vig = 0; if (S.gr) { S.post.ink2 = S.pg.root.visible ? 0.55 : 0.9; S.post.inkz = S.pg.root.visible ? 0.4 : 0.22; } }]],
@@ -410,7 +423,8 @@
       const hs = S.hits.length ? S.hits[S.hits.length - 1] : null, hit3 = hs && A ? (hs.side === 'me' ? [A.me[0], A.me[2] - 3, t - hs.t] : [HOME[0], HOME[2] + 3, t - hs.t]) : null;
       const c = G3D.frame(id, t, { p2, eT: S.since('enter'), fT, rT: S.since('rage'), pT, hit: hit3, fh }, CINE._.rs()); if (!c) return sc0(S);
       const pk = A.pk || 0, heat = 0.5 + 0.4 * p2 + 0.3 * pk, sun = A.sun, sn = backdrop(A, t); g.imageSmoothingEnabled = true; g.drawImage(c, 0, 0, 512, 384);
-      if (id === AIDF) C.cur.sp = null;   /* prøven: figuren står i 3D-bildet, så Gen 5-bildet tegnes ikke */
+      if (id === AIDF) C.cur.sp = null;   /* prøven: figuren er 3D-figuren, så Gen 5-bildet tegnes ikke */
+      C.cur.fig3 = id === AIDF ? G3D.sprite(id) : null;   /* 3D-figuren som sprite: arena.js legger den oppå etter etterbehandlingen (A.fig3) */
       /* Røyklagt etter Primal: røyk i lag over sjøen, tettest ved horisonten. */
       if (pk > 0.02) { C.fogBand(sn.hz + 2, { h: 44, col: '#3a1d16', a: 0.6 * pk, seed: 41, spd: 6, n: 7 }); C.fogBand(sn.hz + 52, { h: 60, col: '#24110e', a: 0.42 * pk, seed: 43, spd: 10, n: 5 }); }
       /* Lyset på figurene: som i arenaen fra steg 2 (varmt og mørkt, lavaen lyser nedenfra, kantlys fra sola og vulkanen). */
