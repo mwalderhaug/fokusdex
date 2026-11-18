@@ -93,7 +93,7 @@ void main(){
        mønsteret i større mål og rundt sjøen (ingen søm foran), renner nedover veggen, noen svake lavastriper nederst, halv kontrast og et slør av dis.
      · Kantlyset fra lavaen ligger på sidene, ikke på flatene på toppen (sett skrått fikk de et oransje slør og skilte seg ikke fra lavaen).
      uSm = hvor avrundet, uRough = hvor ru, uCrust = størknet skorpe (tettere sprekker med glød i), uCk = hvor tydelige sprekkene og porene er (1 = fullt). */
-  const FS_ROCK = `varying vec3 vW, vN, vO; uniform vec3 uA, uB; uniform float uStr, uTop, uSm, uHot, uRough, uCrust, uFar, uCk;
+  const FS_ROCK = `varying vec3 vW, vN, vO; uniform vec3 uA, uB; uniform float uStr, uTop, uSm, uHot, uRough, uCrust, uFar, uCk, uSc, uEdge;
 ${COMMON}
 float hgt(vec2 s, float l2, float l3){ return fbm(s * 1.6) * .55 + fbm(s * 4.7 + 3.1) * .3 * l2 + vn(s * 12.) * .15 * l3; }
 void main(){
@@ -101,7 +101,7 @@ void main(){
   vec3 an = abs(Nf), U = vec3(1., 0., 0.), W = vec3(0., 0., 1.); vec2 sp = vW.xz;
   if (an.y < .66) { if (uFar > .5) { float rr = max(length(vW.xz), 1.); sp = vec2(atan(vW.x, -vW.z) * rr, vW.y); U = vec3(-vW.z, 0., vW.x) / rr; W = vec3(0., 1., 0.); }
     else if (an.x > an.z) { sp = vW.zy; U = vec3(0., 0., 1.); W = vec3(0., 1., 0.); } else { sp = vW.xy; W = vec3(0., 1., 0.); } }
-  float sc = mix(1., .22, uFar), fw = max(length(dFdx(vW)), length(dFdy(vW))) * sc; vec2 s = sp * sc;
+  float sc = mix(1., .22, uFar) * uSc, fw = max(length(dFdx(vW)), length(dFdy(vW))) * sc; vec2 s = sp * sc;
   float l2 = 1. - smoothstep(.07, .16, fw), l3 = 1. - smoothstep(.03, .07, fw), bk = 1. - smoothstep(.1, .35, fw);
   float h = hgt(s, l2, l3), e = .03; vec3 gr = (U * (hgt(s + vec2(e, 0.), l2, l3) - h) + W * (hgt(s + vec2(0., e), l2, l3) - h)) / e; gr -= N * dot(N, gr);
   vec3 Nb = normalize(N - gr * .3 * uRough * bk * (1. - .3 * uFar));
@@ -119,30 +119,45 @@ void main(){
   float cg = crk * (1. - smoothstep(0., .5 + 2.7 * uCrust, dy)) * (.35 + .65 * uCrust); col = mix(col, vec3(1., .42, .08) * (.7 + .5 * uGlow), cg * .85);
   float ls = abs(fbm(vec2(s.x * .45, vW.y * .0045 + 3.)) - .5), lst = (1. - smoothstep(.01, .045, ls)) * side * uFar * smoothstep(.55, .7, fbm(vec2(s.x * .15, 1.))) * (1. - smoothstep(2., 18., dy));
   col += vec3(.9, .22, .04) * lst * (.45 + .4 * uGlow);
+  /* Runde 10 («fortsatt for glatte»): på fjellveggene var mønsteret ganget inn i en nesten svart stein, så det ble borte. Lysere rygger og korn og mørkere søkk legges oppå
+     (dempet: rundt to tredeler av forgrunnens kontrast), og noen flere svake lavastriper lenger opp på veggen. */
+  float fd = (h - .5) * 2.4 + 2.2 * (dot(Nb, uKey) - dot(N, uKey)) - .9 * crk - .5 * pore; col += vec3(.2, .09, .065) * clamp(fd, -.6, 1.) * .42 * uFar * bk;
+  float ls2 = abs(fbm(vec2(s.x * .7 + 9., vW.y * .006)) - .5); col += vec3(.8, .2, .04) * (1. - smoothstep(.008, .035, ls2)) * side * uFar * smoothstep(.5, .66, fbm(vec2(s.x * .2, 4.))) * (1. - smoothstep(4., 30., dy)) * (.25 + .25 * uGlow);
   float rim = pow(1. - max(dot(Nb, V), 0.), 3.);
   col += uRimC * rim * (dot(Nb, uRim) * .5 + .5) * uRimK * .5 * (.4 + .6 * side) + vec3(1., .38, .08) * rim * uGlow * .5 * (1. - smoothstep(0., 5., dy)) * (1. - .5 * uFar) * side;
+  /* uEdge (runde 10, de små steinene i lavaen: «ru tekstur, sprekker og glødende kanter»): omrisset gløder der lavaen er nær, sterkest nede ved lavaen. */
+  float eg = pow(1. - max(dot(N, V), 0.), 4.) * (1. - smoothstep(0., .35, dy)) * .8 + (1. - smoothstep(0., .045, dy)) * .6; col += vec3(1., .42, .1) * eg * uEdge * (.5 + .4 * uGlow);
   col = mix(col, uFogC, .12 * uFar);
   gl_FragColor = vec4(mix(col, uFogC, fogK(vW)), 1.);
 }`;
   /* Vulkanen: mørk basalt med renner nedover (støy strukket langs fallet), lysere aske mot toppen, og lavaelver som følger rennene fra krateret
-     (uEr = hvor sterkt utbruddet er). vUv = (rundt fjellet 0–1, høyden 0–1). Støyen regnes på en sirkel, så den har ingen søm.
+     (uEr = hvor sterkt utbruddet er). vUv = (rundt fjellet 0–1, høyden 0–1). Støyen regnes på en sirkel (og høyden), så den har ingen søm.
      Runde 9 (Jazz 18.11: «litt for glatte: gi dem litt mer tekstur (lavastriper, sprekker, ru stein), men dempet av dis og med mindre kontrast enn forgrunnen, så de blir
-     liggende bak og ikke tar blikket fra Groudon»): ru stein (lyset faller ujevnt), sprekker og svake, størknede lavastriper ned fra krateret. Alt legges inn før disen,
-     og med halve kontrasten til steinene foran; det fine tones ut før det blir mindre enn en piksel. */
+     liggende bak og ikke tar blikket fra Groudon») og runde 10 («fortsatt for glatte»): teksturen var der, men under disen ble den borte (rundt ±13 % i lyset).
+     Nå: rygger og knauser som renner nedover fjellet i to størrelser og korn (3D-støy på sirkelen og høyden, strukket langs fallet), lyset som faller ujevnt på dem,
+     sprekker i to størrelser, flekker av mørkere og lysere stein, og flere størknede lavastriper (smale, mørkt rødoransje) ned fra krateret. Disen legges på først,
+     og teksturen oppå med rundt to tredeler av forgrunnens kontrast (rundt ±30 %, litt mindre der disen er tettest), og til slutt et tynt slør av dis. */
   const FS_VOLC = `varying vec3 vW, vN; varying vec2 vUv; uniform vec3 uA, uB; uniform float uEr;
 ${COMMON}
+float fbm3(vec3 p){ float a = .5, s = 0.; for (int i = 0; i < 4; i++) { s += a * vn3(p); p = p * 2.03 + vec3(17.3, 9.1, 4.7); a *= .5; } return s; }
 void main(){
   float a = vUv.x * 6.2832, v = vUv.y; vec2 c = vec2(cos(a), sin(a));
   vec3 Nf = normalize(cross(dFdx(vW), dFdy(vW))), Ns = normalize(vN); if (dot(Ns, Nf) < 0.) Ns = -Ns; vec3 N = normalize(mix(Nf, Ns, .7));
   float g1 = fbm(c * 9. + vec2(v * 1.3, 0.)), g2 = fbm(c * 24. + v * 2.), streak = fbm(vec2(c.x * 30. + g1 * 2., c.y * 30. + v * 2.5));
-  float fa = length(vec2(dFdx(vUv.x), dFdy(vUv.x))) * 6.2832, lf = 1. - smoothstep(.2, .45, fa * 60.);
-  float h = fbm(c * 20. + vec2(v * 5.5, 2.)) * .7 + vn(c * 60. + vec2(v * 17., 7.)) * .3 * lf;
+  float fa = length(vec2(dFdx(vUv.x), dFdy(vUv.x))) * 6.2832, lf = 1. - smoothstep(.2, .45, fa * 60.), lf2 = 1. - smoothstep(.2, .45, fa * 150.);
+  vec3 q = vec3(c * 18., v * 5.);
+  float rg = smoothstep(.5, .95, 1. - abs(fbm3(q) * 2. - 1.)), rg2 = fbm3(q * vec3(2.6, 2.6, 2.2) + 7.), gn = vn3(vec3(c * 140., v * 34.));
+  float h = rg * .55 + (rg2 - .5) * .7 * lf + (gn - .5) * .3 * lf2;
   vec3 dpx = dFdx(vW), dpy = dFdy(vW), r1 = cross(dpy, N), r2 = cross(N, dpx); float det = dot(dpx, r1);
-  vec3 Nb = normalize(abs(det) * N - sign(det) * (dFdx(h) * r1 + dFdy(h) * r2) * 3.); if (dot(Nb, N) < .45) Nb = N;
-  float ck = abs(fbm(c * 13. + vec2(v * 3.2, 4.)) - .5), crack = (1. - smoothstep(.008, .035, ck)) * (1. - smoothstep(.3, .6, fa * 13.));
-  float sk = abs(fbm(vec2(c.x * 24. + g1 * 1.5, c.y * 24. + v * .9)) - .5), lstr = (1. - smoothstep(.006, .03, sk)) * smoothstep(.22, .75, v) * smoothstep(.42, .62, fbm(c * 6. + 2.)) * (1. - smoothstep(.3, .6, fa * 24.));
+  vec3 Nb = normalize(abs(det) * N - sign(det) * (dFdx(h) * r1 + dFdy(h) * r2) * 5.); if (dot(Nb, N) < .35) Nb = N;
+  float k1 = abs(fbm3(vec3(c * 24., v * 8.) + 3.) - .5), k2 = abs(fbm3(vec3(c * 60., v * 18.) + 9.) - .5);
+  float crack = max((1. - smoothstep(.006, .03, k1)) * (1. - smoothstep(.3, .6, fa * 24.)), (1. - smoothstep(.006, .024, k2)) * .7 * lf);
+  float sk = abs(fbm3(vec3(c * 34., v * 1.6) + 5.) - .5), sk2 = abs(fbm3(vec3(c * 21., v * 1.1) + 13.) - .5);
+  float lstr = max((1. - smoothstep(.008, .04, sk)) * smoothstep(.3, .5, fbm3(vec3(c * 5., v * .8) + 2.)), (1. - smoothstep(.006, .03, sk2)) * .7) * smoothstep(.05, .5, v) * (1. - smoothstep(.3, .6, fa * 34.));
+  float pa = fbm3(vec3(c * 6., v * 2.) + 4.);
   vec3 base = mix(uA, uB, smoothstep(.35, .7, streak * .6 + g2 * .4)) * (.7 + .6 * g1); base = mix(base, uB * 1.3, smoothstep(.5, .95, v) * .45);
-  float lb = smoothstep(.25, .85, dot(Nb, uKey) * .5 + .5), l0 = smoothstep(.25, .85, dot(N, uKey) * .5 + .5), tx = (.78 + .44 * h) * (1. - .35 * crack) * (1. + .9 * (lb - l0));
+  float lb = smoothstep(.2, .9, dot(Nb, uKey) * .5 + .5), l0 = smoothstep(.2, .9, dot(N, uKey) * .5 + .5);
+  float tx = (.72 + .62 * h) * (1. - .55 * crack) * (.72 + .56 * smoothstep(.3, .7, pa)) * (1. + 1.5 * (lb - l0));
   vec3 col = base * mix(uShC, uKeyC, l0);
   col += uRimC * pow(1. - max(dot(N, normalize(cameraPosition - vW)), 0.), 2.5) * (dot(N, uRim) * .5 + .5) * .35;
   float ch = abs(fbm(c * 5. + vec2(0., v * .6)) - .5), w = .01 + .018 * v;
@@ -150,7 +165,11 @@ void main(){
   float flow = .7 + .3 * sin(v * 60. - uTime * 3. + g1 * 9.);
   vec3 hot = mix(vec3(.7, .09, .02), vec3(1., .72, .2), smoothstep(.3, 1., v) * flow) * (.55 + .9 * min(uEr, 1.6));
   float fg = fogK(vW); col = mix(col, uFogC, fg);
-  col *= mix(1., tx, .5 + .5 * (1. - fg)); col += vec3(.62, .13, .03) * lstr * (.22 + .3 * min(uEr, 1.)) * (1. - .5 * fg);   /* teksturen og stripene dempes av disen, men forsvinner ikke */
+  col *= mix(1., tx, .74 - .14 * fg);   /* teksturen og stripene dempes av disen, men forsvinner ikke */
+  float dt = (rg - .5) * 1.1 + (rg2 - .5) * 1.3 * lf + (gn - .5) * .6 * lf2 + 2. * (lb - l0);
+  col += vec3(.2, .09, .065) * clamp(dt, -.6, 1.) * (.4 - .12 * fg);   /* ru stein som synes også der fjellet ligger i skygge: lysere rygger og korn, mørkere søkk */
+  col += vec3(.62, .14, .03) * lstr * (.36 + .3 * min(uEr, 1.)) * (1. - .4 * fg) * (.6 + .5 * pa) + vec3(.55, .12, .03) * crack * .14 * (1. - .5 * fg);
+  col = mix(col, uFogC, .08);
   col += hot * river * (1. - fg * .45) + vec3(1., .42, .08) * smoothstep(.84, 1., v) * (.35 + .7 * min(uEr, 1.6));
   gl_FragColor = vec4(col, 1.);
 }`;
@@ -312,48 +331,59 @@ float stAt(vec2 q, out vec3 c, out float d, out float hy){ c = vec3(0.); d = 1e6
   float zr = texture2D(tFD, uv).x; d = lin(zr); float dE = lin(texture2D(tED, uv).x); vec4 w = uIPV * vec4(uv * 2. - 1., zr * 2. - 1., 1.); hy = w.y / w.w - uLY;
   return d < dE + uTol + dE * .001 ? (id > 254.5 ? 1. : 3.) : 2.; }
 bool vs(float s){ return s == 1. || s == 3.; }
+bool hid(float s){ return s == 2. || s == 4.; }   /* under lavaen: 2 = han er der bak lavaen, 4 = rett over lavaen (kontakt, se under) */
 void main(){
   vec2 p0 = floor(gl_FragCoord.xy); float V[25], D[25], H[25]; vec3 C[25], cx; float dz, hz;
   for (int j = 0; j < 5; j++) for (int i = 0; i < 5; i++) { int k = j * 5 + i; vec3 c; float d, hy; V[k] = stAt(p0 + vec2(float(i - 2), float(j - 2)), c, d, hy); D[k] = d; C[k] = c; H[k] = hy; }
-  /* Kontakt: rett under en synlig piksel som ligger mindre enn uCt over lavaen (buken, en klo), regnes lavaen som om den dekker ham der. */
-  for (int k = 0; k < 20; k++) if (V[k] == 0. && vs(V[k + 5]) && H[k + 5] < uCt) V[k] = 2.;
+  /* Kontakt: rett under en synlig piksel som ligger mindre enn uCt over lavaen (buken, en klo), regnes lavaen som om den dekker ham der (4: ingen kontur, men heller ingen lavakant). */
+  for (int k = 0; k < 20; k++) if (V[k] == 0. && vs(V[k + 5]) && H[k + 5] < uCt) V[k] = 4.;
   float Cm[9], L[9];
   for (int j = 1; j <= 3; j++) for (int i = 1; i <= 3; i++) { int k = j * 5 + i; float n8 = 0., n4 = 0., ln = 0.;
     for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { if (x == 0 && y == 0) continue; int q = k + y * 5 + x; float v = vs(V[q]) ? 1. : 0.; n8 += v;
       if (x == 0 || y == 0) { n4 += v; if (v > .5 && D[q] - D[k] > uInkD.z + D[k] * uInkD.w) ln = 1.; } }
     bool vk = vs(V[k]); int m = (j - 1) * 3 + i - 1;
-    Cm[m] = (vk && n8 > 1.5) || (!vk && V[k] != 2. && n4 > 2.5) ? 1. : 0.; L[m] = V[k] == 1. ? ln : 0.; }
+    Cm[m] = (vk && n8 > 1.5) || (!vk && !hid(V[k]) && n4 > 2.5) ? 1. : 0.; L[m] = V[k] == 1. ? ln : 0.; }
   float n25 = 0.; for (int k = 0; k < 25; k++) n25 += vs(V[k]) ? 1. : 0.;
-  float dl = 9., du = 9.;
-  if (vs(V[12]) || Cm[4] > .5) { if (V[7] == 2.) dl = 1.; else if (V[2] == 2.) dl = 2.; else for (int r = 3; r <= 5; r++) if (dl > 8. && stAt(p0 - vec2(0., float(r)), cx, dz, hz) == 2.) dl = float(r); }
-  if (V[12] == 2.) { if (vs(V[17])) du = 1.; else if (vs(V[22])) du = 2.; else if (vs(stAt(p0 + vec2(0., 3.), cx, dz, hz))) du = 3.; }
-  float xc = p0.x, s = uStep;
-  float lip = 1. + floor(clamp(.85 + .6 * sin(xc * .55 + s * .45) + .4 * sin(xc * 1.31 - s * .3) + .35 * (h1(xc + floor(s / 3.) * 7.) - .5), 0., 1.99));
-  float gw = 1. + floor(clamp(.75 + .6 * sin(xc * .8 - s * .5 + 2.) + .4 * (h1(xc * 1.7 + floor(s / 2.) * 3.) - .5), 0., 1.99));
+  /* Runde 10 (Jazz 18.11: «den lyse linja går rett over hele bredden av spriten og ser ut som bunnen av et rektangel. Den skal følge beina og kroppen, være ujevn med små ringer
+     og sprut, og lyse svakere»): lavaen kutter ham langs en rett linje (planet sett nesten fra siden), så kanten kan ikke ligge over hele bredden. dd = hvor mange rader av ham
+     som går videre ned under lavaen i denne kolonnen: beina, halen og klørne går dypt (mer enn to), buken dypper så vidt eller henger rett over. Bare der det er dypt, tegnes
+     lavakanten: 1–2 piksler som bølger fra trinn til trinn, en piksel høyere på sidene av beinet (den klatrer opp og følger formen), og den lyse øverste raden er svakere og bare på
+     noen av pikslene. Under buken er det ingen kant: buken får varmt lys nedenfra, og lavaen går rett inn under den. Vannlinja i de dype kolonnene merkes (alfa 254), så
+     spritePass kan legge ringer og sprut rundt beina i de samme pikslene. */
+  float dl = 9., du = 9., dd = 0.;
+  if (vs(V[12]) || Cm[4] > .5) { if (hid(V[7])) dl = 1.; else if (hid(V[2])) dl = 2.; else for (int r = 3; r <= 5; r++) if (dl > 8. && stAt(p0 - vec2(0., float(r)), cx, dz, hz) == 2.) dl = float(r);
+    if (dl < 4.5 && (dl > 2.5 || (dl < 1.5 ? V[7] : V[2]) == 2.)) for (int r = 0; r < 5; r++) { if (stAt(p0 - vec2(0., dl + float(r)), cx, dz, hz) == 2.) dd += 1.; else break; } }
+  if (hid(V[12])) { if (vs(V[17])) du = 1.; else if (vs(V[22])) du = 2.; else if (vs(stAt(p0 + vec2(0., 3.), cx, dz, hz))) du = 3.;
+    if (V[12] == 2. && du < 3.5) { dd = du - 1.; for (int r = 0; r < 4; r++) { if (stAt(p0 - vec2(0., float(r)), cx, dz, hz) == 2.) dd += 1.; else break; } } }
+  bool deep = dd > 2.5;
+  float xc = p0.x, s = uStep, sd = 0.;
+  if (deep && dl < 3.5) sd = (stAt(p0 + vec2(-1., -dl), cx, dz, hz) != 2. || stAt(p0 + vec2(1., -dl), cx, dz, hz) != 2.) ? 1. : 0.;
+  float lip = deep ? 1. + floor(clamp(.5 + .6 * sin(xc * .5 + s * .4) + .45 * sin(xc * 1.37 - s * .33) + .5 * (h1(xc + floor(s / 3.) * 7.) - .5), 0., 1.99)) + sd : 0.;
+  bool top = h1(xc * 2.3 + floor(s / 2.) * 5.) > .4;
+  float gw = 1. + floor(clamp(.35 + .6 * sin(xc * .8 - s * .5 + 2.) + .4 * (h1(xc * 1.7 + floor(s / 2.) * 3.) - .5), 0., 1.99));
   vec4 o = vec4(0.);
   if (Cm[4] > .5) {
-    vec3 c = C[12], avg = vec3(0.); float nv = 0., sim = 0.;
+    vec3 c = C[12], avg = vec3(0.); float nv = 0., sim = 0., mk = 1.;
     for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { if (x == 0 && y == 0) continue; int q = 12 + y * 5 + x; if (vs(V[q])) { nv += 1.; avg += C[q]; if (abs(lum(C[q]) - lum(c)) < .1 && distance(C[q], c) < .2) sim += 1.; } }
     avg /= max(nv, 1.);
     if (!vs(V[12])) c = avg; else if (V[12] == 1. && nv > 1.5 && sim < .5) c = avg;
-    if (dl <= lip) c = dl == lip ? uLvT : uLvC;
+    if (dl <= lip) { c = dl == lip && top ? uLvT : uLvC; if (dl < 1.5) mk = 254. / 255.; }
     else if (dl <= 4. && n25 < 8.) c = uLvG;   /* en liten bit av ham rett over lavaen (en klo, en tå): sprut av glød, ikke en mørk prikk */
     else {
-      if (dl <= lip + 3.) c = mix(c, c * vec3(1.3, .9, .62) + uLvG * .22, .5 - .14 * (dl - lip - 1.));
+      if (dl <= lip + 3.) c = mix(c, c * vec3(1.3, .9, .62) + uLvG * .22, (deep ? .46 : .4) - .13 * (dl - lip - 1.));   /* varme fra lavaen, også på buken over den */
       float ln = L[4] * max(max(max(L[0], L[1]), max(L[2], L[3])), max(max(L[5], L[6]), max(L[7], L[8])));
       if (dl > lip + 1.) c = mix(c, c * .32 + uInk * .25, ln);
     }
-    o = vec4(c, 1.);
-  } else if (V[12] == 2.) {
-    if (du <= gw) o = vec4(du < 1.5 ? uLvC : uLvG, 1.);
+    o = vec4(c, mk);
+  } else if (hid(V[12])) {
+    if (deep && du <= gw && h1(xc * 1.3 + floor(s / 2.) * 11.) > .3) o = vec4(du < 1.5 ? uLvC : uLvG, 1.);   /* gløden i lavaen rett foran beinet, ujevn */
   } else {
     bool w1 = (vs(V[11]) && V[6] == 2.) || (V[11] == 2. && vs(V[16])) || (vs(V[13]) && V[8] == 2.) || (V[13] == 2. && vs(V[18]));
-    bool w2 = (vs(V[10]) && V[5] == 2.) || (V[10] == 2. && vs(V[15])) || (vs(V[14]) && V[9] == 2.) || (V[14] == 2. && vs(V[19]));
-    if (w1 || (w2 && h1(xc * 3.1 + floor(s / 2.) * 5.) > .45) || (V[7] == 2. && (vs(V[11]) || vs(V[13]) || vs(V[17])))) o = vec4(uLvG, 1.);
+    if ((w1 && h1(xc * 3.1 + floor(s / 2.) * 5.) > .4) || (V[7] == 2. && (vs(V[11]) || vs(V[13]) || vs(V[17])))) o = vec4(uLvG, 1.);
     else {
       vec3 a = vec3(0.); float n = 0.;
       for (int m = 0; m < 4; m++) { int q = m == 0 ? 7 : m == 1 ? 11 : m == 2 ? 13 : 17, cm = m == 0 ? 1 : m == 1 ? 3 : m == 2 ? 5 : 7;
-        bool lz = (q >= 5 && V[q - 5] == 2.) || (q >= 10 && V[q - 10] == 2.);
+        bool lz = (q >= 5 && hid(V[q - 5])) || (q >= 10 && hid(V[q - 10]));
         if (Cm[cm] > .5 && !lz) { a += C[q]; n += 1.; } }
       if (n > .5) o = vec4(uInk + .16 * a / n, 1.);
     }
@@ -394,7 +424,7 @@ void main(){
   const addBlend = () => ({ transparent: true, depthWrite: false, blending: T.CustomBlending, blendEquation: T.AddEquation, blendSrc: T.OneFactor, blendDst: T.OneFactor, blendEquationAlpha: T.AddEquation, blendSrcAlpha: T.ZeroFactor, blendDstAlpha: T.OneFactor });
   const softBlend = () => ({ transparent: true, depthWrite: false, blending: T.CustomBlending, blendEquation: T.AddEquation, blendSrc: T.OneFactor, blendDst: T.OneMinusSrcAlphaFactor, blendEquationAlpha: T.AddEquation, blendSrcAlpha: T.OneFactor, blendDstAlpha: T.OneMinusSrcAlphaFactor });
   const K = { sin, cos, PI, TAU, abs, max, min, floor, c01, mix, seg, io, eo, ei, back, spring, ant, hit, rnd, hex };
-  K.rockMat = o => sm(VS, FS_ROCK, { uA: uv(u3(o.a || '#3b2422')), uB: uv(u3(o.b || '#5a3a30')), uStr: uv(o.str == null ? 0.22 : o.str), uTop: uv(o.top || 0), uSm: uv(o.sm == null ? 0.7 : o.sm), uHot: uv(o.hot == null ? 1 : o.hot), uRough: uv(o.rough == null ? 1 : o.rough), uCrust: uv(o.crust || 0), uFar: uv(o.far || 0), uCk: uv(o.ck == null ? 1 : o.ck) }, { side: T.DoubleSide });   /* hot: hvor høyt opp foten gløder (1 = 1,8 enheter), rough: hvor ru, crust: størknet skorpe, far: fjellvegg i bakgrunnen, ck: sprekker og porer (0–1) */
+  K.rockMat = o => sm(VS, FS_ROCK, { uA: uv(u3(o.a || '#3b2422')), uB: uv(u3(o.b || '#5a3a30')), uStr: uv(o.str == null ? 0.22 : o.str), uTop: uv(o.top || 0), uSm: uv(o.sm == null ? 0.7 : o.sm), uHot: uv(o.hot == null ? 1 : o.hot), uRough: uv(o.rough == null ? 1 : o.rough), uCrust: uv(o.crust || 0), uFar: uv(o.far || 0), uCk: uv(o.ck == null ? 1 : o.ck), uSc: uv(o.sc || 1), uEdge: uv(o.edge || 0) }, { side: T.DoubleSide });   /* hot: hvor høyt opp foten gløder (1 = 1,8 enheter), rough: hvor ru, crust: størknet skorpe, far: fjellvegg i bakgrunnen, ck: sprekker og porer (0–1), sc: hvor fint mønsteret er (små steiner: 3–4), edge: glødende kant mot lavaen */
   K.cryMat = o => sm(VS, FS_CRY, { uA: uv(u3(o.a || '#7a1030')), uB: uv(u3(o.b || '#ff5a78')), uPulse: uv(0.5) });
   K.figMat = (map, o) => { o = o || {}; if (map) { map.colorSpace = T.NoColorSpace; map.magFilter = T.NearestFilter; map.minFilter = o.mip ? T.LinearMipmapLinearFilter : T.NearestFilter; map.generateMipmaps = !!o.mip; map.needsUpdate = true; }
     return sm(VS_FIG, FS_FIG, { map: uv(map), uUvOff: uv(new T.Vector2()), uId: uv(o.id || 255), uStone: uv(0), uStoneC: uv(u3('#8a7892')), uCrack: uv(0), uCrackR: uv(0), uCrackO: uv(new T.Vector3()), uCrackC: uv(u3('#ffe24a')), uSeam: uv(o.seam == null ? 0.2 : o.seam), uSeamOn: uv(o.seamOn == null ? 1 : o.seamOn), uHead: uv(new T.Vector3(1e4, 1e4, 0)),
@@ -512,19 +542,35 @@ void main(){
     if (o.out > 0) { P.swirl = max(P.swirl, c01(o.out * 1.25)); P.fl = max(P.fl, seg(o.out, 0.62, 1)); P.flc = '#ffffff'; }
     S.scene.updateMatrixWorld(true); cam.updateMatrixWorld(true); return P;
   };
+  /* Ringer og sprut rundt beina i lavaen (runde 10: «ujevn med små ringer og sprut»), i figurens piksler og i takt med trinnene. Spritepasset merker vannlinja der en del av
+     ham går ned i lavaen (alfa 254); merkene samles til strekk (et bein, halen). Fra hvert strekk brer to ringer seg ut til sidene (korte streker på lavaen som blir mørkere og
+     borte) og noen få dråper spretter opp og faller tilbake. Ringene legges bare på lavaen (tomme piksler), aldri oppå ham. n = trinnet. */
+  const LFX = [[255, 176, 82], [228, 108, 38], [170, 62, 22]];
+  const lavaFx = (d, n) => { const W = G.W, H = G.H, pts = [];
+    for (let i = 3; i < d.length; i += 4) if (d[i] === 254) { d[i] = 255; const p = (i - 3) / 4; pts.push([p % W, floor(p / W)]); }
+    if (!pts.length) return; pts.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    const segs = []; for (const [x, y] of pts) { const s = segs[segs.length - 1]; if (s && x - s.x1 <= 2 && abs(y - s.y) <= 2) { s.x1 = x; s.y = max(s.y, y); } else segs.push({ x0: x, x1: x, y }); }
+    const put = (x, y, c, over) => { if (x < 0 || y < 0 || x >= W || y >= H) return; const i = (y * W + x) * 4; if (d[i + 3] && !over) return; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255; };
+    for (const s of segs) { const w = s.x1 - s.x0 + 1; if (w < 2) continue; const yw = s.y + 1, sd = s.x0 * 7 + s.x1 * 3;
+      for (let r = 0; r < 2; r++) { const P = 24, k = ((n + r * 12 + floor(rnd(sd, 5) * P)) % P) / P; if (k > 0.8) continue;
+        const dx = 1 + floor(k * (7 + w * 0.15)), c = LFX[k < 0.3 ? 0 : k < 0.6 ? 1 : 2], y = yw + (k > 0.45 ? 1 : 0), L = k < 0.4 ? 3 : 2;
+        for (let q = 0; q < L; q++) { put(s.x0 - dx - q, y, c); put(s.x1 + dx + q, y, c); } }
+      for (let j = 0; j < 2; j++) { const Cy = 13 + j * 4, m = n + floor(rnd(sd + j, 9) * Cy), cyc = floor(m / Cy), a = m % Cy; if (a >= 6 || rnd(cyc * 7 + j, sd) > 0.65) continue;
+        const x = s.x0 + floor(rnd(cyc, sd + j * 3) * w) + (a > 2 ? (rnd(cyc, sd + 1) > 0.5 ? 1 : -1) : 0), h = Math.round((2 + rnd(cyc, sd + 2) * 2) * sin(PI * a / 6));
+        put(x, yw - 1 - h, LFX[h > 2 ? 0 : 1], true); } } };
   /* Spritepasset (FS_SPR) ut på et vanlig lerret (D.fcv, 256 × 192): figuren slik den står i dette trinnet, renset og med omriss. */
   let rtS = null, sprM = null, sprScene = null, sbuf = null;
   const spritePass = (D, P, n) => {
     if (!rtS) { rtS = new T.WebGLRenderTarget(G.W, G.H, { minFilter: T.NearestFilter, magFilter: T.NearestFilter, generateMipmaps: false, depthBuffer: false });
       sprM = new T.ShaderMaterial({ depthTest: false, depthWrite: false, vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0., 1.); }', fragmentShader: FS_SPR,
-        uniforms: { tF: uv(rtF.texture), tFD: uv(rtF.depthTexture), tED: uv(rtE.depthTexture), uLo: uv(new T.Vector2(G.W, G.H)), uNF: uv(new T.Vector2(0.5, 900)), uInk: uv(u3('#1c0a0c')), uLvT: uv(u3('#ffe27a')), uLvC: uv(u3('#ff9a2c')), uLvG: uv(u3('#ee5a1c')), uStep: uv(0), uLY: uv(0), uCt: uv(0.35), uIPV: uv(new T.Matrix4()), uInkD: uv(new T.Vector4(0, 0, 0.5, 0.03)), uTol: uv(0.03) } });
+        uniforms: { tF: uv(rtF.texture), tFD: uv(rtF.depthTexture), tED: uv(rtE.depthTexture), uLo: uv(new T.Vector2(G.W, G.H)), uNF: uv(new T.Vector2(0.5, 900)), uInk: uv(u3('#1c0a0c')), uLvT: uv(u3('#ffb455')), uLvC: uv(u3('#ec7a2c')), uLvG: uv(u3('#c04a1c')), uStep: uv(0), uLY: uv(0), uCt: uv(0.35), uIPV: uv(new T.Matrix4()), uInkD: uv(new T.Vector4(0, 0, 0.5, 0.03)), uTol: uv(0.03) } });
       sprScene = new T.Scene(); const tri = new T.Mesh(new T.BufferGeometry().setAttribute('position', new T.BufferAttribute(new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]), 3)), sprM); tri.frustumCulled = false; sprScene.add(tri); sbuf = new Uint8Array(G.W * G.H * 4); }
     const u = sprM.uniforms; u.uNF.value.set(cam.near, cam.far); u.uInkD.value.z = P.inkz == null ? 0.5 : P.inkz; u.tED.value = rtE.depthTexture; u.uStep.value = n || 0;
     u.uIPV.value.multiplyMatrices(cam.matrixWorld, cam.projectionMatrixInverse); u.uLY.value = U.uLavaY.value; u.uCt.value = P.ct == null ? 0.35 : P.ct;   /* verdenshøyden til hver piksel (kontakten med lavaen) */
     R.setRenderTarget(rtS); R.clear(); R.render(sprScene, postCam); R.readRenderTargetPixels(rtS, 0, 0, G.W, G.H, sbuf);
     if (!D.fcv) { D.fcv = document.createElement('canvas'); D.fcv.width = G.W; D.fcv.height = G.H; D.fim = D.fcv.getContext('2d').createImageData(G.W, G.H); }
     const d = D.fim.data, rw = G.W * 4; for (let y = 0; y < G.H; y++) d.set(sbuf.subarray((G.H - 1 - y) * rw, (G.H - y) * rw), y * rw);   /* WebGL leser nedenfra og opp */
-    D.fcv.getContext('2d').putImageData(D.fim, 0, 0);
+    lavaFx(d, n || 0); D.fcv.getContext('2d').putImageData(D.fim, 0, 0);
   };
   G.frame = (id, t, o, rs) => {
     const D = DEF[id], S = D && D.S; if (!S || G.dead) return null;
