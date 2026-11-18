@@ -96,7 +96,7 @@ const WKT = {
   worm: { n: 'Ultra Wormhole', c: '#9fd9ff', boss: 'champ', deep: 1, rule: 'Deeper and deeper', zn: ['', 'The rift', 'Ultra Space', 'The deep', 'The abyss', 'The far end'],
     nn: { gt: 'The rift keeper', bs: 'A Champion, lost in here', bg: 'The one at the bottom' }, nd: { gt: 'The rift closes behind whoever loses. Win to go deeper.', bs: 'A Champion who fell through long ago, and stayed.', bg: 'Another Champion, with everything they have. Nobody has been deeper.' },
     rd: 'There is no Frontier Brain in here: the map goes down. Every zone you clear lifts the prize that waits at the way out, and the deeper you are, the likelier it is that what you meet is shiny. Walk out when you like and the prize is yours. Fall, and you get the one a step below.' },
-  pyramid: { n: 'Battle Pyramid', brain: 'Brandon', x: [144, 146], c: '#e0b36a', fac: 1, dark: 1, rule: 'In the dark',
+  pyramid: { n: 'Battle Pyramid', brain: 'Brandon', x: [144, 146], c: '#e0b36a', fac: 1, dark: 1, gk: 0.96, rule: 'In the dark',
     rd: 'The map lies in darkness. You see one row ahead, and one more for every two trainers you beat. In the dark there are berries and Revives that only work in here: use them on the map, between the rooms.' },
   castle: { n: 'Battle Castle', brain: 'Darach', x: [244, 282], c: '#8fb6ff', fac: 1, cp: 1, nosp: 'ev', rule: 'Castle Points',
     rd: 'There are no springs here. Every win gives Castle Points, more the healthier your team is, and you spend them on the map: heal, revive, or learn who waits ahead. Points you save turn into coins at the end.' },
@@ -105,9 +105,9 @@ const WKT = {
     rd: 'Some trainers have a Shadow Pokémon: a rare species with a dark aura that hits harder. Beat them and you may snag it. You have one Snag Ball, two with four tickets, so choose who. Three study days lift the shadow, and then it is yours.' },
   dome: { n: 'Battle Dome', brain: 'Tucker', x: [380, 59], c: '#ffd27a', fac: 1, open: 1, crowd: 0.25, rule: 'Open brackets',
     rd: 'Everyone sees everyone: every team on the map is shown before you step in. The crowd loves a clean win: beat a trainer without losing a Pokémon, and the battle pays a quarter more.' },
-  hall: { n: 'Battle Hall', brain: 'Argenta', x: [149, 445], c: '#d7c8a8', fac: 1, types: 1, rule: 'Type by type',
+  hall: { n: 'Battle Hall', brain: 'Argenta', x: [149, 445], c: '#d7c8a8', fac: 1, types: 1, gk: 0.94, rule: 'Type by type',
     rd: 'Every trainer in the Hall swears by one type, and the map shows which. Choose the path your team likes best.' },
-  arena: { n: 'Battle Arena', brain: 'Greta', x: [292, 68], c: '#f08a8a', fac: 1, nosw: 1, rule: 'No way out',
+  arena: { n: 'Battle Arena', brain: 'Greta', x: [143, 68], c: '#f08a8a', fac: 1, nosw: 1, rule: 'No way out',
     rd: 'In the Arena nobody is called back: neither you nor the opponent can switch during a battle. Only a faint, or a move that switches on its own, changes who is out. Choose who leads with care.' },
   tower: { n: 'Battle Tower', brain: 'Palmer', x: [485, 488], c: '#b7c4ff', fac: 1, nosp: 'tr', zrest: 1, rest: 0.25, rule: 'The long climb',
     rd: 'No springs and no shortcuts: more trainers than anywhere else. In return your team catches its breath after every win, and is fully healed each time a zone is cleared.' }
@@ -227,7 +227,7 @@ function wkBoss(M, nk) {
 function wkShMon(sp, lv, st) { let id = sp; for (let nx = EVO[id]; nx && nx.length; nx = EVO[id]) { const to = nx[rnd(nx.length)]; if (lv < reqLv(to)) break; id = to; } return Object.assign(rentSet(foeMon(id, lv, st)), { shd: 1 }); }
 /* Motstanderen i en node: { st, tr, team, hint }. Likt for alle samme uke (frøet til noden), på nivået flv. */
 function wkFoe(M, nd, flv) {
-  const st = wkFoeSt(nd.k); flv = Math.max(3, Math.round(flv * st.rel));
+  const st = wkFoeSt(nd.k); flv = Math.max(3, Math.round(flv * st.rel * ((nd.k === 'bg' && WKT[M.ty].gk) || 1)));
   const f = wkSeeded(nd.s, () => {
     if (nd.k === 'bs' || nd.k === 'bg') {
       const [k, i] = wkBoss(M, nd.k), d0 = POOL[k][i], x = WKT[M.ty].x, d = x ? Object.assign(d0.slice(), { 4: d0[4].concat(x) }) : d0;
@@ -536,7 +536,7 @@ const WKVN = ['Bronze', 'Silver', 'Gold'], WKVCANDY = [1, 2, 3];
 /* PUNGEN (steg 1d.8): den første kista har i tillegg en fast sum (× studiebonusen og vanskelighetsgraden, som alt annet), så også et løp med én
    billett gir minst som en vanlig kampdag (Jazz: «minst like mange mynter som en vanlig kampdag»). Den er lik uansett billetter og metall:
    flere billetter gir flere kister og mer av kartet, ikke en større pung. Målt i NOTES.md (18. nov). */
-const WKPURSE = 1900;
+const WKPURSE = 2100;
 const WKV = [
   { coin: [70, 130], p: { candy: 30, balls: 24, enc: 26, stone: 12, mint: 8 } },
   { coin: [130, 210], p: { mint: 22, candy: 22, enc: 22, tutor: 14, mstone: 10, gcap: 6, stone: 4 }, sure: ['mint'] },
