@@ -75,6 +75,12 @@ const BSFX = {
   faint: () => { tone(520, 0, 0.5, 0.05, 'square', 90); noise(0.25, 0.3, 0.04, 900, 200); },
   up: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.05, 0.07, 0.035)),
   down: () => [784, 659, 523, 392].forEach((f, i) => tone(f, i * 0.05, 0.07, 0.035)),
+  /* Cutscenene i 3D (Jazz 18.11: «taggene opp må få en passende lydeffekt på hver tagg»): rise = forvarselet mens han løfter armene (d sekunder), slam = slaget i bakken,
+     spike = én tagg som skyter opp (k 0–1 ut i rekka: de siste er størst og nærmest, så de er dypere og sterkere; den aller siste får et drønn etter seg). */
+  rise: d => { tone(42, 0, d, 0.13, 'sawtooth', 110); tone(63, d * 0.3, d * 0.7, 0.07, 'square', 190); noise(d * 0.2, d * 0.8, 0.1, 240, 1500); },
+  slam: () => { noise(0, 0.9, 0.3, 700, 60); tone(84, 0, 0.8, 0.3, 'sine', 30); tone(126, 0.02, 0.35, 0.14, 'sawtooth', 44); noise(0.03, 0.3, 0.15, 3600, 400); },
+  spike: k => { const v = 0.17 + 0.13 * k; noise(0, 0.07, v, 5200 - 2200 * k, 900); noise(0.03, 0.26 + 0.14 * k, v * 0.9, 1500 - 500 * k, 140); tone(170 - 70 * k, 0, 0.24 + 0.12 * k, v, 'sawtooth', 46); tone(2100 - 500 * k, 0.005, 0.08, 0.05, 'square', 620);
+    if (k >= 1) { noise(0.02, 0.85, 0.24, 800, 60); tone(70, 0, 0.85, 0.26, 'sine', 28); } },
   beat: () => { tone(58, 0, 0.16, 0.12, 'sine', 40); tone(52, 0.24, 0.2, 0.1, 'sine', 36); },
   dread: () => { noise(0, 1.3, 0.07, 140, 60); tone(46, 0, 1.3, 0.07, 'sawtooth', 30); },
   /* Mega Evolution: lyset samler seg (stigende toner), og så slipper det. megaArm = knappen slås på. */
@@ -427,9 +433,9 @@ async function legendIntro(B) {
   let stop = () => {};
   if (started) music(''); else { PACK.music(''); stop = epicIntro('ultra', info.R); }
   root.classList.add('on'); sfx.appear(); buzz([40, 60, 40]);
-  const cue = n => { if (gone()) return; if (n === 'cry') { cry(f.id, 0, c3 ? 0.8 : 0.6, c3 ? 1 : 0); buzz([80, 40, 260]); if (!started) battleMusic(B); } else if (n === 'boom') buzz([90, 60, 90, 60, 240]); else if (n === 'thud') buzz(45); else buzz(18); };
+  const cue = (n, v) => { if (gone()) return; if (n === 'cry') { cry(f.id, 0, c3 ? 0.8 : 0.6, c3 ? 1 : 0); buzz([80, 40, 260]); if (!started) battleMusic(B); } else if (n === 'spike') { BSFX.spike(v || 0); buzz(v >= 1 ? [60, 30, 160] : 24); } else if (n === 'slam') { BSFX.slam(); buzz([90, 60, 240]); } else if (n === 'rise') { BSFX.rise(v || 1); buzz([20, 60, 20, 60, 20]); } else if (n === 'boom') buzz([90, 60, 90, 60, 240]); else if (n === 'thud') buzz(45); else buzz(18); };
   const go = $('#lgigo'), pl = CINE.play(cv, id, Object.assign({ clock: () => started ? PACK.clock() : -1, cue, warp: V && started ? dkWarp : null, onhold: () => { if (gone() || skipped) return; if (sk) sk.hidden = true; if (go) go.hidden = false; } }, o)), sk = $('#lgiskip');
-  let skipped = false; const skip = () => { if (skipped) return; skipped = true; sfx.tap(); stop(); if (c3) { if (sk) sk.hidden = true; if (go) go.hidden = true; cry(f.id, 0, 0.7, 1); buzz([80, 40, 260]); } pl.skip(); };
+  let skipped = false; const skip = () => { if (skipped) return; skipped = true; sfx.tap(); stop(); if (c3) { const held = go && !go.hidden; if (sk) sk.hidden = true; if (go) go.hidden = true; if (!held) { cry(f.id, 0, 0.7, 1); buzz([80, 40, 260]); } } pl.skip(); };   /* Continue: brølet er over, ikke et nytt inn i kampen. Skip midt i filmen: brølet han ellers ville gitt */
   setTimeout(() => { if (!gone() && sk && !skipped && (!go || go.hidden)) sk.hidden = false; }, 1200); if (sk) sk.addEventListener('click', skip); if (go) go.addEventListener('click', skip);
   const key = e => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') skip(); }; document.addEventListener('keydown', key);
   const watch = setInterval(() => { if (gone()) pl.stop(); }, 300);

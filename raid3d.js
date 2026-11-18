@@ -208,7 +208,7 @@ void main(){ float a = uA;
   /* Etterpasset: omgivelsene (tE, full oppløsning) og figuren (tF, 256 × 192, nærmeste piksel) settes sammen etter dybden. Dybden til omgivelsene leses
      midt i figurens piksel, så hver store piksel enten synes eller er skjult (lavaen kutter beina, stein står foran). Konturen: figurens piksel får
      blekk når naboen ikke er figur, eller ligger et sprang lenger bak (en arm foran kroppen). Så gnister utover fra et punkt (brølet) og virvelen ut (Black/White). */
-  const FS_POST = `uniform sampler2D tE, tED, tF, tFD; uniform vec2 uRes, uLo, uNF; uniform vec3 uInk; uniform vec4 uSpd, uInkD; uniform float uInkK, uSwirl, uFrame;
+  const FS_POST = `uniform sampler2D tE, tED, tF, tFD; uniform vec2 uRes, uLo, uNF; uniform vec3 uInk; uniform vec4 uSpd, uInkD; uniform float uInkK, uInkO, uSwirl, uFrame;
 float h21(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float lin(float z){ return 2. * uNF.x * uNF.y / (uNF.y + uNF.x - (z * 2. - 1.) * (uNF.y - uNF.x)); }
 void main(){
@@ -218,6 +218,9 @@ void main(){
       for (int i = 0; i < 4; i++) { vec2 o = i == 0 ? vec2(1., 0.) : i == 1 ? vec2(-1., 0.) : i == 2 ? vec2(0., 1.) : vec2(0., -1.); vec2 u2 = tuv + o / uLo; float idn = floor(texture2D(tF, u2).a * 255. + .5), dn = lin(texture2D(tFD, u2).x);
         if (abs(idn - id) > .5) { if (idn < .5 || dn > dF) e = 1.; } else if (id > 127.5 && dn - dF > uInkD.z + dF * uInkD.w) es = 1.; }
       float ik = uInkK * (1. - smoothstep(uNF.y * .12, uNF.y * .2, dF)); vec3 fc = f.rgb; fc = mix(fc, fc * .32 + uInk * .25, es * ik); fc = mix(fc, uInk, e * ik); c = vec4(fc, 1.); } }
+  else if (uInkO > 0.) { float dE = lin(texture2D(tED, tuv).x), k = 0.;   /* kant UTENFOR figuren (uInkO): pikselen ved siden av figuren får blekk, så omrisset blir to piksler */
+    for (int i = 0; i < 4; i++) { vec2 o = i == 0 ? vec2(1., 0.) : i == 1 ? vec2(-1., 0.) : i == 2 ? vec2(0., 1.) : vec2(0., -1.); vec2 u2 = tuv + o / uLo; if (texture2D(tF, u2).a > .995) { float dn = lin(texture2D(tFD, u2).x); if (dn < dE + .03 + dE * .002) k = 1.; } }
+    c.rgb = mix(c.rgb, uInk, k * uInkO); }
   vec2 px = uv * uLo, r = (px - uSpd.xy) / uLo.y; float ang = atan(r.y, r.x), rr = length(r);
   /* Gnister utover fra et punkt: tynne, korte, oransje streker som flyr ut (ikke tykke hvite kiler: Jazz 18.11). Lys legges oppå. */
   if (uSpd.z > 0.) { float bn = ang * 150. / 6.2832, w = h21(vec2(floor(bn), 7.)), ph = fract(w * 7.3 + uFrame * .04 * (.6 + w)), r0 = uSpd.w + ph * 1.15;
@@ -247,7 +250,7 @@ void main(){
     U = { uTime: uv(0), uPs: uv(1), uLavaY: uv(0), uGlow: uv(1), uGlowH: uv(14), uRimK: uv(1), uKey: uv(new T.Vector3(0.4, 0.8, 0.45).normalize()), uKeyC: uv(u3('#fff2e0')), uShC: uv(u3('#3a1a22')),
       uRim: uv(new T.Vector3(0, 0.3, -1).normalize()), uRimC: uv(u3('#ffb040')), uLavaC: uv(u3('#ff6a14')), uFogC: uv(u3('#6a1c08')), uFog: uv(new T.Vector3(60, 300, 0.8)) };
     post = new T.ShaderMaterial({ depthTest: false, depthWrite: false, vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0., 1.); }', fragmentShader: FS_POST,
-      uniforms: { tE: uv(rtE.texture), tED: uv(de), tF: uv(rtF.texture), tFD: uv(dt), uRes: uv(new T.Vector2(512, 384)), uLo: uv(new T.Vector2(G.W, G.H)), uNF: uv(new T.Vector2(0.5, 900)), uInk: uv(u3('#1c0a0c')), uInkK: uv(1), uInkD: uv(new T.Vector4(0.05, 0.004, 0.5, 0.03)), uSpd: uv(new T.Vector4()), uSwirl: uv(0), uFrame: uv(0) } });
+      uniforms: { tE: uv(rtE.texture), tED: uv(de), tF: uv(rtF.texture), tFD: uv(dt), uRes: uv(new T.Vector2(512, 384)), uLo: uv(new T.Vector2(G.W, G.H)), uNF: uv(new T.Vector2(0.5, 900)), uInk: uv(u3('#1c0a0c')), uInkK: uv(1), uInkO: uv(0), uInkD: uv(new T.Vector4(0.05, 0.004, 0.5, 0.03)), uSpd: uv(new T.Vector4()), uSwirl: uv(0), uFrame: uv(0) } });
     postScene = new T.Scene(); const tri = new T.Mesh(new T.BufferGeometry().setAttribute('position', new T.BufferAttribute(new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]), 3)), post); tri.frustumCulled = false; postScene.add(tri);
     postCam = new T.Camera(); scale(1);
     return true;
@@ -352,7 +355,7 @@ void main(){
     return true;
   })().catch(e => { G.err = String(e && e.stack || e); jobs[id] = null; throw e; }));
   G.isReady = id => !!(DEF[id] && DEF[id].S && !G.dead);
-  const P0 = () => ({ sh: 0, fl: 0, flc: '#ffffff', fade: 0, fadec: '#000000', heat: 0, heatY: 60, spd: 0, spx: 128, spy: 96, spr: 0.3, swirl: 0, vig: 0.5, ink: 1 });
+  const P0 = () => ({ sh: 0, fl: 0, flc: '#ffffff', fade: 0, fadec: '#000000', heat: 0, heatY: 60, spd: 0, spx: 128, spy: 96, spr: 0.3, swirl: 0, vig: 0.5, ink: 1, ink2: 0, inkz: 0.5 });
   /* Kameraet: fra, mot, synsvinkel, og en helling (roll) for lave, skjeve vinkler. */
   K.cam = (px, py, pz, tx, ty, tz, fov, roll) => { cam.position.set(px, py, pz); cam.up.set(0, 1, 0); cam.lookAt(tx, ty, tz); if (roll) cam.rotateZ(roll); if (cam.fov !== (fov || 40)) { cam.fov = fov || 40; cam.updateProjectionMatrix(); } cam.updateMatrixWorld(true); };   /* matrisene med en gang, så K.proj og K.ray gjelder dette bildet */
   K.U = () => U; K.face = m => { m.quaternion.copy(cam.quaternion); return m; }; K.camPos = () => cam.position;
@@ -383,7 +386,7 @@ void main(){
       if (o.out > 0) { P.swirl = max(P.swirl, c01(o.out * 1.25)); P.fl = max(P.fl, seg(o.out, 0.62, 1)); P.flc = '#ffffff'; }
       S.scene.updateMatrixWorld(true); cam.updateMatrixWorld(true);
       const pu = post.uniforms, fn = floor(tq * fps);
-      pu.uSpd.value.set(P.spx, G.H - P.spy, P.spd, P.spr); pu.uSwirl.value = P.swirl; pu.uInkK.value = P.ink; pu.uFrame.value = fn; pu.uNF.value.set(cam.near, cam.far);
+      pu.uSpd.value.set(P.spx, G.H - P.spy, P.spd, P.spr); pu.uSwirl.value = P.swirl; pu.uInkK.value = P.ink; pu.uInkO.value = P.ink2 || 0; pu.uInkD.value.z = P.inkz == null ? 0.5 : P.inkz; pu.uFrame.value = fn; pu.uNF.value.set(cam.near, cam.far);
       U.uPs.value = rsNow || 1; cam.layers.set(0); R.setRenderTarget(rtE); R.clear(); R.render(S.scene, cam);
       cam.layers.set(1); R.setRenderTarget(rtF); R.clear(); R.render(S.scene, cam);
       R.setRenderTarget(null); R.clear(); R.render(postScene, postCam);

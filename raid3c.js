@@ -72,12 +72,12 @@
      Slagene i låta (Primal Kyogre & Groudon, en takt er 1,23 s; filmens tid = låtas tid − A0): lyset tennes og brer seg på fire slag (GL; bandet kommer inn på det
      andre), øyet på de tre raske (GT), steinen sprenges der låta løfter seg (GC), så motlyset (GV), slaget (GP) og det siste brølet (GX). */
   const A0 = 2.48, mb = x => Math.round((x - A0) * 100) / 100;
-  const GL = [4.01, 5.26, 6.49, 7.72].map(mb), GT = [8.46, 8.93, 9.54].map(mb), GC = mb(10.16), GV = mb(12.63), GA = mb(13.87), GP = mb(15.05), GW = mb(16.30), GD = mb(17.53), GX = mb(19.97);
+  const GL = [4.01, 5.26, 6.49, 7.72].map(mb), GT = [8.46, 8.93, 9.54].map(mb), GC = mb(10.16), GV = mb(12.63), GA = mb(13.87), GP = mb(15.05), GW = mb(16.30), GD = mb(17.0), GX = mb(18.76);
   const STAT = { Neck1: [0, -0.16, 0], Neck2: [0, -0.06, 0], Head: [0, -0.12, 0], Spine2: [0, -0.05, 0], '*Arm': [0.12, -0.25, 0.18] };                 /* statuen: hodet senket, armene inntil */
   /* Brølet (Jazz sitt referanseark 18.11): brystet fram, ryggen i bue, skuldrene bakover, armene ut med åpne klør, kjeften helt opp, beina plantet. */
   const ROAR = { Neck1: [0, 0.28, 0], Neck2: [0, 0.2, 0], Head: [0, 0.15, 0], Jaw: [0, -0.82, 0], Spine1: [0, 0.06, 0], Spine2: [0, 0.14, 0], Spine3: [0, 0.1, 0], Hips: [0, -0.05, 0], Tail2: [0, 0.12, 0], Tail3: [0, 0.12, 0], Tail4: [0, 0.12, 0], '*Arm': [0.25, 0.35, -0.8], '*Hand': [0.55, 0, -0.15] };
   const DUCK = { Neck1: [0, -0.2, 0], Neck2: [0, -0.1, 0], Head: [0, -0.14, 0], Spine2: [0, -0.1, 0], Spine3: [0, -0.06, 0], '*Arm': [0, -0.3, 0.2] };
-  const RAISE = { '*Arm': [-0.9, 0.3, -0.3], Spine2: [0, 0.12, 0], Spine3: [0, 0.1, 0], Neck1: [0, 0.14, 0], Head: [0, 0.1, 0], Jaw: [0, -0.25, 0] };
+  const RAISE = { '*Arm': [0.85, 0.75, 1.0], Spine2: [0, 0.12, 0], Spine3: [0, 0.1, 0], Neck1: [0, 0.14, 0], Head: [0, 0.1, 0], Jaw: [0, -0.25, 0] };
   const SLAM = { '*Arm': [0.5, 0, 0.3], Spine1: [0, -0.14, 0], Spine2: [0, -0.2, 0], Spine3: [0, -0.16, 0], Neck1: [0, -0.1, 0], Head: [0, 0.12, 0], Jaw: [0, -0.4, 0] };
   const sq = (t, t0, f, d) => { const a = t - t0; return a < 0 ? 0 : Math.exp(-(d || 6) * a) * cos((f || 13) * a); };   /* fjæringen etter et nedslag */
   const NB = 10, blade = i => ({ x: (i % 2 ? 1 : -1) * (5.6 + i * 0.55), z: 15 + i * 4, h: 6.5 + i * 1.15, r: 1 + i * 0.09, t: GP + 0.07 + i * 0.105 });
@@ -92,7 +92,7 @@
   const bodyPts = (g, pose) => { g.clear(); if (pose) g.add(pose, 1); g.root.position.set(HOME[0], HOME[1], HOME[2]); g.apply(); const r = SHELL.filter(n => g.bones[n]).map(n => g.at(n).toArray()); g.clear(); g.apply(); return r; };
 
   G3D.def('c3:383', {
-    len: mb(21.7), hold: 1, R: GX, at: A0, models: ['groudon'],
+    len: mb(20.5), hold: 1, R: GX, at: A0, models: ['groudon'],
     make(K, T) {
       const S = crater(T), g = S.gr = K.figure(K.model('groudon')); S.scene.add(g.root); S.figs.push(g);
       /* Hodekameraet: øyet og kameraplassen målt i hvilestillingen og festet til hodebenet, så nærbildet følger hodet uansett pose. */
@@ -132,7 +132,7 @@
       g.add(SLAM, kf(t, [[GP - 0.1, 0], [GP + 0.07, 1.15, eo], [GP + 0.5, 0.9, io], [GW + 0.4, 0.5, io], [GD, 0, io]]));
       /* 4 Det siste brølet (GX): han dukker og trekker pusten, mer og mer, og brøler mens navnet kommer opp. */
       g.add(DUCK, kf(t, [[GD, 0], [GD + 0.9, 0.75, io], [GX - 0.7, 0.9], [GX - 0.3, 1.3, io], [GX - 0.03, 1.5, ei], [GX + 0.1, 0, eo]]) * (1 - out));
-      const r2 = t < GX ? 0 : back(seg(t, GX, GX + 0.3), 2.6) * (1 - 0.92 * io(seg(t, GX + 2.6, GX + 3.6))), rw = max(r1, r2, out ? back(seg(out, 0, 0.3), 2.2) : 0);
+      const r2 = t < GX ? 0 : back(seg(t, GX, GX + 0.3), 2.6) * (1 - io(seg(t, GX + 1.5, GX + 2.2))), rw = max(r1, r2);
       S.mouth = null; g.add(ROAR, rw); g.rot('Jaw', 0, 0.045 * sin(t * 57) * rw, 0); g.rot('Head', 0, 0, 0.022 * sin(t * 43) * rw); S.rw = rw;
       /* Øynene: lukket (stein) til det første av de tre slagene, så åpne, og smale (sinte) fra det tredje og gjennom brølet. Blunker mens han venter. */
       const nar = (t >= GT[2] && t < GC + 2.3) || (t > GA + 0.4 && t < GW) || (t > GD && t < GX + 3.4) || out, eye = t < GT[0] ? [0, 0.5] : t < GT[0] + 0.07 || (t > GX + 4 && (t - GX) % 4.4 < 0.12) || nar ? [0, 0.75] : [0, 0], E = g.mats.Eye1.uniforms;
@@ -209,16 +209,16 @@
     },
     act(S, t, o) {
       const g = S.gr, p = S.pg, U = K.U(), L = S.lava.material.uniforms, pre = t < PT.S, gm = S.gem.material.uniforms;
-      g.root.visible = t < PT.G1 + 0.4; p.root.visible = !pre;
+      g.root.visible = t < PT.G1 - 0.03; p.root.visible = !pre;
       /* 1 Groudon (vanlig form): rasende, sammentrukket og skjelvende, mens det rosa lyset samler seg om ham og han blir til lys. */
       const str = io(seg(t, 0, 0.9)); g.root.position.set(HOME[0] + 0.03 * sin(t * 61) * str, HOME[1], HOME[2]);
       g.add(STAT, 0.2); g.add(DUCK, 0.9 * str); g.add({ Jaw: [0, -0.3, 0] }, str); g.rot('Jaw', 0, 0.03 * sin(t * 48) * str, 0);
-      g.mats.Eye1.uniforms.uUvOff.value.set(0, 0.75); g.set('uStone', 0); g.set('uCrack', 0); g.set('uFlC', '#ffb4e6'); g.set('uFlK', 0.92 * io(seg(t, 0.3, PT.G0 + 0.3)));
+      g.mats.Eye1.uniforms.uUvOff.value.set(0, 0.75); g.set('uStone', 0); g.set('uCrack', 0); g.set('uFlC', '#ffb4e6'); g.set('uFlK', 0.92 * io(seg(t, 0.3, PT.G0 + 0.3)) + 0.08 * seg(t, PT.G0, PT.G1));
       /* 2 Krystallen: vokser fram rastrert (han skimtes inni), lukker seg på G1, dreier sakte, mørkner (D0–D1) og slår sprekker av lys fra K til den knuses på S. */
-      const gk = seg(t, PT.G0, PT.G1), spin = 0.22 * (t - PT.G1); S.gem.visible = t >= PT.G0 && pre; S.gem.scale.setScalar(GEMR * (pre ? mix(0.72, 1, back(gk, 1.6)) + 0.012 * sin(t * 40) * seg(t, PT.K, PT.S) : 1)); S.gem.rotation.set(0.08 * sin(spin * 1.3), spin, 0);
-      gm.uAl.value = t < PT.G1 ? 0.15 + 0.85 * gk * gk : 1; gm.uDark.value = io(seg(t, PT.D0, PT.D1)) * 0.96; gm.uCrk.value = t >= PT.K ? 1 : 0; gm.uCrkR.value = 2.3 * eo(seg(t, PT.K, PT.S - 0.1)); lerpC(gm.uCrkC, '#ffc21e', '#fff6c0', seg(t, PT.S - 0.5, PT.S));
+      const gk = seg(t, PT.G1 - 0.03, PT.G1 + 0.3), spin = 0.22 * (t - PT.G1); S.gem.visible = t >= PT.G1 - 0.03 && pre; S.gem.scale.setScalar(GEMR * (pre ? mix(0.8, 1, back(gk, 1.6)) + 0.012 * sin(t * 40) * seg(t, PT.K, PT.S) : 1)); S.gem.rotation.set(0.08 * sin(spin * 1.3), spin, 0);
+      gm.uAl.value = 1; gm.uDark.value = io(seg(t, PT.D0, PT.D1)) * 0.96; gm.uCrk.value = t >= PT.K ? 1 : 0; gm.uCrkR.value = 2.3 * eo(seg(t, PT.K, PT.S - 0.1)); lerpC(gm.uCrkC, '#ffc21e', '#fff6c0', seg(t, PT.S - 0.5, PT.S));
       S.motes.visible = t < PT.G1 + 0.2; S.motes.material.uniforms.uA.value = seg(t, 0.1, 0.5) * (1 - seg(t, PT.G1 - 0.2, PT.G1 + 0.2));
-      K.face(S.aura); S.aura.position.set(GEM[0], GEM[1], GEM[2] - 1); S.aura.scale.setScalar(15 + 9 * seg(t, 0, PT.G1)); S.aura.material.uniforms.uA.value = t < PT.D1 ? 0.55 * io(seg(t, 0.2, PT.G0 + 0.4)) * (1 - 0.85 * seg(t, PT.D0, PT.D1)) + 0.5 * hit(t, PT.G1, 0.4) : 0; S.aura.visible = t < PT.D1;
+      K.face(S.aura); S.aura.position.set(GEM[0], GEM[1], GEM[2] - 1); S.aura.scale.setScalar(15 + 9 * seg(t, 0, PT.G1) + 5 * ei(seg(t, PT.G0, PT.G1))); S.aura.material.uniforms.uA.value = t < PT.D1 ? (0.55 * io(seg(t, 0.2, PT.G0 + 0.4)) + 0.4 * ei(seg(t, PT.G0, PT.G1)) * (t < PT.G1 ? 1 : 0)) * (1 - 0.85 * seg(t, PT.D0, PT.D1)) + 0.5 * hit(t, PT.G1, 0.4) : 0; S.aura.visible = t < PT.D1;
       const om = t >= PT.O && pre ? min(1, (t - PT.O) / 0.25) * (0.82 + 0.18 * sin((t - PT.O) * (5 + 9 * seg(t, PT.K, PT.S)))) : 0; S.om = om;
       /* 3 Krystallen knuses (S): skår og støv, et lysglimt, og Primal Groudon står der. Han kommer ut av lyset, reiser seg sakte, trekker seg sammen og brøler (R). */
       S.sh1.at(t, PT.S, { g: 16 }); S.sh2.at(t, PT.S, { g: 16 }); S.puff.material.uniforms.uT0.value = PT.S;
@@ -255,7 +255,7 @@
       [0, (S, u, a, t) => { const e = io(u); K.cam(mix(4.4, 3.4, e), 1.7, mix(22, 19, e), -0.4, 5, 2.6, 46, -0.03); S.post.fl = max(1 - seg(t, 0, 0.35), 0.85 * seg(t, PT.G1 - 0.14, PT.G1)); S.post.flc = t < 1 ? '#ffffff' : '#ffd6f2'; S.post.sh = 1.2 * seg(t, 0, 0.6); }],
       /* 2 Krystallen: kameraet glir sakte inn fra siden, med vulkanen bak. Den mørkner, Ω-tegnet tennes, sprekkene brer seg, og den knuses mens vulkanen bryter ut. */
       [PT.G1 - 0.03, (S, u, a, t) => { const e = io(seg(t, PT.G1, PT.S)); K.cam(mix(-6, -4.5, e), mix(2, 2.7, e), mix(23.5, 18.5, e), mix(-2.3, -0.85, e), mix(6.6, 6.2, e), mix(3.8, -1.2, e), 46, 0.03);   /* krystallen og vulkanen ligger begge innenfor x 64–448 (smal skjerm) */
-        S.post.fl = max(0.85 * hit(t, PT.G1, 0.3), 0.5 * hit(t, PT.O, 0.22), t < PT.S ? ei(seg(t, PT.S - 0.2, PT.S)) * 0.8 : 0.9 * hit(t, PT.S, 0.1)); S.post.flc = t < PT.D0 ? '#ffd6f2' : '#fff2b8';
+        S.post.fl = max(t < PT.G1 ? 0.85 : 0.85 * hit(t, PT.G1, 0.3), 0.5 * hit(t, PT.O, 0.22), t < PT.S ? ei(seg(t, PT.S - 0.2, PT.S)) * 0.8 : 0.9 * hit(t, PT.S, 0.1)); S.post.flc = t < PT.D0 ? '#ffd6f2' : '#fff2b8';
         S.post.sh = 1.5 * hit(t, PT.O, 0.5) + 2.6 * seg(t, PT.K, PT.S) * (t < PT.S ? 1 : 0) + 6 * hit(t, PT.S, 0.6); S.post.heat = 0.6; }],
       /* 3 Primal Groudon i ett langt nærbilde: fra kneet med Ω-merket og oppover kroppen til ansiktet, mens årene gløder og han reiser seg. */
       [PT.C, (S, u, a, t) => { const e = io(u); K.cam(mix(8.4, 4.4, e), mix(1.3, 4.9, e), mix(10.8, 16.5, e), mix(3.3, 0.2, e), mix(1.9, 8.4, e), mix(2.6, 6.4, e), mix(40, 42, e), -0.05); S.post.sh = 0.8; S.post.heat = 1; S.post.vig = 0.7; }],
@@ -324,7 +324,7 @@
       if (d.roar) roarFx(S, t, P, d.roar(t));
       if (S.boom > 0.02 && sn.cq > 0.05) P.rays = { x: sn.cx, y: sn.cy, a: 0.55 * S.boom, len: 0.9 }; else if (S.sun > 0.3 && sn.y > -80 && sn.y < 300) P.rays = { x: sn.x, y: sn.y, a: 0.7 * (S.sun - 0.3), len: 0.85 };
       if (d.fx) d.fx(S, t, P, q, sn); } }); };
-  reg('c3:383', { spid: 383, over: (x, t, o) => plate(x, t - (GX + 0.6), o), cues: [[GL[0], 'thud'], [GL[1], 'thud'], [GT[0], 'thud'], [GT[2], 'thud'], [GC, 'cry'], [GC + 0.05, 'boom'], [GP, 'boom'], [GX, 'cry']], roar: t => t < GX ? GC : GX,
+  reg('c3:383', { spid: 383, over: (x, t, o) => plate(x, t - (GX + 0.6), o), cues: [[GL[0], 'thud'], [GL[1], 'thud'], [GT[0], 'thud'], [GT[2], 'thud'], [GC, 'cry'], [GC + 0.05, 'boom'], [GA, 'rise', GP - GA], [GP, 'slam'], [GX, 'cry']].concat(Array.from({ length: NB }, (_, i) => [blade(i).t, 'spike', i / (NB - 1)])), roar: t => t < GX ? GC : GX,
     /* Mens lyset i steinen stiger: mer glød, og stråler ut fra brystet (lyset siver ut av sprekkene, som i Omega Ruby). */
     fx(S, t, P) { const h = S.heat || 0; if (h <= 0) return; P.bloom += 0.34 * h * h + 0.1 * (S.pul || 0) * h;
       if (h > 0.25 && S.shot === 1) { const c = S.gr.at('Spine3'), m = K.proj(c.x, c.y, c.z); if (m.z < 1) P.rays = { x: m.x, y: m.y, a: 2.6 * (h - 0.25) / 0.75 + 0.5 * (S.pul || 0), len: 0.6 }; } } });
@@ -343,7 +343,7 @@
      Når pakken har 3D-filene, tegnes derfor bakgrunnen i kampen av det samme krateret (fjellveggene, steinene, krystallene, lavasjøen og vulkanen), sett fra et
      fast kamera: Groudon står i lavaen der han sto i introen (lavaen legges over føttene på figuren i mid), og din Pokémon står på et flak nær kameraet.
      Figurene er Gen 5-bildene som før, med scenens lys. Fase 2 (raseriet): vulkanen er i utbrudd, og det regner lavabomber. Uten 3D i pakken: arenaen fra steg 2. */
-  const AID = 'c3:383a', AIDF = 'c3:383b', AFOE = [377, 182], AFIG = [352, 240], AME = [190, 370];   /* lavakanten på Groudon (16 piksler over føttene) og føttene til din egen, i arenaens piksler */
+  const AID = 'c3:383a', AIDF = 'c3:383b', AFOE = [377, 182], AFIG = [362, 228], AMEF = [132, 452], PSC = 0.69, PSY = -0.85, AME = [190, 370];   /* lavakanten på Groudon (16 piksler over føttene) og føttene til din egen, i arenaens piksler */
   /* fig = 1: PRØVE (Jazz 18.11, runde 6: Gen 5-bildet «føles så sykt malplassert»): den legendariske står i arenaen som samme 3D-figur som i cutscenene, i lavaen,
      med scenens lys, og den rører seg (puster, ser seg om, blunker, brøler når den kommer og når den forvandles, rykker til når den blir truffet). Bare i filmverkstedet
      (G3D.fig3): kampskjermen er ikke koblet på ennå (treff, angrep og besvimelse eies av bildet i kampen). */
@@ -356,17 +356,17 @@
          Flaket til din Pokémon legges der strålen gjennom AME treffer (tett på kameraet). Vulkanen står litt lenger unna enn i cutscenene, så hele fjellet og røyken synes. */
       /* MED FIGUREN I 3D (fig, Jazz 18.11 runde 6, etter kampbildet fra Omega Ruby): kameraet står tett på (15 enheter), lavt og vannrett, så han fyller
          høyre halvdel av bildet og føles stor, mens himmelen og vulkanen fra cutscenene står bak ham. Lavakanten hans ligger på AFIG. */
-      const FV = fig ? 52 : 50, cp = fig ? [-5.3, 1.6, 17.4] : [-8.2, 2.05, 24.7], aim = fig ? AFIG : AFOE, kq = fig ? 15.5 / 394 : 23.4 / 412, tg = [HOME[0] - 5, 3, HOME[2]];
+      const FV = fig ? 52 : 50, cp = fig ? [-6.2, 1.65, 19.9] : [-8.2, 2.05, 24.7], aim = fig ? AFIG : AFOE, kq = fig ? 18.2 / 394 : 23.4 / 412, tg = [HOME[0] - 5, 3, HOME[2]];
       for (let i = 0; i < 14; i++) { K.cam(cp[0], cp[1], cp[2], tg[0], tg[1], tg[2], FV); const q = K.proj(HOME[0], 0, HOME[2]); tg[0] -= (aim[0] - q.x) * kq; tg[1] += (aim[1] - q.y) * kq; }
-      S.cp = cp; S.tg = tg; S.fv = FV; K.cam(cp[0], cp[1], cp[2], tg[0], tg[1], tg[2], FV); const m = K.ray(AME[0], AME[1], 0.5); S.me = [m.x, 0.5, m.z];
+      S.cp = cp; S.tg = tg; S.fv = FV; K.cam(cp[0], cp[1], cp[2], tg[0], tg[1], tg[2], FV); const am = fig ? AMEF : AME, m = K.ray(am[0], am[1], 0.5); S.me = [m.x, 0.5, m.z];
       const rm = K.rockMat({ a: '#150b0c', b: '#2c1a19', str: 0.9, top: 0.5, sm: 0.4, hot: 0.16 });
       S.rock = K.boulder(2.1, 77, { flat: 1, sy: 0.26, cap: 0.45, j: 0.22, d: 3, mat: rm }); S.rock.position.set(m.x + 0.15, 0.05, m.z - 0.45); S.scene.add(S.rock);
       for (const [dx, dz, r, sd] of [[3.4, -2.6, 1.1, 81], [-3.2, -3.4, 0.8, 83]]) { const b = K.boulder(r, sd, { flat: 1, sy: 0.14, cap: 0.3, j: 0.24, mat: rm }); b.position.set(m.x + dx, 0.02, m.z + dz); S.scene.add(b); }
       /* Røyken som ligger over sjøen etter utbruddet: store, mørke dotter som driver med vinden, lyst opp nedenfra. */
       S.haze = K.pts(46, i => ({ p: [-70 + rnd(i, 141) * 150, 3 + rnd(i, 142) * 16, -64 + rnd(i, 143) * 74], v: [2.2 + rnd(i, 144) * 2.6, 0.25 + rnd(i, 145) * 0.5, 0.5], b: rnd(i, 146) * 14, l: 14, z: 30 + rnd(i, 147) * 44 }), { loop: 1, shade: 1, px: 60, sz0: 0.8, sz1: 1.5, near: 9, c: ['#6a3a26', '#3a221c', '#1c1211'], a: 0, fade: 0.6 }); S.scene.add(S.haze);
       if (fig) { const g = S.gr = K.figure(K.model('groudon')), p = S.pg = K.figure(K.model('groudon_primal'), { hide: /MagmaLayer[12]/ }); S.scene.add(g.root); S.scene.add(p.root); S.figs.push(g, p);
-        g.set('uGl', 0.5); p.set('uGl', 0.8); g.set('uWk', 0.7); p.set('uWk', 0.7); p.root.scale.setScalar(0.66);   /* Primal er 1,56 ganger så høy: krympet her, ellers går hodet ut av bildet */
-        S.face = Math.atan2(cp[0] - HOME[0], cp[2] - HOME[2]) - 0.62; }   /* på skrå som i Omega Ruby: dreid mot venstre i bildet, så vi ser ham trekvart forfra */
+        g.set('uGl', 0.5); p.set('uGl', 0.8); g.set('uWk', 0.7); p.set('uWk', 0.7); p.root.scale.setScalar(PSC);   /* Primal er 1,56 ganger så høy: krympet her, ellers går hodet ut av bildet */
+        S.face = Math.atan2(m.x - HOME[0], m.z - HOME[2]) - 0.36; }   /* trekvart forfra, dreid mot din Pokémon nede til venstre (som motstanderne i Black/White) */   /* på skrå som i Omega Ruby: dreid mot venstre i bildet, så vi ser ham trekvart forfra */
       return S;
     },
     /* o = arenaens tilstand: { p2 (raseriet, 0–1), eT, fT, rT, pT (sekunder siden kampen startet, stedet slo til, raseriet, Primal-forvandlingen var over),
@@ -389,9 +389,9 @@
       if (!S.gr) return;
       /* Figuren i 3D (prøven): den vanlige formen til forvandlingen er over, så Primal. Den puster, halen går, hodet følger rolig med, den blunker,
          brøler når kampen starter og når den er forvandlet, og rykker til når den blir truffet. */
-      const f = pr ? S.pg : S.gr, fh = o.fh == null ? 99 : o.fh, fl = Math.exp(-5 * fh) * (fh < 99 ? 1 : 0), rt = pr ? pT : eT, rw = rt < 0 || rt > 3 ? 0 : back(seg(rt, 0.15, 0.45), 2.4) * (1 - io(seg(rt, 1.6, 2.5)));
+      const f = pr ? S.pg : S.gr, fh = o.fh == null ? 99 : o.fh, fl = Math.exp(-5 * fh) * (fh < 99 ? 1 : 0), rt = -1, rw = rt < 0 || rt > 3 ? 0 : back(seg(rt, 0.15, 0.45), 2.4) * (1 - io(seg(rt, 1.6, 2.5)));
       S.gr.root.visible = !pr; S.pg.root.visible = pr;
-      f.root.position.set(HOME[0] + 0.05 * sin(t * 47) * fl, (pr ? -0.9 : HOME[1]) - 0.3 * sq(fh, 0, 13, 5) * (fh < 99 ? 1 : 0), HOME[2] - 0.5 * fl); f.root.rotation.y = S.face + 0.05 * sin(t * 0.37);
+      f.root.position.set(HOME[0] + 0.05 * sin(t * 47) * fl, (pr ? PSY : HOME[1]) - 0.3 * sq(fh, 0, 13, 5) * (fh < 99 ? 1 : 0), HOME[2] - 0.5 * fl); f.root.rotation.y = S.face + 0.05 * sin(t * 0.37);
       if (!pr) f.add(STAT, 0.2); const br = 0.028 * sin(t * 2.4); f.add({ Spine1: [0, br, 0], Spine2: [0, br * 0.6, 0], Neck1: [0, 0.03 * sin(t * 0.9 + 1), 0.06 * sin(t * 0.55)], Head: [0, 0.02 * sin(t * 1.3), 0.03 * sin(t * 0.55 + 0.6)], Jaw: [0, -0.06 - 0.04 * sin(t * 2.4), 0], '*Arm': [0.03 * sin(t * 2.4 + 0.5), 0, 0] }, 1);
       for (let i = 1; i <= 5; i++) f.rot('Tail' + i, 0, 0, 0.055 * sin(t * 1.9 + i * 0.55));
       f.add(pr ? PDUCK : DUCK, 0.8 * fl + kf(rt, [[-0.2, 0], [0.08, 0.9, io], [0.18, 0, eo]]) * (rt < 3 ? 1 : 0)); f.add(pr ? PROAR : ROAR, 0.75 * rw); f.rot('Jaw', 0, 0.045 * sin(t * 57) * rw, 0);
@@ -399,9 +399,9 @@
       f.set('uStone', 0); f.set('uFlK', 0.5 * fl * (floor(t * 30) % 2)); f.set('uFlC', '#ffffff');
       f.set('uCrack', pr ? 0.95 + 0.2 * sin(t * 4.2) + 0.5 * rw : 0); if (pr) for (const m in f.mats) if (f.mats[m].uniforms.uCrackC) lerpC(f.mats[m].uniforms.uCrackC, '#ffc626', '#fff2a8', 0.4 * rw);
     },
-    shots: [[0, S => { K.cam(S.cp[0], S.cp[1], S.cp[2], S.tg[0], S.tg[1], S.tg[2], S.fv); S.post.vig = 0; }]],
+    shots: [[0, S => { K.cam(S.cp[0], S.cp[1], S.cp[2], S.tg[0], S.tg[1], S.tg[2], S.fv); S.post.vig = 0; if (S.gr) { S.post.ink2 = S.pg.root.visible ? 0.55 : 0.9; S.post.inkz = S.pg.root.visible ? 0.4 : 0.22; } }]],
   });
-  G3D.def(AID, arenaDef(0)); G3D.def(AIDF, arenaDef(1));
+  G3D.def(AID, arenaDef(0)); G3D.def(AIDF, arenaDef(1)); G3D.meF = AMEF;   /* filmverkstedet flytter din Pokémon hit når 3D-figuren står i arenaen */
   if (typeof ARENA !== 'undefined' && ARENA.defs[383]) {
     const d = ARENA.defs[383], sc0 = d.scene, mid0 = d.mid, fr0 = d.front, bl = C.blend; let on3 = false, lastT = 1e18;
     const aid = () => G3D.fig3 && G3D.isReady(AIDF) ? AIDF : AID;

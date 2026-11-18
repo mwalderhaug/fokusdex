@@ -256,7 +256,7 @@ const CINE = (() => {
   C.FILM = FILM;
   const filmOf = id => FILM[id] || (C.calmFilm ? C.calmFilm(id) : null);
   C.has = id => !!filmOf(id);
-  C.info = id => { const f = filmOf(id); return f ? { len: f.len, at: f.at || 0, R: f.R, bg: !!f.bg, plat: f.plat || null, omen: f.omen || 0, arena: f.arena || 0 } : null; };
+  C.info = id => { const f = filmOf(id); return f ? { len: f.len, at: f.at || 0, R: f.R, bg: !!f.bg, plat: f.plat || null, omen: f.omen || 0, arena: f.arena || 0, cues: f.cues || null } : null; };
   /* Henter det filmen trenger. Venter ikke lenger enn ms. */
   C.prep = async (id, ms, extra) => {
     const f = filmOf(id); if (!f) return false;
@@ -303,7 +303,7 @@ const CINE = (() => {
      Gir { done (løftet holder når filmen er over eller hoppet over), skip() }. */
   C.play = (out, id, o) => {
     o = o || {}; let raf = 0, over = false, skipAt = -1, held = false, fin; const done = new Promise(r => { fin = r; });
-    const f = filmOf(id), t0 = performance.now(), cues = (f.cues || [[f.R, 'cry']]).map(q => ({ t: q[0], n: q[1], on: false }));
+    const f = filmOf(id), t0 = performance.now(), cues = (f.cues || [[f.R, 'cry']]).map(q => ({ t: q[0], n: q[1], v: q[2], on: false }));
     const end = () => { if (over) return; over = true; cancelAnimationFrame(raf); fin(); };
     if (f.c3 && typeof G3D !== 'undefined') G3D.out = 0;
     setCur(id, o).then(() => {
@@ -319,7 +319,7 @@ const CINE = (() => {
         if (t >= f.len && !f.hold) { frame(out, f.len); return end(); }
         if (f.hold && !held && t >= f.len) { held = true; if (o.onhold) try { o.onhold(); } catch (_) {} }
         frame(out, t); C.tick();
-        for (const q of cues) if (!q.on && t >= q.t) { q.on = true; if (o.cue) try { o.cue(q.n); } catch (_) {} }
+        for (const q of cues) if (!q.on && t >= q.t) { q.on = true; if (o.cue) try { o.cue(q.n, q.v); } catch (_) {} }
         raf = requestAnimationFrame(step);
       };
       raf = requestAnimationFrame(step);
