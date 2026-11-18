@@ -78,6 +78,7 @@
     K.lightSet({ amb: blend(blend('#5a3028', '#b8826c', lit), '#d09a80', 0.5 * sun), sat: 0.84, lift: blend('#1c0a08', '#34140e', lit),
       lights: [{ col: '#ff6a1c', a: min(0.85, 0.34 + 0.3 * min(1.3, heat) + 0.25 * (S.glowUp || 0)), h: 0.72 }],
       rim: [{ col: '#ffb060', dx: 1, dy: 1, a: (0.3 + 0.55 * sun) * lit }, { col: '#ff7a24', dx: 0, dy: -1, a: 0.5 + 0.25 * min(1, heat) }],
+      glow: S.film ? null : { mask: 'seam', col: '#ff9a2c', a: (0.5 * S.p2 + 0.5 * hit(S.since('rage'), 0.5, 2.5)) * (0.8 + 0.2 * sin(t * 6)) },
       me: { amb: blend('#643a30', '#c48e76', lit), sat: 0.92, lights: [{ col: '#ff6a1c', a: min(0.8, 0.4 + 0.3 * min(1.3, heat)), h: 0.5 }], rim: [{ col: '#ffa050', dx: -1, dy: 1, a: (0.35 + 0.4 * sun) * lit }, { col: '#ff7a24', dx: 0, dy: -1, a: 0.6 }] } });
     /* Himmelen: natt som gløder nedenfra, askeskyer lyst opp av lavaen, og sola som en hard skive gjennom røyken (Drought). */
     K.layer(Infinity, () => {
@@ -271,6 +272,14 @@
   const kScene = S => {
     const P = K.P, t = S.t, sea = kSea(S), u = sea.u, fl = sea.fl, p2 = S.p2, fT = S.since('field'), rT = S.since('rage'), rain = u[0][3], storm = u[1][0];
     S.u = u;
+    /* Lyset på figurene: kjølig og dempet som uværet. Himmelen lyser svakt ovenfra, lynet gir hardt kantlys, og lyset under vannet når opp nedenfra.
+       Omriss og skygger får den mørke blågrønne skyggefargen. De røde tegnene til Kyogre gløder (sterkt i fase 2). */
+    const glw = S.glow == null ? 0.16 + 0.5 * p2 : S.glow;
+    K.lightSet({ amb: blend('#8499a8', '#c4d6e2', fl[0] * 0.8), sat: 0.84, lift: blend('#0c1a24', '#1c3442', fl[0]),
+      lights: [{ col: '#cfe2f0', a: 0.16 + 0.55 * fl[0], h: 0.55, top: 1 }, { col: '#2aa8e0', a: min(0.7, 0.18 + 0.5 * glw), h: 0.6 }],
+      rim: [{ col: '#d8eafa', dx: fl[1] > 377 ? -1 : 1, dy: 1, a: 0.3 + 0.65 * fl[0] }],
+      glow: S.film ? null : { mask: 'red', col: '#ff6a4a', a: (0.3 + 0.6 * p2 + 0.5 * hit(rT, 0.5, 2.5)) * (0.75 + 0.25 * sin(t * 3.1)) },
+      me: { amb: blend('#7c8f9d', '#c0d2de', fl[0] * 0.8), lights: [{ col: '#cfe2f0', a: 0.2 + 0.55 * fl[0], h: 0.5, top: 1 }], rim: [{ col: '#d8eafa', dx: 0, dy: 1, a: 0.35 + 0.6 * fl[0] }] } });
     /* Havet og himmelen (alt bak): materialet tegner hele bildet. */
     K.ground('ocean', u);
     /* Sjøstakker i disen, så havet får dybde. */
@@ -281,17 +290,18 @@
     /* Regn langt unna (det nære ligger i forgrunnen), og skjæret der din egen står. */
     K.parts('rain', { n: 90, seed: 2, cols: ['#8fb0c8', '#c2d6e4'], a: 0.5 * rain, spd: 1.25, wind: -0.75, z: [0.05, 0.5], y1: H + 20 });
     if (!S.norock) { skerry(KR[0] + 15, KR[1] + 13, 6, u, { seed: 9, y: 2.2, n: 14, wet: 0.4 }); S.rock = skerry(KR[0], KR[1], 11.5, u, { seed: 5, y: 4, wet: 0.5 + 0.5 * fl[0] }); skerry(KR[0] - 9, KR[1] + 4, 5.5, u, { seed: 13, y: 6.2, n: 12, wet: 0.7 }); }
+    if (!S.film && !S.norock) K.contact(S.me[0], S.me[1] - 4, 56 * S.mk, { a: 0.9, col: '#02070b', sy: 0.2 });
     /* Bølgen som slår inn: skumfronten der den bryter mot skjæret. */
     if (sea.fw && fT > 0.55) { const k = hit(fT, 0.95, 0.6), p = K.gp(KR[0], KR[1] + 34, 6); if (p && k > 0) for (let i = 0; i < 16; i++) { const an = -PI / 2 + (rnd(i, 51) - 0.5) * 2.4, r = (1 - k) * (60 + rnd(i, 52) * 150); K.blob(p.x + cos(an) * r * 1.5 + (rnd(i, 53) - 0.5) * 220, p.y + sin(an) * r, 16 + rnd(i, 54) * 22, '#eef8fc', k * 0.8, 0, 0.8); } }
     /* Dråper på linsa, og etterbehandlingen: kjølig tone, glød i skum og lyn, mørke kanter. */
     const drops = K.lensDrops({ n: 16, a: 13, size: 8, wet: S.wet == null ? 0.55 + 0.45 * rain : S.wet, run: 0.4 });
     S.drops = drops;
-    P.bloom = 0.3 + 0.5 * fl[0]; P.bloomT = 0.66; P.grain = 0.04; P.vig = 0.5 + 0.12 * p2; P.vigc = '#01060b';
-    P.grade = { tint: [0.96, 1, 1.04], con: 1.1, sat: 1.1, exp: 1.12 + 0.25 * fl[0] };
+    P.bloom = 0.3 + 0.22 * fl[0]; P.bloomT = 0.68; P.grain = 0.04; P.vig = 0.5 + 0.12 * p2; P.vigc = '#01060b';
+    P.grade = { tint: [0.96, 1, 1.04], con: 1.1, sat: 1.1, exp: 1.12 + 0.1 * fl[0] };
     if (fT < 1.5) P.sh = (P.sh || 0) + hit(fT, 0.92, 0.5) * 7;
   };
   /* Mellom figurene: Kyogre ligger i sjøen. Biten av bildet under vannlinja legges foran den, med skum der kroppen bryter flata. */
-  const kMid = S => { if (!S.u) return; const line = K.seaLine(KZ, 377 - 128, 377 + 128, S.t, S.u, { step: 5 }); K.seaOver(S.back, line, 210); K.seaFoam(line, { a: 0.62 + 0.2 * S.p2, w: 0.8, size: 6.5, up: 18, seed: 93 }); };
+  const kMid = S => { if (!S.u) return; const line = K.seaLine(KZ, 377 - 128, 377 + 128, S.t, S.u, { step: 5 }); if (S.back) K.seaOver(S.back, line, 210); K.seaFoam(line, { a: 0.62 + 0.2 * S.p2, w: 0.8, size: 6.5, up: 18, seed: 93 }); };
   const kFront = S => {
     const t = S.t, p2 = S.p2, fT = S.since('field'), rain = S.rain == null ? 0.7 + 0.3 * p2 : S.rain;
     /* Bølgen som slår over skjæret: en vegg av skum feier opp over nedre del av bildet og renner av. */
@@ -299,8 +309,123 @@
     K.parts('rain', { n: 46, seed: 12, cols: ['#a8c4d8', '#dcebf4'], a: 0.6 * rain, spd: 1.35, wind: -0.75, z: [0.6, 1] });
     K.lensShine(S.drops, { a: 0.9 });
   };
+  /* Filmen (14,2 s, på de samme slagene som Groudon):
+     (1) Stille hav i skumring mens skyene samler seg. På de fire dempede slagene glir en enorm skygge med lysende tegn under overflaten, mot kameraet og
+         under det, og de første dråpene treffer linsa. I trommevirvelen (4,92) kommer regnveggen.
+     (2) Primordial Sea: på 5,26 slår lynet ned og himmelen åpner seg. Havet reiser seg, kameraet rir på dønningene, og en trener på et skjær ser en
+         kjempebølge bygge seg opp bak. På de tre slagene (8,46 · 8,93 · 9,54) lyser tegnene inne i bølgen, større for hver gang.
+     (3) På 10,16 bryter Kyogre ut av bølgeveggen, henger over kameraet og brøler. På 11,40 slår den og bølgen ned over oss, og bildet er under vann én takt
+         (lys ovenfra, bobler, ruiner på bunnen, Kyogre som glir ned i det blå). På 12,63 kommer kameraet opp i kampvinkelen, og Kyogre bryter flata der
+         den ligger i kampen, mens navnet står i vannet.
+     Animasjonen: finnene står rett opp i bildene 12,0–12,6 s (spranget og brølet), svømmetaket er 10,9–11,5 s (stupet), og den ender på første bilde. */
+  const KB = GB, KE = GE, KL = [6.49, 7.72], KK = GK, KRV = GR, KD = 11.4, KU = 12.63, KFN = GF;
+  /* Skyggen under overflaten (akt 1): en mørk kropp med lysende tegn, lagt flatt i vannet. */
+  const kShade = (X, Z, k, a, col, ft) => { const p = K.gp(X, Z, 0); if (!p || a <= 0.01) return; const s = 1.6 * k * p.s; K.blob(p.x, p.y, 170 * p.s * k, '#010810', 0.5 * a, 0, 0.3);
+    K.mon(p.x, p.y + 26 * p.s * k, s, { ft, col: '#020c18', a: 0.42 * a, tf: [1, 0, -0.55, 0.36] }); K.mon(p.x, p.y + 26 * p.s * k, s, { ft, mask: 'red', col, add: 1, a, tf: [1, 0, -0.55, 0.36] }); };
+  /* Et lyn fra skyene ned i sjøen ved x (skjermen), styrke k. */
+  const kStrike = (x, k, sd, t) => { if (k <= 0.02) return; const y = K.st.yh; K.bolt(x + (rnd(sd, 3) - 0.5) * 140, -14, x, y - 1, { seed: sd * 7 + floor(t * 24) % 3, col: '#a8c8ff', core: '#ffffff', w: 2.4, a: k, br: 4, depth: 5 }); K.blob(x, y, 110, '#dce8ff', 0.6 * k, 1, 0.3); };
+  /* Sprut: hvite klumper og dråper som kastes ut fra (x, y). k = 1 → 0 (alder), R = hvor langt. */
+  const kSpray = (x, y, k, R, sd, n) => { if (k <= 0) return; const ph = 1 - k; for (let i = 0; i < (n || 34); i++) { const an = rnd(i, sd) * TAU, r = ph * R * (0.3 + rnd(i, sd + 1)), big = i % 3 === 0; K.blob(x + cos(an) * r * 1.2, y + sin(an) * r * 0.85 + ph * ph * R * 0.35, big ? (20 + rnd(i, sd + 2) * 34) * (0.5 + ph) : 2.5 + rnd(i, sd + 2) * 4, big ? '#e8f4fa' : '#ffffff', k * (big ? 0.5 : 0.95), 0, big ? 0.8 : 1); } };
+  /* Et svart skjær i motlys (filmens forgrunn): taggete topp, en hylle der treneren står, lys kant mot himmelen og skum rundt foten. Gir hylla { x, y, s }. */
+  const kCrag = (X, Z, W0, H0, sd, rim, t) => { const b = K.gp(X, Z, 0); if (!b || b.s > 14) return null; const g = K.g, s = b.s, n = 18, pts = []; for (let i = 0; i <= n; i++) { const u = i / n, sh = u > 0.38 && u < 0.62 ? 0.62 : 0.3 + 0.7 * Math.pow(sin(u * PI), 0.6) * (0.55 + 0.6 * K.fbm1(i * 0.9, sd, 2)); pts.push([b.x + (u * 2 - 1) * W0 * s, b.y - H0 * s * sh * (0.25 + 0.75 * Math.pow(sin(u * PI), 0.35))]); }
+    for (let i = 0; i < 9; i++) K.blob(b.x + ((i + 0.5) / 9 * 2 - 1) * W0 * s * 1.15, b.y + 1 * s, (4 + rnd(i, sd + 3) * 4) * s * (0.8 + 0.3 * sin(t * (1.5 + rnd(i, sd + 4) * 2) + i)), '#dcecf4', 0.55, 0, 0.36);
+    g.save(); g.fillStyle = '#02070b'; g.beginPath(); g.moveTo(b.x - W0 * s * 1.05, b.y + 3 * s); pts.forEach(q => g.lineTo(q[0], q[1])); g.lineTo(b.x + W0 * s * 1.05, b.y + 3 * s); g.closePath(); g.fill();
+    g.strokeStyle = rim; g.lineWidth = max(1, min(2.5, s * 0.4)); g.globalAlpha = 0.8; g.beginPath(); pts.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.stroke(); g.restore();
+    return { x: b.x, y: pts[9][1], s }; };
+  /* Skumrøyken som vinden river av toppen på kjempebølgen. wall = [Z, høyde, bredde]. */
+  const kCrest = (wall, t, a) => { if (!wall || a <= 0.01) return; for (let i = 0; i < 26; i++) { const X = (i / 25 * 2 - 1) * 900 + K.st.cx, p = K.gp(X, wall[0] + X * X * 0.00035, wall[1] * (1 + 0.07 * sin(X * 0.013 + 2)) * 0.97); if (!p || p.x < -80 || p.x > W + 80) continue; const ph = (t * (0.5 + rnd(i, 7) * 0.5) + rnd(i, 8)) % 1, r = (20 + rnd(i, 9) * 34) * min(1.6, p.s * 2.2); K.blob(p.x - ph * 60 * p.s * 2, p.y - ph * 26 * p.s * 2 + 4, r * (0.6 + ph), '#dfeef6', a * (1 - ph) * 0.55, 0, 0.6); } };
   ARENA.def(382, {
     yh: 100, hc: 36, use: [], pose: { cz: 1, k: 1.28, km: 1.9 }, scene: kScene, mid: kMid, front: kFront,
-    ev: { enter: { len: 0.7, cues: [[0, 'thud']] }, field: { len: 1.5, cues: [[0, 'rumble'], [0.92, 'hit'], [0.92, 'sfx', 'Surf']] }, rage: { len: 1.7, cues: [[0, 'rumble'], [0.5, 'boom'], [0.5, 'sfx', 'Thunder'], [0.5, 'cry']] } }
+    ev: { enter: { len: 0.7, cues: [[0, 'thud']] }, field: { len: 1.5, cues: [[0, 'rumble'], [0.92, 'hit'], [0.92, 'sfx', 'Surf']] }, rage: { len: 1.7, cues: [[0, 'rumble'], [0.5, 'boom'], [0.5, 'sfx', 'Thunder'], [0.5, 'cry']] } },
+    film: { len: 14.2, R: KRV, at: 0, outc: '#04121e',
+      cues: [[0.31, 'tick'], [1.56, 'tick'], [2.79, 'tick'], [4.01, 'tick'], [KE, 'boom'], [6.49, 'thud'], [7.72, 'thud'], [8.46, 'thud'], [8.93, 'thud'], [9.54, 'thud'], [KRV, 'cry'], [KD, 'boom'], [KU, 'thud'], [KFN, 'thud']],
+      draw(t, P, c) {
+        const pose = ARENA.fit(c.pose || { cz: 1, k: 1.28 }, c.sp), kf = K.kf, A = c.sp && c.sp.ani, tot = A ? A.total : 13.14, n = KB.filter(q => t >= q).length, bt = hits(t, KB, 0.7), roll = seg(t, 4.92, KE), a1 = t < KE, under = t >= KD && t < KU, ks0 = 1.6 * pose.k;
+        /* ---------- Under vann (11,40–12,63) ---------- */
+        if (under) {
+          const u = (t - KD) / (KU - KD), up = seg(t, 12.25, KU);
+          K.stage({ yh: 150, hc: 36 }); K.camTo({ x: t * 30, z: t * 50, tilt: -30 + 150 * ei(up), zoom: 1 });
+          K.lightSet({ amb: '#5f93bd', sat: 0.7, lift: '#062238', lights: [{ col: '#bfe8ff', a: 0.5, h: 0.6, top: 1 }], rim: [{ col: '#cfeeff', dx: 0, dy: 1, a: 0.5 }] });
+          K.ground('deep', [[mix(70, 9, ei(up)), 0.75 + 0.5 * up + 0.5 * hit(t, 12, 0.5), 0.4, 0], [0.012, 0.11, 0.24, 0], [0.62, 0.9, 1, 0]]);
+          /* Ruinene på bunnen (den sunkne byen), langt nede i det blå. */
+          const g = K.g, by = 392 + 260 * ei(up);
+          for (let i = 0; i < 9; i++) { const x = 20 + i * 62 + rnd(i, 3) * 30 - u * 40 * (1 + (i % 3)), h = 50 + rnd(i, 4) * 130, w = 16 + rnd(i, 5) * 16, far = i % 3; g.fillStyle = far ? '#06294a' : '#031a30'; g.globalAlpha = far ? 0.8 : 0.95; g.fillRect(x, by - h, w, h + 300); g.fillRect(x - 4, by - h, w + 8, 6); if (i % 4 === 1) g.fillRect(x - 30, by - h * 0.55, 60 + w, 9); }
+          g.globalAlpha = 1; K.blob(256, by + 30, 420, '#010912', 0.85, 0, 0.26);
+          for (let i = 0; i < 5; i++) K.shaft(60 + i * 100 + sin(t * 0.7 + i) * 20, -20 - 260 * ei(up), 0.16 + (i - 2) * 0.07, 430, 26, 110, '#9fdcff', (0.2 + 0.08 * sin(t * 2 + i * 1.7)) * (1 - up * 0.5));
+          /* Kyogre glir ned i det blå, med tegnene lysende, og bobler etter seg. */
+          const kx = mix(400, 170, io(u)), ky = mix(190, 300, io(u)) + 320 * ei(up), ks = ks0 * mix(2.3, 0.85, eo(u)), ft = 10.6 + (t - KD) * 0.75, pl = 0.6 + 0.6 * hit(t, 12, 0.5);
+          K.mon(kx, ky, ks, { ft, dark: 0.15 }); K.mon(kx, ky, ks, { ft, mask: 'red', col: '#ff7a5a', add: 1, a: pl * (0.8 + 0.2 * sin(t * 8)) }); K.blob(kx - 20, ky - 60 * ks / 2, 150 * ks / 2, '#3aa8ff', 0.14 * pl, 1, 0.6);
+          if (t >= 12) K.ring(kx, ky - 50 * ks / 2, (t - 12) * 520, { col: '#bfe8ff', w: 3, a: hit(t, 12, 0.55) * 0.7, sy: 0.75 });
+          for (let i = 0; i < 26; i++) { const ph = (t * (0.7 + rnd(i, 21)) + rnd(i, 22)) % 1, bx = kx + 60 * ks / 2 + rnd(i, 23) * 150 * ks / 2 + ph * 40, byy = ky - 30 * ks / 2 - ph * (90 + rnd(i, 24) * 120) + (rnd(i, 25) - 0.5) * 50; K.ring(bx, byy, 2 + rnd(i, 26) * 5, { col: '#cfeeff', w: 1, a: (1 - ph) * 0.7 }); }
+          /* Boblene fra nedslaget (tettest først), og støv som svever. */
+          K.parts('bubble', { n: 110, seed: 5, cols: ['#bfe8ff', '#eaf8ff'], a: 0.9 * (1 - seg(t, KD, KD + 0.75)) + 0.25, spd: 2.6, z: [0.1, 1] }); K.parts('mote', { n: 50, seed: 9, cols: ['#7fc0e8', '#cfeeff'], a: 0.5, z: [0, 0.8] });
+          P.bloom = 0.5; P.bloomT = 0.55; P.grain = 0.05; P.vig = 0.6; P.vigc = '#00050c'; P.grade = { tint: [0.82, 0.98, 1.12], con: 1.06, sat: 1.08, exp: 1 + 0.5 * up * up };
+          P.wav = 2.2 * (1 - 0.5 * u); P.fl = max(hit(t, KD, 0.5), seg(t, KU - 0.14, KU)) * 0.95; P.fc = '#e4f4ff'; P.sh = hit(t, KD, 0.6) * 9 + hit(t, 12, 0.3) * 3;
+          return;
+        }
+        /* ---------- Over vann ---------- Kameraet: lavt over stille sjø, så tilbake og ned mellom dønningene, inn mot bølgeveggen, og til slutt kampvinkelen. */
+        const bob = a1 ? 0 : sin(t * 1.9) * 0.08 * seg(t, KE, 6.4) * (1 - seg(t, 10, 10.6));
+        const cam = t >= KU ? { x: 0, z: kf(t, [[KU, -46], [13.5, 0, eo]]), h: kf(t, [[KU, 0.62], [13.5, 1, eo]]), tilt: kf(t, [[KU, 26], [13.5, 0, eo]]), zoom: 1 }
+          : { x: kf(t, [[0, 0], [KE, 0], [7, 34], [10.16, 22]]), z: kf(t, [[0, -30], [KE, -6], [6.6, -78], [8.3, -74], [10.16, -34], [KD, 10]]), h: kf(t, [[0, 0.56], [KE, 0.52], [6.6, 0.66], [8.3, 0.6], [10.16, 0.5]]) + bob,
+            tilt: kf(t, [[0, 44], [KE, 40], [6.6, 34], [8.3, 44], [10.16, 76], [KD, 96]]), zoom: kf(t, [[8.3, 1], [10.16, 1.1], [KD, 1.18]]) };
+        /* Havet og været. Kjempebølgen: bygger seg opp fra 6,2, står som en vegg på 10, og velter over oss på 11,40. */
+        const wall = t >= 6.2 && t < KD ? [kf(t, [[6.2, 1750], [8.4, 1080], [KRV, 760], [10.7, 700], [KD, 90, ei]]), kf(t, [[6.2, 0], [8.4, 185], [KRV, 318], [10.8, 334], [KD, 250]]), kf(t, [[6.2, 220], [KRV, 165], [KD, 120]]), 0] : null;
+        const kk = hits(t, KK, 0.5), kn = KK.filter(q => t >= q).length, fls = [[KE, 330], [6.49, 120], [7.72, 400], [9.9, 250], [KFN, 400]], fb = fls.reduce((m, q) => { const d = t - q[0], k = d >= 0 && d < 0.5 ? (1 - d / 0.5) * (0.6 + 0.4 * sin(d * 60)) : 0; return k > m[0] ? [k, q[1], q[0]] : m; }, [0, 256, 0]);
+        const far = a1 && t > 3.9 ? 0.3 * hit(t, 4.1, 0.25) + 0.4 * hit(t, 4.75, 0.2) : 0;
+        const wz = wall ? wall[0] : 0, wh = wall ? wall[1] : 0, kX = 26, kZ = wz - 46, lit3 = t >= 8.3 && t < KRV;
+        const S = ARENA.state(t, { film: true, cc: c.cc, cam, wall, nostack: t > 6 && t < KU, norock: t < KU,
+          sw: a1 ? 3 + 1.5 * n + 4 * roll : t < KU ? kf(t, [[KE, 9], [7.6, 25], [KRV, 24], [KD, 30]]) : kf(t, [[KU, 26], [13.6, 15]]),
+          chop: a1 ? 0.35 + 0.5 * roll : 1, foam: a1 ? 0.12 + 0.08 * n + 0.5 * roll : t < KU ? kf(t, [[KE, 0.75], [7.6, 1]]) : kf(t, [[KU, 1.3], [13.7, 0.85]]),
+          rain: a1 ? 0.03 * n + 0.75 * roll * roll : t < KU ? 1 : kf(t, [[KU, 1], [13.8, 0.7]]), storm: a1 ? 0.22 + 0.1 * n + 0.3 * roll : t < KU ? 1 : kf(t, [[KU, 1], [13.8, 0.78]]),
+          wind: a1 ? 0.15 + 0.6 * roll : t < KU ? 1.2 : kf(t, [[KU, 1.2], [13.8, 0.8]]), lee: t < KU ? [50, 240, a1 ? 1 : 0.34, 0] : [60, 300, kf(t, [[KU, 0.5], [13.6, 0.2]]), 0],
+          fl: max(fb[0], far), flx: fb[0] > far ? fb[1] : 380, wet: a1 ? 0.12 * n : 1,
+          /* Lyset under vannet: skyggen i akt 1, tegnene inne i bølgen i akt 2, og Kyogre selv i kampen. */
+          glow: a1 ? 0.25 + 0.3 * bt : lit3 ? 0.22 + 0.14 * kn + 0.6 * kk : t < KU ? 0.6 * hit(t, KRV, 1.4) : kf(t, [[KU, 0.6], [13.9, 0.16]]),
+          gx: a1 ? mix(300, 20, io(seg(t, 0.3, 4.4))) : lit3 || t < KU ? kX : KX, gz: a1 ? mix(950, 70, io(seg(t, 0.3, 4.4))) : lit3 || t < KU ? kZ + 30 : KZ - 6, gr: a1 ? 130 : lit3 ? 150 : 120, glc: lit3 ? [0.12, 0.5, 0.95, 0] : null });
+        ARENA.scene(382, S); const u = S.u;
+        kCrest(wall, t, seg(t, 7.2, 8.6));
+        /* Lynene filmen selv ber om (i akt 1 bare lysglimt inne i skyene). */
+        if (fb[0] > 0.02) kStrike(fb[1], fb[0], floor(fb[2] * 10), t);
+        /* Skalabildet: en trener på et skjær i forgrunnen, sett bakfra, mens havet reiser seg. */
+        if (t > KE && t < 10.1) { const cr = kCrag(6, 30, 20, 17, 5, blend('#27485c', '#dcecff', fb[0]), t); if (cr) K.trainer(cr.x - 1.5 * cr.s, cr.y + 0.6 * cr.s, 7.4 * cr.s, { col: '#02070b', rim: blend('#3a5466', '#dcecff', fb[0]), ra: 0.85, wind: -0.9, lean: 0.06 }); }
+        /* Akt 1: skyggen som glir under overflaten. Tegnene lyser sterkere og rødere for hvert slag. */
+        if (a1 && t > 0.3) { const k = io(seg(t, 0.3, 4.4)); kShade(mix(300, 20, k), mix(950, 70, k), pose.k * 1.5, seg(t, 0.3, 0.9) * (1 - seg(t, 4.15, 4.6)) * (0.5 + 0.5 * bt + 0.12 * n), ['#3f8cff', '#6a7aff', '#b05ad8', '#ff5a6a'][max(0, n - 1)], 2 + t * 0.5); }
+        /* Akt 2: tegnene lyser inne i bølgeveggen, større for hvert av de tre slagene. */
+        const kp = wall ? K.gp(kX, kZ, wh * 0.34) : null, ws = kp ? ks0 * kp.s * (0.9 + 0.35 * kn + 0.12 * kk) : 1;
+        if (lit3 && kp && kn > 0) { const a = 0.3 + 0.16 * kn + 0.6 * kk + seg(t, 9.95, KRV); K.blob(kp.x, kp.y - 40 * ws / 2, 130 * ws / 2, '#0a3a66', 0.3 * a, 1, 0.7);
+          K.mon(kp.x, kp.y + 40 * kp.s, ws, { ft: 12.3, col: '#01101e', a: 0.3 + 0.1 * kn }); K.mon(kp.x, kp.y + 40 * kp.s, ws, { ft: 12.3, mask: 'red', col: kn < 3 ? '#7ab8ff' : '#ffb0a0', add: 1, a: c01(a) }); }
+        /* Akt 3: Kyogre bryter ut av bølgeveggen med finnene rett opp, henger over oss og brøler, og stuper så ned over kameraet (i skjermens mål). */
+        const act = K.act(t, { breath: 1.2, bp: 2.2, roar: [[KRV + 0.12, 0.95]], land: [{ t: KU + 0.34, a: 0.8 }, { t: KFN, a: 0.35 }], amp: 1 - seg(t, 13.98, 14.2) });
+        if (t >= KRV && t < KD && kp) {
+          const k = t - KRV, x0 = K.gp(kX, 714, 159), jx = kf(t, [[KRV, x0 ? x0.x : 270], [KRV + 0.5, 268, eo], [11.05, 256], [KD, 236, ei]]), jy = kf(t, [[KRV, x0 ? x0.y + 30 : 120], [KRV + 0.5, 322, eo], [11.05, 312], [KD, 800, ei]]), s = ks0 * kf(t, [[KRV, 0.75], [KRV + 0.5, 1.7, eo], [11.05, 1.86], [KD, 4.4, ei]]);
+          const ft = t < 11.05 ? K.pp(k, 12, 12.6, 0.56) : K.clip(t, [[11.05, 10.9], [KD, 11.5]]), rr = act.r - 0.2 * (1 - seg(t, KRV, KRV + 0.55)) + 0.42 * ei(seg(t, 11.05, KD));
+          kSpray(jx, jy - 60 * s / 2, 1 - k / 1.15, 320, 31, 48); K.blob(jx, jy - 80 * s / 2, 170 * s / 2, '#eaf6ff', 0.55 * hit(t, KRV, 0.4), 1);
+          K.mon(jx + act.dx * s, jy + act.dy * s, s, { ft, sx: act.sx, sy: act.sy, r: rr });
+          K.mon(jx + act.dx * s, jy + act.dy * s, s, { ft, mask: 'red', col: '#ff8a6a', add: 1, a: 0.9 * (0.8 + 0.2 * sin(t * 11)), sx: act.sx, sy: act.sy, r: rr });
+          /* Vannet som renner av den. */
+          for (let i = 0; i < 34; i++) { const ph = (k * (1.1 + rnd(i, 41)) + rnd(i, 42)) % 1, x = jx + (rnd(i, 43) - 0.5) * 96 * s, y = jy - (8 + rnd(i, 44) * 56) * s + ph * ph * 60 * s; K.rect(x, y, max(1.5, s * 0.5), (5 + ph * 14) * s * 0.4, '#dff2ff', (1 - ph) * 0.7 * (1 - seg(t, 10.95, KD)), 1); }
+        }
+        /* Etter dykket: Kyogre bryter flata der den ligger i kampen (opp for høyt, så ned i leiet), med vannlinja rundt kroppen. */
+        if (t >= KU) {
+          const fp = K.gp(KX, KZ, 0); if (fp) { const s = ks0 * fp.s, dy = kf(t, [[KU, 150], [KU + 0.32, 34, eo], [KU + 0.66, 66], [KU + 0.95, 59], [13.6, 62]]) * fp.s, fy = fp.y + dy + act.dy * s, ft = t < KFN ? K.clip(t, [[KU, tot - 1.5], [KFN, tot - 0.02]]) : (t - KFN) * 0.15;
+            const line = K.seaLine(KZ, fp.x - 130 * fp.s, fp.x + 130 * fp.s, t, u, { step: 5 }), cut = K.seaCut(line, fp.x + act.dx * s, fy, s, s * act.sy);
+            K.mon(fp.x + act.dx * s, fy, s, { box: 1, ft, sx: act.sx, sy: act.sy, r: act.r, fx: cut });
+            K.mon(fp.x + act.dx * s, fy, s, { box: 1, ft, mask: 'red', col: '#ff6a4a', add: 1, a: kf(t, [[KU, 0.95], [13.9, 0.3]]) * (0.75 + 0.25 * sin(t * 3.1)), sx: act.sx, sy: act.sy, r: act.r, fx: cut });
+            K.seaFoam(line, { a: 0.62 + 0.4 * hit(t, KU, 1), w: 0.8, size: 6.5 * fp.s, up: 18 + 60 * hit(t, KU, 0.8), seed: 93 });
+            kSpray(fp.x, fp.y - 10, 1 - (t - KU) / 0.9, 210 * fp.s, 57, 40); }
+        }
+        ARENA.front(382, S);
+        /* Kameraet til bildet: risting, blink, sjokkbølgen der den bryter ut, og buler i bølgeveggen på de tre slagene. */
+        const sk = []; if (kp && t >= KRV && t < KRV + 1.1) sk.push({ x: kp.x, y: kp.y - 40, r: (t - KRV) * 560, w: 36, a: 22 * (1 - seg(t, KRV, KRV + 1.1)) });
+        if (t >= KU && t < KU + 0.8) { const fp = K.gp(KX, KZ, 0); if (fp) sk.push({ x: fp.x, y: fp.y, r: (t - KU) * 380, w: 22, a: 12 * (1 - seg(t, KU, KU + 0.8)), sy: 0.35 }); }
+        P.shock = sk; if (lit3 && kp && kk > 0) P.bulge = { x: kp.x, y: kp.y - 30, r: 190, a: 0.2 * kk };
+        P.bars = a1 ? 1 : 1 - seg(t, KE, KE + 0.3);
+        P.sh = (P.sh || 0) + (a1 ? bt * 2 + roll * 5 : 0) + hit(t, KE, 1.1) * 11 + hits(t, KL, 0.5) * 5 + kk * 5 + hit(t, KRV, 1) * 12 + (t < KD ? seg(t, 11, KD) * 9 : 0) + hit(t, KU, 0.6) * 7 + hit(t, KFN, 0.4) * 3 + (t >= KRV - 0.4 ? act.sh : 0);
+        P.fl = max(hit(t, KE, 0.3) * 0.55, hit(t, KRV, 0.28) * 0.45, t < KD ? seg(t, KD - 0.16, KD) * 0.95 : 0, hit(t, KU, 0.4) * 0.8, hit(t, KFN, 0.25) * 0.2); P.fc = '#e4f2ff'; P.fade = 1 - seg(t, 0, 0.6);
+        if (t >= KU) P.wav = 2.6 * (1 - seg(t, KU, KU + 0.7));
+        P.z = mix(1, pose.cz, io(seg(t, 13.1, 13.7))); P.zx = 230.4; P.zy = 307.2;
+        K.plate(KU + 0.1, { mat: 'water', col: '#5aa8ff' });
+      }
+    }
   });
 })();

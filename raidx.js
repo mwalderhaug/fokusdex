@@ -288,8 +288,7 @@
     for (const [x, h] of [[52, 110], [78, 64], [104, 138]]) rect(x, HZ + 52 - h, 5, h, '#c8fff0', 0.25, 1); rect(36, HZ + 52, 96, 14, '#2a3a44'); rect(36, HZ + 52, 96, 4, '#5a7480');
     glow(84, HZ + 40, 80, '#20c0b0', 0.18 + 0.06 * sin(t * 2), 1); dust('ember', { n: 30, seed: 7, cols: ['#c080ff', '#8a5aff'], a: 0.6, spd: 0.7 });
   });
-  /* Kyogre – havet i uvær. */
-  set(382, ['#9ac8e8', '#2a5a8a', '#0a2238'], ['em_cloudL', 'em_cloudR', 'smoke'], [0.35, '#020a14'], t => { storm(t, 0.35, 0.3); sea(t, HZ, 8, ['#12304a', '#0e3a6a', '#0a2a50']); lin([[0, 'rgba(2,10,20,0)'], [1, 'rgba(2,10,20,.6)']], 1, 250, 384); const q = floor(t * 0.8), ph = (t * 0.8) % 1; if (ph < 0.18 && rnd(q, 3) > 0.4) { bolt(rnd(q, 1) * W, -10, rnd(q, 2) * W, HZ, { seed: q * 3, col: '#9fd0ff', w: 2, a: 1 - ph / 0.18, br: 2 }); fill('#9fd0ff', (0.18 - ph) * 0.8); } });
+  /* Kyogre – arenaen ligger i raid2.js (arena.js). */
   /* Groudon – arenaen ligger i raid2.js (arena.js). */
   /* Dialga og Palkia – Spear Pillar: søylene på fjelltoppen, med tiden (urverket) eller rommet (nettet) i himmelen bak. */
   set(483, ['#d0dcf8', '#5a70a8', '#141e3a'], ['space'], [0.4, '#02040f'], t => {

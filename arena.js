@@ -37,6 +37,8 @@ const ARENA = (() => {
   /* Lysblinket der et angrep treffer (alle arenaer får det): et kort skjær rundt den som ble truffet. Tegnes i front. */
   const hitGlow = S => { for (const h of S.hits) { const k = (S.t - h.t) / 0.34; if (k < 0 || k >= 1) continue; const p = h.side === 'me' ? S.me : S.foe, y = p[1] - (h.side === 'me' ? 70 : 62); K.blob(p[0], y, (h.big ? 150 : 100) * (0.6 + 0.4 * k), h.big ? '#fff6e0' : '#ffffff', (1 - k) * (h.big ? 0.5 : 0.32), 1); } };
 
+  /* Den legendariske gløder selv (tegnene til Groudon og Kyogre): lyset setter glow = { mask (K.MASK), col, a }, og de pikslene tegnes lysende oppå figuren. */
+  A.glow = (x, y, s, G, o) => { if (G && G.a > 0.01) K.mon(x, y, s, Object.assign({}, o, { mask: G.mask, col: G.col, add: 1, a: G.a })); };
   /* En figur på kampskjermen (el = #s-foe eller #s-me), tegnet på et eget lerret med scenens lys. D = det arenaen husker om siden. Gir bildet (sp) når det tegnes. */
   const litDom = (side, el, D, T, L, cur) => {
     const im = el && el.querySelector('img.spr'); if (!im) return null;
@@ -49,7 +51,7 @@ const ARENA = (() => {
     const x = cv.getContext('2d'), P = I.newP(); P.light = side === 'me' && L.me ? Object.assign({}, L, L.me) : L;
     x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 1; x.globalCompositeOperation = 'source-over'; x.clearRect(0, 0, sp.w, sp.h);
     I.set(x, T, P, { id: 'dom:' + side, f: cur.f, sp, sps: {}, cc: cur.cc });
-    try { K.mon(sp.w / 2, sp.h, 1, { box: 1, ft: T - D.t0, hq: 1 }); } catch (e) { C.err = String(e && e.stack || e); return off(); }
+    try { K.mon(sp.w / 2, sp.h, 1, { box: 1, ft: T - D.t0, hq: 1 }); A.glow(sp.w / 2, sp.h, 1, side === 'foe' ? L.glow : null, { box: 1, ft: T - D.t0, hq: 1 }); } catch (e) { C.err = String(e && e.stack || e); return off(); }
     const fl = im.style.filter || ''; if (cv.style.filter !== fl) cv.style.filter = fl;
     im.classList.add('lit0'); D.ft = T - D.t0; return sp;
   };
@@ -124,7 +126,7 @@ const ARENA = (() => {
     x.setTransform(u, 0, 0, u, 0, 0); x.globalAlpha = 1; x.globalCompositeOperation = 'source-over'; x.imageSmoothingEnabled = false; x.fillStyle = '#000'; x.fillRect(0, 0, W, H);
     x.save(); x.translate(230.4, 307.2); x.scale(cz, cz); x.translate(-230.4, -307.2); x.imageSmoothingEnabled = true; x.drawImage(tmp, 0, 0, W, H); x.imageSmoothingEnabled = false;
     const L = P.light, Pf = I.newP(); Pf.light = o.nolight ? null : L; I.set(x, T, Pf, cur);
-    if (sp) K.mon(A.FOE[0], A.FOE[1], 1.6 * pose.k, { box: 1, ft: o.ft == null ? 0 : o.ft, hq: 1 });
+    if (sp) { K.mon(A.FOE[0], A.FOE[1], 1.6 * pose.k, { box: 1, ft: o.ft == null ? 0 : o.ft, hq: 1 }); if (L && !o.nolight) A.glow(A.FOE[0], A.FOE[1], 1.6 * pose.k, L.glow, { box: 1, ft: o.ft == null ? 0 : o.ft, hq: 1 }); }
     if (d.mid && !o.plain) { S.back = tmp; S.cz = cz; try { A.mid(id, S); } catch (e) { C.err = String(e && e.stack || e); } }
     if (me) { const Pm = I.newP(); Pm.light = o.nolight || !L ? null : L.me ? Object.assign({}, L, L.me) : L; I.set(x, T, Pm, cur); K.mon(A.ME[0], A.ME[1], 1.6 * (pose.km || 1.9), { id: 'me', hq: 1 }); I.set(x, T, Pf, cur); }
     x.restore();

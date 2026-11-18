@@ -314,48 +314,10 @@
   const blackSun = (t, x, y, r, a) => { if (a <= 0) return; rays(x, y, { n: 22, rot: t * 0.2, col: '#ff7a1a', a: 0.45 * a, r0: r * 0.9, r1: r * 3.4, wid: 0.34 }); rays(x, y, { n: 22, rot: -t * 0.13, col: '#ffd070', a: 0.25 * a, r0: r * 0.9, r1: r * 2.4, wid: 0.18 }); glow(x, y, r * 2.2, '#ff5a14', 0.7 * a, 1); ring(x, y, r * 1.04, { col: '#ffd070', w: 5, a }); K.g.save(); K.g.globalAlpha = c01(a); K.g.fillStyle = '#030106'; K.g.beginPath(); K.g.arc(x, y, r, 0, TAU); K.g.fill(); K.g.restore(); };
   const dVoid = (t, heat) => { lin(['#04020a', '#0e0618', '#1a0a14', '#020104']); im('vortex', 256, 180, { s: 1.3, r: -t * 0.1, a: 0.5, add: 'screen' }); im('redswirl', 256, 180, { s: 1.6, r: t * 0.2, a: 0.2 + heat * 0.3, add: 1 }); dust('up', { n: 30, seed: 4, cols: ['#ff8a2a', '#5a3a7a'], a: 0.5 + heat * 0.3, spd: 1 + heat }); };
   /* ================= KYOGRE (og motivene Groudon delte med den) =================
-     Fire dempede slag (0.31, 1.56, 2.79, 4.01), en trommevirvel fra 4.92, utbruddet på 5.26, tre slag (8.46, 8.93, 9.54) og et siste på 10.16.
-     Begge begynner som i åpningen av Emerald: en svart kjempe i mørket, med tegn som lyser sterkere og rødere for hvert slag. */
-  const KB = [0.31, 1.56, 2.79, 4.01], KH = [8.46, 8.93, 9.54];
+     Filmene og arenaene til begge ligger i raid2.js. Her står bare motivene andre steder bruker (sea, lava). */
   /* Bølger: tre lag med sjø som ruller, med skum på toppene. y = havflaten, amp = hvor høy sjøen er. */
   const sea = (t, y, amp, cols, a) => { const X = K.g; for (let L = 0; L < 3; L++) { const yy = y + L * 26, sp = (1.2 + L * 0.5) * (L % 2 ? -1 : 1); X.save(); X.globalAlpha = c01(a == null ? 1 : a); X.fillStyle = cols[L]; X.beginPath(); X.moveTo(0, H); for (let x = 0; x <= W; x += 8) X.lineTo(x, yy + sin(x * 0.02 + t * sp + L) * amp + sin(x * 0.045 - t * sp * 1.6 + L * 2) * amp * 0.45); X.lineTo(W, H); X.closePath(); X.fill(); X.strokeStyle = 'rgba(230,245,255,.7)'; X.lineWidth = 2; X.beginPath(); for (let x = 0; x <= W; x += 8) { const yv = yy + sin(x * 0.02 + t * sp + L) * amp + sin(x * 0.045 - t * sp * 1.6 + L * 2) * amp * 0.45; x ? X.lineTo(x, yv) : X.moveTo(x, yv); } X.stroke(); X.restore(); } };
-  film(382, { len: 12.5, R: 5.26, use: ['em_kyogre0', 'em_kyogre1', 'em_kyogre2', 'em_kyogre3', 'lightA', 'lightB', 'waves1', 'smoke', 'fog', 'sparkle', 'ring'],
-    cues: [[0.31, 'thud'], [1.56, 'thud'], [2.79, 'thud'], [4.01, 'thud'], [5.26, 'boom'], [6.0, 'cry'], [10.16, 'thud']],
-    draw(t, P, c) {
-      if (t < 5.26) {
-        P.bars = 1; if (t < 0.31) return;
-        const fl = hits(t, KB, 0.7), n = KB.filter(q => t >= q).length, x = mix(600, 250, eo(seg(t, 0.3, 5.2))), y = 188 + sin(t * 0.9) * 10, s = 2.6 + seg(t, 0.3, 5.26) * 1.5;
-        lin(['#010814', '#031d3c', '#042a4c', '#010610']);
-        for (let i = 0; i < 5; i++) im(i % 2 ? 'lightA' : 'lightB', 70 + i * 100 + sin(t * 0.3 + i) * 24, -10, { s: 2.6, ay: 0, a: 0.1 + 0.05 * sin(t * 0.7 + i * 2), add: 1, r: 0.12 * sin(t * 0.2 + i) });
-        dust('bubble', { n: 40, seed: 3, cols: ['#7ad0ff', '#c8f0ff'], a: 0.5, spd: 0.6 }); dust('mote', { n: 50, seed: 9, cols: ['#5a9ad0'], a: 0.5 });
-        /* Kjempen glir forbi. Tegnene skifter fra blått til rødt etter hvert som den våkner. */
-        const a = seg(t, 0.3, 1.2); im('em_kyogre' + min(3, max(0, n - 1)), x, y, { s, a, px: 1 }); if (fl > 0) im('em_kyogre' + min(3, max(0, n - 1)), x, y, { s: s * 1.02, a: fl * 0.7, add: 1, px: 1 });
-        KB.forEach(q => wave(q, x - 40 * s * 0.3, y, { col: ['#3f8cff', '#8a5aff', '#d040a0', '#ff3040'][KB.indexOf(q)], r: 380, d: 1.2, w: 3, a: 0.6 }));
-        for (let i = 0; i < 6; i++) { const bx = i * 110 - 40 + rnd(i, 4) * 40, bh = 50 + rnd(i, 5) * 70; poly([[bx, H], [bx + 30, H - bh], [bx + 70, H - bh * 0.7], [bx + 120, H]], '#01040a'); }
-        const roll = seg(t, 4.92, 5.26); fill('#bfe6ff', roll * roll * 0.5); vig(0.7, '#00030a');
-        P.sh = fl * 4 + roll * 9; P.z = 1 + roll * 0.2; P.zx = x; P.zy = y; return;
-      }
-      /* Opp gjennom havflaten, ut i uværet. */
-      const bt = hits(t, KH.concat([10.16]), 0.5), up = seg(t, 5.26, 6.0), y = mix(330, 168, back(seg(t, 5.85, 6.5))) + sin(t * 1.5) * 5, s = 3.3;
-      lin(['#050a14', '#10243a', '#1c3a52', '#16304a']);
-      for (let i = 0; i < 4; i++) fog('smoke', { n: 3, seed: 30 + i, a: 0.5, spd: 40, s: 2.4, y0: -20, y1: 120, col: '#20303c' });
-      const q = floor(t * 2.2), ph = (t * 2.2) % 1; if (ph < 0.25 || bt > 0.5) { bolt(40 + rnd(q, 2) * 430, -10, 60 + rnd(q, 3) * 400, 190 + rnd(q, 4) * 60, { seed: q * 3 + floor(ph * 30), col: '#9fd0ff', core: '#fff', w: 2.2, a: max(1 - ph * 4, bt), br: 3 }); fill('#cfe6ff', max(0, 0.14 - ph * 0.56) + bt * 0.06); }
-      /* Vannsøylen den bryter opp gjennom. */
-      const col = seg(t, 5.26, 5.5) * (1 - seg(t, 6.3, 7.4)); if (col > 0) { beam(256, 150 * col, 60, H, '#9fd8ff', 0.5 * col, '#e8f8ff'); for (let i = 0; i < 46; i++) { const ph2 = (rnd(i, 61) + t * (1 + rnd(i, 62))) % 1, an = -PI / 2 + (rnd(i, 63) - 0.5) * 2.2, r = ph2 * 300; rect(256 + cos(an) * r, 300 + sin(an) * r + ph2 * ph2 * 200, 4, 4, '#e8f8ff', (1 - ph2) * col, 1); } }
-      if (t >= 5.85) { glow(256, y, 200, '#3f8cff', 0.35 + bt * 0.2, 1); aura(256, y, s, '#9fd8ff', 4 + bt * 3, 0.35 + bt * 0.3); spr(256, y, s); }
-      sea(t * 2, 286 - hit(t, 5.26, 2) * 30 - bt * 14, 12 + bt * 8, ['#0c3a66', '#0a2c52', '#061c3a']);
-      im('waves1', 256, 192, { a: 0.5, add: 1 });
-      dust('rain', { n: 150, seed: 2, cols: ['#9fc8e8', '#e8f4ff'], a: 0.75, spd: 1.5, wind: -0.7 });
-      wave(5.26, 256, 300, { col: '#e8f8ff', r: 560, d: 0.9, w: 16, sy: 0.5 }); KH.forEach(q2 => wave(q2, 256, 300, { col: '#9fd8ff', r: 460, d: 0.7, w: 6, sy: 0.4 })); wave(10.16, 256, 180, { col: '#e8f8ff', r: 560, d: 0.9 });
-      vig(0.5, '#01060e'); card(10.16, { col: '#5aa8ff' });
-      P.sh = hit(t, 5.26, 1.2) * 14 + bt * 6; P.fl = max(hit(t, 5.26, 0.45), hit(t, 10.16, 0.2) * 0.6, seg(t, 12.25, 12.5)); P.fc = '#e8f6ff'; P.z = 1 + (1 - up) * 0.15; P.zy = 240;
-    },
-    air(t, k) {
-      fill('#04101e', 0.25 * k); dust('rain', { n: 90, seed: 2, cols: ['#9fc8e8', '#e8f4ff'], a: 0.55 * k, spd: 1.4, wind: -0.7 });
-      const q = floor(t / 2.6), ph = (t / 2.6) % 1; if (ph < 0.1) { bolt(40 + rnd(q, 2) * 430, -10, 60 + rnd(q, 3) * 400, 150 + rnd(q, 4) * 60, { seed: q * 3 + floor(ph * 40), col: '#9fd0ff', core: '#fff', w: 2, a: 1 - ph * 10, br: 2 }); fill('#cfe6ff', (0.1 - ph) * k); }
-      sea(t * 1.6, 356, 7, ['#0c3a66', '#0a2c52', '#061c3a'], 0.75 * k); vig(0.4 * k, '#01060e');
-    }
-  });
+  /* Kyogre har ny arena og film fra steg 2: se raid2.js. */
   /* Sprekker med lava i bakken: lyn som ligger stille og gløder. n = hvor mange som har åpnet seg. */
   const lava = (n, y0, a, seedo) => { for (let i = 0; i < n; i++) { const x = rnd(i, 11 + (seedo || 0)) * 560 - 24, yy = y0 + rnd(i, 12) * (H - y0 - 6); bolt(x, yy, x + (rnd(i, 13) - 0.5) * 260, yy + (rnd(i, 14) - 0.3) * 60, { seed: i * 7 + 2, col: '#ff5a1a', core: '#ffe08a', w: 2 + rnd(i, 15) * 2, a, jag: 0.3, depth: 4, br: 1 }); } };
   /* Groudon har ny arena og film fra steg 2: se raid2.js. */

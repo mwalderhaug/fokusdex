@@ -318,6 +318,10 @@
         for (let x = -10; x <= W + 10; x += 10) { const y = ST.yh + (ST.hc - K.seaH(ST.cx + (x - ST.x0) / sc, Z, t, u)) * sc; if (y < top) top = y; g.lineTo(x, y); }
         g.lineTo(W + 10, H + 2); g.closePath(); if (top > H) continue; g.fillStyle = blend(blend(deep, '#1c5a66', 0.12 + 0.2 * rnd(j, 7)), haze, fog); g.fill(); g.strokeStyle = rgba('#e0eef6', (0.16 + 0.4 * (u[0][2] || 0) * rnd(j, 9)) * (1 - fog * 0.7)); g.lineWidth = max(0.7, min(3, sc * 0.9)); g.stroke(); }
     },
+    deep(g, yh, u, t) {
+      const c = u[1], col = `rgb(${c.slice(0, 3).map(q => Math.round(c01(q) * 255)).join(',')})`, gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, blend(col, '#bfe8ff', 0.5 * (u[0][1] || 0))); gr.addColorStop(0.35, col); gr.addColorStop(1, blend(col, '#000308', 0.8)); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+      for (let i = 0; i < 12; i++) K.blob(((rnd(i, 5) * 700 + t * 30) % 700) - 90, 10 + rnd(i, 6) * 40, 50 + rnd(i, 7) * 60, '#cfeeff', 0.16 * (u[0][1] || 0), 1, 0.3);
+    },
     water(g, yh, u, t) {
       const deep = u[1], c = `rgb(${deep.slice(0, 3).map(q => Math.round(c01(q) * 255)).join(',')})`, gr = g.createLinearGradient(0, yh, 0, H); gr.addColorStop(0, blend(c, '#9fb8c8', 0.45)); gr.addColorStop(0.2, c); gr.addColorStop(1, blend(c, '#000000', 0.45)); g.fillStyle = gr; g.fillRect(0, yh, W, H - yh);
       g.strokeStyle = 'rgba(225,240,255,.5)'; for (let j = 0; j < 12; j++) { const jj = j + 1 - ((t * 0.5) % 1), p = K.gp(0, ST.cz + 30 + jj * jj * 9); if (!p || p.y > H + 4) continue; g.lineWidth = max(0.6, p.s * 2.2); g.globalAlpha = c01(0.5 - j * 0.03); g.beginPath(); for (let x = -8; x <= W + 8; x += 12) { const yy = p.y + sin(x * 0.02 / max(0.3, p.s) + t * 1.3 + j) * 5 * p.s * (u[0][0] || 1); x < 0 ? g.moveTo(x, yy) : g.lineTo(x, yy); } g.stroke(); }

@@ -164,16 +164,24 @@ vec3 sky(vec3 d,float t,float q){
 }
 vec3 mat(vec2 s){
   float t=uGC.z;vec3 ro=vec3(uGC.x,uG.w,uGC.y),rd=vec3((s.x-uG.x)/uG.z,(uG.y-s.y)/uG.z,1.);
-  float A=uM[0].x,st=uM[1].x,hi=A*1.84+max(uM[2].y,0.)*1.08+.5,lo=-A*1.1-.5;
+  float A=uM[0].x,st=uM[1].x,hi=A*1.84+.5,lo=-A*1.1-.5;
   float d0=2.,d1=0.;
   if(rd.y<0.){d0=max((ro.y-hi)/-rd.y,2.);d1=(ro.y-lo)/-rd.y;}else if(hi>ro.y)d1=(hi-ro.y)/max(rd.y,.0001);
   d1=min(d1,5200.);float hit=-1.;
-  if(d1>d0){
-    float r=pow(d1/d0,1./34.),da=d0;
+  /* Kjempebølgen først: den står i et smalt belte på tvers, så strålen gås i jevne steg gjennom akkurat det beltet (ellers blir veggen stripete). */
+  if(uM[2].y>0.){
+    float wd=uM[2].x-ro.z,xs=ro.x+rd.x*wd,sf=.00035*xs*xs,da=max(wd+sf-1.2*uM[2].z,2.),b=wd+sf*1.6+2.4*uM[2].z;
+    if(b>da&&ro.y+rd.y*da>=seaH(ro.xz+rd.xz*da,t)){float sp=(b-da)/22.;
+      for(int i=0;i<22;i++){float db=da+sp;if(ro.y+rd.y*db<seaH(ro.xz+rd.xz*db,t)){for(int j=0;j<5;j++){float dm=.5*(da+db);if(ro.y+rd.y*dm<seaH(ro.xz+rd.xz*dm,t))db=dm;else da=dm;}hit=.5*(da+db);break;}da=db;}}
+  }
+  /* Så den vanlige sjøen, fram til det strålen eventuelt alt har truffet. */
+  float de=hit>0.?min(d1,hit):d1;
+  if(de>d0){
+    float r=pow(de/d0,1./34.),da=d0;
     if(ro.y+rd.y*da<seaH(ro.xz+rd.xz*da,t))hit=da;
-    else{for(int i=0;i<34;i++){float db=da*r;if(ro.y+rd.y*db<seaH(ro.xz+rd.xz*db,t)){for(int j=0;j<4;j++){float dm=.5*(da+db);if(ro.y+rd.y*dm<seaH(ro.xz+rd.xz*dm,t))db=dm;else da=dm;}hit=.5*(da+db);break;}da=db;}
-      if(hit<0.&&rd.y<0.)hit=d1;}
-  }else if(rd.y<0.)hit=5200.;
+    else{float h2=-1.;for(int i=0;i<34;i++){float db=da*r;if(ro.y+rd.y*db<seaH(ro.xz+rd.xz*db,t)){for(int j=0;j<4;j++){float dm=.5*(da+db);if(ro.y+rd.y*dm<seaH(ro.xz+rd.xz*dm,t))db=dm;else da=dm;}h2=.5*(da+db);break;}da=db;}
+      if(h2>0.)hit=h2;else if(hit<0.&&rd.y<0.)hit=d1;}
+  }else if(hit<0.&&rd.y<0.)hit=5200.;
   vec3 dir=normalize(rd);
   if(hit<0.)return sky(dir,t,1.);
   vec2 w=ro.xz+rd.xz*hit;float h=seaH(w,t),rg=uM[2].y>0.?rogue(w):0.,e=max(.7,hit*.006),det=1.-clamp(hit/1000.,0.,1.);
@@ -184,17 +192,17 @@ vec3 mat(vec2 s){
   float nv=max(dot(-dir,n),0.),F=.03+.97*pow(1.-nv,4.);
   vec3 R=reflect(dir,n);R.y=abs(R.y)+.03;
   vec3 refl=sky(normalize(R),t,0.);
-  float hn=(h-rg)/max(A,1.),top=uM[2].y>1.?rg/uM[2].y:0.,lite=.55+.45*(1.-st)+uM[1].y*.9;
+  float hn=(h-rg)/max(A,1.),top=uM[2].y>1.?rg/uM[2].y:0.,lite=.55+.45*(1.-st)+uM[1].y*.4;
   vec3 deep=mix(vec3(.03,.13,.19),vec3(.012,.062,.09),st)*(1.+.5*uM[1].y);
   vec3 sss=vec3(.04,.27,.27)*(smoothstep(.1,1.2,hn)+top*top*.9)*lite;
   vec3 c=mix(deep+sss,refl,F)+hor(st)*.05*n.y;
   float fn=fbm(w*.045+vec2(t*.25,t*.4)),fs=fbm(vec2(w.x*.011+w.y*.031,w.x*.052-w.y*.019)+t*.09);
-  float fo=smoothstep(.55,1.12,hn+(fn-.5)*1.1)+smoothstep(.54,.8,fs)*uM[1].w*(.3+.4*clamp(hn+.5,0.,1.))+smoothstep(.4,.6,fs)*smoothstep(-.3,.7,hn)*.3;
+  float fo=smoothstep(.66,1.2,hn+(fn-.5)*1.1)+smoothstep(.54,.8,fs)*uM[1].w*(.3+.4*clamp(hn+.5,0.,1.))+smoothstep(.4,.6,fs)*smoothstep(-.3,.7,hn)*.3;
   fo*=uM[0].z;
   if(uM[2].y>1.){float sl=1.-n.y;fo+=smoothstep(.5,.85,vn(vec2(w.x*.045,h*.035-t*.7)))*smoothstep(.2,.55,sl)*top*.7+smoothstep(.8,.98,top)*(.6+.4*fn);}
-  fo=clamp(fo,0.,1.);fo*=mix(.62,.45+.55*smoothstep(.25,.7,vn(w*.3+t*.2)),det);
+  fo=clamp(fo,0.,1.);fo*=mix(.62,.42+.58*smoothstep(.3,.66,n2(w*.17+vec2(t*.2,-t*.13))),det);
   c=mix(c,vec3(.86,.93,.97)*lite+hor(st)*.2,fo);
-  if(uM[0].w>0.&&hit<200.){vec2 gp=w/3.2;vec2 ci=floor(gp);vec2 o=h22(ci);float ph=fract(t*(1.3+o.x*.9)+o.y);float rr=length(fract(gp)-.5-(o-.5)*.4);c+=vec3(.55,.66,.74)*(exp(-pow((rr-ph*.36)/.07,2.))*.5+exp(-rr*rr*90.)*(1.-ph))*(1.-ph)*step(o.x,uM[0].w*.6)*.34*(1.-hit/200.);}
+  if(uM[0].w>0.&&hit<200.&&hit>22.){vec2 gp=w/3.2;vec2 ci=floor(gp);vec2 o=h22(ci);float ph=fract(t*(1.3+o.x*.9)+o.y);float rr=length(fract(gp)-.5-(o-.5)*.4);c+=vec3(.55,.66,.74)*(exp(-pow((rr-ph*.36)/.07,2.))*.5+exp(-rr*rr*90.)*(1.-ph))*(1.-ph)*step(o.x,uM[0].w*.6)*.22*(1.-hit/200.);}
   for(int i=3;i<6;i++){vec4 q=uM[i];if(q.w>0.){float k=(length(w-q.xy)-q.z)/7.;c+=vec3(.7,.85,.95)*q.w*exp(-k*k)*.6;}else if(q.w<0.){vec2 dv=(w-q.xy)/q.z;c+=uM[7].rgb*(-q.w)*exp(-dot(dv,dv))*(1.-F*.6);}}
   float fg=1.-exp(-hit*mix(.00028,.001,uM[0].w));
   return mix(c,hor(st)*(.92+uM[1].y*.5),fg);
