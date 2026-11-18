@@ -375,6 +375,19 @@
       const FV = fig ? 52 : 50, cp = fig ? [-6.2, 1.65, 19.9] : [-8.2, 2.05, 24.7], aim = fig ? AFIG : AFOE, kq = fig ? 18.2 / 394 : 23.4 / 412, tg = [HOME[0] - 5, 3, HOME[2]];
       for (let i = 0; i < 14; i++) { K.cam(cp[0], cp[1], cp[2], tg[0], tg[1], tg[2], FV); const q = K.proj(HOME[0], 0, HOME[2]); tg[0] -= (aim[0] - q.x) * kq; tg[1] += (aim[1] - q.y) * kq; }
       S.cp = cp; S.tg = tg; S.fv = FV; K.cam(cp[0], cp[1], cp[2], tg[0], tg[1], tg[2], FV); const am = fig ? AMEF : AME, m = K.ray(am[0], am[1], 0.5); S.me = [m.x, 0.5, m.z];
+      /* Runde 18 (Jazz 18.11: lavaen «mer levende», uten mer skorpe; enig i «C som grunnlag, med driften fra B i lavere styrke»): i kampen bobler lavaen. 16 store bobler
+         (7 av dem foran kameraet, mellom deg og ham; takt 4–9 s) vokser opp, sprekker med en ring i lavaen og 12 små dråper som spretter opp og faller tilbake, og 22 småbobler
+         (2,6–6,5 s) uten sprut. Nær kameraet er de mindre og spruter lavere. Ikke der han står (7 enheter), ikke ved steinen din (5) og ikke bak din Pokémon i bildet.
+         uLive = 1: lavaen renner litt fortere og skorpen driver med (bare i kampen; cutscenene har lavaen sin som før). Stedene fra crater() (tolv over hele sjøen) byttes ut. */
+      if (fig) { const dx = tg[0] - cp[0], dz = tg[2] - cp[2], dl = Math.hypot(dx, dz), ux = dx / dl, uz = dz / dl, P2 = [], P3 = [], NP = 12, LU = S.lava.material.uniforms; LU.uLive.value = 1;
+        const spot = (i, s, d0, d1) => { const dd = d0 + rnd(i, s) * (d1 - d0), la = (rnd(i, s + 1) - 0.5) * 1.1 * dd, x = cp[0] + ux * dd - uz * la, z = cp[2] + uz * dd + ux * la, pq = K.proj(x, 0, z);
+          return Math.hypot(x - HOME[0], z - HOME[2]) < 7 || Math.hypot(x - m.x, z - m.z) < 5 || Math.hypot(x, z) > 58 || (pq.x < 250 && pq.y > 235) ? null : [x, z, dd]; };
+        for (let i = 0; P2.length < 16 && i < 900; i++) { const nr = P2.length < 7, q = spot(i, 421, nr ? 7 : 15, nr ? 15 : 38); if (q) P2.push([q[0], q[1], 4 + rnd(i, 423) * 5, rnd(i, 424) * 11, q[2] < 16 ? 0.5 : q[2] < 24 ? 0.75 : 1, (0.34 + rnd(i, 425) * 0.3) * Math.min(1, Math.max(0.55, q[2] / 20))]); }
+        for (let i = 0; P3.length < 22 && i < 900; i++) { const nr = P3.length < 12, q = spot(i, 431, nr ? 6 : 15, nr ? 15 : 34); if (q) P3.push([q[0], q[1], 2.6 + rnd(i, 433) * 3.9, rnd(i, 434) * 9, (0.13 + rnd(i, 435) * 0.15) * Math.min(1, Math.max(0.6, q[2] / 16)), 0.8]); }
+        LU.uPop.value.forEach((v, i) => { const q = P2[i]; if (q) v.set(q[0], q[1], q[2], q[3]); else v.set(0, 0, 0, 0); });
+        S.dome = K.domes(P2.map(q => [q[0], q[1], q[2], q[3], q[5], 1.25]).concat(P3)); S.scene.add(S.dome);
+        S.scene.remove(S.pop); S.pop = K.pts(P2.length * NP, i => { const q = P2[Math.floor(i / NP)], a = rnd(i, 411) * TAU, h = 0.4 + rnd(i, 412) * 2.4, r0 = 0.1 + rnd(i, 415) * 0.4; return { p: [q[0] + cos(a) * r0, 0.15, q[1] + sin(a) * r0], v: [cos(a) * h, (5.5 + rnd(i, 413) * 7) * q[4], sin(a) * h], b: q[3] - rnd(i, 416) * 0.12, l: q[2], z: (0.34 + rnd(i, 414) * 0.5) * (q[4] < 0.6 ? 0.7 : 1) }; },
+          { loop: 1, shade: 1, g: 22, px: 60, floor: 0, near: 5, c: ['#ffc24e', '#ff7616', '#b83208'], fade: 0.97 }); S.scene.add(S.pop); }
       /* Runde 9: din Pokémon står på et flak av gråsvart lavastein, glatt som før, så den skilles fra lavaen (Jazz 18.11: «Dette er for mye og for teksturert ... Mer mot slik
          det var før, bare tydelig at det er stein som man står på som skilles fra lavaen. Gjerne litt mer grå/svart da lavastein ser mer slik ut»). Ingen sprekker med glød, bare
          en svak ruhet; lavaen lyser opp sidene og foten. Med figuren i 3D (der din Pokémon står nede til venstre og føttene er utenfor bildet) er flaket stort og flatt,

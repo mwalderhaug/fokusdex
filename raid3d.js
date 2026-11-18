@@ -190,15 +190,22 @@ void main(){
      · Pusten: store flater gløder sterkere og svakere, langsomt (rundt 9 s) og i hver sin takt.
      · Boblene (uPop: x, z, takt, fase): stedet gløder opp like før, og en lysende ring brer seg når klumpene spretter opp (partiklene i raid3c.js, samme takt).
      Fine detaljer tones ut på avstand (fd, lod). uK = verktøykassas mål per enhet. Ringer ved nedslag (uRing) og kulpen rundt det som står i lavaen (uWade). */
-  const FS_LAVA = `varying vec3 vW; uniform vec4 uRing[4]; uniform vec4 uWade; uniform vec4 uPop[12]; uniform float uHeat, uK, uCell, uCw, uBri;
-${COMMON}
-vec3 ramp(float x){ vec3 c = vec3(.028, .006, .002); c = mix(c, vec3(.4, .028, .0), smoothstep(0., .3, x)); c = mix(c, vec3(.98, .24, .02), smoothstep(.24, .6, x)); c = mix(c, vec3(1., .66, .14), smoothstep(.56, .92, x)); return mix(c, vec3(1., .95, .72), smoothstep(.9, 1.35, x)); }
-/* Voronoi med id-en til nabocellen også (vor2), og om en celle er skorpe akkurat nå (crust): hver celle smelter og størkner i sin egen takt. */
+  /* Skorpen på lavaen, delt mellom lavaflaten og boblene (K.domes): crDrift = hvor fort flakene driver (live = 1 i kampen: 0,35 enheter/s, ellers 0,2), og plateAt = om et
+     punkt ligger under et skorpeflak akkurat nå (samme regning som i FS_LAVA, uten utjevningen for avstand). */
+  const LAVA_CR = `/* Voronoi med id-en til nabocellen også (vor2), og om en celle er skorpe akkurat nå (crust): hver celle smelter og størkner i sin egen takt. */
 vec3 vor2(vec2 p, out float i2){ vec2 i = floor(p), f = fract(p); float a = 8., b = 8., id = 0., jd = 0.;
   for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { vec2 g = vec2(float(x), float(y)), r = g + h22(i + g) - f; float d = dot(r, r), h = h21(i + g + 3.7);
     if (d < a) { b = a; jd = id; a = d; id = h; } else if (d < b) { b = d; jd = h; } }
   i2 = jd; return vec3(sqrt(a), sqrt(b), id); }
 float crust(float id, float t){ return smoothstep(id - .05, id + .05, .36 + .08 * sin(t * .04 + id * 9.)); }
+vec2 crDrift(float live){ return mix(vec2(.015, .055), vec2(.027, .096), live); }
+float plateAt(vec2 xz, float t, float k, float cell, float live){ vec2 q = xz * k / cell * .55, rb = q * 2.6 - crDrift(live) * t, rc = rb + (vec2(fbm(rb * .2 + 4.), fbm(rb * .2 + 9.)) - .5) * .9 + (vec2(vn(rb * 1.7 + 1.), vn(rb * 1.7 + 7.)) - .5) * .28;
+  float id2; vec3 cv = vor2(rc, id2); float ce = cv.y - cv.x; return crust(cv.z, t) * mix(smoothstep(.02, .09, ce), smoothstep(0., .03, ce), crust(id2, t)); }
+`;
+  const FS_LAVA = `varying vec3 vW; uniform vec4 uRing[4]; uniform vec4 uWade; uniform vec4 uPop[16]; uniform float uHeat, uK, uCell, uCw, uBri, uLive;
+${COMMON}
+vec3 ramp(float x){ vec3 c = vec3(.028, .006, .002); c = mix(c, vec3(.4, .028, .0), smoothstep(0., .3, x)); c = mix(c, vec3(.98, .24, .02), smoothstep(.24, .6, x)); c = mix(c, vec3(1., .66, .14), smoothstep(.56, .92, x)); return mix(c, vec3(1., .95, .72), smoothstep(.9, 1.35, x)); }
+${LAVA_CR}
 float lv(vec2 r, float t, float fd, float px){
   float big = fbm(r * .7 + vec2(0., t * .015)), mid = fbm(r * 1.9 + 5.2 - vec2(t * .02, 0.));
   float skin = smoothstep(.44, .68, fbm(r * 1.3 + vec2(2., 6.) + big * .8));
@@ -211,21 +218,23 @@ void main(){
   vec2 w = vW.xz * uK; float t = uTime, heat = uHeat, cell = uCell; vec2 p = w / cell;
   float fw = max(length(dFdx(w)), length(dFdy(w))), px = fw / cell, fd = 1. - clamp(px / .07, 0., 1.);
   vec2 q = p * .55, fl = vec2(.18, .62) + (vec2(fbm(q * .3 + 1.3), fbm(q * .3 + 8.1)) - .5) * 1.1;
-  float ph = t * .09, f0 = fract(ph), f1 = fract(ph + .5), wa = 1. - abs(2. * f0 - 1.);
+  float ph = t * mix(.09, .13, uLive), f0 = fract(ph), f1 = fract(ph + .5), wa = 1. - abs(2. * f0 - 1.);
   float temp = mix(lv(q - fl * f1 * 1.1 + vec2(3.7, 1.9), t, fd, px), lv(q - fl * f0 * 1.1, t, fd, px), wa);
   temp += .07 * sin(t * .7 + fbm(p * .1 + 3.3) * 7.) + .08 * (heat - 1.);
   /* Skorpe som driver (runde 9: «gi den litt mørkere skorpe som driver og årer som lyser sterkere, så den ser ut som lava og ikke tåke»): flak av størknet skorpe som flyter
      sakte og stivt med strømmen (mønsteret regnes i et koordinatsystem som flytter seg, så flakene holder formen), med ujevne kanter. Rundt en tredel er skorpe, og flakene
      smelter og størkner sakte (hver i sin takt, over et halvt minutt). Mot åpen lava smelter kanten gradvis ut (ingen lys strek rundt flaket); mellom to flak går en smal,
      lysende sprekk. På avstand blir flakene til en jevn, litt mørkere tone (cf). */
-  vec2 rb = q * 2.6 - vec2(.015, .055) * t, rc = rb + (vec2(fbm(rb * .2 + 4.), fbm(rb * .2 + 9.)) - .5) * .9 + (vec2(vn(rb * 1.7 + 1.), vn(rb * 1.7 + 7.)) - .5) * .28;
+  vec2 rb = q * 2.6 - crDrift(uLive) * t, rc = rb + (vec2(fbm(rb * .2 + 4.), fbm(rb * .2 + 9.)) - .5) * .9 + (vec2(vn(rb * 1.7 + 1.), vn(rb * 1.7 + 7.)) - .5) * .28;
   float id2; vec3 cv = vor2(rc, id2); float ce = cv.y - cv.x, cfw = px * 1.43, cf = clamp(cfw / .3, 0., 1.);
   float k1 = crust(cv.z, t), k2 = crust(id2, t), ew = .09 + cfw * 1.5, cw = .03 + cfw * 1.5, wr = fbm(rc * 5.);
   float plate = mix(k1 * mix(smoothstep(.02, ew, ce), smoothstep(0., cw, ce), k2), .3, cf), crack = k1 * k2 * (1. - smoothstep(0., cw, ce)) * (1. - cf);
+  if (uLive > .5) for (int i = 0; i < 16; i++) { vec4 s = uPop[i]; if (s.z <= 0.) continue; float o = smoothstep(.75, 1.6, length(vW.xz - s.xy) + (wr - .5) * .5); plate *= o; crack *= o; }
   temp = mix(temp, .14 + .08 * wr + .03 * sin(rc.y * 18. + wr * 5.) * (1. - cf), plate * .95);
   temp = mix(temp, 1.02, crack * .85);
-  for (int i = 0; i < 12; i++) { vec4 s = uPop[i]; if (s.z <= 0.) continue; float a = mod(t + s.w, s.z), d = length(vW.xz - s.xy);
-    temp += .3 * smoothstep(s.z - .5, s.z, a) * (1. - smoothstep(0., 1.1, d)) + (a < .8 ? .5 * (1. - a / .8) * (1. - smoothstep(.15 + a * 2.4, .6 + a * 2.8, d)) : 0.); }
+  for (int i = 0; i < 16; i++) { vec4 s = uPop[i]; if (s.z <= 0.) continue; float a = mod(t + s.w, s.z), d = length(vW.xz - s.xy);
+    if (uLive > .5) temp += .28 * smoothstep(s.z - 1.2, s.z, a) * (1. - smoothstep(0., .9, d)) + (a < .9 ? (1. - a / .9) * (.3 * (1. - smoothstep(0., .2 + .12 * a, abs(d - .3 - a * 2.))) + .3 * max(0., 1. - a / .3) * (1. - smoothstep(0., .5, d))) : 0.);
+    else temp += .3 * smoothstep(s.z - .5, s.z, a) * (1. - smoothstep(0., 1.1, d)) + (a < .8 ? .5 * (1. - a / .8) * (1. - smoothstep(.15 + a * 2.4, .6 + a * 2.8, d)) : 0.); }
   float rg = 0.; for (int i = 0; i < 4; i++) { vec4 g = uRing[i]; if (g.w > 0.) rg = max(rg, g.w * (1. - smoothstep(0., .5 + g.z * .07, abs(length(vW.xz - g.xy) - g.z)))); }
   temp += rg * .42;
   float dw = length(vW.xz - uWade.xy), wd = min(1., uWade.w) * (1. - smoothstep(uWade.z * .3, uWade.z, dw)), rip = .5 + .5 * sin(dw * 1.7 - t * 2.2 + fbm(vW.xz * .35 + t * .05) * 3.2);
@@ -450,7 +459,7 @@ void main(){
     for (let j = 0; j < M; j++) for (let i = 0; i < N; i++) { const p = j * (N + 1) + i, q = p + N + 1; idx.push(p, q, p + 1, q, q + 1, p + 1); }
     const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(uvs, 2)); g.setIndex(idx); g.computeVertexNormals(); g.computeBoundingSphere();
     return new T.Mesh(g, sm(VS, FS_VOLC, { uA: uv(u3(o.a || '#140c0e')), uB: uv(u3(o.b || '#33211d')), uEr: uv(0.3) }, { side: T.DoubleSide })); };
-  K.lava = o => { o = o || {}; return new T.Mesh(new T.PlaneGeometry(o.size || 900, o.size || 900).rotateX(-PI / 2), sm(VS, FS_LAVA, { uRing: uv([0, 1, 2, 3].map(() => new T.Vector4())), uWade: uv(new T.Vector4()), uPop: uv(Array.from({ length: 12 }, () => new T.Vector4())), uHeat: uv(1.2), uK: uv(o.k || 16), uCell: uv(o.cell || 84), uCw: uv(o.cw || 0.05), uBri: uv(0.95) })); };
+  K.lava = o => { o = o || {}; return new T.Mesh(new T.PlaneGeometry(o.size || 900, o.size || 900).rotateX(-PI / 2), sm(VS, FS_LAVA, { uRing: uv([0, 1, 2, 3].map(() => new T.Vector4())), uWade: uv(new T.Vector4()), uPop: uv(Array.from({ length: 16 }, () => new T.Vector4())), uLive: uv(0), uHeat: uv(1.2), uK: uv(o.k || 16), uCell: uv(o.cell || 84), uCw: uv(o.cw || 0.05), uBri: uv(0.95) })); };
   /* Partikler. init(i) gir { p, v, s: frø, b: fødsel (s), l: levetid (s), z: størrelse }. o.pix: harde piksler i figurens oppløsning, o.add: lys, ellers røyk. */
   K.pts = (n, init, o) => { o = o || {}; const P = new Float32Array(n * 3), V = new Float32Array(n * 3), S = new Float32Array(n * 4);
     for (let i = 0; i < n; i++) { const q = init(i); P.set(q.p, i * 3); V.set(q.v || [0, 0, 0], i * 3); S.set([q.s == null ? rnd(i, 77) : q.s, q.b || 0, q.l || 1, q.z || 1], i * 4); }
@@ -474,6 +483,25 @@ void main(){
   K.gem = o => { o = o || {}; const g = jitter(new T.IcosahedronGeometry(1, 1), 0.07, o.seed || 4, (x, y, z) => [x, y * 1.06, z * 0.96]).toNonIndexed();
     const m = new T.Mesh(g, sm(VS, FS_GEM, { uA: uv(u3(o.a || '#c81e8c')), uB: uv(u3(o.b || '#ff9adf')), uD: uv(u3(o.d || '#1a0c1c')), uCrkC: uv(u3(o.crk || '#ffe24a')), uId: uv(o.id || 190), uAl: uv(1), uDark: uv(0), uCrk: uv(0), uCrkR: uv(0) }, { side: T.FrontSide })); m.frustumCulled = false; m.layers.set(1); return m; };
   /* Lys oppå: mode 0 ring (flat på bakken), 1 glød (vend den mot kameraet med K.face). */
+  /* Lavabobler (runde 18, Jazz 18.11: lavaen «mer levende»): blemmer i 3D som vokser opp av lavaen og sprekker. Sett fra kampens lave kamera klemmes alt som bare ligger
+     PÅ flaten, til en strek (7:1), så liv i lavaen må ha høyde. Hver boble er en halvkule (instansert): L = [[x, z, takt, fase, radius, voksetid], …]. Den vokser de siste
+     aB.w sekundene av takten sin og er borte idet den sprekker (da kommer ringen i lavaen og dråpene: samme takt som uPop og S.pop). Småboblene (voksetid under 1 s) vokser
+     ikke opp gjennom et skorpeflak; rundt de store smelter skorpen (FS_LAVA). Disen legges på med halv styrke, så de ikke blir matte i røyken etter Primal. */
+  K.domes = L => { const g = new T.SphereGeometry(1, 16, 8, 0, PI * 2, 0, PI / 2), n = L.length, B = new Float32Array(n * 4), M = new T.Matrix4();
+    const m = new T.InstancedMesh(g, sm(`attribute vec4 aB; varying vec3 vW, vN; varying float vG;
+${COMMON}
+${LAVA_CR}
+void main(){ float a = mod(uTime + aB.y, aB.x), gq = clamp((a - (aB.x - aB.w)) / aB.w, 0., 1.), e = gq * gq * (3. - 2. * gq), s = aB.z * (.3 + .7 * e) * step(.001, gq), h = (.22 + .62 * e) * (1. + .06 * sin(uTime * 21. + aB.y * 9.) * e * e);
+  vec4 c0 = modelMatrix * instanceMatrix * vec4(0., 0., 0., 1.); if (aB.w < 1.) s *= 1. - smoothstep(.15, .5, plateAt(c0.xz, uTime, 16., 84., 1.));
+  vec3 p = position * vec3(s, s * h, s); vG = e; vN = normalize(vec3(position.x * h, position.y + .0001, position.z * h));
+  vec4 w = modelMatrix * instanceMatrix * vec4(p, 1.); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`, `varying vec3 vW, vN; varying float vG;
+${COMMON}
+vec3 ramp(float x){ vec3 c = vec3(.028, .006, .002); c = mix(c, vec3(.4, .028, .0), smoothstep(0., .3, x)); c = mix(c, vec3(.98, .24, .02), smoothstep(.24, .6, x)); c = mix(c, vec3(1., .66, .14), smoothstep(.56, .92, x)); return mix(c, vec3(1., .95, .72), smoothstep(.9, 1.35, x)); }
+void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float f = 1. - max(dot(N, V), 0.), top = N.y * N.y;
+  float temp = .58 + .16 * vG + (.2 + .22 * vG) * top - .26 * f * f + .1 * smoothstep(.55, .9, dot(N, normalize(vec3(-.3, .8, .5)))) * (.4 + .6 * vG);
+  gl_FragColor = vec4(mix(ramp(temp) * .84, uFogC, fogK(vW) * .5), 1.); }`, {}), n);
+    L.forEach((q, i) => { m.setMatrixAt(i, M.makeTranslation(q[0], 0, q[1])); B.set([q[2], q[3], q[4], q[5] || 1.2], i * 4); });
+    g.setAttribute('aB', new T.InstancedBufferAttribute(B, 4)); m.frustumCulled = false; return m; };
   K.light = (mode, col, o) => { o = o || {}; const g = mode === 0 ? new T.RingGeometry(0.6, 1, 40, 1).rotateX(-PI / 2) : new T.PlaneGeometry(1, 1);
     if (mode === 0) { const u = g.attributes.uv, p = g.attributes.position; for (let i = 0; i < u.count; i++) u.setXY(i, 0, (Math.hypot(p.getX(i), p.getZ(i)) - 0.6) / 0.4); }
     const m = new T.Mesh(g, sm(VS, FS_ADD, { uC: uv(u3(col)), uA: uv(1), uMode: uv(mode) }, Object.assign(addBlend(), { side: T.DoubleSide, depthTest: o.depth !== false }))); m.frustumCulled = false; return m; };
