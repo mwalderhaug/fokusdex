@@ -536,7 +536,7 @@ const WKVN = ['Bronze', 'Silver', 'Gold'], WKVCANDY = [1, 2, 3];
 /* PUNGEN (steg 1d.8): den første kista har i tillegg en fast sum (× studiebonusen og vanskelighetsgraden, som alt annet), så også et løp med én
    billett gir minst som en vanlig kampdag (Jazz: «minst like mange mynter som en vanlig kampdag»). Den er lik uansett billetter og metall:
    flere billetter gir flere kister og mer av kartet, ikke en større pung. Målt i NOTES.md (18. nov). */
-const WKPURSE = 2100;
+const WKPURSE = 2500;
 const WKV = [
   { coin: [70, 130], p: { candy: 30, balls: 24, enc: 26, stone: 12, mint: 8 } },
   { coin: [130, 210], p: { mint: 22, candy: 22, enc: 22, tutor: 14, mstone: 10, gcap: 6, stone: 4 }, sure: ['mint'] },

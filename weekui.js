@@ -742,7 +742,7 @@ function wkIsle(o) {
   o = o || {};
   const N = wkNow(); if (!N) { closeOv(); return render(); }
   const W = wkSt(), sb = wkSbx(), T = WKT[N.ty], nxk = wkType(N.r + 1), NX = WKT[nxk], V = wkView(), R = V && V.R, live = !!V && modeOn('week'), ph = wkPhase(wkHour());
-  const key = N.r + ':' + N.ty, intro = !!o.arrive && (sb ? sb.iw : W.iw) !== key;
+  const key = N.r + ':' + N.ty, intro = !!o.arrive && !N.played && (sb ? sb.iw : W.iw) !== key;
   if (intro) { if (sb) sb.iw = key; else { W.iw = key; save(); } }
   const L = W.last, vl = W.run ? 0 : wkVaultLeft(), fs = Object.keys(WKT).filter(k => WKT[k].fac), ns = fs.reduce((a, k) => a + (W.sym[k] || 0), 0);
   /* Challenge: det knappen gjør akkurat nå, og linja under. */
