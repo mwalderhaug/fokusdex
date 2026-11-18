@@ -4,7 +4,7 @@
    i tre lag og ett levende element. Alle tider er sekunder fra filmen starter (filmen starter låta i «at»), lagt på slagene i musikken. */
 (() => {
   if (typeof ARENA === 'undefined') return;
-  const C = CINE, K = C.kit, { W, H, TAU, PI, sin, cos, abs, max, min, floor, c01, mix, seg, hit, pulse, io, eo, ei, back, rnd, rgba, blend } = K;
+  const C = CINE, K = C.kit, { W, H, TAU, PI, sin, cos, abs, max, floor, c01, mix, seg, hit, pulse, io, eo, rnd, blend } = K;
   const hits = (t, l, d) => l.reduce((m, q) => max(m, hit(t, q, d)), 0), Z4 = [0, 0, 0, 0];
 
   /* ================= ARTICUNO =================
@@ -15,7 +15,7 @@
      Grepet bare denne har: frost på linsa. Den kryper inn fra hjørnene i filmen og ligger svakt igjen i kampen.
      Filmen (7,3 s): (1) frosten kryper inn over linsa på de tre første slagene. (2) Én blå fjær daler sakte ned, vugger på slagene og treffer isen, som
      sprekker i en stjerne. (3) Articuno ses først som et speilbilde i isen under stjernen, og så daler den ned med vingene ut. */
-  const AB = [0.01, 0.36, 0.71], AF = [2.42, 2.77, 3.12, 3.47, 3.82], AT = 4.17, AR = 4.51, AL = 5.56, ALEN = 7.3;
+  const AB = [0.01, 0.36, 0.71], AT = 4.17, AR = 4.51, AL = 5.56, ALEN = 7.3;
   /* Frosten på linsa: fjærformede krystaller som vokser inn fra hjørnene (tegnet én gang og gjenbrukt). k = hvor langt den har vokst (0–1), a = styrken. */
   let frostCv = null;
   const frostMake = () => {
@@ -32,7 +32,7 @@
     const gr = g.createLinearGradient(0, -12, 0, 10); gr.addColorStop(0, '#eaf8ff'); gr.addColorStop(0.5, '#8fd0ff'); gr.addColorStop(1, '#4a8fe0'); g.fillStyle = gr; g.beginPath(); g.moveTo(0, -12); g.quadraticCurveTo(6, -4, 3.6, 7); g.lineTo(0.6, 10); g.lineTo(-0.6, 10); g.lineTo(-3.6, 7); g.quadraticCurveTo(-6, -4, 0, -12); g.fill();
     g.strokeStyle = '#ffffff'; g.lineWidth = 0.7; g.beginPath(); g.moveTo(0, -11); g.lineTo(0, 14); for (let i = 0; i < 5; i++) { g.moveTo(0, -6 + i * 3.2); g.lineTo(3.6 - i * 0.2, -8.5 + i * 3.2); g.moveTo(0, -6 + i * 3.2); g.lineTo(-3.6 + i * 0.2, -8.5 + i * 3.2); } g.stroke(); g.restore(); };
   const aScene = S => {
-    const g = K.g, P = K.P, t = S.t, st = K.st, YH = st.YH, p2 = S.p2, fT = S.since('field'), star = S.star || null, dim = S.dim || 0;
+    const g = K.g, P = K.P, t = S.t, st = K.st, YH = st.YH, p2 = S.p2, star = S.star || null, dim = S.dim || 0;
     /* Lyset på figurene: skumringen. Rosa lys fra himmelen bak og fra venstre, blått skjær nedenfra fra isen, og blåfiolette skygger. */
     K.lightSet({ amb: blend('#b4a6cc', '#7a7aa8', dim), sat: 0.92, lift: '#221c40', lights: [{ col: '#ffc4d4', a: 0.26 * (1 - dim), h: 0.5, top: 1 }, { col: '#9fd0ff', a: 0.3, h: 0.45 }],
       rim: [{ col: '#ffd0dc', dx: 1, dy: 1, a: 0.55 * (1 - dim) }], me: { amb: blend('#a99cc4', '#74749e', dim), rim: [{ col: '#ffd0dc', dx: -1, dy: 1, a: 0.5 * (1 - dim) }] } });
