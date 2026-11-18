@@ -261,7 +261,8 @@ const CINE = (() => {
   C.prep = async (id, ms, extra) => {
     const f = filmOf(id); if (!f) return false;
     const own = typeof id === 'number' || /^dk/.test(id), ani = f.ani && C.loadAni ? [].concat(own ? [f.spid || id] : [], f.ani === 1 ? [] : f.ani).map(q => loadSprite(q).then(sp => sp && C.loadAni(q, sp))) : [];
-    const jobs = Promise.all([need((f.use || []).concat(['paint'])), own ? loadSprite(f.spid || id) : 0].concat((f.sps || []).concat(extra || []).map(loadSprite), ani));
+    /* f.pre: noe filmen selv må hente før den kan tegnes (3D-cutscenene henter bunten og modellene fra pakken). */
+    const jobs = Promise.all([need((f.use || []).concat(['paint'])), own ? loadSprite(f.spid || id) : 0, f.pre ? Promise.resolve().then(f.pre).catch(() => 0) : 0].concat((f.sps || []).concat(extra || []).map(loadSprite), ani));
     await Promise.race([jobs, new Promise(r => setTimeout(r, ms || 4000))]); return true;
   };
   let B = null;
