@@ -2708,3 +2708,249 @@ button.rtf::before{content:"";position:absolute;left:10px;right:10px;bottom:6px;
 .echn{display:flex;justify-content:center;align-items:baseline;gap:8px;margin:6px 0}.echn b{color:var(--gold)}
 .pill.tpp{box-shadow:inset 0 0 0 1px var(--line)}.tp-skit{color:#9fd3e6}.tp-heavy{color:#d8b58a}.tp-rest{color:#bfe3c0}.tp-fierce{color:#f0a08c}
 @media (prefers-reduced-motion:reduce){.rtf i,.rtf.sp::after{animation:none!important}}
+
+/* ---------- Ekspedisjonen (steg 1d): billettene, kortet på forsiden, kartet og rommene ----------
+   --wc er ukas farge (WKT i week.js). Forsiden følger utseendet som er valgt (lys eller mørk); kartet (.ov.wkov) er alltid mørkt. */
+.wk-k{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2)}
+/* Billettene: fem små lykter. */
+.wkl{display:inline-flex;gap:5px;align-items:center;flex:none}
+.wkl i{position:relative;width:11px;height:15px;border-radius:4px 4px 5px 5px;background:var(--track);box-shadow:inset 0 0 0 1px var(--line)}
+.wkl i::before{content:"";position:absolute;left:50%;top:-3px;width:5px;height:3px;margin-left:-2.5px;border-radius:2px 2px 0 0;background:var(--line)}
+.wkl i.on{background:linear-gradient(#fff6d6,var(--gold));box-shadow:0 0 9px color-mix(in srgb,var(--gold) 75%,transparent)}
+.wkl em{font-style:normal;font-size:11px;color:var(--gold);margin-left:1px;letter-spacing:1px}
+.wkl.lg i{width:15px;height:20px;border-radius:5px 5px 7px 7px}.wkl.lg{gap:7px}
+.wkemb{flex:none;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--wc) 22%,var(--card));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--wc) 55%,transparent)}
+.wkemb svg{width:22px;height:22px;fill:none;stroke:color-mix(in srgb,var(--wc) 70%,var(--ink));stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* Raden på forsiden */
+.wks{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border:0;font:inherit;color:var(--ink);text-align:left;cursor:pointer}
+.wks .sp{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}.wks .sp b{font-size:15.5px;font-weight:600;letter-spacing:-.01em}.wks .sp .sm{line-height:1.3}
+.wks.on{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--gold) 70%,transparent)}
+.wkc .mode-h .wkemb{width:34px;height:34px;border-radius:11px}.wkc .mode-h .wkemb svg{width:19px;height:19px}
+.wkc .mode-t .wkl{margin-left:auto}
+/* Laget i løpet */
+.wkt{display:flex;justify-content:center;gap:8px}
+.wkt>span{display:flex;flex-direction:column;align-items:center;gap:3px;width:38px}.wkt .sprb{--s:34px}
+.wkt>span>i{display:block;width:30px;height:4px;border-radius:3px;background:var(--track);overflow:hidden}.wkt>span>i>i{display:block;height:100%;border-radius:3px}
+.wkt>span.ko .sprb{filter:grayscale(1);opacity:.35}
+/* Kortet i valget av dagens modus */
+.mdc.wkm{background:linear-gradient(135deg,color-mix(in srgb,var(--wc) 20%,var(--card)),var(--card) 70%);box-shadow:0 0 0 1.5px color-mix(in srgb,var(--wc) 60%,var(--line))}
+.mdc.wkm.on{box-shadow:0 0 0 2.5px var(--gold)}
+.mdc.wkm .wkl{margin-left:auto}
+/* Arkene */
+.wkih{display:flex;align-items:center;gap:12px;margin-bottom:4px}.wkih .sp{flex:1;min-width:0}
+.wkzl{display:flex;flex-direction:column;gap:7px;margin:4px 0}
+.wkzl>div{display:flex;gap:10px;align-items:center;font-size:13.5px;color:var(--ink3)}
+.wkzl i{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:11.5px;font-weight:700;background:var(--track);color:var(--ink3)}
+.wkzl>div.on{color:var(--ink)}.wkzl>div.on i{background:linear-gradient(#fff6d6,var(--gold));color:var(--goldink)}
+.wkwhy{color:var(--ink2);border-radius:12px;padding:10px 12px;background:var(--soft)}
+.wkfoe{display:flex;gap:12px;align-items:center;border-radius:16px;padding:10px 12px;background:var(--card2);box-shadow:0 0 0 1px var(--line)}
+.wkfoe .sp{display:flex;flex-direction:column;gap:3px;min-width:0}.wkfoe .sp b{font-size:17px}.wkfoe .ty{font-size:10.5px;padding:1px 7px;border-radius:99px;color:var(--tyink)}
+.wkscout{display:flex;align-items:center;flex-wrap:wrap;gap:4px}.wkscout .sm{width:100%}.wkscout .sprb{--s:38px}
+.wklu{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.wklu button{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;padding:8px 4px 7px;border:0;border-radius:14px;background:var(--card2);box-shadow:0 0 0 1px var(--line);color:var(--ink);font:inherit;cursor:pointer}
+.wklu button.lead{box-shadow:0 0 0 2px var(--sage);background:color-mix(in srgb,var(--sage) 12%,var(--card2))}
+.wklu b{max-width:100%;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wklu .sprb{--s:40px}
+.wkhp{display:block;width:72%;height:4px;border-radius:3px;background:var(--track);overflow:hidden}.wkhp>i{display:block;height:100%;border-radius:3px}
+.wklu button.ko{opacity:.45}.wklu button.ko .sprb{filter:grayscale(1)}
+.wkevd{font-size:15px;line-height:1.45;color:var(--ink)}
+.wkopts{display:flex;flex-direction:column;gap:8px}
+.wkopt{display:flex;flex-direction:column;gap:3px;width:100%;padding:13px 14px;border:0;border-radius:16px;background:var(--card2);box-shadow:0 0 0 1px var(--line);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.wkopt b{font-size:15.5px}.wkopt:active{transform:scale(.985)}
+.wkrs{justify-content:center;margin:4px 0}
+/* Rommene: samme merke på kartet og i arkene (.stat = står stille i et ark). */
+.wkn{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;padding:0;border:0;border-radius:50%;display:grid;place-items:center;background:#241f33;color:#d9d3ea;box-shadow:0 0 0 1.5px rgba(255,255,255,.2);cursor:pointer;transition:transform .12s ease}
+.wkn:active{transform:scale(.93)}
+.wkn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.wkn svg.f{fill:currentColor;stroke:none}
+.wkn .wkq{font-size:21px;font-weight:800;line-height:1}
+.wkn.stat{position:static;margin:0;flex:none;cursor:default}
+.wkn.k-tr{color:#cfd6c4}.wkn.k-ac{color:#f0c987;box-shadow:0 0 0 1.5px #f0c987}.wkn.k-gt,.wkn.k-el{color:#f3e3bd;box-shadow:0 0 0 2px rgba(240,201,135,.7)}
+.wkn.k-ev{color:#c9b3ff}.wkn.k-sp{color:#8fd6d0}.wkn.k-tz{color:#f0c56d}.wkn.k-en{color:#9fd08a}.wkn.k-sr{color:#e9d9ff}
+.wkn.big{width:62px;height:62px;margin:-31px 0 0 -31px;overflow:hidden;background:radial-gradient(circle at 40% 30%,#3d4250,#1a1c24);box-shadow:0 0 0 2px #cfd5e2,0 0 20px rgba(207,213,226,.3);color:#e3e7f0}
+.wkn.big.k-bg{background:radial-gradient(circle at 40% 30%,#4c3f2a,#221b12);box-shadow:0 0 0 2px #f0c987,0 0 22px rgba(240,201,135,.4);color:#f0c987}
+.wkn.big.k-sr{background:radial-gradient(circle at 40% 30%,#3b2a5c,#17102a);box-shadow:0 0 0 2px #b99cff,0 0 22px rgba(185,156,255,.35)}
+.wkn.big svg{width:28px;height:28px}
+.wkn.big .tsb{width:62px;height:62px;border-radius:50%;background:none}
+.wkn.done{opacity:.5}.wkn.off{opacity:.22}
+.wkn.lock{opacity:.28;box-shadow:0 0 0 1px rgba(255,255,255,.14)}
+.wkn.now{box-shadow:0 0 0 2.5px #fff,0 0 18px rgba(255,255,255,.55);background:#3a3152;opacity:1}
+.wkn.open{box-shadow:0 0 0 2.5px var(--tc),0 0 0 6px color-mix(in srgb,var(--tc) 22%,transparent);animation:wkpulse 1.8s ease-in-out infinite}
+.wkn .wkok{position:absolute;right:-4px;bottom:-4px;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:#6fd08a;color:#10210f}.wkn .wkok svg{width:12px;height:12px;stroke-width:3}
+@keyframes wkpulse{50%{box-shadow:0 0 0 2.5px var(--tc),0 0 0 11px color-mix(in srgb,var(--tc) 0%,transparent)}}
+@media (prefers-reduced-motion:reduce){.wkn.open{animation:none}}
+/* Kartet: en mørk sone */
+.ov.wkov{--bg:#141021;--bg2:#0b0910;--panel:#1c1830;--panel2:#262139;--card:rgba(255,255,255,.065);--card2:rgba(255,255,255,.06);--line:rgba(255,255,255,.11);--soft:rgba(255,255,255,.08);--hi:rgba(255,255,255,.14);
+  --ink:#f3f1f8;--ink2:#b1acc2;--ink3:#777289;--acc:#b5a8e6;--acc2:#edb5a0;--accink:#1a152c;--accsoft:rgba(181,168,230,.16);--gold:#f0c987;--goldsoft:rgba(240,201,135,.14);--goldink:#2a2109;--red:#e79a8c;--good:#a9d6a5;
+  --shade:rgba(6,5,16,.5);--scrim:rgba(7,6,16,.55);--track:rgba(255,255,255,.1);--sage:var(--acc);
+  --page:radial-gradient(120% 34% at 50% 0%,color-mix(in srgb,var(--tc) 24%,transparent),transparent 70%),linear-gradient(#151122,#0b0910);background:var(--page);color:var(--ink);color-scheme:dark}
+.wktop{align-items:center;gap:10px}.wk-h{display:flex;flex-direction:column;min-width:0;text-align:center}.wk-h b{font-size:17px;letter-spacing:-.01em}
+.wkmap{position:relative;width:100%;border-radius:22px;overflow:hidden;background:radial-gradient(120% 30% at 50% 100%,color-mix(in srgb,var(--tc) 16%,#14111d),transparent 70%),linear-gradient(#0f0c17,#100d19);box-shadow:0 0 0 1px var(--line)}
+.wkz{position:absolute;left:0;right:0;border-top:1px dashed rgba(255,255,255,.14);pointer-events:none}
+.wkz span{position:absolute;left:10px;top:5px;display:flex;gap:5px;align-items:center;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+.wkz span svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.wkz.lock{background:repeating-linear-gradient(135deg,rgba(0,0,0,.4) 0 9px,rgba(0,0,0,.26) 9px 18px)}.wkz.lock span{color:var(--ink2)}
+.wke{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.wke line{stroke:rgba(255,255,255,.24);stroke-width:1.6;stroke-dasharray:2 6;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.wke line.w{stroke:#fff;stroke-width:2.4;stroke-dasharray:none}.wke line.o{stroke:var(--tc);stroke-width:2.4;stroke-dasharray:3 6}.wke line.d{stroke:rgba(255,255,255,.09)}
+.wkme{position:absolute;width:30px;height:30px;margin:-52px 0 0 -15px;pointer-events:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}.wkme .sprb{--s:30px}
+.wkgate{position:absolute;left:0;right:0;margin-top:-10px;text-align:center;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);pointer-events:none}
+.wkacts{position:sticky;bottom:0;align-items:center;padding:10px 12px;border-radius:18px;background:rgba(17,13,27,.9);box-shadow:0 0 0 1px var(--line);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.wkacts p{flex:1;margin:0}.wkacts .btn{flex:none}
+/* Oppsummeringen */
+.wkend{display:flex;flex-direction:column;gap:14px;align-items:stretch;text-align:left;margin-top:8vh}
+.wkzp{display:flex;flex-direction:column;gap:8px}
+.wkzp span{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--ink3)}
+.wkzp i{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--track);box-shadow:inset 0 0 0 1px var(--line)}
+.wkzp i svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.wkzp span.op{color:var(--ink2)}.wkzp span.on{color:var(--ink)}.wkzp span.on i{background:linear-gradient(#fff6d6,var(--gold));color:var(--goldink);box-shadow:0 0 10px color-mix(in srgb,var(--gold) 55%,transparent)}
+.wkend .gain{grid-template-columns:repeat(3,minmax(0,1fr))}
+
+/* ---------- Steg 1d.4 og 1d.5: ukestypenes regler, hvelvet, symbolene, Mints og Gold Bottle Cap ---------- */
+/* Regelkortet: i arket om ekspedisjonen (.wkrule) og som en smal rad over kartet (.wkrc). */
+.wkrule{display:flex;flex-direction:column;gap:3px;width:100%;padding:12px 14px;border:0;border-radius:16px;text-align:left;font:inherit;color:var(--ink);background:color-mix(in srgb,var(--wc) 12%,var(--card2));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--wc) 45%,transparent);cursor:pointer}
+.wkrule b{font-size:16px}.wkrule .sm{line-height:1.4}
+.wkrc{display:flex;align-items:center;gap:10px;width:100%;padding:8px 12px;border:0;border-radius:13px;background:var(--card);box-shadow:0 0 0 1px var(--line);color:var(--ink);font:inherit;cursor:pointer}
+.wkrc b{flex:1;text-align:right;font-size:14px;font-weight:600}.wkrc .icn{width:15px;height:15px;opacity:.6;flex:none}
+/* Raden under laget: Castle Points, Pyramid-veska, veien ut, Snag Ballene */
+.wktr{display:flex;align-items:center;gap:10px;width:100%;padding:8px 12px;border:0;border-radius:14px;background:var(--card);box-shadow:0 0 0 1px var(--line);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.wktr.stat{cursor:default}.wktr .sp{display:flex;flex-direction:column;min-width:0;flex:1}.wktr b{font-size:14px;font-weight:600}.wktr .icn{width:15px;height:15px;opacity:.6;flex:none}
+.wkcpi{flex:none;min-width:34px;height:34px;padding:0 7px;border-radius:11px;display:grid;place-items:center;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink);background:color-mix(in srgb,var(--tc,var(--wc,var(--gold))) 22%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tc,var(--wc,var(--gold))) 55%,transparent)}
+.wkcpi.lg{min-width:46px;height:46px;font-size:19px;border-radius:14px}
+.wkopt.cp{flex-direction:row;align-items:center;gap:10px}.wkopt.cp .sp{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}.wkopt:disabled{opacity:.42;cursor:default}
+.wklu button:disabled{opacity:.42;cursor:default}
+/* Kartet: lukkede dører og mørke rom, hintet i Pike, typen i Hall, Shadow-auraen */
+.wkn.k-hid{color:#8d87a3;background:#191524;box-shadow:0 0 0 1.5px rgba(255,255,255,.14)}
+.wkn.hint::after{content:"";position:absolute;right:-2px;top:-2px;width:11px;height:11px;border-radius:50%;background:var(--tc,var(--wc));box-shadow:0 0 8px var(--tc,var(--wc))}
+.wkn.shd::before{content:"";position:absolute;inset:-8px;border-radius:50%;background:radial-gradient(circle,transparent 56%,rgba(176,107,255,.6) 70%,transparent 80%);pointer-events:none;animation:wkaur 2.6s ease-in-out infinite}
+.wkn.big.shd{overflow:visible}
+.wkty{position:absolute;left:50%;top:100%;transform:translate(-50%,3px);font-style:normal;font-size:9px;line-height:1.5;padding:0 6px;border-radius:99px;color:var(--tyink,#17130f);white-space:nowrap;pointer-events:none}
+.wkn.big .wkty{display:none}
+.wkmap.dark{background:radial-gradient(90% 22% at 50% 100%,color-mix(in srgb,var(--tc) 12%,#0a0810),transparent 70%),#07060b}
+@keyframes wkaur{50%{opacity:.45;transform:scale(1.08)}}
+/* Shadow-Pokémon: i arkene (.wksh), og i kampen (.bs.shd og merket ved navnet) */
+.wksh{flex:none;display:inline-grid;place-items:center;border-radius:50%;background:radial-gradient(circle,rgba(160,90,255,.5),transparent 70%)}
+.wksh .sprb{filter:drop-shadow(0 0 4px #b06bff) brightness(.8) saturate(.75)}
+.wkshl{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border:0;border-radius:16px;background:var(--card2);box-shadow:0 0 0 1px var(--line);color:var(--ink);font:inherit;text-align:left}
+.wkshl .sp{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}button.wkshl{cursor:pointer}.wkshl .icn{width:16px;height:16px;opacity:.6;flex:none}
+.wkhg{display:inline-flex;gap:5px;flex:none}.wkhg i{width:10px;height:10px;border-radius:50%;background:#6a2bd9;box-shadow:0 0 6px rgba(160,90,255,.7)}
+.wkhg i.on{background:var(--gold);box-shadow:0 0 6px color-mix(in srgb,var(--gold) 70%,transparent)}
+.wksc{box-shadow:0 0 0 1.5px rgba(176,107,255,.6)}
+.bs[data-shd="1"]{background:radial-gradient(closest-side,rgba(150,70,255,.5),rgba(90,30,200,.24) 55%,transparent 76%)}
+.bs[data-shd="1"] img{filter:brightness(.76) saturate(.62) drop-shadow(0 0 3px #c58bff) drop-shadow(0 0 12px #7a3cf0);animation:wkshb 2.4s ease-in-out infinite}
+@keyframes wkshb{50%{filter:brightness(.86) saturate(.7) drop-shadow(0 0 6px #d3a4ff) drop-shadow(0 0 20px #8a4cff)}}
+.tyb span.shdt{background:#6a2bd9;color:#fff;text-shadow:none}
+.mc-n.wkpu b{color:#b98cff}
+/* Brettet i Arcade */
+.wkbd{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.wkbt{display:grid;place-items:center;min-height:54px;padding:4px;border-radius:12px;background:var(--card2);box-shadow:inset 0 0 0 1px var(--line);text-align:center;font-size:11.5px;line-height:1.2;color:var(--ink2);transition:transform .08s ease}
+.wkbt b{font-weight:600}.wkbt.g2{box-shadow:inset 0 0 0 1.5px rgba(111,208,138,.75)}.wkbt.g0{box-shadow:inset 0 0 0 1.5px rgba(239,122,106,.75)}
+.wkbt.cur,.wkbd.set .wkbt.on{background:var(--gold);color:var(--goldink);transform:scale(1.06)}.wkbd.set .wkbt{opacity:.38}.wkbd.set .wkbt.on{opacity:1}
+/* Veien ut av ormehullet */
+.wkex>div.cur{font-weight:600}.wkex>div.cur i{box-shadow:0 0 0 2.5px var(--wc)}
+/* Hvelvet: én kiste per billett. --m er metallet. */
+.wkvault{display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:20px;background:var(--card);box-shadow:0 0 0 1px var(--line)}
+.wkvault p{margin:0}
+.wkchs{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px}
+.wkch{--m:#c08a5a;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:96px;padding:10px 6px;border:0;border-radius:16px;background:color-mix(in srgb,var(--m) 12%,var(--card));box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--m) 55%,transparent);color:var(--ink);font:inherit;text-align:center}
+.wkch.m1{--m:#cfd5e2}.wkch.m2{--m:#f0c987}
+button.wkch{cursor:pointer}button.wkch:active{transform:scale(.96)}
+.wkcb{position:relative;display:block;width:46px;height:34px;border-radius:7px 7px 5px 5px;background:linear-gradient(var(--m) 0 38%,color-mix(in srgb,var(--m) 55%,#000) 38% 45%,color-mix(in srgb,var(--m) 80%,#000) 45%);box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.28),0 3px 9px rgba(0,0,0,.35)}
+.wkcb::after{content:"";position:absolute;left:50%;top:30%;width:9px;height:11px;margin-left:-4.5px;border-radius:2px 2px 4px 4px;background:#2a2109;box-shadow:0 0 0 1.5px color-mix(in srgb,var(--m) 60%,#fff)}
+button.wkch .wkcb{animation:wkbob 2.4s ease-in-out infinite}
+.wkch.open .rs-it{flex-direction:column;gap:3px;min-height:0;padding:0;background:none;box-shadow:none;color:var(--ink)}.wkch.open .rs-nm{font-size:12px;line-height:1.25}
+.wkch.open .coin{font-size:12.5px}
+.wkch.pop{animation:wkpop .45s cubic-bezier(.2,1.4,.4,1)}
+.wkch.mini{min-height:0;width:38px;height:38px;padding:0;border-radius:12px;flex:none}.wkch.mini .wkcb{width:24px;height:18px;animation:none}.wkch.mini .wkcb::after{width:5px;height:6px;margin-left:-2.5px}
+@keyframes wkbob{50%{transform:translateY(-3px)}}@keyframes wkpop{0%{transform:scale(.7);opacity:.2}}
+/* Symbolene i Profile */
+.wksyg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:10px}
+.wksym{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;border:0;background:none;color:var(--ink2);font:inherit;cursor:pointer}.wksym small{font-size:10.5px}
+.wksym svg{width:40px;height:44px}.wksym .hx{fill:none;stroke:var(--ink3);stroke-width:1.4;stroke-dasharray:3 3;opacity:.6}.wksym .gl{fill:none;stroke:var(--ink3);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;opacity:.55}
+.wksym.s1 .hx{fill:#cfd5e2;stroke:#8f97a8;stroke-dasharray:none;opacity:1}.wksym.s1 .gl{stroke:#333a48;opacity:1}
+.wksym.s2 .hx{fill:#f0c987;stroke:#b8862a;stroke-dasharray:none;opacity:1;filter:drop-shadow(0 0 5px rgba(240,201,135,.6))}.wksym.s2 .gl{stroke:#3a2a09;opacity:1}
+.wksym.s1,.wksym.s2{color:var(--ink)}span.wksym{cursor:default;padding:0;flex:none}.wksym.lg svg{width:52px;height:57px}
+.wksymr{display:flex;align-items:center;gap:12px}.wksymr p{margin:0}
+.wkinv{display:flex;align-items:center;gap:14px;width:100%;margin-top:10px;padding:9px 12px;border:0;border-radius:12px;background:var(--card2);color:var(--ink);font:inherit;cursor:pointer}
+.wkinv span{display:flex;align-items:center;gap:6px;font-size:13px}.wkinv .icn{margin-left:auto;width:16px;height:16px;opacity:.6}
+/* Mint og Gold Bottle Cap: tegnet i kode (SHOP.ic) */
+.wkmint{display:inline-block;flex:none;width:18px;height:18px;border-radius:2px 13px 2px 13px;background:linear-gradient(135deg,#c9efd2,#5fbf8f);box-shadow:inset 0 0 0 1px rgba(0,0,0,.16);transform:rotate(-8deg)}
+.wkcap{display:inline-block;flex:none;width:19px;height:19px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff3c4,#f0c35a 55%,#b8862a);box-shadow:inset 0 0 0 2px rgba(120,80,10,.32),0 0 0 1.5px #b8862a}
+.wkmb{display:inline-flex;align-items:center;gap:7px;margin-top:6px}.wkmc{flex-wrap:wrap}.wkmc small{opacity:.7}
+.wkcr .trl .sm{display:block}.wkcr .wkcap{vertical-align:-3px;margin-right:6px}
+@media (prefers-reduced-motion:reduce){.wkn.shd::before,.bs[data-shd="1"] img,button.wkch .wkcb,.wkch.pop{animation:none}}
+
+/* ---------- Ekspedisjonen (steg 1d.6–1d.8): portalen, øya, ukas intro, hvelvet som åpnes, resultatkortet og arket på studiedag 10 ---------- */
+/* Portalen: et lerret med stjernestriper over hele appen, et blink i ukas farge, og forsiden som trekkes inn mot midten. */
+.wkport{position:absolute;inset:0;z-index:90;overflow:hidden;transition:opacity .4s}
+.wkport canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}
+.wkport-f{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 50% 50%,#fff 0,color-mix(in srgb,var(--wc) 65%,#fff) 28%,transparent 68%);opacity:0;animation:wkflash var(--ms) linear forwards}
+.wkport.out .wkport-f{animation-name:wkflasho}
+.wkport.gone{opacity:0;pointer-events:none}
+.wkport-s{position:absolute;right:18px;top:calc(14px + env(safe-area-inset-top,0px));z-index:2;background:rgba(13,11,24,.6);color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.25)}
+@keyframes wkflash{0%,70%{opacity:0;transform:scale(.15)}86%{opacity:1;transform:scale(2.6)}100%{opacity:0;transform:scale(3.2)}}
+@keyframes wkflasho{0%{opacity:.2;transform:scale(.3)}45%{opacity:1;transform:scale(2.6)}100%{opacity:0;transform:scale(3.2)}}
+.main.wkwarp{animation:wkwarp var(--ms) cubic-bezier(.55,0,.85,.45) forwards;transform-origin:50% calc(var(--sy,0px) + 45vh)}
+@keyframes wkwarp{55%{opacity:1}to{transform:scale(.04) rotate(220deg);filter:blur(3px) brightness(1.7);opacity:0}}
+.ov.wkwarpo{animation:wkwarpo .62s ease-in forwards}
+@keyframes wkwarpo{to{transform:scale(1.22);filter:blur(3px) brightness(1.8);opacity:0}}
+/* Øya: bildet i piksler med et trykkpunkt per sted, ukas type, Challenge og menyen. */
+.wkisw{position:relative;display:flex;flex-direction:column;gap:10px}
+.wkis{position:relative;aspect-ratio:176/120;border-radius:20px;overflow:hidden;background:#090818;box-shadow:0 0 0 1px color-mix(in srgb,var(--wc) 38%,transparent),0 20px 46px -24px var(--wc)}
+.wkis canvas{display:block;width:100%;height:100%;image-rendering:pixelated;transform-origin:var(--ox,50%) var(--oy,50%);transition:transform 1.4s cubic-bezier(.3,.1,.2,1)}
+.wkisw.intro .wkis canvas{transform:scale(2.05)}
+.wkisw.intro .wkhs{opacity:0;pointer-events:none}
+.wkisw.intro>.wkwk,.wkisw.intro>.wkgo,.wkisw.intro>.wkmenu,.wkisw.intro>.wknx{display:none}
+.wkisw:not(.intro)>.wkwk,.wkisw:not(.intro)>.wkgo,.wkisw:not(.intro)>.wkmenu{animation:wkrise .35s both}
+.wkisw:not(.intro)>.wkgo{animation-delay:.05s}.wkisw:not(.intro)>.wkmenu{animation-delay:.1s}
+.wkhs{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;padding:0;border:0;border-radius:50%;background:none;cursor:pointer;transition:opacity .5s .6s;-webkit-tap-highlight-color:transparent}
+.wkhs:active{background:rgba(255,255,255,.14)}
+.wkhs i{position:absolute;left:50%;bottom:calc(100% - 2px);transform:translateX(-50%);padding:2px 8px;border-radius:99px;font-style:normal;font-size:10px;font-weight:700;line-height:1.35;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;background:rgba(13,11,24,.82);color:#fff;box-shadow:0 0 0 1px color-mix(in srgb,var(--wc) 80%,transparent)}
+.wkhs.nx i{color:rgba(255,255,255,.78);box-shadow:0 0 0 1px rgba(255,255,255,.28)}
+.wkhs.rt i{left:auto;right:2px;transform:none}.wkhs.lf i{left:2px;transform:none}.wkhs.dn i{bottom:auto;top:calc(100% - 6px)}
+.wkwk{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border:0;border-radius:16px;background:var(--card);box-shadow:0 0 0 1px var(--line);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.wkwk .sp{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}.wkwk b{font-size:17px;letter-spacing:-.01em}.wkwk .icn{width:16px;height:16px;opacity:.6;flex:none}
+.wkgo{display:flex;align-items:center;gap:12px;width:100%;padding:15px 16px;border:0;border-radius:18px;background:var(--card);box-shadow:0 0 0 1px var(--line);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.wkgo .sp{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}.wkgo b{font-size:19px;letter-spacing:-.01em}.wkgo .sm{line-height:1.3}
+.wkgo.on{background:linear-gradient(135deg,color-mix(in srgb,var(--gold) 24%,#1a1626),#1a1626 78%);box-shadow:0 0 0 1.5px var(--gold),0 14px 30px -20px var(--gold)}
+.wkgo.on b{color:var(--gold)}.wkgo:active{transform:scale(.985)}.wkgo:disabled{cursor:default;opacity:.72}.wkgo:disabled:active{transform:none}
+.wkgo>svg,.wkgo>.icn{width:18px;height:18px;flex:none;opacity:.7;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.wkmenu{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.wkmi{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;padding:12px 11px;border:0;border-radius:16px;background:var(--card);box-shadow:0 0 0 1px var(--line);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.wkmi:active{transform:scale(.97)}.wkmi b{font-size:14.5px}.wkmi .sm{font-size:11.5px;line-height:1.25}
+.wkmg{flex:none;width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,var(--wc,var(--gold)) 18%,transparent);color:color-mix(in srgb,var(--wc,var(--gold)) 70%,var(--ink))}
+.wkmg svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.wkdot{position:absolute;right:10px;top:10px;width:9px;height:9px;border-radius:50%;background:var(--gold);box-shadow:0 0 9px var(--gold)}
+.wknx{text-align:center;margin:2px 0 0}
+/* Ukas intro: står under bildet mens det glir inn mot ukas sted. Hver linje kommer for seg, og lyktene tennes én etter én. */
+.wkint-c{display:flex;flex-direction:column;gap:11px;padding:4px 2px 0}
+.wkint-c>*{animation:wkrise .5s backwards}
+.wkint-c>.wk-k{animation-delay:.55s}.wkint h1{margin:-6px 0 0;font-size:32px;line-height:1.1;letter-spacing:-.02em;color:color-mix(in srgb,var(--wc) 60%,#fff);animation-delay:.7s}
+.wkint-b{display:flex;align-items:center;gap:13px;animation-delay:1.15s}.wkint-b p{margin:0;font-size:15px;line-height:1.4;color:var(--ink)}
+.wkint-b .tsb{width:64px;height:64px;border-radius:18px;box-shadow:0 0 0 1.5px color-mix(in srgb,var(--wc) 70%,transparent)}
+.wkint-q{flex:none;width:64px;height:64px;border-radius:18px;display:grid;place-items:center;background:color-mix(in srgb,var(--wc) 16%,transparent);box-shadow:0 0 0 1.5px color-mix(in srgb,var(--wc) 70%,transparent);color:color-mix(in srgb,var(--wc) 70%,#fff)}
+.wkint-q svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.wkint-q .wkq{font-size:30px}
+.wkint-z{display:flex;flex-direction:column;gap:7px;animation-delay:1.5s}
+.wkint-z span{display:flex;align-items:center;gap:11px;font-size:13.5px;color:var(--ink3)}
+.wkint-z i{flex:none;width:11px;height:15px;border-radius:4px 4px 5px 5px;background:var(--track);box-shadow:inset 0 0 0 1px var(--line)}
+.wkint-z span.on{color:var(--ink)}
+.wkint-z span.on i{background:linear-gradient(#fff6d6,var(--gold));box-shadow:0 0 9px color-mix(in srgb,var(--gold) 75%,transparent);animation:wklamp .35s backwards;animation-delay:calc(1.64s + var(--i)*.26s)}
+.wkint-n{margin:0;animation-delay:3.1s}.wkint-c>.btn{animation-delay:3.3s}
+.wkint.gone{display:none}
+@keyframes wkrise{from{opacity:0;transform:translateY(10px)}}
+@keyframes wklamp{from{background:var(--track);box-shadow:inset 0 0 0 1px var(--line);transform:scale(.8)}}
+/* Hvelvet som åpnes: kista rister, og når den går opp, slår et lysskjær i metallets farge ut og innholdet stiger opp. */
+.wkch.shk .wkcb{animation:wkshk .5s ease-in-out infinite}
+@keyframes wkshk{0%,100%{transform:rotate(0)}20%{transform:rotate(-10deg) translateY(-2px)}40%{transform:rotate(9deg)}60%{transform:rotate(-7deg) translateY(-3px)}80%{transform:rotate(5deg)}}
+.wkch.open.pop{overflow:visible;z-index:1}
+.wkch.open.pop::before{content:"";position:absolute;inset:-10px;border-radius:24px;background:radial-gradient(circle,color-mix(in srgb,var(--m) 75%,#fff) 0,transparent 68%);animation:wkbeam .8s ease-out forwards;pointer-events:none}
+.wkch.open.pop>*{animation:wkrise .45s .12s backwards}
+.wkch.open.rare{box-shadow:inset 0 0 0 2px var(--m),0 0 24px -6px var(--m)}
+@keyframes wkbeam{0%{opacity:.95;transform:scale(.4)}100%{opacity:0;transform:scale(1.8)}}
+.wkpurse{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
+.wkch.open .coin.big{font-size:15px}
+.wkvr{display:flex;align-items:center;gap:8px}.wkvr .sm{flex:1;margin-left:4px}
+/* Resultatkortet og arket på studiedag 10 */
+.wkcardi{display:block;width:min(100%,290px);margin:2px auto 4px;border-radius:18px;box-shadow:0 0 0 1px var(--line),0 16px 36px -22px var(--shade)}
+.wkd10 .wkis{margin-bottom:12px}
+.wkdr{display:flex;gap:12px;align-items:flex-start;padding:7px 0}.wkdr .sp{display:flex;flex-direction:column;gap:2px;min-width:0}.wkdr b{font-size:15px}
+.wkendb{display:flex;gap:8px}.wkendb .btn{flex:1}
+@media (prefers-reduced-motion:reduce){.wkport-f,.main.wkwarp,.ov.wkwarpo,.wkint-c>*,.wkint-z span.on i,.wkch.shk .wkcb,.wkch.open.pop::before,.wkch.open.pop>*,.wkisw:not(.intro)>*{animation:none}.wkis canvas{transition:none}.wkch.open.pop::before{display:none}}

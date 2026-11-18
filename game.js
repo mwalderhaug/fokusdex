@@ -55,6 +55,8 @@ const SHOP = {
   radiant: { n: 'Radiant Incense', p: 18000, d: 'Shiny odds ×5 for 72 hours on new encounters while it burns · trainer level 24', lv: 24, img: 'full-incense', bc: '#e3c577', sb: [5, 72] },
   prism: { n: 'Prism Lure', p: 12000, d: 'The next legendary raid has a 1 in 5 chance of being shiny · trainer level 20', lv: 20, img: 'prism-scale', bc: '#b295e6' },
   candy: { n: 'Rare Candy', p: 150, d: 'One level up for one Pokémon', img: 'rare-candy', bc: '#7fa8e6' },
+  mint: { n: 'Mint', p: 0, d: 'Gives one Pokémon a new nature. Only found in the vault of the Expedition', ic: 'wkmint', wk: 1 },
+  gcap: { n: 'Gold Bottle Cap', p: 0, d: 'Hyper trains all six stats of one Pokémon at once. Only found in the vault of the Expedition', ic: 'wkcap', wk: 1 },
   mstone: { n: 'Mega Stone', p: 3000, d: 'Give it to one Pokémon that has a Mega form. It can then Mega Evolve once a battle', ic: 'gem', ring: 1 },
   stone: { n: 'Evolution Stone', p: 300, d: 'For those that do not evolve by level alone', ic: 'gem' },
   egg: { n: 'Egg', p: 250, d: 'Hatches after 120 focus minutes. Can be from any region', ic: 'egg' }
@@ -566,6 +568,8 @@ function migrate11() {
    tl(tekst, verdier): den engelske teksten er nøkkelen, LNO[tekst] den norske; {navn} byttes med verdier.navn. Mangler en oversettelse, står den engelske. */
 const LNO = {
   // Steg 1c.6: radar-gresset og kjedene
+  // Steg 1d: ekspedisjonen (resten av tekstene står i week.js og weekui.js)
+  'Locked during your expedition.': 'Låst under ekspedisjonen.', 'It opens when the expedition is over.': 'Det åpnes når ekspedisjonen er over.',
   'One patch moves like your chain. Step in there to meet the same Pokémon again. Any other patch ends the chain.': 'Én tue rører seg som kjeden din. Gå inn der for å møte den samme Pokémonen igjen. En annen tue avslutter kjeden.',
   'Step into a patch that moves. A sparkle means a shiny is in there.': 'Gå inn i en tue som rører seg. Glitter betyr at det er en shiny der.',
   'Resting: it needs a waiting encounter as common as itself.': 'Hviler: den trenger et møte som venter, like vanlig som den selv.',
@@ -688,6 +692,9 @@ const LNO = {
   'Something new can happen in the League and the World Tournament.': 'Noe nytt kan skje i League og World Tournament.',
   'The grass moves now: catch the same Pokémon in a row and see what happens.': 'Gresset rører seg nå: fang den samme Pokémonen flere ganger på rad og se hva som skjer.',
   'A shiny shows the moment you meet it.': 'En shiny vises i det øyeblikket du møter den.',
+  'Something new opens on Fridays, after Done for today: the Expedition.': 'Noe nytt åpner på fredager, etter Done for today: ekspedisjonen.',
+  'The more days you study in a week, the further it takes you.': 'Jo flere dager du studerer i løpet av en uke, jo lenger kommer du.',
+  'New prizes that cannot be bought in the Shop.': 'Nye premier som ikke kan kjøpes i Shop.',
   'Battles point out where to tap to see what the foe is weak to.': 'Kampene viser hvor du trykker for å se hva motstanderen er svak mot.',
   'Size and training are easier to read on a Pokémon\'s card.': 'Størrelse og trening er lettere å lese på kortet til en Pokémon.',
   'Bug fixes.': 'Feilrettinger.',
@@ -880,7 +887,7 @@ function jFriend() {
 const has = k => !!(S.ulk && S.ulk[k]);
 /* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
    Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
-const WNV = 77, WN = ['The Battle Frontier has rare balls, and a rating that shows how good each rental really is.', 'Something new can happen in the League and the World Tournament.', 'The grass moves now: catch the same Pokémon in a row and see what happens.', 'A shiny shows the moment you meet it.'];
+const WNV = 78, WN = ['Something new opens on Fridays, after Done for today: the Expedition.', 'The more days you study in a week, the further it takes you.', 'New prizes that cannot be bought in the Shop.'];
 /* Første linje for dem som går reisen (whatsNew i ui.js). */
 const WNJ = 'Your journey: new things now open one study day at a time. See the card on the Focus page.';
 function featCheck() { S.ulk = S.ulk || {}; if (!jOn()) return 0; let ch = 0; for (const [k, d] of JOURNEY) if (!S.ulk[k] && (S.jd || 0) >= d) { S.ulk[k] = 1; ch = 1; } return ch; }
@@ -1117,6 +1124,7 @@ function carry(p) {
   if (p.mode && p.mode.day && (!S.mode || ge(p.mode.day, S.mode.day))) S.mode = p.mode;
   if (p.evt && p.evt.day && (!S.evt || ge(p.evt.day, S.evt.day))) S.evt = p.evt;
   if (p.raid && S.raid && p.raid.id === S.raid.id && !!p.raid.dk === !!S.raid.dk && (p.raid.at || '') === (S.raid.at || '')) { S.raid.tries = Math.max(S.raid.tries || 0, p.raid.tries || 0); if (ge(p.raid.day, S.raid.day)) S.raid.day = p.raid.day || ''; if (p.raid.seen) S.raid.seen = 1; }
+  if (p.wk && (p.wk.w == null ? -1 : p.wk.w) > (S.wk && S.wk.w != null ? S.wk.w : -1)) { const sy = (S.wk && S.wk.sym) || {}; S.wk = p.wk; S.wk.sym = S.wk.sym || {}; for (const k in sy) S.wk.sym[k] = Math.max(S.wk.sym[k] || 0, sy[k]); }
   if (p.tmax > (S.tmax || 0)) S.tmax = p.tmax;
   if (p.fair && (!S.fair || p.fair.n > S.fair.n)) S.fair = p.fair;
   if (p.hon && (!S.hon || ge(p.hon.d, S.hon.d))) S.hon = p.hon;

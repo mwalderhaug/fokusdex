@@ -224,6 +224,27 @@ const MUSIC = (() => {
         'd6 - - - - - - - f#6 - - - a6 - - -',
         'd7 - - - - - - - - - - - - - - -'] } } },
 
+    /* Øya i ekspedisjonen (steg 1d.6), for spillere uten pakken: rolig og litt hemmelighetsfull. Egen melodi. */
+    isle: { bpm: 92, tp: 0, seq: ['a', 'b'], loop: 0, sec: {
+      a: { ch: 'Am F C G Am F Dm E', bs: 'half', ar: 'wave', dr: ['tick', 'tick', 'tick', 'tick', 'tick', 'tick', 'tick', 'tick'], ld: [
+        'e5 - - - - - a5 - - - g5 - e5 - - -',
+        'f5 - - - - - c6 - - - a5 - f5 - - -',
+        'g5 - - - - - e5 - - - c5 - e5 - g5 -',
+        'd5 - - - - - - - b4 - d5 - g5 - - -',
+        'e5 - - - - - a5 - - - c6 - b5 - a5 -',
+        'a5 - - - - - f5 - - - c5 - f5 - - -',
+        'f5 - - - - - d5 - - - a4 - d5 - f5 -',
+        'e5 - - - - - - - g#5 - - - b5 - - -'] },
+      b: { ch: 'F G Em Am F G Am Am', bs: 'half', ar: 'broken', dr: ['half', 'half', 'half', 'half', 'half', 'half', 'tick', 'tick'], ld: [
+        'c6 - - - a5 - - - f5 - - - a5 - - -',
+        'b5 - - - g5 - - - d5 - - - g5 - - -',
+        'g5 - - - e5 - - - b4 - - - e5 - g5 -',
+        'a5 - - - - - - - e5 - - - c5 - - -',
+        'c6 - - - a5 - - - f5 - a5 - c6 - - -',
+        'd6 - - - b5 - - - g5 - b5 - d6 - - -',
+        'e6 - - - - - c6 - a5 - - - e5 - - -',
+        'a5 - - - - - - - - - - - . . . .'] } } },
+
     /* Legendariske raid: tungt og truende, før det tar av. */
     legend: { bpm: 138, tp: -2, seq: ['i', 'a', 'b', 'c'], loop: 1, sec: {
       i: { ch: 'Dm Dm Dm Dm', bs: ['long', 'long', 'pedal', 'pedal'], ar: ['none', 'pad', 'pad', 'pad'], dr: ['boom', 'none', 'toms', 'fill2'], ld: [

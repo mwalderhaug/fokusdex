@@ -223,7 +223,7 @@ function cry(id, delay = 0, vol = 0.45) {
    SND gir lyden for hver handling (ellers tap). Trykket spilles etter handlingen: har handlingen selv spilt en lyd (SNDP settes i out()),
    faller trykklyden bort, så ingenting blir dobbelt. En handling kan si fra selv med snd('warn') eller snd('') (stille).
    OWN = handlinger som skal være stille når de ikke spiller noe med en gang (kampen, kastet og filmene har sine egne lyder litt etter). */
-const OWN = new Set(['evpick', 'mgive', 'triv', 'trev', 'start', 'throw', 'buy', 'buy10', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'evolve', 'sestart', 'sound', 'hunt', 'cries', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'buse', 'btypes', 'honyes', 'clkagain', 'help', 'tour', 'tourend', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats', 'achget', 'achall', 'sbxsnd', 'held', 'heldgive', 'heldoff', 'heldshop', 'heldbuy', 'form', 'tswp', 'tswgo', 'pkrel', 'early', 'bforfeit', 'bmega', 'berry', 'showfilm', 'tutteach', 'tutlearn']);
+const OWN = new Set(['wkisle', 'wkout', 'wkskip', 'wkintok', 'wkshgo', 'wkshdl', 'wkshtx', 'wkgo', 'wkdo', 'wkpick', 'wkdoor', 'wkstop', 'wkcpb', 'wkbagu', 'wksnag', 'wkpun', 'wkchest', 'wkchall', 'wkmintok', 'wkcap', 'evpick', 'mgive', 'triv', 'trev', 'start', 'throw', 'buy', 'buy10', 'pack', 'pkopen', 'pkflip', 'pkhunt', 'evolve', 'sestart', 'sound', 'hunt', 'cries', 'candy', 'selldupes', 'sell', 'bmove', 'bsw', 'bgo', 'fgo', 'bdone', 'btap', 'music', 'lforget', 'tgive', 'tskip', 'fenter', 'fpick', 'mopen', 'msel', 'mgo', 'evinfo', 'lresume', 'lgive', 'lgiveo', 'buse', 'btypes', 'honyes', 'clkagain', 'help', 'tour', 'tourend', 'swopen', 'swtap', 'swundo', 'swnext', 'fstats', 'achget', 'achall', 'sbxsnd', 'held', 'heldgive', 'heldoff', 'heldshop', 'heldbuy', 'form', 'tswp', 'tswgo', 'pkrel', 'early', 'bforfeit', 'bmega', 'berry', 'showfilm', 'tutteach', 'tutlearn']);
 const SND = {
   /* Faner og sider */
   tab: 'tab', lagv: 'tab', dexr: 'tab', sbxtab: 'tab', shopt: 'tab', pknext: 'tab', tourgo: 'tab', toshop: 'tab', bteam: 'tab', sbxsounds: 'tab',
@@ -245,6 +245,10 @@ const SND = {
   pkkeep: 'ok', sbxq: 'ok', jday: 'ok', avpick: 'ok', rkok: 'ok', stnext: 'ok', tipok: 'ok', mvsug: 'ok', lead: 'ok', sesave: 'ok', party: 'ok', wnok: 'ok', newsok: 'ok', jok: 'ok', mvsave: 'ok',
   nicksave: 'ok', wsave: 'ok', wone: 'ok', wearly: 'ok', exsave: 'ok', upd: 'ok', trtipok: 'ok', rcdone: 'ok', jnext: 'ok',
   bkcopy: 'saved', bkload: 'saved', bkold: 'saved',
+  /* Ekspedisjonen (weekui.js) */
+  wkinfo: 'open', wkopen: 'open', wknode: 'open', wkend: 'open', sbxwk: 'open', wklead: 'chip', sbxwky: 'chip', sbxwkt: 'chip',
+  wkrule: 'open', wkcp: 'open', wkcps: 'open', wkbag: 'open', wkbags: 'open', wkdepth: 'open', wksnags: 'open', wksym: 'open', wkitems: 'open', wkmint: 'open', wkmintp: 'chip', sbxwki: 'open', sbxwkp: 'open',
+  wkhome: 'open', wkmode: 'open', wkrew: 'open', wksyms: 'open', wksite: 'open', wkshare: 'open', sbxwkd: 'open', sbxwkh: 'chip',
   /* Ellers */
   ball: 'ball', fav: 'fav', boinfo: 'warn'
 };
@@ -666,11 +670,11 @@ VIEW.fokus = () => {
   /* En vanlig dag ligger kampene nederst. På en eventdag står eventet og kampene øverst, og det som har med studeringen å gjøre, under. */
   const CL = clockLock(); if (CL) top += clockCard(CL);
   const fpk = S.fpk && Object.keys(S.fpk).length ? `<button type="button" class="btn wide gold" data-a="fpk">${icn('gift')}Open your free packs</button>` : '';
-  if (!open) return top + hero + (S.raid && S.raid.ev && S.party.length ? raidCard() : '') + fpk + ses + today + studyFoot() + admRow();
+  if (!open) return top + hero + (S.raid && S.raid.ev && S.party.length ? raidCard() : '') + fpk + ses + today + wkStrip() + studyFoot() + admRow();
   /* Etter «Done for today»: økta er foldet sammen til én rad («Study more») til den åpnes. */
   const sesRow = U.sopen ? ses : `<button type="button" class="card sesrow" data-a="sopen" aria-expanded="false">${icn('clock')}<span class="sp"><b>Study more</b><span class="sm tn">${esc(F(fag).n)}<i class="sep"></i>${min} min</span></span>${icn('chev')}</button>`;
   const battles = S.party.length ? (has('battles') ? raidCard() + ladderCard() : lockCard('battles')) : '';
-  return top + hero + newsEl() + journeyCard() + fpk + battles + today + sesRow + admRow();
+  return top + hero + newsEl() + journeyCard() + fpk + battles + wkStrip() + today + sesRow + admRow();
 };
 
 /* ---------- Laget, Box og Duplicates ---------- */
@@ -905,7 +909,7 @@ function monSheet(m, re) {
       <button type="button" class="mc-pw" data-a="mstat" data-u="${m.u}" aria-label="Power ${pwOf(m)}. See the numbers"><span class="pw tn"><b>${nb(pwOf(m))}</b><small>power</small></span><span class="sp">${potOn() ? `${starRow(m, 'lg')}<small>${now > born ? `Born ${JT[born - 1].toLowerCase()} · trained to ${now} stars` : `Born ${JT[born - 1].toLowerCase()}`}</small>` : ''}
         <span class="mtrs"><span class="mtr" role="img" aria-label="Level ${m.lv} of 100"><small>Level</small><i><b style="width:${m.lv}%"></b></i></span>${has('train') ? `<span class="mtr" role="img" aria-label="Training: ${evSum(m)} of ${EVTOT} EVs"><small>Training</small><i><b style="width:${Math.round(evSum(m) / EVTOT * 100)}%"></b></i></span>` : ''}</span></span>${icn('chev')}</button>
       ${hexEl(m)}
-      ${potOn() ? `<div class="mc-n"><b>${NAT[m.nat]}</b>${up !== dn ? `<span class="up">${icn('up')}${SN[up]}</span><span class="dn">${icn('dn')}${SN[dn]}</span>` : '<span>no stat up or down</span>'}</div>` : ''}${szLine(m)}
+      ${potOn() ? `<div class="mc-n"><b>${NAT[m.nat]}</b>${up !== dn ? `<span class="up">${icn('up')}${SN[up]}</span><span class="dn">${icn('dn')}${SN[dn]}</span>` : '<span>no stat up or down</span>'}</div>` : ''}${szLine(m)}${wkCardX(m)}
       ${sg ? `<div class="mc-x au">${icn('spark')}<span><b>Shiny</b> · ${nb(sg.sum)} more power than a regular ${esc(d[0])}</span></div>` : ''}
       ${ab ? `<div class="mc-x"><span><b>${ab.n}</b> · ${ab.d}${ab.live ? '' : ' <i class="nyet">Not in battles yet.</i>'}</span></div>` : ''}
       ${S.mons.length > 1 ? `<button type="button" class="btn sm2 wide mc-c" data-a="cmpw" data-u="${m.u}">${icn('scale')}Compare with another</button>` : ''}</div>
@@ -1006,7 +1010,7 @@ function trainSheet(m) {
     <div class="card2 trx"><div class="row" style="justify-content:space-between"><b>${SN[i]}</b><span class="sm tn" style="${natc(i)}">${st[i]}${up !== dn && i === up ? ' · nature +10 %' : up !== dn && i === dn ? ' · nature −10 %' : ''}</span></div>
       ${shed ? '<p class="sm">Shedinja always has 1 HP, so there is nothing to train here.</p>' : `<div class="trl"><span class="sm"><b>IV</b> <b class="tn">${m.iv[i]}</b> of 31${ht ? ' · counts as 31' : ''}<br>${ht || ivv >= 31 ? 'Nothing more to gain here.' : `Born with it. Hyper Training makes it count as 31: +${dIv} now, +${dIv100} at Lv 100.`}</span>${ivb}</div>
       <div class="sm"><b>EV</b> <b class="tn">${m.ev[i]}</b> of ${EVMAX} · ${VIT[i]}${dEv > 0 ? `<br>Room for ${room} more: +${dEv} now, +${dEv100} at Lv 100.` : ''}</div>${evb}`}</div>
-    <p class="sm">${trainCut() < 1 ? `<b style="color:var(--gold)">Training Camp: everything here costs ${Math.round((1 - trainCut()) * 100)} % less today.</b> ` : ''}<b class="tn">${free}</b> of ${EVTOT} EVs are free, enough to max two stats. Focus sessions give your partner 1 EV every two minutes.</p>
+    ${wkCapRow(m)}<p class="sm">${trainCut() < 1 ? `<b style="color:var(--gold)">Training Camp: everything here costs ${Math.round((1 - trainCut()) * 100)} % less today.</b> ` : ''}<b class="tn">${free}</b> of ${EVTOT} EVs are free, enough to max two stats. Focus sessions give your partner 1 EV every two minutes.</p>
     <button type="button" class="btn wide" data-a="trback">Back</button>`;
   const host = $('#trd');
   if (host && +host.dataset.u === m.u) { host.innerHTML = html; $('#trc').innerHTML = coinEl(S.coins); }
@@ -1235,6 +1239,7 @@ VIEW.profil = () => {
       <span class="bar"><i style="width:${pct}%;background:${R.c}"></i></span><span class="sm tn">${R.p} of ${achTotal()} medals${R.nn ? ` · ${R.next - R.p} to ${R.nn}` : ''}</span><span class="sm tn">Level ${l} · ${nb(S.xp - xa)} of ${nb(xb - xa)} XP</span></span></div>
     <div class="row"><button type="button" class="btn sp${as.open ? ' gold' : ''}" data-a="ach">${as.open ? `${as.open} reward${as.open > 1 ? 's' : ''} ready` : 'Achievements'}</button><button type="button" class="btn sp" data-a="avatar">${S.av ? 'Character' : 'Pick a character'}</button></div>
     ${hasS ? `<div class="card exc"><div class="row" style="justify-content:space-between"><b>Exam period</b><button type="button" class="pill${exOn ? ' on' : ''}" data-a="exam">${exOn ? 'until ' + dShort(examEnd()) : 'off · start'}</button></div><div class="bdgs">${badges}</div></div>` : ''}
+    ${wkSymCard()}
     <div class="card"><div class="pst"><div><b class="tn">${hm(hasS ? sp.subj : tot)}</b><span class="sm">${hasS ? 'Subjects' : 'Focus'}</span></div><div><b class="tn">${ses}</b><span class="sm">Sessions</span></div><div><b class="tn">${streak()}</b><span class="sm">Streak</span></div><div><b class="tn">${all}</b><span class="sm">Species</span></div></div>
       <div class="hm" role="img" aria-label="Focus the last ten weeks${hasS && sp.other ? `. Plus ${hm(sp.other)} of other things` : ''}">${heat}</div></div>
     <div class="card slist pset">${PSET.filter(x => x[0] !== 'admin' || isAdmin()).map(([k, n, ic]) => `<button type="button" class="srow-m prow" data-a="pset" data-k="${k}"><span class="ic">${icn(ic)}</span><span class="sp"><b>${n}</b></span><span class="sm tn">${psetNow(k)}</span>${icn('chev')}</button>`).join('')}</div>
@@ -1489,7 +1494,7 @@ function pkEnd() {
     : `${live.length ? '<button type="button" class="btn gold" data-a="pkhunt">Catch them now</button>' : ''}<button type="button" class="btn nf" data-a="pkdone">${live.length ? 'Later' : 'Done'}</button>${!sum && pkPickOn() && live.some(e => !e.myst) ? '<button type="button" class="btn nf pk-lg" data-a="pkpick">Let some go for coins</button>' : ''}`;
 }
 function ov(html, cls, tc) { const o = $('#ov'); o.className = 'ov' + (cls ? ' ' + cls : ''); o.style.setProperty('--tc', tc || 'var(--sage)'); o.innerHTML = `<div class="ovin">${html}</div>`; o.hidden = false; }
-function closeOv() { const o = $('#ov'); o.hidden = true; o.innerHTML = ''; }
+function closeOv() { const o = $('#ov'); o.hidden = true; o.innerHTML = ''; if (typeof wkAmbOff === 'function') wkAmbOff(); }
 
 /* ---------- STARTEN (steg 1.10, ønske 8, 10, 16 og 17) ----------
    Fem korte skjermer, én idé på hver: velkommen og løftet · hvor godt du kjenner Pokémon · hvor vanskelige kampene skal være · region og
@@ -1791,7 +1796,7 @@ const A = {
   minfo: el => modeInfo(el.dataset.k || ''),
   boinfo: el => { const k = el.dataset.k, it = SHOP[k], st = boostState(k); if (!it) return; toast(st === 'on' ? `${it.n} is already active.` : st === 'lk' ? `${it.n} opens at trainer level ${it.lv}.` : `${it.n} costs ${nb(it.p)} coins. You have ${nb(S.coins)}.`); },
   adm: () => { if (!isAdmin()) return; U.adm = !admOn(); try { localStorage.setItem(KEY + '.adm', U.adm ? '1' : '0'); } catch (_) {} render(); setRe(); toast(U.adm ? 'Admin view is on: everything is open, and the Sandbox is here.' : 'Admin view is off: you see what everyone sees.'); },
-  wnok: () => { closeSheet(); if (!giftSheet() && !jAfter() && !incSheet() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
+  wnok: () => { closeSheet(); if (!giftSheet() && !jAfter() && !incSheet() && !wkDay10() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
   fpk: () => { const k = Object.keys(S.fpk || {}).find(x => PACKS[x]); if (!k) return render(); const out = openPacks(k, Math.min(10, S.fpk[k])); if (!out) { snd('warn'); return toast('Catch some of your waiting encounters first.'); } sfx.coin(); render(); packShow(k, out); },
   newsok: el => { S.news = (S.news || []).filter(k => k !== el.dataset.k); save(true); render(); },
   /* «Done for today»: resten av appen kommer fram. Er det studert nok til kampene (og de er åpnet for deg), åpnes kampdagen med det samme. */
@@ -1808,7 +1813,7 @@ const A = {
   pause: () => { togglePause(); paintTimer(); },
   early: () => endTimer(),
   quit: () => { if (!U.quit) { snd('warn'); U.quit = 1; $('#t-quit').textContent = 'Tap again to cancel'; setTimeout(() => { U.quit = 0; const b = $('#t-quit'); if (b) b.textContent = 'Cancel'; }, 3000); return; } clearInterval(tick); dropAwake(); S.timer = null; save(true); document.title = 'Fokusdex'; closeOv(); render(); },
-  home: () => { encQuiet(); closeOv(); render(); if (!jAfter() && !incSheet() && !giftSheet() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
+  home: () => { encQuiet(); closeOv(); render(); if (!jAfter() && !incSheet() && !giftSheet() && !wkDay10() && typeof raidArrive === 'function' && raidGo()) raidArrive(); },
   hunt: () => { if (jOn() && (S.jx || {}).sh === 1 && $('#sheet').hidden) { snd('ok'); closeOv(); render(); jAfter(); return; } closeSheet(); hunt(); },
   jok: () => { closeSheet(); if (jAfter() || incSheet()) return; const d = U.jfrom === 'dn'; U.jfrom = ''; if (d && has('battles') && S.party.length && openNeed() <= 0 && (!S.lad.day || (dayOld() && dayDone()))) BA.bdone(); else if (typeof raidArrive === 'function' && raidGo()) raidArrive(); },
   later: () => { cancelAnimationFrame(E.raf); encQuiet(); closeOv(); render(); },
@@ -2001,7 +2006,7 @@ const A = {
 };
 document.addEventListener('click', ev => {
   const el = ev.target.closest('[data-a]');
-  const fn = el && !el.disabled && (A[el.dataset.a] || BA[el.dataset.a] || HA[el.dataset.a] || (typeof XA !== 'undefined' && XA[el.dataset.a]));
+  const fn = el && !el.disabled && (A[el.dataset.a] || BA[el.dataset.a] || HA[el.dataset.a] || (typeof XA !== 'undefined' && XA[el.dataset.a]) || WA[el.dataset.a]);
   if (fn) { press(el, fn); return; }
   if (ev.target.id === 'sheet') { sfx.close(); closeSheet(); }
 });
@@ -2056,7 +2061,7 @@ window.addEventListener('storage', ev => { if (ev.key === KEY) tabShow(); });
 render();
 clockCheck();
 netTime().then(o => { if (o != null && clockCheck() && $('#ov').hidden) render(); });
-if (S.started && S.timer) showTimer(); else if (!(typeof liveGate === 'function' && liveGate()) && S.started) { if (S.tour !== TOURV) tourShow(0); else if (!whatsNew() && !giftSheet() && !jAfter() && !incSheet() && typeof raidArrive === 'function' && raidGo()) raidArrive(); }
+if (S.started && S.timer) showTimer(); else if (!(typeof liveGate === 'function' && liveGate()) && S.started) { if (S.tour !== TOURV) tourShow(0); else if (!whatsNew() && !giftSheet() && !jAfter() && !incSheet() && !wkDay10() && typeof raidArrive === 'function' && raidGo()) raidArrive(); }
 ghPull();
 setTimeout(() => PACK.init(), 2500);
 /* Adressen …/#lab åpner demoen direkte. */
