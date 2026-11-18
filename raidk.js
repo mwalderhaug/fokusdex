@@ -296,6 +296,42 @@
   };
   /* Ruiner: en søyle med rifler (fra stedsverktøyene i raidx.js). K.column(x, yb, bredde, høyde, lys, mørk, brukket). */
   if (C.stage && C.stage.column) K.column = C.stage.column;
+  /* En revne i bakken fra (X0, Z0) til (X1, Z1), i verdensmål, så den ligger riktig i perspektivet: knekker på størrelse med flakene (cell),
+     bredde som følger avstanden og smalner i knekkene og mot tuppen, greiner der den svinger, mørk bruddkant og glødende kjerne med ildtunger.
+     k = hvor langt den har revnet (0–1), hot = gløden (0 = størknet), wk = bredden (1 → 0: den gror igjen fra kantene), cap = største halve
+     bredde på skjermen i piksler (så den ikke blir en elv tett på kameraet), a = synlighet, t = tiden (ildtungene). cols = [bruddkant, størknet, lava,
+     kjerne, hvitglødende]: med andre farger, hot 0 og fl 0 blir det en sprekk i is eller stein. Gir tuppen på skjermen ({x, y, s}).
+     Tegnes rett etter K.ground, før det som står på bakken. */
+  K.crack = (X0, Z0, X1, Z1, o) => {
+    o = o || {}; const g = K.g, sd = o.seed || 1, cell = o.cell || 80, w = o.w || 10, kk = c01(o.k == null ? 1 : o.k), hot = o.hot == null ? 1 : max(0, o.hot), al = o.a == null ? 1 : c01(o.a), tt = o.t || 0, wk = o.wk == null ? 1 : c01(o.wk), cap = o.cap || 8;
+    if (kk <= 0 || al <= 0 || wk <= 0) return null;
+    const cols = o.cols || ['#0b0403', '#571207', '#de340c', '#ff9a2a', '#ffeab4'], L = Math.hypot(X1 - X0, Z1 - Z0), n = max(3, Math.round(L / (cell * 0.62))), ux = (X1 - X0) / L, uz = (Z1 - Z0) / L, amp = o.amp == null ? 0.6 : o.amp;
+    const J = [], sl = [], cum = [0]; let side = -1; for (let i = 0; i <= n; i++) { if (rnd(i, sd + 2) >= 0.25) side = -side; const e = i === 0 || i === n ? 0 : 1, sv = e * side * (0.12 + 0.75 * rnd(i, sd)) * cell * amp, av = i / n * L + e * (rnd(i, sd + 1) - 0.5) * L / n * 0.8; J.push([X0 + ux * av - uz * sv, Z0 + uz * av + ux * sv]); }
+    for (let i = 0; i < n; i++) { sl.push(Math.hypot(J[i + 1][0] - J[i][0], J[i + 1][1] - J[i][1]) || 1); cum.push(cum[i] + sl[i]); }
+    const dl = cum[n] * kk, M = 5, pts = [], tan = i => [(J[i + 1][0] - J[i][0]) / sl[i], (J[i + 1][1] - J[i][1]) / sl[i]];
+    for (let i = 0; i < n && cum[i] < dl; i++) { const [tx, tz] = tan(i), sv = 0.5 + 1.1 * rnd(i, sd + 3) * rnd(i, sd + 3);
+      for (let m = (i ? 1 : 0); m <= M; m++) { const u = m / M, d = cum[i] + sl[i] * u;
+        if (d >= dl) { const uu = (dl - cum[i]) / sl[i]; pts.push({ X: J[i][0] + tx * sl[i] * uu, Z: J[i][1] + tz * sl[i] * uu, tx, tz, h: 0 }); break; }
+        let ax = tx, az = tz; if (m === M && i < n - 1) { const [nx, nz] = tan(i + 1), q = Math.hypot(tx + nx, tz + nz) || 1; ax = (tx + nx) / q; az = (tz + nz) / q; }
+        pts.push({ X: J[i][0] + tx * sl[i] * u, Z: J[i][1] + tz * sl[i] * u, tx: ax, tz: az, h: w * 0.5 * (0.55 + 0.45 * sin(PI * u)) * sv * Math.pow(c01((dl - d) / (cell * 1.1)), 0.7) * c01(d / (cell * 0.35) + 0.25) }); } }
+    const strip = (P, sc, minpx, col, a, add) => { if (a <= 0.004) return; const Lp = [], Rp = [];
+      const flush = () => { if (Lp.length > 1) { g.beginPath(); g.moveTo(Lp[0][0], Lp[0][1]); for (let i = 1; i < Lp.length; i++) g.lineTo(Lp[i][0], Lp[i][1]); for (let i = Rp.length - 1; i >= 0; i--) g.lineTo(Rp[i][0], Rp[i][1]); g.closePath(); g.fill(); } Lp.length = 0; Rp.length = 0; };
+      g.save(); g.globalAlpha = c01(a); g.fillStyle = col; if (add) g.globalCompositeOperation = 'lighter';
+      for (const q of P) { const c = K.gp(q.X, q.Z); if (!c) { flush(); continue; } const h = q.h > 0 ? max(min(q.h * wk, cap / c.s) * sc, minpx * wk / c.s) : 0, a1 = K.gp(q.X - q.tz * h, q.Z + q.tx * h), b1 = K.gp(q.X + q.tz * h, q.Z - q.tx * h); if (!a1 || !b1) { flush(); continue; } Lp.push([a1.x, a1.y]); Rp.push([b1.x, b1.y]); }
+      flush(); g.restore(); };
+    const hk = min(1, hot), fl = o.fl == null ? 1 : o.fl, lay = (P, f) => { strip(P, 1.9, 1 * f, cols[0], 0.75 * al); strip(P, 1.4, 0.6 * f, cols[1], al); if (hot > 0) { strip(P, 1.4, 0.6 * f, cols[2], hk * al); strip(P, 0.8, 0.3 * f, cols[3], hk * al * 0.95); strip(P, 0.34, 0, cols[4], c01(hot - 0.25) * al * f, 1); } };
+    if (hot > 0) for (let i = 0; i < pts.length; i += 2) { const q = pts[i], c = q.h > 0 && K.gp(q.X, q.Z); if (c) K.blob(c.x, c.y, min(70, (cell * 0.42 + q.h * 3) * c.s) * (0.4 + 0.6 * wk), cols[2], 0.13 * hk * al * wk * (0.7 + 0.3 * sin(tt * 3 + i)), 1, 0.42); }
+    /* Greinene: der revna svinger, fortsetter en mindre sprekk omtrent rett fram og dør ut. */
+    for (let i = 1; i < n; i++) { if (cum[i] >= dl || rnd(i, sd + 5) < 0.4) continue; const gk = c01((dl - cum[i]) / (cell * 1.3)), [tx0, tz0] = tan(i - 1), dv = (rnd(i, sd + 6) - 0.5) * 0.7, bx = tx0 * cos(dv) - tz0 * sin(dv), bz = tx0 * sin(dv) + tz0 * cos(dv);
+      const bl = cell * (0.45 + 0.8 * rnd(i, sd + 7)) * gk, kink = (rnd(i, sd + 8) - 0.5) * 0.5 * bl, hb = w * 0.25 * (0.6 + 0.8 * rnd(i, sd + 3)) * c01((dl - cum[i]) / (cell * 1.1)), B = [];
+      for (let m = 0; m <= 4; m++) { const u = m / 4, off = sin(PI * u) * kink; B.push({ X: J[i][0] + bx * bl * u - bz * off, Z: J[i][1] + bz * bl * u + bx * off, tx: bx, tz: bz, h: hb * (1 - u) }); }
+      lay(B, 0.8); }
+    lay(pts, 1);
+    /* Ildtunger som slikker opp av revna her og der. */
+    if (hot > 0.2 && fl > 0 && pts.length > 3) for (let i = 0; i < 7; i++) { const sp = 0.7 + rnd(i, sd + 11) * 0.6, cl = tt * sp + rnd(i, sd + 12), ph = cl % 1, q = pts[floor(rnd(i + floor(cl) * 7, sd + 13) * pts.length)], c = q && q.h > 0 && K.gp(q.X, q.Z); if (!c) continue;
+      const e = sin(ph * PI), r = min(22, (5 + q.h) * c.s * 0.55) * (0.6 + e * 0.6); K.blob(c.x, c.y - r * (0.3 + ph * 0.9), r, ph < 0.5 ? cols[4] : cols[3], 0.5 * e * hk * al * fl * wk, 1, 1.7); }
+    const tp = pts[pts.length - 1], tc = tp && K.gp(tp.X, tp.Z); return tc ? { x: tc.x, y: tc.y, s: tc.s } : null;
+  };
   /* Tåkebånd mellom lagene: et bånd som driver sidelengs. o = { h, col, a, seed, spd, n, add }. */
   K.fogBand = (y, o) => { o = o || {}; const t = K.T, hh = o.h || 40, n = o.n || 7, sd = o.seed || 21, A = o.a == null ? 0.6 : o.a; for (let i = 0; i < n; i++) { const wv = 150 + rnd(i, sd) * 170, x = ((rnd(i, sd + 1) * (W + 400) + t * (o.spd == null ? 8 : o.spd) * (0.5 + rnd(i, sd + 2))) % (W + 400)) - 200; K.blob(x, y + (rnd(i, sd + 3) - 0.5) * hh * 0.6, wv, o.col || '#20202a', A * (0.5 + 0.5 * rnd(i, sd + 4)), o.add, hh / wv * (0.6 + 0.5 * rnd(i, sd + 5))); } };
   /* Grantrær i en rekke. o = { y, n, seed, h, col, snow, x0, x1, jit }. */

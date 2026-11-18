@@ -103,6 +103,9 @@
     K.ground('lava', [[heat, 1, 84, 0.036], [(0.8 + 0.2 * min(1, heat)) * (1 - 0.3 * night), 0.08 + 0.55 * min(1.2, heat), 0.6, 0], [0.34, 0.075, 0.03, 0.0005], rings[0] || Z4, rings[1] || Z4, rings[2] || Z4], { soft: 3 });
     /* En sprekk med ildgardin langt ute på sjøen. */
     for (let i = 0; i < 16; i++) { const p = K.gp(-300 + i * 44 + (rnd(i, 51) - 0.5) * 30, 1150 + rnd(i, 52) * 80); if (!p) continue; const fl = 0.6 + 0.4 * sin(t * (5 + rnd(i, 53) * 5) + i), hh = (14 + rnd(i, 54) * 30) * p.s * (0.5 + 0.7 * min(1.3, heat)) * fl; K.blob(p.x, p.y - hh * 0.5, hh * 0.9, '#ff5a14', 0.5 * lit, 1, 1.5); K.blob(p.x, p.y - hh * 0.3, hh * 0.4, '#ffd070', 0.7 * lit, 1, 1.6); }
+    /* Revna i skorpa (bare i filmen): fra der Groudon ligger under lavaen og mot kameraet, i den åpne lavaen mellom flaket til treneren og ditt eget. */
+    if (S.fis && S.fis.k > 0) { const f = S.fis, tip = K.crack(G0[0] + 26, G0[1] - 22, -118, 118, { seed: 5, cell: 84, w: 10, k: f.k, hot: f.hot, wk: f.w, t });
+      if (tip && f.grow > 0) for (let i = 0; i < 9; i++) { const ph = 1 - f.grow, an = -PI / 2 + (rnd(i, 71) - 0.5) * 1.9, r = ph * (26 + rnd(i, 72) * 50) * min(3, tip.s); K.blob(tip.x + cos(an) * r, tip.y + sin(an) * r * 0.8 + ph * ph * 30 * min(3, tip.s), 1.6 + min(3, tip.s), i % 2 ? '#ffe08a' : '#ff6a1a', f.grow, 1); } }
     /* Flakene: småflak som pynt, og de to som det står noen på. De ligger dypere når lavaen stiger (fase 2). */
     const sink = 0.45 * S.p2, ga = 0.1 + 0.52 * min(1.3, heat), fo = { sink, ga, lit: 0.35 + 0.65 * lit };
     for (const [X, Z, R, sd] of [[-250, 640, 44, 3], [330, 720, 60, 5], [-90, 520, 30, 7], [260, 300, 26, 9], [-190, 250, 34, 12], [60, 800, 50, 15], [-420, 900, 80, 17], [470, 1000, 70, 19]]) floe(X, Z, R, Object.assign({ seed: sd, th: 5 }, fo, { ga: ga * 0.8 }));
@@ -157,15 +160,16 @@
         BL.forEach((b, i) => bl.push([b[0], b[1], b[2], seg(t, GK[i], GK[i] + 0.14) * (1 - seg(t, i === 2 ? GR - 0.05 : 10.6, i === 2 ? GR + 0.35 : 11.3)), i + 1, 1 - seg(t, GK[i] + 0.2, GK[i] + 2)]));
         const S = ARENA.state(t, { film: true, cc: c.cc, cam, rings, blades: bl,
           night: kf(t, [[0, 1], [GE, 0.9], [GE + 0.5, 0.3], [8, 0]]), er: a1 ? 0.03 + 0.2 * roll * roll : kf(t, [[GE, 1.5], [8.4, 1.15], [11, 1], [13.2, 0.32]]),
-          vl: max(hit(t, 6.48, 0.22), hit(t, 6.62, 0.12), hit(t, 7.1, 0.16)), heat: a1 ? 0.04 + 0.085 * n + 0.14 * bt + 0.3 * roll : kf(t, [[GE, 0.85], [8, 1], [11.2, 0.95], [13.3, 0.5]]), sun: kf(t, [[6.3, 0], [8, 1], [11, 0.9], [13.3, 0.38]]), shim: kf(t, [[9.8, 1], [GR, 0.55], [12.6, 0.55], [13.3, 1]]), rays: kf(t, [[9.8, 0.6], [GR, 1.5], [11.6, 1.2], [13.2, 0.7]]) });
+          vl: max(hit(t, 6.48, 0.22), hit(t, 6.62, 0.12), hit(t, 7.1, 0.16)), heat: a1 ? 0.04 + 0.085 * n + 0.14 * bt + 0.3 * roll : kf(t, [[GE, 0.85], [8, 1], [11.2, 0.95], [13.3, 0.5]]), sun: kf(t, [[6.3, 0], [8, 1], [11, 0.9], [13.3, 0.38]]), shim: kf(t, [[9.8, 1], [GR, 0.55], [12.6, 0.55], [13.3, 1]]), rays: kf(t, [[9.8, 0.6], [GR, 1.5], [11.6, 1.2], [13.2, 0.7]]),
+          /* Revna: skorpa revner et stykke til mot kameraet for hvert slag fra det andre, står åpen gjennom utbruddet, og gror igjen fra kantene når Groudon er oppe. */
+          fis: { k: kf(t, [[GB[1], 0], [GB[1] + 0.32, 0.38, eo], [GB[2], 0.4], [GB[2] + 0.32, 0.72, eo], [GB[3], 0.74], [GB[3] + 0.32, 1, eo]]), grow: max(hit(t, GB[1], 0.5), hit(t, GB[2], 0.5), hit(t, GB[3], 0.5)),
+            hot: a1 ? 0.5 + 0.45 * bt + 0.4 * roll : kf(t, [[GE, 1.25], [7, 0.8], [GK[0], 0.75], [GR, 1.15], [11.4, 0.9], [12.5, 0.6]]), w: kf(t, [[11.3, 1], [12.5, 0]]) } });
         ARENA.scene(383, S);
         /* Skalabildet: en trener på et flak til venstre, som ser alt skje. */
         const tr = K.gp(TF[0] + 4, TF[1]), rc = hit(t, GR + 0.05, 0.9); if (tr && tr.x > -40 && tr.s < 9) K.trainer(tr.x - rc * 5 * tr.s, tr.y - 2 * tr.s, 24 * tr.s, { col: '#070405', rim: S.night > 0.5 ? '#7a2410' : '#ff8a3a', ra: 0.8, wind: t > GR ? -0.9 * (0.4 + 0.6 * rc) : 0.5, lean: -0.1 * rc });
         /* Bomber fra utbruddet som slår ned i sjøen. */
         const cr = K.lp(3200, 176, K.st.YH - 86);
         gBomb(t, 6.48, -260, 700, cr); gBomb(t, 7.71, -30, 150, cr);
-        /* Skjelvet: på det andre slaget revner skorpa i en glødende sprekk mot kameraet, og under lavaen lyser tegnene til noe stort sterkere for hvert slag. */
-        if (a1 && t >= GB[1]) { const p0 = K.gp(G0[0] + 30, G0[1] - 30), p1 = K.gp(-40, 34), k = eo(seg(t, GB[1], GB[1] + 0.5)); if (p0 && p1) K.bolt(p0.x, p0.y, mix(p0.x, p1.x, k), mix(p0.y, p1.y, k), { seed: 5, col: '#ff4a12', core: '#ffd070', w: 1.4 + 2.2 * k, a: 0.55 + 0.45 * bt, jag: 0.1, depth: 5, br: 2 }); }
         /* Groudon: noe gløder under lavaen i skjelvet; på 10,16 reiser den seg, lavaen renner av, og så de to stegene opp på flaket. */
         const gp = K.gp(gx, gz);
         if (a1 && gp) { const pl = 0.25 + 0.2 * n + bt; K.blob(gp.x, gp.y, (70 + 30 * n + 40 * bt) * gp.s, '#ff3c0a', 0.22 * pl, 1, 0.24); K.blob(gp.x, gp.y, 30 * gp.s * (1 + bt), '#ffb040', 0.3 * bt + 0.4 * roll, 1, 0.24);
