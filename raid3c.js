@@ -8,6 +8,9 @@
   if (typeof G3D === 'undefined' || typeof CINE === 'undefined') return;
   const K = G3D.K, C = CINE.kit, { sin, cos, PI, TAU, abs, max, min, floor, c01, mix, seg, io, eo, ei, back, hit, rnd, hex } = K, kf = C.kf;
   const lerpC = (u, a, b, k) => { const x = hex(a), y = hex(b); u.value.setRGB(mix(x[0], y[0], k), mix(x[1], y[1], k), mix(x[2], y[2], k)); };
+  /* Runde 21 (Jazz: «hull i magen»): kroppen til Primal Groudon har åpninger langs årene, og MagmaLayer1 er lappen som tetter dem. Den tegnes som en del av
+     figuren, farget mørk som glør (FILL), så årene ser ut som før: det lyse kommer fra linjemasken (lag 3) som gløder oppå. Lag 2 er en kopi og står skjult. */
+  const FILL = '#4f1f1c', primalFig = o => { const p = K.figure(K.model('groudon_primal'), Object.assign({ hide: /MagmaLayer2/ }, o)), m = p.mats.BodyBInc; if (m) m.uniforms.uMul.value.setRGB(...hex(FILL)); return p; };
 
   /* ---------- Stedet: krateret ----------
      Nesten bare lava (Jazz 18.11: «bakken er for lite lava», og han skal stå i den): lavasjøen er arenaens materiale i 3D, med noen få skorpeflak langt ute,
@@ -203,7 +206,7 @@
   G3D.def('c3:383p', {
     len: PT.E, R: PT.R, at: 0, models: ['groudon', 'groudon_primal'],
     make(K, T) {
-      const S = crater(T), g = S.gr = K.figure(K.model('groudon')), p = S.pg = K.figure(K.model('groudon_primal'), { hide: /MagmaLayer[12]/ }); S.scene.add(g.root); S.scene.add(p.root); S.figs.push(g, p);
+      const S = crater(T), g = S.gr = K.figure(K.model('groudon')), p = S.pg = primalFig(); S.scene.add(g.root); S.scene.add(p.root); S.figs.push(g, p);
       g.set('uGl', 0.5); p.set('uGl', 0.8); g.set('uWk', 0.7); p.set('uWk', 0.7);
       S.gem = K.gem({}); S.gem.position.set(GEM[0], GEM[1], GEM[2]); S.scene.add(S.gem);
       /* Lyset som samler seg: rosa gnister som strømmer inn mot ham fra alle kanter, og en glød rundt ham. */
@@ -398,7 +401,7 @@
       for (const [dx, dz, r, sd] of [[3.4, -2.6, 1.1, 81], [-3.2, -3.4, 0.8, 83]]) { const b = K.boulder(r, sd, { flat: 1, sy: 0.14, cap: 0.3, j: 0.24, mat: cm }); b.position.set(m.x + dx, 0.02, m.z + dz); S.scene.add(b); }
       /* Røyken som ligger over sjøen etter utbruddet: store, mørke dotter som driver med vinden, lyst opp nedenfra. */
       S.haze = K.pts(46, i => ({ p: [-70 + rnd(i, 141) * 150, 3 + rnd(i, 142) * 16, -64 + rnd(i, 143) * 74], v: [2.2 + rnd(i, 144) * 2.6, 0.25 + rnd(i, 145) * 0.5, 0.5], b: rnd(i, 146) * 14, l: 14, z: 30 + rnd(i, 147) * 44 }), { loop: 1, shade: 1, px: 60, sz0: 0.8, sz1: 1.5, near: 9, c: ['#6a3a26', '#3a221c', '#1c1211'], a: 0, fade: 0.6 }); S.scene.add(S.haze);
-      if (fig) { const g = S.gr = K.figure(K.model('groudon'), { mip: 1 }), p = S.pg = K.figure(K.model('groudon_primal'), { hide: /MagmaLayer[12]/, mip: 1 }); S.scene.add(g.root); S.scene.add(p.root); S.figs.push(g, p);
+      if (fig) { const g = S.gr = K.figure(K.model('groudon'), { mip: 1 }), p = S.pg = primalFig({ mip: 1 }); S.scene.add(g.root); S.scene.add(p.root); S.figs.push(g, p);
         g.set('uGl', 0.5); p.set('uGl', 0.8); g.set('uWk', 0); p.set('uWk', 0); p.root.scale.setScalar(PSC);   /* runde 9: ikke det glatte varmebåndet over beina; lavaen ved beina tegnes i spritens piksler (FS_SPR) */   /* Primal er 1,56 ganger så høy: krympet her, ellers går hodet ut av bildet */
         S.face = Math.atan2(m.x - HOME[0], m.z - HOME[2]) - 0.36;
         /* Runde 12 (Jazz 18.11: enig i «lyset forfra»): nøkkellyset på figuren kommer fra den retningen han vender (mot din Pokémon), 38° opp, så buken, brystet og klørne
