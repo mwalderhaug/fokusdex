@@ -302,17 +302,22 @@ const CINE = (() => {
   /* Spiller filmen på lerretet. o = { name, cap, lv, cc, clock() (sekunder siden låta startet, eller −1), cue(navn) (lyd og rystelse i mobilen), fast }.
      Gir { done (løftet holder når filmen er over eller hoppet over), skip() }. */
   C.play = (out, id, o) => {
-    o = o || {}; let raf = 0, over = false, skipAt = -1, fin; const done = new Promise(r => { fin = r; });
+    o = o || {}; let raf = 0, over = false, skipAt = -1, held = false, fin; const done = new Promise(r => { fin = r; });
     const f = filmOf(id), t0 = performance.now(), cues = (f.cues || [[f.R, 'cry']]).map(q => ({ t: q[0], n: q[1], on: false }));
     const end = () => { if (over) return; over = true; cancelAnimationFrame(raf); fin(); };
+    if (f.c3 && typeof G3D !== 'undefined') G3D.out = 0;
     setCur(id, o).then(() => {
       const step = () => {
         if (over) return; if (!out.isConnected) return end();
         let t = (performance.now() - t0) / 1000; const ck = o.clock ? o.clock() : -1; if (ck >= 0 && abs(ck - t) < 1.5) t = ck;
         /* o.warp: fra sekunder i låta til sekunder i filmen, når filmen spilles til en annen låt enn den er lagt på. */
         if (o.warp) t = o.warp(t);
+        /* Cutscenene i 3D går ut med sin egen overgang (virvel og hvitt blink, G3D.out), mens handlingen fortsetter. */
+        if (skipAt >= 0 && f.c3 && typeof G3D !== 'undefined') { const k = (performance.now() - skipAt) / 850; G3D.out = c01(k); frame(out, t); if (k >= 1) return end(); raf = requestAnimationFrame(step); return; }
         if (skipAt >= 0) { const k = (performance.now() - skipAt) / 280; frame(out, min(t, f.len - 0.02)); const x = out.getContext('2d'); x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = c01(k); x.fillStyle = f.outc || '#fff'; x.fillRect(0, 0, out.width, out.height); x.globalAlpha = 1; if (k >= 1) return end(); raf = requestAnimationFrame(step); return; }
-        if (t >= f.len) { frame(out, f.len); return end(); }
+        /* f.hold: filmen slutter ikke av seg selv. Etter len står den og venter (o.onhold sier fra én gang), til skip() kalles. */
+        if (t >= f.len && !f.hold) { frame(out, f.len); return end(); }
+        if (f.hold && !held && t >= f.len) { held = true; if (o.onhold) try { o.onhold(); } catch (_) {} }
         frame(out, t); C.tick();
         for (const q of cues) if (!q.on && t >= q.t) { q.on = true; if (o.cue) try { o.cue(q.n); } catch (_) {} }
         raf = requestAnimationFrame(step);

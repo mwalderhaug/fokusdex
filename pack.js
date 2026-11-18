@@ -10,7 +10,7 @@ const PACK = (() => {
      (musikken er det store) må hentes på nytt. Mapper uten egen utgave følger pakkens versjon. */
   const gen = p => { const m = P.man, t = p.split('/')[0]; return m ? (m.g && m.g[t] != null ? m.g[t] : m.v) : 0; };
   const key = p => 'https://pack.invalid/' + gen(p) + '/' + p;
-  const MIME = { png: 'image/png', mp3: 'audio/mpeg', json: 'application/json', ttf: 'font/ttf', webp: 'image/webp' };
+  const MIME = { png: 'image/png', mp3: 'audio/mpeg', json: 'application/json', ttf: 'font/ttf', webp: 'image/webp', js: 'text/javascript', glb: 'model/gltf-binary', wasm: 'application/wasm' };
   /* Henter én fil fra kilden: det private repoet, eller en egen adresse satt for utvikling. */
   async function raw(path) {
     const d = dev();
@@ -56,6 +56,8 @@ const PACK = (() => {
     catch (_) { try { m = JSON.parse(localStorage.getItem('fokusdex.packman')); } catch (_) {} }
     if (!m || !m.v) return false;
     P.man = m; P.ok = true; P.err = '';
+    /* 3D-cutscenene (raid3d.js): three.js og modellene ligger bare i pakken (manifest['3d'].f). Uten dem har G3D ingen kilde, og sprite-filmene spilles. */
+    if (typeof G3D !== 'undefined') { const d3 = m['3d'] && m['3d'].f; G3D.src = d3 ? n => d3.indexOf(n) >= 0 ? P.url('3d/' + n) : Promise.resolve('') : null; }
     setTimeout(warmUp, 600); setTimeout(sweep, 9000);
     return true;
   };

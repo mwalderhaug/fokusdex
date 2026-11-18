@@ -55,7 +55,7 @@
   const NB = 10, blade = i => ({ x: (i % 2 ? 1 : -1) * (5.6 + i * 0.55), z: 15 + i * 4, h: 6.5 + i * 1.15, r: 1 + i * 0.09, t: GP + 0.07 + i * 0.105 });
 
   G3D.def('c3:383', {
-    len: 22.4, hold: 1, R: GX, at: 0, models: ['groudon'],
+    len: 21.7, hold: 1, R: GX, at: 0, models: ['groudon'],
     make(K, T) {
       const S = crater(T), g = S.gr = K.figure(K.model('groudon')); S.scene.add(g.root); S.figs.push(g);
       /* Hodekameraet: øyet og kameraplassen målt i hvilestillingen og festet til hodebenet, så nærbildet følger hodet uansett pose. */

@@ -162,6 +162,8 @@ const leagueTag = () => { const L = S.lad; return `${L.lap ? 'Lap ' + (L.lap + 1
    filmen går), og nivået sies aldri på forhånd. */
 function raidCard() {
   const R = S.raid; if (!R || R.hid || !LEG[R.id]) return '';
+  /* Har pakken en cutscene i 3D for denne, hentes bunten og modellen nå, så den er klar når kampen starter. */
+  try { if (typeof G3D !== 'undefined' && G3D.can() && G3D.has('c3:' + R.id) && raidOpen()) G3D.ready('c3:' + R.id).catch(() => {}); } catch (_) {}
   const V = raidShow(R), L = V.L, open = raidOpen(), n = (R.tries || 0) + 1, last = n >= raidTries(R) && !R.ev;
   const btn = `<button type="button" class="btn gold wide" data-a="raid" style="margin-top:10px"${open ? '' : ' disabled'}>${open ? (last ? 'Challenge it · last attempt' : 'Challenge it') : 'Again tomorrow'}</button>`;
   if (!R.seen) return `<div class="card k-ultra raidc myst"><div class="pre-foe"><span class="raid-sp qm" aria-hidden="true"><i>?</i></span><div class="sp"><div class="sm">Legendary raid · attempt 1 of ${raidTries(R)}</div><b class="bossn">A legendary Pokémon</b><div class="sm tn">Who it is stays secret until you face it</div></div></div>${btn}</div>`;
@@ -398,10 +400,15 @@ const foePose = B => { const f = B.foe[0], m = B.me[0], h = Math.max(htOf(f.id, 
 /* Filmen når en legendarisk Pokémon viser seg (raid.js og raidf.js). Hver av de store har sin egen, lagt på slagene i låta si, og trioene og de mindre har
    roligere filmer. Låta starter med filmen og fortsetter inn i kampen. Filmen kan hoppes over. Med «redusert bevegelse» vises bare et stillbilde. */
 async function legendIntro(B) {
-  const tr = B.tr, f = B.foe[0], id = tr.dk ? 'dk' + tr.leg : tr.leg, info = typeof CINE !== 'undefined' ? CINE.info(id) : null, T = ms => new Promise(r => setTimeout(r, ms));
+  const tr = B.tr, f = B.foe[0], T = ms => new Promise(r => setTimeout(r, ms)); let id = tr.dk ? 'dk' + tr.leg : tr.leg, info = typeof CINE !== 'undefined' ? CINE.info(id) : null;
   if (!info) { battleMusic(B); return; }
-  ov(`<div class="lgi" id="lgi" style="--cc:${tr.cc}"><div class="lgi-s"><canvas class="lgi-cv" id="lgicv" width="512" height="384"></canvas></div><i class="lgi-wait"></i><button type="button" class="lgi-skip" id="lgiskip" hidden>Skip</button></div>`, 'battle vsov');
+  ov(`<div class="lgi" id="lgi" style="--cc:${tr.cc}"><div class="lgi-s"><canvas class="lgi-cv" id="lgicv" width="512" height="384"></canvas></div><i class="lgi-wait"></i><button type="button" class="lgi-skip" id="lgiskip" hidden>Skip</button><button type="button" class="lgi-go" id="lgigo" hidden>Continue</button></div>`, 'battle vsov');
   const root = $('#lgi'), cv = $('#lgicv'), gone = () => BT.B !== B || !root.isConnected, o = { name: tr.n, cap: tr.title, lv: 0, cc: tr.cc, pose: foePose(B) };
+  /* Cutscenen i 3D (raid3d.js, raid3c.js): finnes den for arten, og har pakken 3D-filene, spilles den i stedet for sprite-filmen. Den ender i brølet med navnet og
+     nivået og venter på Continue; så virvel og hvitt blink, og rett inn i kampen. Lar den seg ikke hente i tide, går sprite-filmen som før. */
+  const id3 = 'c3:' + tr.leg, c3 = !tr.dk && !calm() && typeof G3D !== 'undefined' && G3D.can() && CINE.has(id3) && await Promise.race([G3D.ready(id3).then(() => true, () => false), T(G3D.isReady(id3) ? 300 : 12000).then(() => false)]);
+  if (gone()) return;
+  if (c3) { id = id3; info = CINE.info(id); o.lv = f.lv; root.classList.add('c3'); }
   /* Dark Mewtwo: den første kamplåta starter med forvandlingen (filmen) og går rett videre inn i kampen. Finnes den ikke i pakken, er alt som før. */
   const V = tr.dk ? PACK.special(/Villain/) : '', tk = V || PACK.trackFor(B), ready = CINE.prep(id, 6000);
   if (V) PACK.cue(V);
@@ -419,9 +426,9 @@ async function legendIntro(B) {
   if (started) music(''); else { PACK.music(''); stop = epicIntro('ultra', info.R); }
   root.classList.add('on'); sfx.appear(); buzz([40, 60, 40]);
   const cue = n => { if (gone()) return; if (n === 'cry') { cry(f.id, 0, 0.6); buzz([80, 40, 260]); if (!started) battleMusic(B); } else if (n === 'boom') buzz([90, 60, 90, 60, 240]); else if (n === 'thud') buzz(45); else buzz(18); };
-  const pl = CINE.play(cv, id, Object.assign({ clock: () => started ? PACK.clock() : -1, cue, warp: V && started ? dkWarp : null }, o)), sk = $('#lgiskip');
-  let skipped = false; const skip = () => { if (skipped) return; skipped = true; sfx.tap(); stop(); pl.skip(); };
-  setTimeout(() => { if (!gone() && sk) sk.hidden = false; }, 1200); if (sk) sk.addEventListener('click', skip);
+  const go = $('#lgigo'), pl = CINE.play(cv, id, Object.assign({ clock: () => started ? PACK.clock() : -1, cue, warp: V && started ? dkWarp : null, onhold: () => { if (gone() || skipped) return; if (sk) sk.hidden = true; if (go) go.hidden = false; } }, o)), sk = $('#lgiskip');
+  let skipped = false; const skip = () => { if (skipped) return; skipped = true; sfx.tap(); stop(); if (c3) { if (sk) sk.hidden = true; if (go) go.hidden = true; cry(f.id, 0, 0.6); buzz([80, 40, 260]); } pl.skip(); };
+  setTimeout(() => { if (!gone() && sk && !skipped && (!go || go.hidden)) sk.hidden = false; }, 1200); if (sk) sk.addEventListener('click', skip); if (go) go.addEventListener('click', skip);
   const key = e => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') skip(); }; document.addEventListener('keydown', key);
   const watch = setInterval(() => { if (gone()) pl.stop(); }, 300);
   await pl.done; clearInterval(watch); document.removeEventListener('keydown', key);
@@ -429,7 +436,7 @@ async function legendIntro(B) {
   if (!started && !PACK.playing() && !MUSIC.playing()) battleMusic(B);
   /* Filmen til en arena slutter i hvilestillingen. Bildet males på nytt, så animasjonen i kampen starter fra samme bilde. */
   if (info.arena && BT.arena && !skipped) { const sp = $('#s-foe'); if (sp && sp.classList.contains('pre')) paintSprite('foe', 'ace pre'); }
-  root.classList.add('d'); await T(240);
+  root.classList.add('d'); await T(c3 ? 430 : 240); if (c3) G3D.out = 0;
 }
 /* Dagens event: dine egne som får noe ut av det (laget først, så de sterkeste i boksen). */
 function evWho(e, n) {
