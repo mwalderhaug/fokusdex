@@ -53,7 +53,7 @@ void main(){ vUv = uv + uUvOff; vO = vec3(position.x, position.z, -position.y) *
   #include <skinning_vertex>
   vec4 w = modelMatrix * vec4(transformed, 1.); vW = w.xyz; vN = normalize(mat3(modelMatrix) * objectNormal); gl_Position = projectionMatrix * viewMatrix * w; }`;
   const FS_FIG = `varying vec3 vW, vN, vO; varying vec2 vUv; uniform sampler2D map;
-uniform float uId, uStone, uCrack, uCrackR, uSeam, uSeamOn, uEmis, uFlK, uB1, uB2, uMask, uVor, uGl, uCw, uHalo, uSpill, uWk, uWh; uniform vec3 uCrackC, uCrackO, uFlC, uStoneC, uMul, uHead; uniform vec2 uTx;
+uniform float uId, uStone, uCrack, uCrackR, uSeam, uSeamOn, uEmis, uFlK, uB1, uB2, uMask, uVor, uGl, uCw, uHalo, uSpill, uWk, uWh; uniform vec3 uCrackC, uCrackO, uFlC, uStoneC, uMul, uHead, uKf; uniform vec2 uTx;
 ${COMMON}
 void main(){
   vec4 tx = texture2D(map, vUv); vec3 base = tx.rgb; float lum = dot(base, vec3(.3, .59, .11));
@@ -64,7 +64,7 @@ void main(){
   float seam = (1. - smoothstep(uSeam - .05, uSeam + .05, lm)) * uSeamOn;
   float st = step(vn3(vO * .42) * .8 + vn3(vO * 1.7) * .2, uStone * 1.3 - .15);
   base = mix(base, uStoneC * (.4 + lum * 1.05), st) * uMul;
-  float d = dot(N, uKey), tn = tone3(d, uB1, uB2);
+  float d = dot(N, dot(uKf, uKf) > .01 ? uKf : uKey), tn = tone3(d, uB1, uB2);   /* uKf: figurens eget nøkkellys (kampen); null = stedets */
   /* Steinen er nøytralt grå: lyset på den mister fargen, gløden nedenfra når bare det nederste, og kantlyset er blekt (Jazz 18.11: «mer tydelig at han er helt grå»). */
   vec3 lit = mix(uShC, uKeyC, tn); lit = mix(lit, vec3(dot(lit, vec3(.34, .33, .33))) * vec3(.99, .96, 1.05), st * .88);
   vec3 col = base * lit;
@@ -339,7 +339,8 @@ void main(){
   float Cm[9], L[9];
   for (int j = 1; j <= 3; j++) for (int i = 1; i <= 3; i++) { int k = j * 5 + i; float n8 = 0., n4 = 0., ln = 0.;
     for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { if (x == 0 && y == 0) continue; int q = k + y * 5 + x; float v = vs(V[q]) ? 1. : 0.; n8 += v;
-      if (x == 0 || y == 0) { n4 += v; if (v > .5 && D[q] - D[k] > uInkD.z + D[k] * uInkD.w) ln = 1.; } }
+      if (x == 0 || y == 0) { n4 += v; int o2 = k - y * 5 - x; float g = vs(V[o2]) ? clamp(D[k] - D[o2], -.25, .25) : 0.;   /* hellingen på vår side (runde 12) */
+        if (v > .5 && D[q] - D[k] - g > uInkD.z + D[k] * uInkD.w + (H[k] < .7 ? .6 : 0.)) ln = 1.; } }
     bool vk = vs(V[k]); int m = (j - 1) * 3 + i - 1;
     Cm[m] = (vk && n8 > 1.5) || (!vk && !hid(V[k]) && n4 > 2.5) ? 1. : 0.; L[m] = V[k] == 1. ? ln : 0.; }
   float n25 = 0.; for (int k = 0; k < 25; k++) n25 += vs(V[k]) ? 1. : 0.;
@@ -371,7 +372,7 @@ void main(){
     else {
       if (dl <= lip + 3.) c = mix(c, c * vec3(1.3, .9, .62) + uLvG * .22, (deep ? .46 : .4) - .13 * (dl - lip - 1.));   /* varme fra lavaen, også på buken over den */
       float ln = L[4] * max(max(max(L[0], L[1]), max(L[2], L[3])), max(max(L[5], L[6]), max(L[7], L[8])));
-      if (dl > lip + 1.) c = mix(c, c * .32 + uInk * .25, ln);
+      if (dl > lip + 1.) c = mix(c, c * .32 + uInk * .25, ln * (1. - step(.7, lum(c)) * step(c.b, c.g * .55)));   /* ikke strek oppå det som gløder gult (Primal): den ble olivengrønn */
     }
     o = vec4(c, mk);
   } else if (hid(V[12])) {
@@ -427,7 +428,7 @@ void main(){
   K.cryMat = o => sm(VS, FS_CRY, { uA: uv(u3(o.a || '#7a1030')), uB: uv(u3(o.b || '#ff5a78')), uPulse: uv(0.5) });
   K.figMat = (map, o) => { o = o || {}; if (map) { map.colorSpace = T.NoColorSpace; map.magFilter = T.NearestFilter; map.minFilter = o.mip ? T.LinearMipmapLinearFilter : T.NearestFilter; map.generateMipmaps = !!o.mip; map.needsUpdate = true; }
     return sm(VS_FIG, FS_FIG, { map: uv(map), uUvOff: uv(new T.Vector2()), uId: uv(o.id || 255), uStone: uv(0), uStoneC: uv(u3('#8a7892')), uCrack: uv(0), uCrackR: uv(0), uCrackO: uv(new T.Vector3()), uCrackC: uv(u3('#ffe24a')), uSeam: uv(o.seam == null ? 0.2 : o.seam), uSeamOn: uv(o.seamOn == null ? 1 : o.seamOn), uHead: uv(new T.Vector3(1e4, 1e4, 0)),
-      uEmis: uv(o.emis || 0), uTx: uv(new T.Vector2(1.6 / ((map && map.image && map.image.width) || 512), 1.6 / ((map && map.image && map.image.height) || 512))), uVor: uv(0), uGl: uv(1), uCw: uv(1), uHalo: uv(0), uSpill: uv(0), uWk: uv(0), uWh: uv(1.15), uOs: uv(o.os || 0.0254), uFlK: uv(0), uFlC: uv(u3('#ffffff')), uB1: uv(-0.1), uB2: uv(0.45), uMask: uv(o.mask || 0), uMul: uv(u3('#ffffff')) }, o.mask ? Object.assign(addBlend(), { side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 }) : { side: T.DoubleSide }); };
+      uEmis: uv(o.emis || 0), uTx: uv(new T.Vector2(1.6 / ((map && map.image && map.image.width) || 512), 1.6 / ((map && map.image && map.image.height) || 512))), uVor: uv(0), uGl: uv(1), uCw: uv(1), uHalo: uv(0), uSpill: uv(0), uWk: uv(0), uWh: uv(1.15), uOs: uv(o.os || 0.0254), uFlK: uv(0), uFlC: uv(u3('#ffffff')), uB1: uv(-0.1), uB2: uv(0.45), uMask: uv(o.mask || 0), uMul: uv(u3('#ffffff')), uKf: uv(new T.Vector3()) }, o.mask ? Object.assign(addBlend(), { side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 }) : { side: T.DoubleSide }); };
   /* Kampestein: en kule dyttet ut og inn etter frø. Normalen peker ut fra midten, så den skygges som en rund stein. */
   const jitter = (geo, amt, seed, fn) => { const p = geo.attributes.position, nn = geo.attributes.normal; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), h = Math.round(x * 31.7) * 3 + Math.round(y * 17.3) * 7 + Math.round(z * 23.9) * 13, k = 1 + (rnd(h, seed) - 0.5) * 2 * amt; let v = [x * k, y * k, z * k]; if (fn) v = fn(v[0], v[1], v[2]); p.setXYZ(i, v[0], v[1], v[2]); if (nn) { const l = Math.hypot(x, y, z) || 1; nn.setXYZ(i, x / l, y / l, z / l); } } p.needsUpdate = true; geo.computeBoundingSphere(); return geo; };
   K.boulder = (r, seed, o) => { o = o || {}; const g = jitter(new T.IcosahedronGeometry(r, o.d == null ? 2 : o.d), o.j == null ? 0.2 : o.j, seed, (x, y, z) => [x * (o.sx || 1), min((y < 0 && o.flat ? y * 0.25 : y) * (o.sy || 1), o.cap == null ? 1e9 : o.cap), z * (o.sz || 1)]); return new T.Mesh(g, o.mat); };
@@ -562,7 +563,7 @@ void main(){
   const spritePass = (D, P, n) => {
     if (!rtS) { rtS = new T.WebGLRenderTarget(G.W, G.H, { minFilter: T.NearestFilter, magFilter: T.NearestFilter, generateMipmaps: false, depthBuffer: false });
       sprM = new T.ShaderMaterial({ depthTest: false, depthWrite: false, vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0., 1.); }', fragmentShader: FS_SPR,
-        uniforms: { tF: uv(rtF.texture), tFD: uv(rtF.depthTexture), tED: uv(rtE.depthTexture), uLo: uv(new T.Vector2(G.W, G.H)), uNF: uv(new T.Vector2(0.5, 900)), uInk: uv(u3('#1c0a0c')), uLvT: uv(u3('#ffb455')), uLvC: uv(u3('#ec7a2c')), uLvG: uv(u3('#c04a1c')), uStep: uv(0), uLY: uv(0), uCt: uv(0.35), uIPV: uv(new T.Matrix4()), uInkD: uv(new T.Vector4(0, 0, 0.5, 0.03)), uTol: uv(0.03) } });
+        uniforms: { tF: uv(rtF.texture), tFD: uv(rtF.depthTexture), tED: uv(rtE.depthTexture), uLo: uv(new T.Vector2(G.W, G.H)), uNF: uv(new T.Vector2(0.5, 900)), uInk: uv(u3('#1c0a0c')), uLvT: uv(u3('#ffb455')), uLvC: uv(u3('#ec7a2c')), uLvG: uv(u3('#c04a1c')), uStep: uv(0), uLY: uv(0), uCt: uv(0.35), uIPV: uv(new T.Matrix4()), uInkD: uv(new T.Vector4(0, 0, 0.5, 0)), uTol: uv(0.03) } });
       sprScene = new T.Scene(); const tri = new T.Mesh(new T.BufferGeometry().setAttribute('position', new T.BufferAttribute(new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]), 3)), sprM); tri.frustumCulled = false; sprScene.add(tri); sbuf = new Uint8Array(G.W * G.H * 4); }
     const u = sprM.uniforms; u.uNF.value.set(cam.near, cam.far); u.uInkD.value.z = P.inkz == null ? 0.5 : P.inkz; u.tED.value = rtE.depthTexture; u.uStep.value = n || 0;
     u.uIPV.value.multiplyMatrices(cam.matrixWorld, cam.projectionMatrixInverse); u.uLY.value = U.uLavaY.value; u.uCt.value = P.ct == null ? 0.35 : P.ct;   /* verdenshøyden til hver piksel (kontakten med lavaen) */

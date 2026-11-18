@@ -355,6 +355,8 @@
      Når pakken har 3D-filene, tegnes derfor bakgrunnen i kampen av det samme krateret (fjellveggene, steinene, krystallene, lavasjøen og vulkanen), sett fra et
      fast kamera: Groudon står i lavaen der han sto i introen (lavaen legges over føttene på figuren i mid), og din Pokémon står på et flak nær kameraet.
      Figurene er Gen 5-bildene som før, med scenens lys. Fase 2 (raseriet): vulkanen er i utbrudd, og det regner lavabomber. Uten 3D i pakken: arenaen fra steg 2. */
+  /* Kampstillingen til Primal (runde 12, «truende»), lagt oppå modellens egen stilling. Den vanlige formen står som før (Jazz 18.11: «Holdningen på vanlig groudon var bedre før»). */
+  const PSTAND = { Spine1: [0, 0.048, 0], Spine2: [0, 0.084, 0], Hips: [0, -0.03, 0], Tail2: [0, 0.06, 0], Tail3: [0, 0.06, 0], '*Arm': [-0.21, 0.09, 0.45], '*Hand': [0.18, 0, 0], Neck1: [0, -0.1, 0], Head: [0, -0.06, 0], Jaw: [0, -0.14, 0] };
   const AID = 'c3:383a', AIDF = 'c3:383b', AFOE = [377, 182], AFIG = [362, 228], AMEF = [132, 452], PSC = 0.69, PSY = -0.85, AME = [190, 370];   /* lavakanten på Groudon (16 piksler over føttene) og føttene til din egen, i arenaens piksler */
   /* fig = 1: PRØVE (Jazz 18.11, runde 6: Gen 5-bildet «føles så sykt malplassert»): den legendariske står i arenaen som samme 3D-figur som i cutscenene, i lavaen,
      med scenens lys, og den rører seg (puster, ser seg om, blunker, brøler når den kommer og når den forvandles, rykker til når den blir truffet). Bare i filmverkstedet
@@ -386,6 +388,9 @@
       if (fig) { const g = S.gr = K.figure(K.model('groudon'), { mip: 1 }), p = S.pg = K.figure(K.model('groudon_primal'), { hide: /MagmaLayer[12]/, mip: 1 }); S.scene.add(g.root); S.scene.add(p.root); S.figs.push(g, p);
         g.set('uGl', 0.5); p.set('uGl', 0.8); g.set('uWk', 0); p.set('uWk', 0); p.root.scale.setScalar(PSC);   /* runde 9: ikke det glatte varmebåndet over beina; lavaen ved beina tegnes i spritens piksler (FS_SPR) */   /* Primal er 1,56 ganger så høy: krympet her, ellers går hodet ut av bildet */
         S.face = Math.atan2(m.x - HOME[0], m.z - HOME[2]) - 0.36;
+        /* Runde 12 (Jazz 18.11: enig i «lyset forfra»): nøkkellyset på figuren kommer fra den retningen han vender (mot din Pokémon), 38° opp, så buken, brystet og klørne
+           er lyst opp (før: stedets lys traff ryggen, og forsiden ble én mørk brun flate). Stedet selv har lyset sitt som før. */
+        for (const f of [g, p]) f.set('uKf', [Math.sin(S.face) * 0.785, 0.62, Math.cos(S.face) * 0.785]);
         /* Runde 9: ingen glør rett ved føttene hans (en myk lysklump i høy oppløsning ved spritekanten): de som starter nærmere enn 8 enheter, flyttes ut (runde 10: 5 var for lite, de driver inn til ham). */
         const ea = S.embers.geometry.attributes.position; for (let i = 0; i < ea.count; i++) { const x = ea.getX(i) - HOME[0], z = ea.getZ(i) - HOME[2], d = Math.hypot(x, z); if (d < 8) { const k = 8 / Math.max(d, 0.1); ea.setX(i, HOME[0] + x * k); ea.setZ(i, HOME[2] + z * k); } } ea.needsUpdate = true; }   /* trekvart forfra, dreid mot din Pokémon nede til venstre (som motstanderne i Black/White) */   /* på skrå som i Omega Ruby: dreid mot venstre i bildet, så vi ser ham trekvart forfra */
       return S;
@@ -415,14 +420,14 @@
       /* Roten står fast (ellers kryper pikslene). Rykket ved treff er to hele piksler til siden annethvert trinn, og dukket ned er hele piksler (S.fo, flyttes på skjermen). */
       const st = floor(t * 12.5 + 1e-6); f.root.position.set(HOME[0], pr ? PSY : HOME[1], HOME[2]); f.root.rotation.y = S.face + 0.05 * sin(t * 0.37);
       S.fo = [fl > 0.25 ? (st % 2 ? 2 : -2) : 0, fh < 99 ? Math.round(3.2 * sq(fh, 0, 13, 5)) : 0];
-      if (!pr) f.add(STAT, 0.2); const br = 0.028 * sin(t * 2.4); f.add({ Spine1: [0, br, 0], Spine2: [0, br * 0.6, 0], Neck1: [0, 0.03 * sin(t * 0.9 + 1), 0.06 * sin(t * 0.55)], Head: [0, 0.02 * sin(t * 1.3), 0.03 * sin(t * 0.55 + 0.6)], Jaw: [0, -0.06 - 0.04 * sin(t * 2.4), 0], '*Arm': [0.03 * sin(t * 2.4 + 0.5), 0, 0] }, 1);
+      if (pr) f.add(PSTAND, 1); else f.add(STAT, 0.2); const br = 0.028 * sin(t * 2.4); f.add({ Spine1: [0, br, 0], Spine2: [0, br * 0.6, 0], Neck1: [0, 0.03 * sin(t * 0.9 + 1), 0.06 * sin(t * 0.55)], Head: [0, 0.02 * sin(t * 1.3), 0.03 * sin(t * 0.55 + 0.6)], Jaw: [0, -0.06 - 0.04 * sin(t * 2.4), 0], '*Arm': [0.03 * sin(t * 2.4 + 0.5), 0, 0] }, 1);
       for (let i = 1; i <= 5; i++) f.rot('Tail' + i, 0, 0, 0.055 * sin(t * 1.9 + i * 0.55));
       f.add(pr ? PDUCK : DUCK, 0.8 * fl + kf(rt, [[-0.2, 0], [0.08, 0.9, io], [0.18, 0, eo]]) * (rt < 3 ? 1 : 0)); f.add(pr ? PROAR : ROAR, 0.75 * rw); f.rot('Jaw', 0, 0.045 * sin(t * 57) * rw, 0);
       const E = f.mats.Eye1.uniforms; E.uUvOff.value.set(0, t % 4.6 < 0.12 ? 0.5 : rw > 0.2 || fl > 0.3 ? 0.75 : 0); E.uEmis.value = 0.5;
       f.set('uStone', 0); f.set('uFlK', fl > 0.25 && st % 2 ? 0.55 : 0); f.set('uFlC', '#ffffff');
       f.set('uCrack', pr ? 0.95 + 0.2 * sin(t * 4.2) + 0.5 * rw : 0); if (pr) for (const m in f.mats) if (f.mats[m].uniforms.uCrackC) lerpC(f.mats[m].uniforms.uCrackC, '#ffc626', '#fff2a8', 0.4 * rw);
     },
-    shots: [[0, S => { K.cam(S.cp[0], S.cp[1], S.cp[2], S.tg[0], S.tg[1], S.tg[2], S.fv); S.post.vig = 0; if (S.gr) { S.post.ink2 = S.pg.root.visible ? 0.55 : 0.9; S.post.inkz = S.pg.root.visible ? 0.4 : 0.22; } }]],
+    shots: [[0, S => { K.cam(S.cp[0], S.cp[1], S.cp[2], S.tg[0], S.tg[1], S.tg[2], S.fv); S.post.vig = 0; if (S.gr) { S.post.ink2 = S.pg.root.visible ? 0.55 : 0.9; S.post.inkz = 0.16;   /* runde 12: strekene inni (FS_SPR trekker fra hellingen, så terskelen er lav og lik for begge formene) */ } }]],
   });
   G3D.def(AID, arenaDef(0)); G3D.def(AIDF, arenaDef(1)); G3D.meF = AMEF;   /* filmverkstedet flytter din Pokémon hit når 3D-figuren står i arenaen */
   if (typeof ARENA !== 'undefined' && ARENA.defs[383]) {
