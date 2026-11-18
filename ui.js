@@ -236,7 +236,7 @@ const SND = {
   mon: 'open', sinfo: 'open', pinfo: 'open', pkskip: 'open', pkpick: 'open', sbxpick: 'open', sbxtools: 'open', jprev: 'open', sbxfac: 'open', sbxlgo: 'open', sbxcup: 'open', sbxfinal: 'open', sbxagain: 'open',
   spec: 'open', plan: 'open', sync: 'open', backup: 'open', seadd: 'open', avatar: 'open', avall: 'open', ach: 'open', today: 'open', sopen: 'open', minfo: 'open', pset: 'open', badge: 'open',
   train: 'open', cmpw: 'open', tsw: 'open', tswc: 'open', mstat: 'open', mvpick: 'open', mlearn: 'open', tutor: 'open', tutmv: 'open', tutmore: 'open', nick: 'open', exam: 'open', work: 'open', tourhub: 'open',
-  lab: 'open', binfo: 'open', bbag: 'open', bfightm: 'open', bswitch: 'open', bpause: 'open', bpre: 'open', blearn: 'open', tpick: 'open', packlab: 'open', sbxopen: 'open',
+  lab: 'open', binfo: 'open', bbag: 'open', bfightm: 'open', bswitch: 'open', bpause: 'open', bpre: 'open', blearn: 'open', tpick: 'open', tsel: 'open', packlab: 'open', sbxopen: 'open',
   /* Lukk, tilbake, nei takk */
   close: 'close', home: 'close', later: 'close', sedel: 'close', skip: 'close', syncoff: 'close', pkdone: 'close', btyback: 'close', stback: 'close', trback: 'close', tswb: 'close', mback: 'close',
   tswr: 'close', wdel: 'close', woff: 'close', exend: 'close', quit: 'close', reset: 'close', trclr: 'close', bback: 'close', fkeepno: 'close', lskip: 'close', tback: 'close', swback: 'close',
@@ -306,6 +306,7 @@ function render() {
     if (!L && U.wlock) { U.wlock = 0; closeOv(); } }
   /* Før «Done for today» finnes bare Focus, uten faner (dayOpenQ). */
   if (typeof giftCheck === 'function' && giftCheck()) setTimeout(() => { if (!giftSheet()) return; }, 60);
+  if (typeof giftBack === 'function' && giftBack()) setTimeout(() => { giftSheet(); }, 60);
   if (typeof jFriend === 'function') jFriend();
   if (typeof examCheck === 'function' && examCheck()) save(true);
   const open = dayOpenQ(); if (!open || (U.tab === 'butikk' && jOn() && !has('shop'))) U.tab = 'fokus'; $('#nav').hidden = !open;
@@ -334,10 +335,23 @@ const studyFoot = () => `<button type="button" class="btn wide st-done" data-a="
 /* Raidet vises ellers først når dagen er åpnet; gaveraidet (ev) vises med en gang. */
 const raidGo = () => dayOpenQ() || !!(S.raid && S.raid.ev);
 function giftSheet() {
-  if (!S.gnote || S.timer || !$('#ov').hidden || !$('#sheet').hidden) return false;
+  if (S.timer || !$('#ov').hidden || !$('#sheet').hidden) return false;
+  if (S.gxn) return backSheet();
+  if (!S.gnote) return false;
   delete S.gnote; save(true);
   const pk = Object.keys(S.fpk || {}).filter(k => PACKS[k]).map(k => PACKS[k].n);
   openSheet(`<h2 style="margin:0 0 4px">A gift today</h2><ul class="wnl">${pk.length ? `<li>Free packs wait in the Shop: ${pk.join(', ')}.</li>` : ''}<li>Something legendary shows itself to every trainer today. You get one attempt, today only.</li></ul><button type="button" class="btn wide gold" data-a="wnok" style="margin-top:14px">Got it</button>`);
+  return true;
+}
+/* Arket om Electivire som kom tilbake (giftBack i league.js, 18.11). Vises én gang: S.gxn = Pokémonen, og det slettes når arket vises.
+   «See it» åpner kortet (handlingen mon), «Got it» går videre som etter What's new (wnok). */
+function backSheet() {
+  const m = monBy(S.gxn); delete S.gxn; save(true); if (!m) return false;
+  openSheet(`<div class="gxb"><span class="gxs">${spr(m.id, { ani: 1, sh: 1, s: '104px' })}</span><h2>${tl('Your Electivire is back')}</h2>
+    <p class="sm">${tl('A trade took your shiny Electivire by mistake. Here it is again: shiny, Lv {lv}, with full IVs like every shiny.', { lv: m.lv })}</p>
+    <p class="sm">${S.party.includes(m.u) ? tl('It is on your team.') : tl('It is in your box.')}</p></div>
+    <div class="row" style="margin-top:14px"><button type="button" class="btn sp" data-a="mon" data-u="${m.u}">See it</button><button type="button" class="btn sp gold" data-a="wnok">${tl('Got it')}</button></div>`);
+  setTimeout(() => shinyFx(document.querySelector('#sheet .gxs')), 300);
   return true;
 }
 /* ---------- REISEN (nye spillere) ----------

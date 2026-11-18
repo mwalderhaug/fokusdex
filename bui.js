@@ -2,7 +2,7 @@
 /* Fokusdex – kampskjermene: kortene på forsiden, oppstilling før kampen, selve kampen, oppgjøret etterpå, Battle Frontier og demoen.
    Reglene ligger i battle.js og league.js, effektene i bfx.js. */
 
-const BT = { B: null, busy: false, v: null, menu: 'main', res: null, ty: 0, tap: null, lead: 0, fsel: [], tp: null, fs: null };
+const BT = { B: null, busy: false, v: null, menu: 'main', res: null, ty: 0, tap: null, lead: 0, fsel: [], tp: null, tg: null, fs: null };
 /* Farten i kampene: vanlig fart er satt opp en fjerdedel etter tilbakemelding om at angrepene gikk for sakte, og FAST er litt over det dobbelte.
    FXSLOW er bare til testing: et tall under 1 spiller alt i sakte film. */
 /* Farten i kamp. FAST er godt over det dobbelte. Lydene følger med: de innebygde krympes (SFXT), og pakkens spilles litt raskere og kuttes
@@ -1558,7 +1558,7 @@ function endBattle() {
   if (jOn() && B.mode !== 'raid' && B.mode !== 'lab' && !(S.jx || {}).b) { (S.jx = S.jx || {}).b = 1; jRaid(); }
   /* En hel modus er vunnet: kamplåta toner kort ut, og seierslåta tar over etter fanfaren (fameSong). Ellers klinger den ut som før. */
   res.fame = fameWin(res) ? 1 : 0; stopMusic(res.fame ? 0.9 : 2.6); if (res.fame) fameSong(res);
-  BT.tp = null; BT.fs = null;
+  BT.tp = null; BT.tg = null; BT.fs = null;
   if (res.dark && $('#arena')) return darkRise(B);
   if (res.win) BSFX.win(); else BSFX.lose();
   /* Raidet er vunnet: ballen lukker seg rundt den (show.js), og så kommer oppsummeringen. */
@@ -1626,7 +1626,7 @@ async function darkRise(B) {
 /* ---------- Etter kampen ---------- */
 const encLine = res => res.encs.length ? `<div class="row" style="justify-content:space-between"><span>Encounters</span><b>${res.encs.length} waiting in the grass${res.encs.some(e => e.t >= 4) ? ' · legendary' : res.encs.some(e => e.t >= 3) ? ' · epic' : ''}</b></div>` : '';
 const tyEl = x => mTypes(x).filter(t => t >= 0).map(t => `<span class="ty" style="background:var(--t${t})">${TYN[t]}</span>`).join(' ');
-const monCard = (x, a, k, on) => `<button type="button" data-a="${a}" data-k="${k}" aria-pressed="${!!on}" class="${x.mega ? 'mega' : ''}" style="--tc:var(--t${mTypes(x)[0]})">${spr(x.id, { ani: 1, mega: x.mega, sh: x.sh })}<b>${x.sh ? 'Shiny ' : ''}${esc(mName(x))}</b><span class="sm tn">Lv ${x.lv}${x.iv ? ' · ' + judge(x).t : ''}</span><span class="row" style="gap:4px;justify-content:center;flex-wrap:wrap">${tyEl(x)}</span>${x.mv ? `<span class="mvl">${x.mv.map(i => esc(MOVES[i][0])).join(' · ')}</span>` : ''}</button>`;
+const monCard = (x, a, k, on, tag) => `<button type="button" data-a="${a}" data-k="${k}" aria-pressed="${!!on}" class="${x.mega ? 'mega' : ''}" style="--tc:var(--t${mTypes(x)[0]})">${tag ? `<span class="trd-tag">${tag}</span>` : ''}${spr(x.id, { ani: 1, mega: x.mega, sh: x.sh })}<b>${x.sh ? 'Shiny ' : ''}${esc(mName(x))}</b><span class="sm tn">Lv ${x.lv}${x.iv ? ' · ' + judge(x).t : ''}</span><span class="row" style="gap:4px;justify-content:center;flex-wrap:wrap">${tyEl(x)}</span>${x.mv ? `<span class="mvl">${x.mv.map(i => esc(MOVES[i][0])).join(' · ')}</span>` : ''}</button>`;
 /* Premien for en klar runde i Battle Frontier: behold én av de fire du leide. Brukes på resultatskjermen og fra forsiden (hvis valget ble utsatt). */
 function keepCard(sheet) {
   const kl = facKeepList(); if (!kl.length) return '';
@@ -1634,6 +1634,42 @@ function keepCard(sheet) {
     <div class="rent">${kl.map((x, i) => monCard({ id: x.id, lv: x.lv, iv: x.iv, nat: x.nat, sh: x.sh }, 'fkeep', i)).join('')}</div>
     <button type="button" class="btn wide" data-a="fkeepno">No thanks</button></div>`;
 }
+/* BYTTET I LIGAEN (v86, Jazz 18.11: en kompis byttet bort sin shiny Electivire på nivå 54 med ett trykk ved et uhell). Tre trinn, og ingenting
+   skjer før det er bekreftet: 1) velg en av deres (tpick) · 2) velg hvem fra laget som går (tsel, BT.tg; kortene er merket, og trykket tar ikke
+   byttet) · 3) byttet side om side, hva du mister (shiny, legendarisk, partneren, nivåer, trening, gjenstanden), og «Trade away» (tgive).
+   En shiny, en legendarisk eller partneren krever to trykk på knappen (tradeDear). «Back» går ett trinn tilbake (tback). */
+const tradeDear = m => !!m && (!!m.sh || isLeg(m.id) || S.party[0] === m.u);
+const tradeTag = m => S.party[0] === m.u ? 'Partner' : isLeg(m.id) ? 'Legendary' : '';
+function tradeLines(m, x) {
+  const out = [];
+  if (m.sh) out.push(tl('It is shiny, and shinies are rare.'));
+  if (isLeg(m.id)) out.push(tl('It is legendary.'));
+  if (S.party[0] === m.u) out.push(tl('It is your partner: {x} takes its place.', { x: D(x.id)[0] }));
+  if (m.lv > x.lv) out.push(tl('It is {n} levels above the one you get.', { n: m.lv - x.lv }));
+  if ((m.ev || []).some(v => v > 0) || (m.ht || []).some(Boolean)) out.push(tl('Its training leaves with it.'));
+  if (heldOf(m)) out.push(tl('The {it} it holds goes back to your bag.', { it: heldOf(m).n }));
+  if (m.ms && !isLeg(m.id) && megaOpts(m.id).includes(m.ms)) out.push(tl('Its Mega Stone goes back to your bag.'));
+  return out;
+}
+function tradeCard(res, tr) {
+  const x = BT.tp == null ? null : res.trade[BT.tp], mine = x && BT.tg != null && S.party.includes(BT.tg) ? monBy(BT.tg) : null;
+  if (!x) return `<div class="card stack trd"><b>${esc(tr.n)} offers a trade</b><p class="sm">${tl('You get one of these.')} <b class="trd-q">${tl('One of your team leaves you for good in return.')}</b> ${tl('Or keep your team and get an extra encounter instead.')}</p>
+      <div class="rent">${res.trade.map((y, i) => monCard(y, 'tpick', i)).join('')}</div>
+      <button type="button" class="btn wide" data-a="tskip">Keep my team · extra encounter</button></div>`;
+  if (!mine) return `<div class="card stack trd"><b>${esc(tr.n)} offers a trade</b><div class="trd-get">${spr(x.id, { s: '40px' })}<span class="sp"><span class="sm">${tl('You get')}</span> <b>${esc(D(x.id)[0])}</b> <span class="sm tn">Lv ${x.lv}</span></span></div>
+      <p class="sm"><b class="trd-q">${tl('Who leaves your team for it?')}</b> ${tl('Tap one to see the trade. Nothing happens before you confirm.')}</p>
+      <div class="rent give">${S.party.map(monBy).filter(Boolean).map(m => monCard(m, 'tsel', m.u, false, tradeTag(m))).join('')}</div>
+      <button type="button" class="btn wide" data-a="tback">Back</button></div>`;
+  const nm = esc(mName(mine)), side = (m, giv) => `<div class="trd-s${giv ? ' give' : ''}"><span class="sm">${giv ? tl('You give') : tl('You get')}</span>${spr(m.id, { ani: 1, sh: m.sh, mega: m.mega, s: '72px' })}<b>${m.sh ? 'Shiny ' : ''}${esc(mName(m))}</b><span class="sm tn">Lv ${m.lv}${m.iv ? ' · ' + judge(m).t : ''}</span></div>`;
+  const ls = tradeLines(mine, x);
+  return `<div class="card stack trd"><b>Trade with ${esc(tr.n)}?</b>
+      <div class="trd-vs">${side(mine, 1)}<span class="trd-ar">${icn('swap')}</span>${side(x, 0)}</div>
+      <div class="trd-warn" role="note"><b>${esc(tl('{n} leaves you for good.', { n: mName(mine) }))}</b> ${tl('A trade cannot be undone.')}${ls.length ? `<ul>${ls.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}</div>
+      <button type="button" class="btn wide trd-go" data-a="tgive" data-k="${mine.u}"${tradeDear(mine) ? ' data-dear="1"' : ''}>Trade away ${nm}</button>
+      <button type="button" class="btn wide" data-a="tback">Back</button></div>`;
+}
+/* Etter hvert trinn står kortet for byttet øverst i bildet, så det nye trinnet synes (det kan ligge langt nede på resultatskjermen). */
+const tradeShow = () => { const c = document.querySelector('#ov .trd'); if (c && c.scrollIntoView) c.scrollIntoView({ block: 'start', behavior: calm() ? 'auto' : 'smooth' }); };
 /* Bildet til en gjenstand fra butikken (ball, stein, godteri), i samme form som i butikken. */
 const itPic = (k, s) => !SHOP[k] ? '' : SHOP[k].img ? ballEl(k, s || '30px') : SHOP[k].ic === 'egg' ? '<span class="egg" style="transform:scale(.7)"></span>' : `<span class="${SHOP[k].ic}${k === 'mstone' ? ' mg' : ''}"></span>`;
 /* RESULTATSKJERMEN (steg 1.9): ett sammendrag øverst (vant eller tapte, laget med XP-streker, myntene og det du fikk som ikoner), valgene som
@@ -1689,12 +1725,8 @@ function overview() {
   let extra = '';
   if (res.snag) extra = wkSnagCard(res);
   else if (res.pz && res.pz.length) extra = pzCard(res);
-  else if (res.trade) {
-    const tp = BT.tp;
-    extra = `<div class="card stack"><b>${esc(tr.n)} offers a trade</b><p class="sm">${tp == null ? 'Pick one of these, then one from your team to give up. Or keep your team and get an extra encounter instead.' : `Who do you give up for ${esc(D(res.trade[tp].id)[0])}?`}</p>
-      <div class="rent">${tp == null ? res.trade.map((x, i) => monCard(x, 'tpick', i)).join('') : S.party.map(monBy).filter(Boolean).map(m => monCard(m, 'tgive', m.u)).join('')}</div>
-      <button type="button" class="btn wide" data-a="${tp == null ? 'tskip' : 'tback'}">${tp == null ? 'Keep my team · extra encounter' : 'Back'}</button></div>`;
-  } else if (res.keep && S.fac.keep && S.fac.keep.length) {
+  else if (res.trade) extra = tradeCard(res, tr);
+  else if (res.keep && S.fac.keep && S.fac.keep.length) {
     extra = keepCard();
   } else if (res.kept && monBy(res.kept)) {
     const km = monBy(res.kept); extra = `<div class="card stack"><div class="row" style="gap:12px;align-items:center">${spr(km.id, { sh: km.sh, s: '56px' })}<div class="sp"><div class="sm">Round reward</div><b>${esc(mName(km))} joined you</b><div class="sm tn">Lv ${km.lv} · ${judge(km).t} · it is in your box</div></div></div></div>`;
@@ -2057,9 +2089,13 @@ const BA = {
   blearn: el => { const m = monBy(+el.dataset.u); if (m) learnSheet(m, 'ov'); },
   lforget: el => { const L = U.learn, m = monBy(L.u); if (!m) return closeSheet(); const x = m.nm[0], old = +el.dataset.k; resolveMove(m, x, old); sfx.learn(); toast(`${mName(m)} forgot ${MOVES[old][0]} and learned ${MOVES[x][0]}.`); learnSheet(m, L.back); },
   lskip: () => { const L = U.learn, m = monBy(L.u); if (!m) return closeSheet(); const x = m.nm[0]; resolveMove(m, x, null); toast(`${mName(m)} did not learn ${MOVES[x][0]}.`); learnSheet(m, L.back); },
-  tpick: el => { BT.tp = +el.dataset.k; overview(); },
-  tback: () => { BT.tp = null; overview(); },
-  tgive: el => { const res = BT.res, x = res.trade[BT.tp], mine = monBy(+el.dataset.k); if (!x || !mine) return; const got = doTrade(x, mine); res.got = `${D(got.id)[0]} · Lv ${got.lv} (for ${D(mine.id)[0]})`; res.trade = null; BT.tp = null; sfx.got(); cry(got.id, 200); overview(); },
+  tpick: el => { BT.tp = +el.dataset.k; BT.tg = null; overview(); tradeShow(); },
+  /* Trinn 2: trykket velger bare hvem som går. Byttet skjer først på «Trade away» i trinn 3. */
+  tsel: el => { const m = monBy(+el.dataset.k), res = BT.res; if (!m || !res || !res.trade || BT.tp == null || !S.party.includes(m.u)) return; BT.tg = m.u; overview(); tradeShow(); },
+  tback: () => { if (BT.tg != null) BT.tg = null; else BT.tp = null; overview(); tradeShow(); },
+  tgive: el => { const res = BT.res, x = res && res.trade && res.trade[BT.tp], mine = monBy(+el.dataset.k); if (!x || !mine || !S.party.includes(mine.u) || mine.u !== BT.tg) return;
+    if (el.dataset.dear === '1' && el.dataset.ok !== '1') { el.dataset.ok = '1'; el.textContent = `Tap again: ${mName(mine)} is gone for good`; return; }
+    const got = doTrade(x, mine); res.got = `${D(got.id)[0]} · Lv ${got.lv} (for ${mine.sh ? 'shiny ' : ''}${mName(mine)})`; res.trade = null; BT.tp = null; BT.tg = null; sfx.got(); cry(got.id, 200); overview(); },
   tskip: () => { const res = BT.res; pushEnc(res, genEnc({ min: 2, luck: 1.2 })); save(); res.trade = null; sfx.found(); overview(); },
   wenter: () => { if (!pwtOpen()) { closeOv(); return render(); } if (!S.party.map(monBy).filter(Boolean).length) { snd('warn'); return toast('You need a Pokémon in your team.'); } if (!pwtRun()) { pwtStart(); BT.wsel = []; } BT.B = null; BT.busy = false; sfx.open(); pwtScreen(); },
   wsel: el => { const R = pwtRun(); if (!R) return; const u = +el.dataset.u, s = BT.wsel || (BT.wsel = []), i = s.indexOf(u); if (i >= 0) s.splice(i, 1); else if (s.length < R.n) s.push(u); else return snd('warn'); pwtScreen(); },

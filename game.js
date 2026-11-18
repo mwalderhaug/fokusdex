@@ -567,6 +567,24 @@ function migrate11() {
 /* SPRÅK: forklaringer og introduksjoner kan leses på norsk (S.lang = 'no'). Navn, typer, angrep, knapper og faner står alltid på engelsk.
    tl(tekst, verdier): den engelske teksten er nøkkelen, LNO[tekst] den norske; {navn} byttes med verdier.navn. Mangler en oversettelse, står den engelske. */
 const LNO = {
+  // v86: Electivire som kom tilbake (backSheet i ui.js)
+  'Your Electivire is back': 'Electivire-en din er tilbake',
+  'A trade took your shiny Electivire by mistake. Here it is again: shiny, Lv {lv}, with full IVs like every shiny.': 'Et bytte tok den shiny Electivire-en din ved et uhell. Her er den igjen: shiny, nivå {lv}, med full IV som alle shiny.',
+  'It is on your team.': 'Den er på laget ditt.', 'It is in your box.': 'Den ligger i boksen din.',
+  'A trade now shows who leaves your team, and asks before it happens.': 'Et bytte viser nå hvem som forlater laget, og spør før det skjer.',
+  // v86: byttet i ligaen (tradeCard i bui.js)
+  'You get one of these.': 'Du får en av disse.', 'One of your team leaves you for good in return.': 'En fra laget ditt forlater deg for godt i bytte.',
+  'Or keep your team and get an extra encounter instead.': 'Eller behold laget og få et ekstra møte i stedet.',
+  'You get': 'Du får', 'You give': 'Du gir',
+  'Who leaves your team for it?': 'Hvem fra laget går i bytte?',
+  'Tap one to see the trade. Nothing happens before you confirm.': 'Trykk på en for å se byttet. Ingenting skjer før du bekrefter.',
+  '{n} leaves you for good.': '{n} forlater deg for godt.', 'A trade cannot be undone.': 'Et bytte kan ikke angres.',
+  'It is shiny, and shinies are rare.': 'Den er shiny, og shiny er sjeldne.', 'It is legendary.': 'Den er legendarisk.',
+  'It is your partner: {x} takes its place.': 'Den er partneren din: {x} tar plassen.',
+  'It is {n} levels above the one you get.': 'Den er {n} nivåer over den du får.',
+  'Its training leaves with it.': 'Treningen den har, forsvinner med den.',
+  'The {it} it holds goes back to your bag.': '{it} som den holder, går tilbake i bagen.',
+  'Its Mega Stone goes back to your bag.': 'Mega-steinen går tilbake i bagen.',
   // Steg 1c.6: radar-gresset og kjedene
   // Steg 1d: ekspedisjonen (resten av tekstene står i week.js og weekui.js)
   'Locked during your expedition.': 'Låst under ekspedisjonen.', 'It opens when the expedition is over.': 'Det åpnes når ekspedisjonen er over.',
@@ -887,7 +905,7 @@ function jFriend() {
 const has = k => !!(S.ulk && S.ulk[k]);
 /* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
    Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
-const WNV = 78, WN = ['Something new opens on Fridays, after Done for today: the Expedition.', 'The more days you study in a week, the further it takes you.', 'New prizes that cannot be bought in the Shop.'];
+const WNV = 79, WN = ['A trade now shows who leaves your team, and asks before it happens.'];
 /* Første linje for dem som går reisen (whatsNew i ui.js). */
 const WNJ = 'Your journey: new things now open one study day at a time. See the card on the Focus page.';
 function featCheck() { S.ulk = S.ulk || {}; if (!jOn()) return 0; let ch = 0; for (const [k, d] of JOURNEY) if (!S.ulk[k] && (S.jd || 0) >= d) { S.ulk[k] = 1; ch = 1; } return ch; }
