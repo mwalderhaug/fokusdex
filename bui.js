@@ -100,6 +100,8 @@ const BSFX = {
 const C3SFX = ['Rock Blast 1hit', 'Magnitude', 'Self Destruct', 'Rock Smash', 'Power Gem', 'Light Screen', 'Shadow Force', 'Rock Polish', 'Shell Smash', 'Ice Shard'];
 const c3p = (n, v, o) => typeof PACK !== 'undefined' && PACK.sfx(n, v, Object.assign({ keep: 1 }, o));
 const c3h = i => { const x = Math.sin(i * 127.1 + 0.5) * 43758.5453; return x - Math.floor(x); };
+/* Artenes egne lyder (c3/<art>.js legger dem i G3C.snd, og pakkelydene som skal varmes opp, i G3C.sfx): slås opp etter de felles under. */
+const c3snd = n => C3SND[n] || (typeof G3C !== 'undefined' && G3C.snd[n]) || null, c3warm = () => C3SFX.concat(typeof G3C !== 'undefined' ? G3C.sfx : []).forEach(n => PACK.warm(n));
 const C3SND = {
   /* Én tagg som skyter opp (k 0–1 ut i rekka; de siste er nærmest og størst): et skarpt, tungt smell (pakken: Rock Blast, dypere og sterkere for hver) og et dypt
      dunk under. Den siste får det store smellet (blast). */
@@ -214,8 +216,9 @@ const leagueTag = () => { const L = S.lad; return `${L.lap ? 'Lap ' + (L.lap + 1
    filmen går), og nivået sies aldri på forhånd. */
 function raidCard() {
   const R = S.raid; if (!R || R.hid || !LEG[R.id]) return '';
-  /* Har pakken en cutscene i 3D for denne, hentes bunten og modellen nå, så den er klar når kampen starter. */
-  try { if (typeof G3D !== 'undefined' && G3D.can() && G3D.has('c3:' + R.id) && raidOpen()) G3D.ready('c3:' + R.id).then(() => { const a = () => G3D.has('c3:' + R.id + 'a') && G3D.ready('c3:' + R.id + 'a'); return G3D.has('c3:' + R.id + 'b') ? G3D.ready('c3:' + R.id + 'b').catch(a) : a(); }).catch(() => {}); } catch (_) {}
+  /* Har arten en cutscene i 3D og pakken 3D-filene, hentes artens fil, bunten og modellene nå, så den er klar når kampen starter.
+     Er raidet åpent, bygges scenen også; ellers hentes bare filene i bakgrunnen. */
+  try { if (typeof G3C !== 'undefined' && !calm() && G3D.can() && G3C.has(R.id)) { if (!raidOpen()) G3C.warm(R.id).catch(() => {}); else G3C.load(R.id).then(() => G3D.ready('c3:' + R.id)).then(() => { const a = () => G3D.has('c3:' + R.id + 'a') && G3D.ready('c3:' + R.id + 'a'); return G3D.has('c3:' + R.id + 'b') ? G3D.ready('c3:' + R.id + 'b').catch(a) : a(); }).catch(() => {}); } } catch (_) {}
   const V = raidShow(R), L = V.L, open = raidOpen(), n = (R.tries || 0) + 1, last = n >= raidTries(R) && !R.ev;
   const btn = `<button type="button" class="btn gold wide" data-a="raid" style="margin-top:10px"${open ? '' : ' disabled'}>${open ? (last ? 'Challenge it · last attempt' : 'Challenge it') : 'Again tomorrow'}</button>`;
   if (!R.seen) return `<div class="card k-ultra raidc myst"><div class="pre-foe"><span class="raid-sp qm" aria-hidden="true"><i>?</i></span><div class="sp"><div class="sm">Legendary raid · attempt 1 of ${raidTries(R)}</div><b class="bossn">A legendary Pokémon</b><div class="sm tn">Who it is stays secret until you face it</div></div></div>${btn}</div>`;
@@ -458,11 +461,11 @@ async function legendIntro(B) {
   if (!info) { battleMusic(B); return; }
   ov(`<div class="lgi" id="lgi" style="--cc:${tr.cc}"><div class="lgi-s"><canvas class="lgi-cv" id="lgicv" width="512" height="384"></canvas></div><i class="lgi-wait"></i><button type="button" class="lgi-skip" id="lgiskip" hidden>Skip</button><button type="button" class="lgi-go" id="lgigo" hidden>Continue</button></div>`, 'battle vsov');
   const root = $('#lgi'), cv = $('#lgicv'), gone = () => BT.B !== B || !root.isConnected, o = { name: tr.n, cap: tr.title, lv: 0, cc: tr.cc, pose: foePose(B) };
-  /* Cutscenen i 3D (raid3d.js, raid3c.js): finnes den for arten, og har pakken 3D-filene, spilles den i stedet for sprite-filmen. Den ender i brølet med navnet og
-     nivået og venter på Continue; så virvel og hvitt blink, og rett inn i kampen. Lar den seg ikke hente i tide, går sprite-filmen som før. */
-  const id3 = 'c3:' + tr.leg, c3 = !tr.dk && !calm() && typeof G3D !== 'undefined' && G3D.can() && CINE.has(id3) && await Promise.race([G3D.ready(id3).then(() => true, () => false), T(G3D.isReady(id3) ? 300 : 12000).then(() => false)]);
+  /* Cutscenen i 3D (raid3d.js, raid3c.js og artens fil i c3/): finnes den for arten, og har pakken 3D-filene, spilles den i stedet for sprite-filmen. Den ender i
+     brølet med navnet og nivået og venter på Continue; så virvel og hvitt blink, og rett inn i kampen. Lar den seg ikke hente i tide, går sprite-filmen som før. */
+  const id3 = 'c3:' + tr.leg, c3 = !tr.dk && !calm() && typeof G3C !== 'undefined' && G3D.can() && G3C.has(tr.leg) && await Promise.race([G3C.load(tr.leg).then(() => G3D.ready(id3)).then(() => true, () => false), T(G3D.isReady(id3) ? 300 : 12000).then(() => false)]);
   if (gone()) return;
-  if (c3) { id = id3; info = CINE.info(id); o.lv = f.lv; root.classList.add('c3'); C3SFX.forEach(n => PACK.warm(n));   /* også Primal-lydene: de trengs senere i kampen */
+  if (c3) { id = id3; info = CINE.info(id); o.lv = f.lv; root.classList.add('c3'); c3warm();   /* også Primal-lydene: de trengs senere i kampen */
     /* Arenaen i 3D (samme sted som cutscenen) må stå klar når kampen starter. Primal-cutscenen hentes når kampen er i gang (ikke mens introen spiller). */
     /* Med 3D-figuren i kampen ('b', begge modellene): den ventes på her. Kommer den ikke i tide, hentes arenaen uten figur ('a') som reserve, og 'b' brukes hvis den
        rekker å bli klar til kampen starter. */
@@ -484,7 +487,7 @@ async function legendIntro(B) {
   let stop = () => {};
   if (started) music(''); else { PACK.music(''); stop = epicIntro('ultra', info.R); }
   root.classList.add('on'); sfx.appear(); buzz([40, 60, 40]);
-  const cue = (n, v) => { if (gone()) return; if (n === 'cry') { cry(f.id, 0, c3 ? 0.8 : 0.6, c3 ? 1 : 0); buzz([80, 40, 260]); if (!started) battleMusic(B); } else if (C3SND[n]) buzz(C3SND[n](v) || 30); else if (n === 'slam') { BSFX.slam(); buzz([90, 60, 240]); } else if (n === 'rise') { BSFX.rise(v || 1); buzz([20, 60, 20, 60, 20]); } else if (n === 'boom') buzz([90, 60, 90, 60, 240]); else if (n === 'thud') buzz(45); else buzz(18); };
+  const cue = (n, v) => { if (gone()) return; if (n === 'cry') { cry(f.id, 0, c3 ? 0.8 : 0.6, c3 ? 1 : 0); buzz([80, 40, 260]); if (!started) battleMusic(B); } else if (c3snd(n)) buzz(c3snd(n)(v) || 30); else if (n === 'slam') { BSFX.slam(); buzz([90, 60, 240]); } else if (n === 'rise') { BSFX.rise(v || 1); buzz([20, 60, 20, 60, 20]); } else if (n === 'boom') buzz([90, 60, 90, 60, 240]); else if (n === 'thud') buzz(45); else buzz(18); };
   const go = $('#lgigo'), pl = CINE.play(cv, id, Object.assign({ clock: () => started ? PACK.clock() : -1, cue, warp: V && started ? dkWarp : null, onhold: () => { if (gone() || skipped) return; if (sk) sk.hidden = true; if (go) go.hidden = false; } }, o)), sk = $('#lgiskip');
   let skipped = false; const skip = () => { if (skipped) return; skipped = true; sfx.tap(); stop(); if (c3) { const held = go && !go.hidden; if (sk) sk.hidden = true; if (go) go.hidden = true; if (!held) { cry(f.id, 0, 0.7, 1); buzz([80, 40, 260]); } } pl.skip(); };   /* Continue: brølet er over, ikke et nytt inn i kampen. Skip midt i filmen: brølet han ellers ville gitt */
   setTimeout(() => { if (!gone() && sk && !skipped && (!go || go.hidden)) sk.hidden = false; }, 1200); if (sk) sk.addEventListener('click', skip); if (go) go.addEventListener('click', skip);
@@ -982,7 +985,8 @@ function paintSprite(side, cls) {
   const b = teamOf(side)[BT.v[side].i], el = $('#s-' + side);
   if (el) { el.className = 'bs ' + side + ' ' + (cls || ''); el.dataset.k = sprK(side, b).toFixed(3); el.style.setProperty('--k', el.dataset.k); el.innerHTML = spr(b.id, { ani: 1, sh: b.sh, back: side === 'me', mega: b.mega, it: b.src && b.src.item }); el.dataset.shd = b.shd ? '1' : ''; if (side === 'foe' && BT.B && BT.B.rage) el.classList.add('rage'); if (side === 'foe' && BT.B && BT.B.sin) { el.classList.add('sin'); dkEyes(el); } camFit(); }
 }
-/* Primal Reversion i et raid som cutscene i 3D (raid3c.js, 'c3:<art>p'; bare når pakken har 3D-filene): krystallen, Ω-tegnet, den knuses, og vulkanen bryter ut.
+/* Forvandlingen ved raseriet i et raid som cutscene i 3D ('c3:<art>p' i artens fil; Primal Reversion hos Groudon: krystallen, Ω-tegnet, den knuses, og vulkanen bryter ut).
+   Gjelder enhver form som har en slik cutscene (Primal, Mega).
    Den kan hoppes over. Bildet og boksen byttes mens skjermen er dekket, og cutscenen ender i et hvitt blink rett tilbake til kampen.
    Gir false når den ikke kan spilles (da går lysringen som før). */
 async function primalCut(B, e) {
@@ -994,8 +998,8 @@ async function primalCut(B, e) {
   root.innerHTML = '<div class="lgi-s"><canvas class="lgi-cv" id="pcutcv" width="512" height="384"></canvas></div><button type="button" class="lgi-skip" id="pcutskip" hidden>Skip</button>';
   host.appendChild(root); const cv = root.querySelector('canvas'), sk = root.querySelector('button'), gone = () => BT.B !== B || !root.isConnected, f = teamOf('foe')[BT.v.foe.i];
   const arn = BT.arena && BT.arena.on && BT.arena.pause ? BT.arena : null; if (arn) arn.pause(1);   /* arenaen står stille under cutscenen */
-  C3SFX.forEach(n => PACK.warm(n)); buzz([30, 50, 30, 50]);   /* lydene til forvandlingen er signalene i cutscenen (C3SND), ikke den vanlige Mega-lyden */
-  const base = fxCue(B), cue = (n, v) => { if (gone()) return; if (n === 'cry') { cry(e.id, 0, 0.8, 1); buzz([80, 40, 260]); } else if (C3SND[n]) buzz(C3SND[n](v) || 30); else base(n, v); };
+  c3warm(); buzz([30, 50, 30, 50]);   /* lydene til forvandlingen er signalene i cutscenen (C3SND), ikke den vanlige Mega-lyden */
+  const base = fxCue(B), cue = (n, v) => { if (gone()) return; if (n === 'cry') { cry(e.id, 0, 0.8, 1); buzz([80, 40, 260]); } else if (c3snd(n)) buzz(c3snd(n)(v) || 30); else base(n, v); };
   const pl = CINE.play(cv, id, { name: B.tr.n, cc: B.tr.cc, cue }); requestAnimationFrame(() => root.classList.add('on'));
   let skipped = false; const skip = () => { if (skipped) return; skipped = true; sfx.tap(); sk.hidden = true; pl.skip(); };
   const tm = setTimeout(() => { if (!gone() && !skipped) sk.hidden = false; }, 900); sk.addEventListener('click', skip);
@@ -1017,7 +1021,7 @@ async function megaShow(B, side, e) {
   let sp = $('#s-' + side); if (!sp) return;
   await say(e.txt, 500);
   if (BT.B !== B || !sp.isConnected) return;
-  if (e.primal && side === 'foe' && B.tr.wild && await primalCut(B, e)) return;
+  if (side === 'foe' && B.tr.wild && await primalCut(B, e)) return;
   const img = sp.querySelector('img,canvas'), h = Math.max(56, Math.min(230, img ? img.getBoundingClientRect().height : 90));
   const ring = cls => { const fx = document.createElement('i'); fx.className = 'megafx ' + cls + (e.primal ? ' primal' : ''); fx.style.setProperty('--h', h.toFixed(0) + 'px'); sp.appendChild(fx); return fx; };
   ring('gather'); BSFX.mega(); buzz([30, 50, 30, 50, 30, 50, 220]); sp.classList.add('megaev'); if (side === 'foe') fig3Mark('mega', 1);

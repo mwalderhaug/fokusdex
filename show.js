@@ -14,6 +14,8 @@ const XT = ms => new Promise(r => setTimeout(r, ms));
 function raidArrive() {
   const R = S.raid; if (!R || R.hid || !R.nw || S.timer || !$('#ov').hidden || !$('#sheet').hidden) return false;
   R.nw = 0; save(true);
+  /* Cutscenen i 3D: artens fil, bunten og modellene hentes fra pakken i bakgrunnen nå, så de er klare når raidet åpnes. */
+  try { if (typeof G3C !== 'undefined' && !calm() && G3D.can() && G3C.has(R.id)) G3C.warm(R.id).catch(() => {}); } catch (_) {}
   ov(`<div class="rarr" id="rarr"><canvas class="rarr-cv" id="rarrcv" width="512" height="384"></canvas>
       <div class="rarr-c"><span class="raid-sp qm" aria-hidden="true"><i>?</i></span><div class="sm">Legendary raid</div><h1 class="big" style="font-size:28px">A legendary Pokémon has shown itself.</h1>
         <p class="mut" style="max-width:32ch;margin:0 auto">Who it is stays secret until you face it. ${R.ev ? 'You get one attempt, today only.' : `You get ${RAIDTRIES} attempts: the first blind, the second knowing. Beat it, and it is yours.`}</p>
