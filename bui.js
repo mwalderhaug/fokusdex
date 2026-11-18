@@ -134,6 +134,8 @@ const C3SND = {
   /* Sprekkene brer seg (d sekunder til den knuses): knitring som tetner, og en spenning som stiger. */
   crack: d => { d = d || 1.1; for (let i = 0; i < 16; i++) { const u = 1 - Math.pow(1 - i / 15, 1.7), a = u * (d - 0.05); noise(a, 0.035, 0.08 + 0.1 * u, 5200 + 1800 * c3h(i), 2400); tone(2200 + 1600 * c3h(i + 40), a, 0.025, 0.035 + 0.025 * u, 'square'); }
     swellN(0, d, 0.16, 500, 3600); swell(98, 0, d, 0.08, 'sawtooth', 196); return [15, 50, 15, 40, 15, 30, 15, 20, 15]; },
+  /* Oppladningen før brølet (d sekunder, runde 9): en dyp rumling som stiger (pakken: Magnitude, lagt dypt) og en knurring som vokser mot brølet. */
+  charge: d => { d = d || 1.1; if (!c3p('Magnitude', 0.35, { rate: 0.7, len: d, trim: 1 })) swellN(0, d, 0.2, 90, 420); swell(46, 0, d, 0.12, 'sine', 72); swell(110, d * 0.3, d * 0.7, 0.05, 'sawtooth', 196); swellN(d * 0.4, d * 0.6, 0.08, 300, 1400); return [20, 50, 20, 40, 20, 30, 20, 20, 20]; },
   /* Den knuses: et knus av krystall (pakken: Shell Smash), skår som klirrer etterpå (Ice Shard), og et dypt drønn under. */
   shatter: () => { if (!c3p('Shell Smash', 1, { off: 1.12, len: 1.1 })) { noise(0, 0.38, 0.55, 7200, 2400); noise(0.02, 0.6, 0.3, 3000, 900); }
     if (!c3p('Ice Shard', 0.75, { at: 0.06, off: 0.6, len: 1.9 })) for (let i = 0; i < 18; i++) tone(2800 + 4200 * c3h(i + 9), 0.06 + 0.95 * c3h(i + 77) * c3h(i + 3), 0.09, 0.05 * (1 - i / 22), i % 3 ? 'sine' : 'triangle');
