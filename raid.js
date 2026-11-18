@@ -210,7 +210,12 @@ const CINE = (() => {
 
   /* ---------- Kameraet ---------- Filmen setter feltene i P for hvert bilde:
      sh risting (piksler) · z, zx, zy zoom mot et punkt · rot · fl, fc blink · inv negativ · gl forstyrrelser · rgb fargesplitt · wav bølger · bars svarte bånd (0..1) · fade, fadec toning · scan linjer. */
-  const newP = () => ({ sh: 0, z: 1, zx: W / 2, zy: H / 2, rot: 0, fl: 0, fc: '#fff', inv: 0, gl: 0, rgb: 0, wav: 0, bars: 0, fade: 0, fadec: '#000', scan: 0 });
+  /* Nye felt (steg 2, brukes av filmer med gl: 1 og av arenaene; fxgl.js forklarer hvert av dem):
+     heat, heatY, heatUp, heatDn, heatMask varmeflimmer · shock [{ x, y, r, w, a, sy }] sjokkbølger · bulge { x, y, r, a } · warp { map, a, world } forvrengningskart ·
+     bloom, bloomT glød · rays { x, y, a, len } lysstråler · grade { tint, lift, sat, con, exp, sepia } · mono, monoT treffbildet · vig, vigc · grain · melt · film ·
+     mat { k, g, c, t, u } materialet under bildet (lava, hav, is). */
+  const newP = () => ({ sh: 0, z: 1, zx: W / 2, zy: H / 2, rot: 0, fl: 0, fc: '#fff', inv: 0, gl: 0, rgb: 0, wav: 0, bars: 0, fade: 0, fadec: '#000', scan: 0,
+    heat: 0, heatY: 150, heatUp: 90, heatDn: 120, heatMask: null, shock: null, bulge: null, warp: null, bloom: 0, bloomT: 0.62, rays: null, grade: null, mono: 0, monoT: 0.42, vig: 0, vigc: '#000', grain: 0, melt: 0, film: 0, mat: null });
   let tmpA = null, tmpB = null;
   function present(out, B) {
     const o = out.getContext('2d'); o.setTransform(1, 0, 0, 1, 0, 0); o.globalAlpha = 1; o.globalCompositeOperation = 'source-over'; o.imageSmoothingEnabled = false; o.fillStyle = '#000'; o.fillRect(0, 0, W, H);
@@ -230,6 +235,19 @@ const CINE = (() => {
     if (P.bars > 0.01) { const b = Math.round(34 * c01(P.bars)); o.fillStyle = '#000'; o.fillRect(0, 0, W, b); o.fillRect(0, H - b, W, b); }
     if (P.fade > 0.01) { o.globalAlpha = c01(P.fade); o.fillStyle = P.fadec; o.fillRect(0, 0, W, H); o.globalAlpha = 1; }
   }
+  /* Reserven for de nye feltene uten WebGL. Tegnes rett i bildet B før det vises: glød som et uskarpt lag, sjokkbølger som ringer, fargetone som et slør,
+     treffbildet som høy kontrast, og vignett. Varmeflimmeret blir bølgende rader (P.wav). Materialet (bakken) tegner arenaen selv (K.ground i raidk.js). */
+  let tmpS = null;
+  function soften(B) {
+    const x = B.getContext('2d'); x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 1;
+    if (P.bloom > 0) { if (!tmpS) { tmpS = document.createElement('canvas'); tmpS.width = W / 8; tmpS.height = H / 8; } const s = tmpS.getContext('2d'); s.globalCompositeOperation = 'copy'; s.imageSmoothingEnabled = true; s.drawImage(B, 0, 0, W / 8, H / 8); x.globalCompositeOperation = 'lighter'; x.globalAlpha = c01(P.bloom * 0.3); x.imageSmoothingEnabled = true; x.drawImage(tmpS, 0, 0, W, H); x.globalAlpha = 1; }
+    x.globalCompositeOperation = 'lighter'; for (const q of P.shock || []) { if (!q.a) continue; x.globalAlpha = c01(Math.abs(q.a) / 30); x.strokeStyle = '#fff'; x.lineWidth = max(1, (q.w || 22) * 0.25); x.beginPath(); x.ellipse(q.x, q.y, max(1, q.r), max(1, q.r * (q.sy || 1)), 0, 0, TAU); x.stroke(); }
+    x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
+    const gr = P.grade; if (gr && gr.tint) { x.globalCompositeOperation = 'multiply'; x.fillStyle = typeof gr.tint === 'string' ? gr.tint : `rgb(${gr.tint.slice(0, 3).map(q => Math.round(min(1, q) * 255)).join(',')})`; x.fillRect(0, 0, W, H); x.globalCompositeOperation = 'source-over'; }
+    if (P.mono > 0.5) { x.globalCompositeOperation = 'saturation'; x.fillStyle = '#000'; x.fillRect(0, 0, W, H); x.globalCompositeOperation = 'overlay'; x.fillStyle = '#fff'; x.fillRect(0, 0, W, H); x.fillRect(0, 0, W, H); x.globalCompositeOperation = 'source-over'; }
+    if (P.vig > 0) { const gd = x.createRadialGradient(W / 2, H / 2, 120, W / 2, H / 2, 330); gd.addColorStop(0, rgba(P.vigc || '#000', 0)); gd.addColorStop(1, P.vigc || '#000'); x.globalAlpha = c01(P.vig); x.fillStyle = gd; x.fillRect(0, 0, W, H); }
+    x.restore(); if (P.heat > 0 && !P.wav) P.wav = min(2.2, P.heat * 0.35);
+  }
 
   /* ---------- Filmene ---------- FILM[art] = { len, at (hvor i låta filmen starter), R (når den viser seg), use (bilder), sps (andre former), spid (bildet som brukes i stedet for artens vanlige, f.eks. Giratina i Origin Forme), draw(), air(k) }. */
   const FILM = {};
@@ -237,11 +255,12 @@ const CINE = (() => {
   C.FILM = FILM;
   const filmOf = id => FILM[id] || (C.calmFilm ? C.calmFilm(id) : null);
   C.has = id => !!filmOf(id);
-  C.info = id => { const f = filmOf(id); return f ? { len: f.len, at: f.at || 0, R: f.R, bg: !!f.bg, plat: f.plat || null, omen: f.omen || 0 } : null; };
+  C.info = id => { const f = filmOf(id); return f ? { len: f.len, at: f.at || 0, R: f.R, bg: !!f.bg, plat: f.plat || null, omen: f.omen || 0, arena: f.arena || 0 } : null; };
   /* Henter det filmen trenger. Venter ikke lenger enn ms. */
   C.prep = async (id, ms, extra) => {
     const f = filmOf(id); if (!f) return false;
-    const jobs = Promise.all([need((f.use || []).concat(['paint'])), (typeof id === 'number' || /^dk/.test(id)) ? loadSprite(f.spid || id) : 0].concat((f.sps || []).concat(extra || []).map(loadSprite)));
+    const own = typeof id === 'number' || /^dk/.test(id), ani = f.ani && C.loadAni ? [].concat(own ? [f.spid || id] : [], f.ani === 1 ? [] : f.ani).map(q => loadSprite(q).then(sp => sp && C.loadAni(q, sp))) : [];
+    const jobs = Promise.all([need((f.use || []).concat(['paint'])), own ? loadSprite(f.spid || id) : 0].concat((f.sps || []).concat(extra || []).map(loadSprite), ani));
     await Promise.race([jobs, new Promise(r => setTimeout(r, ms || 4000))]); return true;
   };
   let B = null;
@@ -254,12 +273,21 @@ const CINE = (() => {
   }
   /* Tegner ett bilde av filmen på lerretet out. */
   function frame(out, t) {
-    T = t; frameNo = floor(t * 60); P = newP(); g = B.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.imageSmoothingEnabled = true; g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+    const glf = !!cur.f.gl;
+    T = t; frameNo = floor(t * 60); P = newP(); g = B.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.imageSmoothingEnabled = true;
+    if (glf) g.clearRect(0, 0, W, H); else { g.fillStyle = '#000'; g.fillRect(0, 0, W, H); }
     try { cur.f.draw(T, P, cur); } catch (e) { C.err = String(e && e.stack || e); }
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    if (glf) { if (C.gpu(out, B)) return; soften(B); }
     present(out, B);
   }
+  /* Bildet B gjennom WebGL (fxgl.js) og ut på lerretet out. Gir false når WebGL ikke er der (da tegnes reserven). */
+  C.gpu = (out, B2) => { if (typeof FXGL === 'undefined' || !FXGL.ok()) return false; const sx = P.sh ? (rnd(frameNo, 1) - 0.5) * 2 * P.sh : 0, sy = P.sh ? (rnd(frameNo, 2) - 0.5) * 2 * P.sh : 0; return FXGL.draw(out, B2, P, T, frameNo, sx, sy); };
+  /* Bilder i sekundet i filmen eller arenaen som går nå (vises med ?fps=1). */
+  C.fps = 0; let fpsN = 0, fpsT = 0;
+  C.tick = () => { const n = performance.now(); fpsN++; if (n - fpsT >= 1000) { C.fps = Math.round(fpsN * 1000 / (n - fpsT)); fpsN = 0; fpsT = n; if (C.onfps) C.onfps(C.fps); } };
   /* Til testing: ett bilde på et bestemt tidspunkt. */
-  C.still = async (out, id, t, o) => { await C.prep(id, 8000); await setCur(id, o); frame(out, t); return C.err || ''; };
+  C.still = async (out, id, t, o) => { C.err = ''; await C.prep(id, 8000); await setCur(id, o); frame(out, t); return C.err || ''; };
   /* Spiller filmen på lerretet. o = { name, cap, lv, cc, clock() (sekunder siden låta startet, eller −1), cue(navn) (lyd og rystelse i mobilen), fast }.
      Gir { done (løftet holder når filmen er over eller hoppet over), skip() }. */
   C.play = (out, id, o) => {
@@ -274,7 +302,7 @@ const CINE = (() => {
         if (o.warp) t = o.warp(t);
         if (skipAt >= 0) { const k = (performance.now() - skipAt) / 280; frame(out, min(t, f.len - 0.02)); const x = out.getContext('2d'); x.globalAlpha = c01(k); x.fillStyle = f.outc || '#fff'; x.fillRect(0, 0, W, H); x.globalAlpha = 1; if (k >= 1) return end(); raf = requestAnimationFrame(step); return; }
         if (t >= f.len) { frame(out, f.len); return end(); }
-        frame(out, t);
+        frame(out, t); C.tick();
         for (const q of cues) if (!q.on && t >= q.t) { q.on = true; if (o.cue) try { o.cue(q.n); } catch (_) {} }
         raf = requestAnimationFrame(step);
       };
@@ -333,8 +361,10 @@ const CINE = (() => {
 
   C.airStill = (out, id, t, o) => { const f = filmOf(id); if (!f || !f.air) return; T = t; frameNo = floor(T * 60); P = newP(); cur = { id, f, sp: null, sps: {}, cc: (o && o.cc) || '#fff' }; g = out.getContext('2d'); g.setTransform(out.width / W, 0, 0, out.height / H, 0, 0); g.clearRect(0, 0, W, H); f.air(T, (o && o.k) || 1, cur.cc); };
 
+  /* Til raidk.js og arena.js: motorens indre. draw(out, f, t, o, fn) tegner ett bilde med en annen tegner enn filmens egen. */
+  C._ = { loadSprite, need, art, tinted, sprs, filmOf, newP, present, soften, setCur, set: (g2, t, p, c) => { g = g2; T = t; frameNo = floor(t * 60); P = p; cur = c; }, buf: () => { if (!B) { B = document.createElement('canvas'); B.width = W; B.height = H; } return B; } };
   /* Verktøyene filmene bruker (filmene ligger i raidf.js). */
-  C.kit = { W, H, TAU, PI, sin, cos, abs, max, min, floor, c01, mix, seg, hit, pulse, io, eo, ei, back, rnd, rgba, blend, fill, lin, glow, im, has, tintArt, mulArt, cover, strip, spr, aura, sprH, bolt, rays, ring, wave, poly, rect, beam, stars, dust, fog, txt, vig, card, shatter, onAux, film, fx,
+  C.kit = { W, H, TAU, PI, sin, cos, abs, max, min, floor, c01, mix, seg, hit, pulse, io, eo, ei, back, rnd, hex, rgba, blend, fill, lin, glow, im, has, tintArt, mulArt, cover, strip, spr, aura, sprH, bolt, rays, ring, wave, poly, rect, beam, stars, dust, fog, txt, fontN, vig, card, shatter, onAux, film, fx,
     get T() { return T; }, get P() { return P; }, get g() { return g; }, get cur() { return cur; } };
   return C;
 })();
