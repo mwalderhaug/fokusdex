@@ -79,7 +79,7 @@ void main(){
   col += uCrackC * (hl * uHalo + uSpill * fr) * (1. - ln);
   col = mix(col, uCrackC, ln);
   /* Der han går ned i lavaen, gløder han: tre harde trinn fra hvitgult ved overflaten til ingenting (uWh over den). */
-  float wb = floor(clamp(1. - (vW.y - uLavaY) / uWh, 0., 1.) * 2. + .8) / 2.; col = mix(col, mix(vec3(1., .4, .07), vec3(1., .8, .32), wb) * (.6 + .6 * base), wb * uWk * (1. - .45 * st));
+  float wb = floor(clamp(1. - (vW.y - uLavaY) / uWh, 0., 1.) * 2. + .8) / 2.; col += mix(vec3(.9, .3, .04), vec3(1., .62, .16), wb) * wb * uWk * (.75 - .3 * st);   /* lagt oppå som varme, ikke blandet inn (det ble et blekt bånd) */
   col = mix(col, uFlC, uFlK);
   float fg = floor(fogK(vW) * 6. + .5) / 6.;
   gl_FragColor = vec4(mix(col, uFogC, fg), uId / 255.);
@@ -375,7 +375,7 @@ void main(){
       /* Samme bilde som sist (filmen går i 30 bilder i sekundet, skjermen ofte i 60): lerretet står som det er. */
       const key = id + '|' + floor(tq * fps + 0.5) + '|' + (rs || 1) + '|' + o.out.toFixed(3); if (key === lastKey && !D.live) return cv; lastKey = '';
       const P = S.post = P0(); U.uTime.value = tq;
-      for (const f of S.figs || []) f.clear();
+      for (const f of S.figs || []) f.clear(); U.uFog.value.set(60, 300, 0.8);
       D.act(S, tq, o); for (const f of S.figs || []) f.apply();
       let si = 0; for (let i = 0; i < D.shots.length; i++) if (tq >= D.shots[i][0] - 1e-6) si = i;
       const s0 = D.shots[si][0], s1 = si + 1 < D.shots.length ? D.shots[si + 1][0] : D.len; S.shot = si;

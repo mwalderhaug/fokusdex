@@ -950,6 +950,7 @@ async function primalCut(B, e) {
   /* Under det hvite: den nye formen står der når kampen kommer tilbake. */
   const sp = $('#s-foe'); if (sp) { const keep = [...sp.classList].filter(c => !['bs', 'foe', 'megaev', 'megain', 'in', 'gone'].includes(c)).join(' '); paintSprite('foe', keep); paintBox('foe'); }
   if (skipped && f) cry(f.id, 0.05, 0.5);
+  if (arn) arn.ev('primal');   /* arenaen: vulkanen er i utbrudd og stedet røyklagt fra nå */
   shake(520, 4); root.classList.add('d'); await T(440); root.remove();
   return true;
 }
@@ -966,7 +967,7 @@ async function megaShow(B, side, e) {
   await bwait(1150); if (BT.B !== B || !sp.isConnected) return;
   const keepCls = [...sp.classList].filter(c => !['bs', side, 'megaev', 'in', 'gone'].includes(c)).join(' ');
   if (!calm()) { const fxl = $('#fx'); if (fxl) { const d = document.createElement('i'); d.className = 'flashov'; d.style.background = '#fff'; d.style.animationDuration = '520ms'; fxl.append(d); setTimeout(() => d.remove(), 580); } }
-  shake(520, 4); paintSprite(side, keepCls + ' megain'); paintBox(side);
+  shake(520, 4); paintSprite(side, keepCls + ' megain'); paintBox(side); if (e.primal && side === 'foe' && BT.arena && BT.arena.on) BT.arena.ev('primal');
   sp = $('#s-' + side); if (sp) { const fx = ring('burst'); setTimeout(() => fx.remove(), 800); }
   const b = teamOf(side)[BT.v[side].i]; if (b) cry(b.id, 0.12, 0.5);
   await bwait(850);
