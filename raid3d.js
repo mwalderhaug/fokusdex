@@ -93,7 +93,7 @@ void main(){
        mønsteret i større mål og rundt sjøen (ingen søm foran), renner nedover veggen, noen svake lavastriper nederst, halv kontrast og et slør av dis.
      · Kantlyset fra lavaen ligger på sidene, ikke på flatene på toppen (sett skrått fikk de et oransje slør og skilte seg ikke fra lavaen).
      uSm = hvor avrundet, uRough = hvor ru, uCrust = størknet skorpe (tettere sprekker med glød i), uCk = hvor tydelige sprekkene og porene er (1 = fullt). */
-  const FS_ROCK = `varying vec3 vW, vN, vO; uniform vec3 uA, uB; uniform float uStr, uTop, uSm, uHot, uRough, uCrust, uFar, uCk;
+  const FS_ROCK = `varying vec3 vW, vN, vO; uniform vec3 uA, uB; uniform float uStr, uTop, uSm, uHot, uRough, uCrust, uFar, uCk, uSc;
 ${COMMON}
 float hgt(vec2 s, float l2, float l3){ return fbm(s * 1.6) * .55 + fbm(s * 4.7 + 3.1) * .3 * l2 + vn(s * 12.) * .15 * l3; }
 void main(){
@@ -101,7 +101,7 @@ void main(){
   vec3 an = abs(Nf), U = vec3(1., 0., 0.), W = vec3(0., 0., 1.); vec2 sp = vW.xz;
   if (an.y < .66) { if (uFar > .5) { float rr = max(length(vW.xz), 1.); sp = vec2(atan(vW.x, -vW.z) * rr, vW.y); U = vec3(-vW.z, 0., vW.x) / rr; W = vec3(0., 1., 0.); }
     else if (an.x > an.z) { sp = vW.zy; U = vec3(0., 0., 1.); W = vec3(0., 1., 0.); } else { sp = vW.xy; W = vec3(0., 1., 0.); } }
-  float sc = mix(1., .22, uFar), fw = max(length(dFdx(vW)), length(dFdy(vW))) * sc; vec2 s = sp * sc;
+  float sc = mix(1., .22, uFar) * uSc, fw = max(length(dFdx(vW)), length(dFdy(vW))) * sc; vec2 s = sp * sc;
   float l2 = 1. - smoothstep(.07, .16, fw), l3 = 1. - smoothstep(.03, .07, fw), bk = 1. - smoothstep(.1, .35, fw);
   float h = hgt(s, l2, l3), e = .03; vec3 gr = (U * (hgt(s + vec2(e, 0.), l2, l3) - h) + W * (hgt(s + vec2(0., e), l2, l3) - h)) / e; gr -= N * dot(N, gr);
   vec3 Nb = normalize(N - gr * .3 * uRough * bk * (1. - .3 * uFar));
@@ -424,7 +424,7 @@ void main(){
   const addBlend = () => ({ transparent: true, depthWrite: false, blending: T.CustomBlending, blendEquation: T.AddEquation, blendSrc: T.OneFactor, blendDst: T.OneFactor, blendEquationAlpha: T.AddEquation, blendSrcAlpha: T.ZeroFactor, blendDstAlpha: T.OneFactor });
   const softBlend = () => ({ transparent: true, depthWrite: false, blending: T.CustomBlending, blendEquation: T.AddEquation, blendSrc: T.OneFactor, blendDst: T.OneMinusSrcAlphaFactor, blendEquationAlpha: T.AddEquation, blendSrcAlpha: T.OneFactor, blendDstAlpha: T.OneMinusSrcAlphaFactor });
   const K = { sin, cos, PI, TAU, abs, max, min, floor, c01, mix, seg, io, eo, ei, back, spring, ant, hit, rnd, hex };
-  K.rockMat = o => sm(VS, FS_ROCK, { uA: uv(u3(o.a || '#3b2422')), uB: uv(u3(o.b || '#5a3a30')), uStr: uv(o.str == null ? 0.22 : o.str), uTop: uv(o.top || 0), uSm: uv(o.sm == null ? 0.7 : o.sm), uHot: uv(o.hot == null ? 1 : o.hot), uRough: uv(o.rough == null ? 1 : o.rough), uCrust: uv(o.crust || 0), uFar: uv(o.far || 0), uCk: uv(o.ck == null ? 1 : o.ck) }, { side: T.DoubleSide });   /* hot: hvor høyt opp foten gløder (1 = 1,8 enheter), rough: hvor ru, crust: størknet skorpe, far: fjellvegg i bakgrunnen, ck: sprekker og porer (0–1) */
+  K.rockMat = o => sm(VS, FS_ROCK, { uSc: uv(o.sc || 1), uA: uv(u3(o.a || '#3b2422')), uB: uv(u3(o.b || '#5a3a30')), uStr: uv(o.str == null ? 0.22 : o.str), uTop: uv(o.top || 0), uSm: uv(o.sm == null ? 0.7 : o.sm), uHot: uv(o.hot == null ? 1 : o.hot), uRough: uv(o.rough == null ? 1 : o.rough), uCrust: uv(o.crust || 0), uFar: uv(o.far || 0), uCk: uv(o.ck == null ? 1 : o.ck) }, { side: T.DoubleSide });   /* hot: hvor høyt opp foten gløder (1 = 1,8 enheter), rough: hvor ru, crust: størknet skorpe, far: fjellvegg i bakgrunnen, ck: sprekker og porer (0–1) */
   K.cryMat = o => sm(VS, FS_CRY, { uA: uv(u3(o.a || '#7a1030')), uB: uv(u3(o.b || '#ff5a78')), uPulse: uv(0.5) });
   K.figMat = (map, o) => { o = o || {}; if (map) { map.colorSpace = T.NoColorSpace; map.magFilter = T.NearestFilter; map.minFilter = o.mip ? T.LinearMipmapLinearFilter : T.NearestFilter; map.generateMipmaps = !!o.mip; map.needsUpdate = true; }
     return sm(VS_FIG, FS_FIG, { map: uv(map), uUvOff: uv(new T.Vector2()), uId: uv(o.id || 255), uStone: uv(0), uStoneC: uv(u3('#8a7892')), uCrack: uv(0), uCrackR: uv(0), uCrackO: uv(new T.Vector3()), uCrackC: uv(u3('#ffe24a')), uSeam: uv(o.seam == null ? 0.2 : o.seam), uSeamOn: uv(o.seamOn == null ? 1 : o.seamOn), uHead: uv(new T.Vector3(1e4, 1e4, 0)),

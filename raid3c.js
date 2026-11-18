@@ -379,8 +379,8 @@
          det var før, bare tydelig at det er stein som man står på som skilles fra lavaen. Gjerne litt mer grå/svart da lavastein ser mer slik ut»). Ingen sprekker med glød, bare
          en svak ruhet; lavaen lyser opp sidene og foten. Med figuren i 3D (der din Pokémon står nede til venstre og føttene er utenfor bildet) er flaket stort og flatt,
          så det synes bak den nederste delen av spriten (størrelsen Jazz likte); ellers steinen fra før. */
-      const cm = K.rockMat({ a: '#15171b', b: '#474a51', str: 0.3, top: 0.6, sm: 0.65, hot: 0.05, rough: 0.35, ck: 0.15 });   /* kjølig grå: lyset og fargetonen i arenaen gjør den varmere */
-      if (fig) { const fc = K.ray(118, 300, 0); S.rock = K.boulder(4, 77, { flat: 1, sx: 1.25, sy: 0.07, sz: 1.15, cap: 0.3, j: 0.2, d: 3, mat: cm }); S.rock.position.set(fc.x, 0.04, fc.z); S.rock.rotation.y = 0.5; }
+      const cm = K.rockMat({ a: '#1c1214', b: '#3c2823', str: 0.2, top: 0.6, sm: 0.12, hot: 0.1, rough: 0.28, ck: 0, sc: 3.2 });   /* runde 16: fasetter som krystallene, svakt fint korn, ingen sprekker */   /* kjølig grå: lyset og fargetonen i arenaen gjør den varmere */
+      if (fig) { S.rock = K.boulder(2.5, 77, { flat: 1, sx: 1.2, sy: 0.2, sz: 1, cap: 0.42, j: 0.3, d: 2, mat: cm }); S.rock.position.set(m.x + 0.1, 0.05, m.z - 1.0); S.rock.rotation.y = 0.5; }   /* runde 14: liten plattform rett under din Pokémon (før: stort flatt flak, «alt for dårlig lagt») */
       else { S.rock = K.boulder(2.1, 77, { flat: 1, sy: 0.26, cap: 0.45, j: 0.22, d: 3, mat: cm }); S.rock.position.set(m.x + 0.15, 0.05, m.z - 0.45); } S.scene.add(S.rock);
       for (const [dx, dz, r, sd] of [[3.4, -2.6, 1.1, 81], [-3.2, -3.4, 0.8, 83]]) { const b = K.boulder(r, sd, { flat: 1, sy: 0.14, cap: 0.3, j: 0.24, mat: cm }); b.position.set(m.x + dx, 0.02, m.z + dz); S.scene.add(b); }
       /* Røyken som ligger over sjøen etter utbruddet: store, mørke dotter som driver med vinden, lyst opp nedenfra. */
