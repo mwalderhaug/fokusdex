@@ -275,7 +275,7 @@ void main(){
   /* Skum: på toppene (der dønningen er høyest og bryter), i striper etter vinden, og rundt det som står i vannet (uWade). */
   float fn = fbm(w * .55 + vec2(t * .22, -t * .16)), top = smoothstep(.92, 1.35, h0 / max(uSea.x, .01) + (fn - .5) * 1.1 + c0 * .12 * uSea.y);
   vec2 wd = normalize(uWind.xy + vec2(1e-4, 0.)); float st = fbm(vec2(dot(w, wd) * .12 - t * .2, dot(w, vec2(-wd.y, wd.x)) * 1.4)), streak = smoothstep(.62, .82, st) * smoothstep(.35, .7, fn) * .55;
-  float dw = length(w - uWade.xy), wr = uWade.w * (1. - smoothstep(uWade.z * .55, uWade.z, dw)) * smoothstep(.35, .6, fbm(w * 1.3 + vec2(t * .4, 0.)) + .25 * sin(dw * 2.2 - t * 2.4));
+  float dw = length(w - uWade.xy), wr = uWade.w * (1. - smoothstep(uWade.z * .55, uWade.z, dw)) * smoothstep(.38, .62, fbm(w * 1.3 + vec2(t * .4, 0.)) + .16 * sin(dw * 1.5 - t * 2.2 + 5. * fbm(w * .35)));
   float rg = 0.; for (int i = 0; i < 4; i++) { vec4 g = uRing[i]; if (g.w > 0.) rg = max(rg, g.w * (1. - smoothstep(0., .45 + g.z * .06, abs(length(w - g.xy) - g.z)))); }
   float foam = clamp(max(max(top, streak) * uSea.z, max(wr, rg * .8)), 0., 1.) * (.55 + .45 * lod);
   col = mix(col, uFoamC * (.72 + .28 * smoothstep(-.2, .8, dot(N, uKey))), foam);
