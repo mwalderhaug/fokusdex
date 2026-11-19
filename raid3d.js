@@ -618,7 +618,7 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float f
   /* Materialreglene: [mønster på materialets navn, valg]. Den første som treffer, gjelder; artens egne (o.rules) kommer før standarden (3DS-modellenes navn).
      Valg: eye (øyet: egen id, ingen sømmer, eget lys; atlas: 0 = teksturen er ikke 3DS-atlaset med åpne, smale og lukkede øyne), mask (linjemaske som gløder oppå),
      key (del materiale med et annet navn), og alt K.figMat tar (seam, seamOn, emis, mul).
-     o.glow = [[mønster på materialet, (r, g, b, a) => true der teksturen har en linje]]: linjer som gløder, hentet fra fargene (0–1) i teksturen. Arkivets Switch-modeller
+     o.glow = [[mønster på materialet, (r, g, b, a) => true der teksturen har en linje, eller et tall 0–1 for hvor sterkt]]: linjer som gløder, hentet fra fargene (0–1) i teksturen. Arkivets Switch-modeller
      har linjene i kroppens tekstur, ikke i en egen maske som 3DS-modellene: flaten tegnes en gang til oppå med en maske laget av teksturen, i samme slags materiale som
      3DS-maskene. Den første er f.mats.mask, de andre deler uCrack og uCrackC med den, så alle linjene gløder likt. Masken lages én gang per modell, materiale og test. */
   const RULES0 = [[/Eye/, { eye: 1 }], [/BodyB1|^BodyB$/, { seamOn: 0 }], [/Mask/, { mask: 1 }]];
@@ -627,7 +627,7 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float f
   const glowCv = new Map();
   const glowMap = (key, src, test) => { let cv = glowCv.get(key); const img = src.image;
     if (!cv) { cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height; const x = cv.getContext('2d', { willReadFrequently: true }); x.drawImage(img, 0, 0); const d = x.getImageData(0, 0, cv.width, cv.height), a = d.data;
-      for (let i = 0; i < a.length; i += 4) { const v = test(a[i] / 255, a[i + 1] / 255, a[i + 2] / 255, a[i + 3] / 255) ? 255 : 0; a[i] = a[i + 1] = a[i + 2] = v; a[i + 3] = 255; } x.putImageData(d, 0, 0); glowCv.set(key, cv); }
+      for (let i = 0; i < a.length; i += 4) { const q = test(a[i] / 255, a[i + 1] / 255, a[i + 2] / 255, a[i + 3] / 255), v = q === true ? 255 : !q ? 0 : Math.round(255 * Math.min(1, q)); a[i] = a[i + 1] = a[i + 2] = v; a[i + 3] = 255; } x.putImageData(d, 0, 0); glowCv.set(key, cv); }
     const t = new T.CanvasTexture(cv); t.flipY = src.flipY; t.wrapS = src.wrapS; t.wrapT = src.wrapT; return t; };   /* som kildens tekstur: samme vei (glTF: ikke snudd) og gjentatt (UV-ene går utenfor 0–1) */
   K.figure = (gltf, o) => { o = o || {}; const root = gltf.scene, bones = {}, rest = {}, acc = {}, mats = {}, ex = {}, eyes = [], mir = o.mir || MIR, map = o.map || {};
     const rules = (o.rules || []).concat(RULES0), rule = n => { for (const r of rules) if (r[0].test(n)) return r[1]; return {}; };
@@ -640,7 +640,7 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float f
     const names = Object.keys(bones), al = k => map[k] || k, list = k => ex[k] || (ex[k] = (k = al(k))[0] === '*' ? ['L' + k.slice(1), 'R' + k.slice(1)].map(al).filter(n => bones[n]) : bones[k] ? [k] : []);
     if (o.glow) for (const q of own) { const g = o.glow.find(r => r[0].test(q.userData.mn)), src = g && q.material.uniforms.map.value; if (!src || !src.image || !src.image.width) continue;
       const mk = mats.mask ? 'mask_' + q.userData.mn : 'mask', mm = mats[mk] || (mats[mk] = K.figMat(glowMap([gltf.model, q.userData.mn, g[1]].join('|'), src, g[1]), { id: o.id || 255, mask: 1 }));
-      if (mk !== 'mask') { mm.uniforms.uCrack = mats.mask.uniforms.uCrack; mm.uniforms.uCrackC = mats.mask.uniforms.uCrackC; }
+      if (mk !== 'mask') { mm.uniforms.uCrack = mats.mask.uniforms.uCrack; mm.uniforms.uCrackC = mats.mask.uniforms.uCrackC; } if (g[2]) Object.assign(mm, g[2]);
       const s = q.isSkinnedMesh ? new T.SkinnedMesh(q.geometry, mm) : new T.Mesh(q.geometry, mm); if (q.isSkinnedMesh) { s.bindMode = q.bindMode; s.bind(q.skeleton, q.bindMatrix); }
       s.layers.set(1); s.frustumCulled = false; s.renderOrder = 5; q.add(s); }   /* et barn av flaten: samme plass, samme skjelett */
     /* Flaten i figurens eget rom (vO i FS_FIG: steinhuden, sprekkene, hodet): modellens plassering i hvilestillingen. Modellene fra conv.js står alle likt

@@ -22,11 +22,13 @@
      (CoreRed, CoreYellow) er ensfargede og lyser selv, og øyet er ikke 3DS-atlaset (atlas: 0). 3DS-modellen virker fortsatt hvis den legges i pakken
      (`node scripts/conv.js kyogre:primal`): linjemasken BodyCMask og flekkene BodyBInc og BodyBInc2. Primal er 1,66 ganger så stor som den vanlige formen. */
   const KS = 1.45, PS = 0.62;   /* skalaen (Kyogre skal føles enorm) og hvor mye Primal krympes i kampen, så formene er like store der (regelen fra Groudon) */
-  /* LINE: de lyseblå linjene i BodyBlue (12 % av teksturen). Det blanke laget over ryggen, hodet og finnene (BodyUra) er én lys farge med mønsteret i alfa (0,2–1): det tegnes
-     tett, som i sammenligningen Jazz valgte fra. Glød fra alfa (a > 0,72) ble prøvd 19.11 og lyste opp hele hodet: ikke brukt. */
-  const LINE = (r, g, b) => g - r > 0.3 && b > 0.75;
+  /* Linjene lyser opp som på 3DS-modellen (Jazz 19.11 kveld: «Liker at de lyser opp i primal form hos 3DS versjonene - vil ha det»; han valgte Switch fordi
+     3DS-modellene har hull). LINE: de lyseblå linjene i BodyBlue (12 % av teksturen). URA: det blanke laget BodyUra ligger oppå kroppen i 3D (linjene er rygger),
+     med mønsteret i alfa (0,2–1): det tetteste (over 0,6) gløder, sterkere jo tettere. Uten forskyvning (polygonOffset: false), ellers ble hele skallet dratt fram
+     foran kroppen og hodet lyste hvitt. Masken gløder i lines()-fargen: lyseblå ved 1, hvit ved 2. Sammenlignet med 3DS-utgaven ved glød 1,3 og 2 (views.js). */
+  const LINE = (r, g, b) => g - r > 0.3 && b > 0.75, URA = (r, g, b, a) => a > 0.6 ? a : 0;
   const kyFig = o => { const f = K.figure(K.model('kyogre'), Object.assign({ rules: [[/Inc$/, { mask: 1 }]] }, o)); f.root.rotation.order = 'YXZ'; f.root.scale.setScalar(KS); lines(f, 0.7, 0); return f; };
-  const kypFig = o => { const f = K.figure(K.model('kyogre_primal'), Object.assign({ rules: [[/^Eye$/, { eye: 1, atlas: 0 }], [/^Core/, { emis: 0.85, seamOn: 0 }], [/^BodyBInc/, { emis: 0.85 }]], glow: [[/^BodyBlue$/, LINE]] }, o));
+  const kypFig = o => { const f = K.figure(K.model('kyogre_primal'), Object.assign({ rules: [[/^Eye$/, { eye: 1, atlas: 0 }], [/^Core/, { emis: 0.85, seamOn: 0 }], [/^BodyBInc/, { emis: 0.85 }]], glow: [[/^BodyBlue$/, LINE], [/^BodyUra$/, URA, { polygonOffset: false }]] }, o));
     f.root.rotation.order = 'YXZ'; f.root.scale.setScalar(KS); lines(f, 1, 1); return f; };
   /* Linjene: v = hvor sterkt (0,7 = som teksturen, over 1 = gløder), p = Primal (lyseblå) eller vanlig (rød). */
   const lines = (f, v, p) => { const m = f.mats.mask; if (!m) return; m.uniforms.uCrack.value = v; if (p) m.uniforms.uCrackC.value.setRGB(mix(0.42, 0.75, c01(v - 1)), mix(0.86, 1, c01(v - 1)), 1); else m.uniforms.uCrackC.value.setRGB(mix(0.82, 1, c01(v - 0.8)), mix(0.16, 0.45, c01(v - 1.2)), mix(0.2, 0.3, c01(v - 1))); };
