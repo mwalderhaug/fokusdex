@@ -617,17 +617,32 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float f
   const mname = (m, q) => { const a = mclean(m.name), b = mclean(m.map && m.map.name); return /^Material\b|^$/.test(a) ? (b || q.name) : a; };
   /* Materialreglene: [mønster på materialets navn, valg]. Den første som treffer, gjelder; artens egne (o.rules) kommer før standarden (3DS-modellenes navn).
      Valg: eye (øyet: egen id, ingen sømmer, eget lys; atlas: 0 = teksturen er ikke 3DS-atlaset med åpne, smale og lukkede øyne), mask (linjemaske som gløder oppå),
-     key (del materiale med et annet navn), og alt K.figMat tar (seam, seamOn, emis, mul). */
+     key (del materiale med et annet navn), og alt K.figMat tar (seam, seamOn, emis, mul).
+     o.glow = [[mønster på materialet, (r, g, b, a) => true der teksturen har en linje]]: linjer som gløder, hentet fra fargene (0–1) i teksturen. Arkivets Switch-modeller
+     har linjene i kroppens tekstur, ikke i en egen maske som 3DS-modellene: flaten tegnes en gang til oppå med en maske laget av teksturen, i samme slags materiale som
+     3DS-maskene. Den første er f.mats.mask, de andre deler uCrack og uCrackC med den, så alle linjene gløder likt. Masken lages én gang per modell, materiale og test. */
   const RULES0 = [[/Eye/, { eye: 1 }], [/BodyB1|^BodyB$/, { seamOn: 0 }], [/Mask/, { mask: 1 }]];
+  /* Flater uten tekstur (arkivets Switch-modeller har ensfargede deler, som kjernene på Primal Kyogre) får en tekstur på 1 × 1 piksel i sin egen farge; ellers ble de svarte. */
+  const solidMap = c => { const h = c.getHex(), t = new T.DataTexture(new Uint8Array([h >> 16 & 255, h >> 8 & 255, h & 255, 255]), 1, 1); t.needsUpdate = true; return t; };
+  const glowCv = new Map();
+  const glowMap = (key, src, test) => { let cv = glowCv.get(key); const img = src.image;
+    if (!cv) { cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height; const x = cv.getContext('2d', { willReadFrequently: true }); x.drawImage(img, 0, 0); const d = x.getImageData(0, 0, cv.width, cv.height), a = d.data;
+      for (let i = 0; i < a.length; i += 4) { const v = test(a[i] / 255, a[i + 1] / 255, a[i + 2] / 255, a[i + 3] / 255) ? 255 : 0; a[i] = a[i + 1] = a[i + 2] = v; a[i + 3] = 255; } x.putImageData(d, 0, 0); glowCv.set(key, cv); }
+    const t = new T.CanvasTexture(cv); t.flipY = src.flipY; t.wrapS = src.wrapS; t.wrapT = src.wrapT; return t; };   /* som kildens tekstur: samme vei (glTF: ikke snudd) og gjentatt (UV-ene går utenfor 0–1) */
   K.figure = (gltf, o) => { o = o || {}; const root = gltf.scene, bones = {}, rest = {}, acc = {}, mats = {}, ex = {}, eyes = [], mir = o.mir || MIR, map = o.map || {};
     const rules = (o.rules || []).concat(RULES0), rule = n => { for (const r of rules) if (r[0].test(n)) return r[1]; return {}; };
     const holder = new T.Group(); holder.add(root); holder.updateMatrixWorld(true); const own = [];
     root.traverse(q => { if (q.isBone) { const bn = bname(q.name); if (!bones[bn]) { bones[bn] = q; rest[bn] = [q.rotation.x, q.rotation.y, q.rotation.z, q.position.x, q.position.y, q.position.z]; } }
-      if (q.isMesh) { q.frustumCulled = false; q.layers.set(1); const n = mname(q.material, q); if (o.hide && o.hide.test(n + ' ' + q.name)) { q.visible = false; return; } own.push(q);
-        const ru = rule(n), k = ru.key || (ru.mask ? 'mask' : n); q.material = mats[k] || (mats[k] = K.figMat(q.material.map, Object.assign({ id: o.id || 255, mip: o.mip && !ru.eye && !ru.mask }, ru.eye ? { id: (o.id || 255) - 1, seamOn: 0, emis: 0.35 } : {}, ru))); if (ru.mask) q.renderOrder = 5; if (ru.eye && eyes.indexOf(q.material) < 0) { q.material.userData.atlas = ru.atlas !== 0; eyes.push(q.material); } } });
+      if (q.isMesh) { q.frustumCulled = false; q.layers.set(1); const n = mname(q.material, q); if (o.hide && o.hide.test(n + ' ' + q.name)) { q.visible = false; return; } own.push(q); q.userData.mn = n;
+        const ru = rule(n), k = ru.key || (ru.mask ? 'mask' : n); q.material = mats[k] || (mats[k] = K.figMat(q.material.map || (q.material.color ? solidMap(q.material.color) : null), Object.assign({ id: o.id || 255, mip: o.mip && !ru.eye && !ru.mask }, ru.eye ? { id: (o.id || 255) - 1, seamOn: 0, emis: 0.35 } : {}, ru))); if (ru.mask) q.renderOrder = 5; if (ru.eye && eyes.indexOf(q.material) < 0) { q.material.userData.atlas = ru.atlas !== 0; eyes.push(q.material); } } });
     /* Skjelettkartet (o.map): posene skrives med rollene (Head, Jaw, Neck1, Spine1, '*Arm' …), og kartet sier hvilket ben som har rollen i denne modellen
        ({ '*Arm': '*Shoulder', Spine3: 'Spine2' }). Uten oppføring er rollen bennavnet selv. '*X' = både LX og RX (høyre speilet med o.mir). */
     const names = Object.keys(bones), al = k => map[k] || k, list = k => ex[k] || (ex[k] = (k = al(k))[0] === '*' ? ['L' + k.slice(1), 'R' + k.slice(1)].map(al).filter(n => bones[n]) : bones[k] ? [k] : []);
+    if (o.glow) for (const q of own) { const g = o.glow.find(r => r[0].test(q.userData.mn)), src = g && q.material.uniforms.map.value; if (!src || !src.image || !src.image.width) continue;
+      const mk = mats.mask ? 'mask_' + q.userData.mn : 'mask', mm = mats[mk] || (mats[mk] = K.figMat(glowMap([gltf.model, q.userData.mn, g[1]].join('|'), src, g[1]), { id: o.id || 255, mask: 1 }));
+      if (mk !== 'mask') { mm.uniforms.uCrack = mats.mask.uniforms.uCrack; mm.uniforms.uCrackC = mats.mask.uniforms.uCrackC; }
+      const s = q.isSkinnedMesh ? new T.SkinnedMesh(q.geometry, mm) : new T.Mesh(q.geometry, mm); if (q.isSkinnedMesh) { s.bindMode = q.bindMode; s.bind(q.skeleton, q.bindMatrix); }
+      s.layers.set(1); s.frustumCulled = false; s.renderOrder = 5; q.add(s); }   /* et barn av flaten: samme plass, samme skjelett */
     /* Flaten i figurens eget rom (vO i FS_FIG: steinhuden, sprekkene, hodet): modellens plassering i hvilestillingen. Modellene fra conv.js står alle likt
        (Z opp, −Y fram, tommer): da brukes de nøyaktige tallene. Andre (fra arkivet) får sin egen matrise. */
     for (const q of own) { const e = q.matrixWorld.elements, ref = [OS3, 0, 0, 0, 0, -OS3, 0, OS3, 0], m3 = [e[0], e[1], e[2], e[4], e[5], e[6], e[8], e[9], e[10]];

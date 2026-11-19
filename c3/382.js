@@ -15,12 +15,19 @@
   const musNow = t => { if (typeof G3D.mus === 'function') return G3D.mus(t); try { return typeof PACK !== 'undefined' && PACK.tlOf(PACK.track()) ? PACK.pos() : -1; } catch (_) { return -1; } };
 
   /* ---------- Figurene ----------
-     'kyogre' og 'kyogre_primal' er Jazz sin nedlasting fra Omega Ruby / Alpha Sapphire (3DS). Den vanlige formen har to lag med linjer som gløder (BodyAInc,
-     BodyBInc): de tegnes som linjemasker oppå (røde linjer, sterkere når den er sint), ellers ble finnene svarte. Primal har linjemasken BodyCMask (lyseblå
-     linjer som lyser) og de runde flekkene BodyBInc og BodyBInc2 (gule og oransje) som lyser selv. Primal er 1,66 ganger så stor som den vanlige formen. */
+     'kyogre' er Jazz sin nedlasting fra Omega Ruby / Alpha Sapphire (3DS). Den har to lag med linjer som gløder (BodyAInc, BodyBInc): de tegnes som
+     linjemasker oppå (røde linjer, sterkere når den er sint), ellers ble finnene svarte.
+     'kyogre_primal' er Switch-modellen fra arkivet (Jazz 19.11 kveld: «Switch på kyogre», som Primal Groudon i 2b.1). Samme skjelett, akser og mål som 3DS-modellen
+     (akseprøven), så posene er de samme. Linjene ligger i kroppens tekstur (de lyseblå feltene i BodyBlue) og gløder som en maske oppå (glow, LINE), kjernene
+     (CoreRed, CoreYellow) er ensfargede og lyser selv, og øyet er ikke 3DS-atlaset (atlas: 0). 3DS-modellen virker fortsatt hvis den legges i pakken
+     (`node scripts/conv.js kyogre:primal`): linjemasken BodyCMask og flekkene BodyBInc og BodyBInc2. Primal er 1,66 ganger så stor som den vanlige formen. */
   const KS = 1.45, PS = 0.62;   /* skalaen (Kyogre skal føles enorm) og hvor mye Primal krympes i kampen, så formene er like store der (regelen fra Groudon) */
+  /* LINE: de lyseblå linjene i BodyBlue (12 % av teksturen). Det blanke laget over ryggen, hodet og finnene (BodyUra) er én lys farge med mønsteret i alfa (0,2–1): det tegnes
+     tett, som i sammenligningen Jazz valgte fra. Glød fra alfa (a > 0,72) ble prøvd 19.11 og lyste opp hele hodet: ikke brukt. */
+  const LINE = (r, g, b) => g - r > 0.3 && b > 0.75;
   const kyFig = o => { const f = K.figure(K.model('kyogre'), Object.assign({ rules: [[/Inc$/, { mask: 1 }]] }, o)); f.root.rotation.order = 'YXZ'; f.root.scale.setScalar(KS); lines(f, 0.7, 0); return f; };
-  const kypFig = o => { const f = K.figure(K.model('kyogre_primal'), Object.assign({ rules: [[/^BodyBInc/, { emis: 0.85 }]] }, o)); f.root.rotation.order = 'YXZ'; f.root.scale.setScalar(KS); lines(f, 1, 1); return f; };
+  const kypFig = o => { const f = K.figure(K.model('kyogre_primal'), Object.assign({ rules: [[/^Eye$/, { eye: 1, atlas: 0 }], [/^Core/, { emis: 0.85, seamOn: 0 }], [/^BodyBInc/, { emis: 0.85 }]], glow: [[/^BodyBlue$/, LINE]] }, o));
+    f.root.rotation.order = 'YXZ'; f.root.scale.setScalar(KS); lines(f, 1, 1); return f; };
   /* Linjene: v = hvor sterkt (0,7 = som teksturen, over 1 = gløder), p = Primal (lyseblå) eller vanlig (rød). */
   const lines = (f, v, p) => { const m = f.mats.mask; if (!m) return; m.uniforms.uCrack.value = v; if (p) m.uniforms.uCrackC.value.setRGB(mix(0.42, 0.75, c01(v - 1)), mix(0.86, 1, c01(v - 1)), 1); else m.uniforms.uCrackC.value.setRGB(mix(0.82, 1, c01(v - 0.8)), mix(0.16, 0.45, c01(v - 1.2)), mix(0.2, 0.3, c01(v - 1))); };
   /* Posene (akseprøven 19.11: Jaw y− åpner, Neck/Head y− løfter hodet, '*Shoulder' z+ løfter finnene og z− senker dem, Hips y− løfter halen, Tail1 y+ løfter halefinnene). */
@@ -330,7 +337,8 @@
       P.grade = { tint: [0.95, 1, 1.05], con: 1.1, sat: 1.04 - 0.06 * pk, exp: 1.05 + 0.2 * fl - 0.05 * pk };
       if (A.drop && A.drop.on) P.sh = (P.sh || 0) + 1.6 * A.drop.hk; if (A.drop && A.drop.sl > 0) P.sh = (P.sh || 0) + 3 * A.drop.sl * A.drop.sl;
     },
-    fig: { models: ['kyogre', 'kyogre_primal'], at: [356, 236], me: [132, 452],   /* vannlinja hans og føttene til din egen med 3D-figuren (oppstillingen fra Black/White) */
+    fig: { models: ['kyogre', 'kyogre_primal'], at: [362, 228], me: [132, 452],   /* vannlinja hans og føttene til din egen med 3D-figuren (oppstillingen fra Black/White); at er der
+      kampskjermen setter boksen (.arena.fig3 .bs.foe i style.css ved --cz 1, som Groudon), så treffene og effektene lander på figuren */
       make(S, K, T) { const g = S.gr = kyFig({ mip: 1 }), p = S.pg = kypFig({ mip: 1 }); S.scene.add(g.root); S.scene.add(p.root); S.figs.push(g, p); S.forms = [g, p]; p.root.scale.setScalar(KS * PS); },
       form: (S, pr) => pr ? { f: S.pg, y: 0.1, stand: [{ Neck: [0, -0.08, 0], '*Shoulder': [0, 0, 0.1] }, 1], duck: DUCK, roar: ROAR, rk: 0.45 } : { f: S.gr, y: 0.15, stand: [{ Neck: [0, -0.06, 0] }, 1], duck: DUCK, roar: ROAR, rk: 0.5 },
       idle(f, t) { SWIM(f, t, 0.35, 1.3); f.add({ Neck: [0, 0.03 * sin(t * 0.8), 0.05 * sin(t * 0.45)], Jaw: [0, -0.04 - 0.03 * sin(t * 2), 0] }, 1); },
