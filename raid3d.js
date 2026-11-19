@@ -258,7 +258,7 @@ float seaH(vec2 w, float t){ vec2 d = normalize(uWind.xy + vec2(1e-4, 0.)), e = 
   const VS_SEA = `varying vec3 vW; varying float vH; uniform float uTime;
 ${SEA_H}
 void main(){ vec4 w = modelMatrix * vec4(position, 1.); float k = 1. - smoothstep(180., 420., length(w.xz)); vH = seaH(w.xz, uTime) * k; w.y += vH; vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
-  const FS_SEA = `varying vec3 vW; varying float vH; uniform vec4 uRing[4]; uniform vec4 uWade; uniform vec3 uDeep, uShal, uSkyA, uSkyB, uFoamC; uniform float uBri;
+  const FS_SEA = `varying vec3 vW; varying float vH; uniform vec4 uRing[4]; uniform vec4 uWade, uBody, uBodyD, uGlo; uniform vec3 uDeep, uShal, uSkyA, uSkyB, uFoamC, uGloC; uniform float uBri;
 ${COMMON}
 ${SEA_H}
 float chop(vec2 w, float t){ return (fbm(w * .32 + vec2(t * .5, t * .31)) - .5) * 1.4 + .3 * sin(w.x * .9 + w.y * .7 + t * 2.3); }
@@ -270,7 +270,15 @@ void main(){
   vec3 sky = mix(uSkyA, uSkyB, pow(clamp(R.y, 0., 1.), .45));
   float thin = smoothstep(.25, 1.25, h0 / max(uSea.x, .01)) * smoothstep(-.2, .5, dot(N, uKey));
   vec3 body = mix(uDeep, uShal, thin * .8) * (.62 + .4 * smoothstep(-.3, .9, dot(N, uKey) * .5 + .5));
+  /* Under overflaten (Kyogre, Jazz 19.11 «kraken»): en enorm mørk kropp (uBody = x, z, halv lengde, styrke; uBodyD = retning x, z, halv bredde, finner) med finner
+     til sidene, og lys fra dypet (uGlo = x, z, radius, styrke; uGloC = fargen). Bare i vannets egen farge: speilingen og skummet ligger oppå. */
+  float gl = 0.;
+  if (uBody.w > 0.) { vec2 dd = normalize(uBodyD.xy + vec2(1e-4, 0.)), q = w - uBody.xy; float a = dot(q, dd) / uBody.z, b = dot(q, vec2(-dd.y, dd.x)) / uBodyD.z, nz = (fbm(w * .09 + t * .05) - .5) * .25;
+    float e = a * a + b * b * (1. + .6 * max(0., -a)), f = pow((a - .15) / .42, 2.) + pow((abs(b) - 1.9) / 1.15, 2.), k = max(1. - smoothstep(.45, 1.1, e + nz), (1. - smoothstep(.4, 1.1, f + nz)) * uBodyD.w);
+    body *= 1. - .82 * k * uBody.w; }
+  if (uGlo.w > 0.) { float d = length(w - uGlo.xy) / max(uGlo.z, .01); gl = exp(-d * d * 2.2) * uGlo.w; body += uGloC * gl; }
   vec3 col = mix(body, sky, fr);
+  col += uGloC * gl * .3;
   col += uKeyC * pow(max(dot(R, normalize(uKey + vec3(0., .25, 0.))), 0.), 60.) * .5 * lod;
   /* Skum: på toppene (der dønningen er høyest og bryter), i striper etter vinden, og rundt det som står i vannet (uWade). */
   float fn = fbm(w * .55 + vec2(t * .22, -t * .16)), top = smoothstep(.92, 1.35, h0 / max(uSea.x, .01) + (fn - .5) * 1.1 + c0 * .12 * uSea.y);
@@ -540,7 +548,7 @@ void main(){
      så arenaen og cutscenene kan si fra om nedslag og hvor figuren står på samme måte. Kanten på figuren i kampen følger materialet (def.edge: 'lava', 'sea', null).
      · sea: o = { size, seg (ruter i flaten: flere gir jevnere dønninger), swell, chop, foam, rain, wind: [x, z, fart], deep, shal, skyA, skyB, foamC }. Uniformene uSea og uWind kan endres i act.
      · ice: o = { size, mirror, rime, cracks, snow, deep, shal, skyA, skyB, foamC }. uStar = sprekk-stjernen. */
-  const gU = () => ({ uRing: uv([0, 1, 2, 3].map(() => new T.Vector4())), uWade: uv(new T.Vector4()), uBri: uv(1) });
+  const gU = () => ({ uRing: uv([0, 1, 2, 3].map(() => new T.Vector4())), uWade: uv(new T.Vector4()), uBri: uv(1), uBody: uv(new T.Vector4()), uBodyD: uv(new T.Vector4(0, 1, 1, 1)), uGlo: uv(new T.Vector4()), uGloC: uv(new T.Vector3(0.3, 0.8, 1)) });
   K.sea = o => { o = o || {}; const n = o.seg || 160; return new T.Mesh(new T.PlaneGeometry(o.size || 900, o.size || 900, n, n).rotateX(-PI / 2), sm(VS_SEA, FS_SEA, Object.assign(gU(), { uSea: uv(new T.Vector4(o.swell == null ? 0.6 : o.swell, o.chop == null ? 1 : o.chop, o.foam == null ? 0.7 : o.foam, o.rain || 0)), uWind: uv(new T.Vector4(...(o.wind || [0.25, 1, 1]), 0)),
     uDeep: uv(u3(o.deep || '#06202e')), uShal: uv(u3(o.shal || '#1c7c8c')), uSkyA: uv(u3(o.skyA || '#8aa2b4')), uSkyB: uv(u3(o.skyB || '#1c2c44')), uFoamC: uv(u3(o.foamC || '#e8f4fa')) }))); };
   K.ice = o => { o = o || {}; return new T.Mesh(new T.PlaneGeometry(o.size || 900, o.size || 900).rotateX(-PI / 2), sm(VS, FS_ICE, Object.assign(gU(), { uStar: uv(new T.Vector4()), uIce: uv(new T.Vector4(o.mirror == null ? 0.8 : o.mirror, o.rime == null ? 0.7 : o.rime, o.cracks == null ? 0.8 : o.cracks, o.snow == null ? 0.6 : o.snow)),

@@ -11,7 +11,7 @@
    Tyngden i bevegelsene: forvarsel (trekker seg sammen før den slår ut), overskudd (back: forbi målet og tilbake), en dempet fjær etter hvert nedslag (sq). */
 const G3C = (() => {
   /* ARTS: artene som har en fil i c3/. Legg til nummeret når fila finnes (og fila i FILES i sw.js). */
-  const X = { ARTS: [383], snd: {}, sfx: [], base: 'c3/' }, jobs = {};
+  const X = { ARTS: [383, 382], snd: {}, sfx: [], base: 'c3/' }, jobs = {};
   const ok = typeof G3D !== 'undefined' && typeof CINE !== 'undefined';
   X.has = id => ok && X.ARTS.indexOf(+id) >= 0;
   /* Henter artens fil (én gang). Feiler den (ikke nett, ikke mellomlagret), kan den prøves igjen senere, og sprite-introen spilles i mellomtiden. */

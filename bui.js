@@ -198,6 +198,7 @@ const musicKey = B => MKIND[B.tr.kind] || (B.tr.fr || B.mode === 'fac' || B.mode
 /* Kampmusikken: trenerens egen låt fra ressurspakken hvis den finnes, ellers den innebygde. */
 async function battleMusic(B, o) {
   if (dkOn(B) && B.dks && B.dks.ph) return dkMusic(B, o);
+  if (kyOn(B)) return kyMusic(B, o);
   return battleMusic0(B, o);
 }
 async function battleMusic0(B, o) {
@@ -208,7 +209,7 @@ async function battleMusic0(B, o) {
 }
 /* Musikken stopper aldri brått: den tones ut. sec = hvor lenge (kort når skjermen byttes, lang etter en kamp). */
 const stopMusic = sec => { const f = sec == null ? 0.35 : sec; PACK.music('', { out: f }); PACK.stingOut(Math.min(f, 1.2)); music('', { out: f }); };
-document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible') { dkPause(); stopMusic(0.05); } else if (BT.B && !BT.B.over && $('#arena')) battleMusic(BT.B); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible') { dkPause(); kyPause(); stopMusic(0.05); } else if (BT.B && !BT.B.over && $('#arena')) battleMusic(BT.B); });
 
 /* ---------- Forsiden ---------- */
 const leagueTag = () => { const L = S.lad; return `${L.lap ? 'Lap ' + (L.lap + 1) + ' · ' : ''}Battle ${L.n + 1}/${LAPN}`; };
@@ -411,6 +412,55 @@ async function dkShift(B) {
   for (const e of ev) { if (!ok()) return; await playOne(B, e); }
   if (!ok()) return;
   liveSave(B); BT.busy = false;
+  if (B.over) return endBattle();
+  return turnIdle(B);
+}
+/* ---------- Kyogre: låta styrer stormen (Jazz 19.11) ----------
+   Kampen mot Kyogre går på «All-Devouring Narwhal» (pakken), og låta har et kart i manifestet (tl, PACK.tlOf): oppbyggingen fra 3:15, kuttet, slaget og stillheten
+   3:43–3:46 (cut, stab, gap), phase 2 som smeller inn på 3:46,15 (slam) og dubstep-dropet på 4:26 (drop). Når låta nærmer seg cutscenens start (pre, 3:34,9) og Kyogre
+   ikke er rasende, gjør stormen den rasende (stormRage i league.js), og Primal-cutscenen spilles på låta: han stuper på crashet, α lyser langt nede, han stiger,
+   breachen kommer på slaget, han henger i lufta i stillheten, og brølet smeller inn med phase 2. Blir den rasende av HP før det, hoppes låta til pre når cutscenen
+   starter (primalCut); hoppes cutscenen over, hoppes låta til like før slaget, og uten cutscene (lysringen) så slaget kommer i blinket. Etter forvandlingen går
+   phase 2 i sløyfe (l i manifestet), og arenaen leser låtas tid selv (PACK.pos) og slår til på dropet. Spilles det av noe når låta når fram, venter raseriet til
+   runden er vist (som Dark Mewtwo); når låta slutten av oppbyggingen (hold[1]) før cutscenen har startet, hoppes den 8 takter tilbake (hold[0]), så kuttet aldri
+   kommer uten ham. Hvor langt låta er kommet, lagres med kampen (B.kys = { ph: 1 før og 2 etter forvandlingen, el: sekunder i låta }), og den fortsetter der når
+   appen har vært lagt bort. Uten låta (en eldre pakke eller uten pakke) er alt som før: Primal ved halv HP. */
+const KYLEAD = 2.6;   /* raseriet starter så lenge før pre: teksten og «Primal Reversion!» kommer før cutscenen */
+const kyTk = B => B && B.raid && B.tr && !B.tr.dk && B.tr.leg === KYOGRE && typeof PACK !== 'undefined' ? PACK.trackFor(B) : '';
+const kyTl = B => { const tk = kyTk(B); return tk ? PACK.tlOf(tk) : null; };
+const kyOn = B => !!kyTl(B);
+const kyDone = B => !!(B.megaUsed && B.megaUsed.foe) || !!(B.kys && B.kys.ph === 2);
+const kyS = B => B.kys || (B.kys = { ph: kyDone(B) ? 2 : 1, el: 0 });
+function kyArm(B) { clearTimeout(BT.kyTm); if (BT.B !== B || B.over || !kyOn(B)) return; kyS(B); BT.kyTm = setTimeout(() => kyCheck(B), 200); }
+function kyCheck(B) {
+  if (BT.B !== B || B.over || !$('#arena')) return; const tl = kyTl(B), s = kyS(B); if (!tl) return;
+  const p = PACK.pos(1); if (PACK.track() !== kyTk(B) || p < 0) return kyArm(B);
+  s.el = p; if (s.ph === 1 && kyDone(B)) s.ph = 2;
+  if (!s.cut) {
+    const h = tl.hold; if (h && p >= h[1] - 0.45 && p < tl.cut) PACK.seek(h[0], { when: AC.currentTime + Math.max(0, h[1] - p), x: 0.05 });
+    if (s.ph === 1 && p >= tl.pre - KYLEAD && p < tl.cut) s.due = 1;
+    if (s.ph === 1 && s.due && !BT.busy && !B.rage && B.foe[B.b].hp > 0) return kyShift(B);
+  }
+  kyArm(B);
+}
+const kyDue = B => kyOn(B) && !!B.kys && B.kys.ph === 1 && !!B.kys.due && !B.rage && !B.over && B.foe[B.b].hp > 0;
+function kyPause() { const B = BT.B; clearTimeout(BT.kyTm); if (B && B.kys && kyOn(B) && PACK.track() === kyTk(B)) { const p = PACK.pos(1); if (p >= 0) B.kys.el = p; } }
+/* Musikken når kampen starter uten film, hentes fram igjen, eller appen har vært lagt bort: låta fortsetter der den var (aldri forbi oppbyggingen før forvandlingen). */
+async function kyMusic(B, o) {
+  const tk = kyTk(B), tl = PACK.tlOf(tk), s = kyS(B); let at = s.el || 0; if (tl && s.ph === 1 && tl.hold && at >= tl.hold[1]) at = tl.hold[0];
+  if (tl && s.ph === 2) { s.cut = 1; if (at < tl.slam) at = tl.slam - 0.05; }
+  if (PACK.track() === tk) { kyArm(B); return music(''); }
+  if (await PACK.music(tk, Object.assign({ fade: 0.5 }, o, { at }))) { music(''); kyArm(B); return; }
+  if (BT.B !== B || B.over) return;
+  PACK.music(''); music(musicKey(B), o);
+}
+async function kyShift(B) {
+  const s = B.kys; if (!s || s.ph !== 1 || BT.B !== B || B.over || !$('#arena') || B.rage) return;
+  clearTimeout(BT.kyTm); BT.busy = true; BT.menu = 'main'; drawMenu();
+  const ev = []; stormRage(B, ev); liveSave(B);
+  for (const e of ev) { if (BT.B !== B || !$('#arena')) return; await playOne(B, e); }
+  if (BT.B !== B || !$('#arena')) return;
+  s.ph = 2; liveSave(B); BT.busy = false; kyArm(B);
   if (B.over) return endBattle();
   return turnIdle(B);
 }
@@ -1000,8 +1050,10 @@ async function primalCut(B, e) {
   const arn = BT.arena && BT.arena.on && BT.arena.pause ? BT.arena : null; if (arn) arn.pause(1);   /* arenaen står stille under cutscenen */
   c3warm(); buzz([30, 50, 30, 50]);   /* lydene til forvandlingen er signalene i cutscenen (C3SND), ikke den vanlige Mega-lyden */
   const base = fxCue(B), cue = (n, v) => { if (gone()) return; if (n === 'cry') { cry(e.id, 0, 0.8, 1); buzz([80, 40, 260]); } else if (c3snd(n)) buzz(c3snd(n)(v) || 30); else base(n, v); };
-  const pl = CINE.play(cv, id, { name: B.tr.n, cc: B.tr.cc, cue }); requestAnimationFrame(() => root.classList.add('on'));
-  let skipped = false; const skip = () => { if (skipped) return; skipped = true; sfx.tap(); sk.hidden = true; pl.skip(); };
+  /* Kyogre: cutscenen går på låta. Låta hoppes til crashet der han stuper (tl.pre), og filmens tid er låtas tid derfra; hoppes den over, hoppes låta til like før slaget. */
+  const tl = kyOn(B) && PACK.track() === kyTk(B) ? kyTl(B) : null; if (tl) { kyS(B).cut = 1; PACK.seek(tl.pre, { x: 0.12 }); }
+  const pl = CINE.play(cv, id, { name: B.tr.n, cc: B.tr.cc, cue, clock: tl ? () => { const q = PACK.pos(); return q < 0 ? -1 : q - tl.pre; } : null }); requestAnimationFrame(() => root.classList.add('on'));
+  let skipped = false; const skip = () => { if (skipped) return; skipped = true; sfx.tap(); sk.hidden = true; if (tl && PACK.pos(1) < tl.stab - 0.75) PACK.seek(tl.stab - 0.72, { x: 0.06 }); pl.skip(); };
   const tm = setTimeout(() => { if (!gone() && !skipped) sk.hidden = false; }, 900); sk.addEventListener('click', skip);
   const key = k => { if (k.key === 'Enter' || k.key === ' ' || k.key === 'Escape') skip(); }; document.addEventListener('keydown', key);
   const watch = setInterval(() => { if (gone()) pl.stop(); }, 300);
@@ -1012,6 +1064,7 @@ async function primalCut(B, e) {
   const sp = $('#s-foe'); if (sp) { const keep = [...sp.classList].filter(c => !['bs', 'foe', 'megaev', 'megain', 'in', 'gone'].includes(c)).join(' '); paintSprite('foe', keep); paintBox('foe'); }
   if (skipped && f) cry(f.id, 0.05, 0.5);
   if (arn) arn.ev('primal');   /* arenaen: vulkanen er i utbrudd og stedet røyklagt fra nå */
+  if (B.kys) B.kys.ph = 2;
   shake(520, 4); root.classList.add('d'); await T(440); root.remove();
   return true;
 }
@@ -1022,6 +1075,7 @@ async function megaShow(B, side, e) {
   await say(e.txt, 500);
   if (BT.B !== B || !sp.isConnected) return;
   if (side === 'foe' && B.tr.wild && await primalCut(B, e)) return;
+  if (side === 'foe' && kyOn(B) && PACK.track() === kyTk(B)) { const s = kyS(B); s.cut = 1; s.ph = 2; PACK.seek(kyTl(B).stab - 1.15, { x: 0.1 }); }   /* Kyogre uten cutscene: slaget i låta kommer i blinket */
   const img = sp.querySelector('img,canvas'), h = Math.max(56, Math.min(230, img ? img.getBoundingClientRect().height : 90));
   const ring = cls => { const fx = document.createElement('i'); fx.className = 'megafx ' + cls + (e.primal ? ' primal' : ''); fx.style.setProperty('--h', h.toFixed(0) + 'px'); sp.appendChild(fx); return fx; };
   ring('gather'); BSFX.mega(); buzz([30, 50, 30, 50, 30, 50, 220]); sp.classList.add('megaev'); if (side === 'foe') fig3Mark('mega', 1);
@@ -1540,6 +1594,7 @@ async function playEv(ev) {
   if (B.over) return endBattle();
   /* Dark Mewtwo: er den første låta slutt, forvandles den nå som runden er vist ferdig. */
   if (dkDue(B)) return dkShift(B);
+  if (kyDue(B)) return kyShift(B);
   return turnIdle(B);
 }
 /* Runden er vist: en tvungen runde (lading, hvile) går av seg selv, ellers er det spilleren sin tur. */
@@ -1636,7 +1691,7 @@ async function startBattle(B) {
   }
   await prep; await Promise.race([pre, new Promise(r => setTimeout(r, 2000))]);
   if (BT.B !== B) return;
-  drawBattle(); drawMenu(); packHint(); dkStart(B);
+  drawBattle(); drawMenu(); packHint(); dkStart(B); kyArm(B);
   if (BT.arena && B.tr.wild) paintSprite('foe', 'ace pre');
   await bwait(350);
   await say(B.tr.wild ? (/^The /.test(B.tr.title) ? `${B.tr.n}, ${B.tr.title.replace(/^The /, 'the ')}, appeared!` : `The ${B.tr.title.replace(' Pokémon', '').toLowerCase()} ${B.tr.n} appeared!`) : `${who(B.tr)} wants to battle!`);
@@ -1666,7 +1721,7 @@ function fameSong(res) {
 const fameHead = res => res.mode === 'wk' ? (res.sym === 2 ? 'GOLD SYMBOL' : 'SILVER SYMBOL') : res.mode === 'fac' ? (res.done ? 'CONQUERED' : 'NEW SYMBOL') : 'CHAMPION';
 function endBattle() {
   /* Kampmusikken klinger ut over et par sekunder i stedet for å stoppe: først dukker den, så seierslyden slipper til. */
-  const B = BT.B; BT.busy = false; clearTimeout(BT.dkTm); BT.dkB = null;
+  const B = BT.B; BT.busy = false; clearTimeout(BT.dkTm); BT.dkB = null; clearTimeout(BT.kyTm);
   if (B.mode !== 'lab') liveEnd();
   clearInterval(BT.goldT); FX.show(null); if (BT.air) { BT.air(); BT.air = null; }
   const res = BT.res = B.mode === 'wk' ? finishWeek(B) : B.mode === 'fac' ? finishFactory(B) : B.mode === 'lab' ? finishLab(B) : B.mode === 'raid' ? finishRaid(B) : B.mode === 'pwt' ? finishPwt(B) : finishLeague(B);

@@ -229,8 +229,8 @@ const PACK = (() => {
       else s.buffer = d;
       s.connect(g2); g2.connect((typeof master === 'function' && master()) || a.destination);
       if (o.fade) { g2.gain.setValueAtTime(Math.max(0.0001, v * (o.from || 0)), t); g2.gain.linearRampToValueAtTime(v, t + o.fade); } else g2.gain.setValueAtTime(v, t);
-      s.start(0, Math.max(0, Math.min(d.duration - 0.2, o.at || 0)));
-      return { s, g: g2, t0: t };
+      const at = Math.max(0, Math.min(d.duration - 0.2, o.at || 0)); s.start(0, at);
+      return { s, g: g2, t0: t, at, d, v };
     } catch (_) { return null; }
   }
   /* En lang uttoning (etter en kamp) dukker først raskt, så seierslyden slipper til, og klinger så ut. */
@@ -278,9 +278,28 @@ const PACK = (() => {
   P.special = re => { const e = P.ok && P.man.music && P.man.music.find(x => x.c === 'special' && re.test(x.t)); return e ? e.f : ''; };
   P.lenOf = path => { const e = path && ent(path); return e && e.d ? e.d : 0; };
   /* Musikkskyveren flyttes mens en låt spiller. */
-  P.vol = () => { try { if (node && mode === 'wa') node.g.gain.setTargetAtTime(Math.min(1, mvol() * tgain(cur)), AC.currentTime, 0.05); else if (au && mode === 'el') au.volume = Math.min(1, mvol() * tgain(cur)); } catch (_) {} };
+  P.vol = () => { try { if (node && mode === 'wa') { node.v = Math.min(1, mvol() * tgain(cur)); node.g.gain.setTargetAtTime(node.v, AC.currentTime, 0.05); } else if (au && mode === 'el') au.volume = Math.min(1, mvol() * tgain(cur)); } catch (_) {} };
   /* Sekunder siden låta som spiller nå ble startet (til å holde raid-filmene i takt med den), justert for forsinkelsen ut til høyttaleren. −1 hvis ingen låt spiller. */
   P.clock = () => { try { return node && mode === 'wa' && AC.state === 'running' ? AC.currentTime - node.t0 - (AC.outputLatency || AC.baseLatency || 0) : -1; } catch (_) { return -1; } };
+  /* LÅTA STYRER (Kyogre, Jazz 19.11). pos = hvor i låta vi er (sekunder i fila), med sløyfa regnet inn. Uten raw er forsinkelsen ut til høyttaleren trukket fra
+     (det man hører nå: til bildene); med raw er det lydklokka (til å planlegge hopp). −1 hvis ingen låt spiller gjennom WebAudio. */
+  P.pos = raw => { try { if (!node || mode !== 'wa' || AC.state !== 'running' || node.at == null) return -1; const s = node.s, d = node.d; let p = node.at + AC.currentTime - node.t0 - (raw ? 0 : (AC.outputLatency || AC.baseLatency || 0));
+    if (s.loop && d) { const le = s.loopEnd > s.loopStart ? s.loopEnd : d.duration, ls = s.loopEnd > s.loopStart ? s.loopStart : 0; if (le - ls > 0.5) while (p >= le) p -= le - ls; } return p; } catch (_) { return -1; } };
+  /* Hopper i låta som spiller: en ny kilde fra samme lyd starter på sec, og den gamle tones ut over x sekunder mens den nye tones inn (samme sløyfe og styrke).
+     o.when = lydklokka hoppet skal skje på (et slag), ellers nå. Gir false når ingen låt spiller gjennom WebAudio. */
+  P.seek = (sec, o) => {
+    o = o || {}; if (!node || mode !== 'wa' || !node.d) return false;
+    try {
+      const a = AC, d = node.d, x = Math.max(0.01, o.x == null ? 0.06 : o.x), w = Math.max(a.currentTime + 0.005, o.when || 0), v = node.v || Math.min(1, mvol() * tgain(cur)), s = a.createBufferSource(), g2 = a.createGain(), old = node;
+      s.buffer = d; s.loop = old.s.loop; s.loopStart = old.s.loopStart; s.loopEnd = old.s.loopEnd;
+      s.connect(g2); g2.connect((typeof master === 'function' && master()) || a.destination);
+      const at = Math.max(0, Math.min(d.duration - 0.2, sec)); g2.gain.setValueAtTime(0.0001, a.currentTime); g2.gain.setValueAtTime(0.0001, w); g2.gain.linearRampToValueAtTime(v, w + x); s.start(w, at);
+      try { const ov = old.g.gain; ov.cancelScheduledValues(w); ov.setValueAtTime(v, w); ov.linearRampToValueAtTime(0.0001, w + x); old.s.stop(w + x + 0.05); } catch (_) { try { old.s.stop(); } catch (_) {} }
+      node = { s, g: g2, t0: w, at, d, v }; return true;
+    } catch (_) { return false; }
+  };
+  /* Kartet over låta i manifestet (tl: tidene en cutscene og arenaen følger), eller null. */
+  P.tlOf = path => { const e = path && ent(path); return e && e.tl ? e.tl : null; };
   /* Korte lyder (angrep, treff, status) dekodes og spilles gjennom appens vanlige lydutgang, så volumknappen gjelder. Gir false hvis lyden ikke er klar. */
   /* Den siste lyden som ble startet, så angrepslyden kan klippes når animasjonen er over (sfxTrim). */
   let last = null;
