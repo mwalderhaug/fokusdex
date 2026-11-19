@@ -29,7 +29,7 @@ const G3C = (() => {
 
   /* ---------- Brølet ---------- (Jazz 18.11: «ikke tykke streker»): tynne gnister ut fra kjeften, lydbølger som brer seg fra den (forvrengningsringer i fxgl.js) og
      et rykk i bildet. mouth(S, f, t0, t) i kameraet som filmer brølet: f = figuren, t0 = når brølet startet, S.rw = hvor åpent (0–1). Kjeften er rollen 'Jaw'. */
-  X.mouth = (S, f, t0, t, len) => { const j = f.at('Jaw'), m = K.proj(j.x, j.y, j.z); S.post.spx = m.x / 2; S.post.spy = m.y / 2; S.post.spr = 0.1; S.post.spd = 0.9 * S.rw * hit(t, t0, len || 2.4); S.mouth = m; };
+  X.mouth = (S, f, t0, t, len) => { const j = f.at('Jaw'), m = K.proj(j.x, j.y, j.z); S.post.spx = m.x / 2; S.post.spy = m.y / 2; S.post.spr = 0.1; S.post.spd = 0.9 * S.rw * hit(t, t0, len || 2.4); S.mouth = m; if (S.spc) S.post.spc = S.spc; };   /* S.spc: stedets farge på gnistene (standard oransje) */
   X.roarFx = (S, t, P, t0) => { const a = t - t0, m = S.mouth; if (a < 0 || a > 2.9 || !m || m.z >= 1 || !(S.rw > 0.05)) return; const sk = P.shock || (P.shock = []);
     for (let i = 0; i < 3; i++) { const ph = (a / 0.72 + i / 3) % 1; if (a - ph * 0.72 < -0.01) continue; sk.push({ x: m.x, y: m.y, r: 14 + ph * 300, w: 26, a: 20 * (1 - ph) * S.rw }); }
     P.bulge = { x: m.x, y: m.y, r: 210, a: 0.2 * hit(t, t0, 0.3) }; };
