@@ -98,7 +98,7 @@ function bmon(src) {
    b.item = det den holder nå. Magic Room og Embargo slår det av så lenge de varer. En gjenstand som brukes opp (bær, Focus Sash), er borte for godt:
    den tas også fra den ekte Pokémonen (heldUse). Knock Off slår den bare ut av hendene for resten av kampen (b.lost). */
 /* EN LEGENDARISK I RAID (b.big = hvor mange ganger så mye HP den har som ellers): skade som regnes i andeler av full HP (gift, brann, forbannelse,
-   Leech Seed, vær, feller, Rough Skin, Rocky Helmet), regnes av HP-en den ville hatt uten raidet (mx). Ellers ville gift tatt like stor del av den
+   Leech Seed, vær, feller, Rough Skin, Rocky Helmet, Bad Dreams), regnes av HP-en den ville hatt uten raidet (mx). Ellers ville gift tatt like stor del av den
    enorme HP-streken hver runde som av en vanlig, og det gjorde raidene til et spørsmål om Toxic. Angrep som slår ut med ett slag, virker ikke på den,
    og heller ikke Super Fang, Endeavor, Pain Split, Destiny Bond, Perish Song og Grudge. Tilstander (søvn, lammelse) og senkede verdier virker som ellers. */
 const mx = b => b.big ? b.max / b.big : b.max;
@@ -846,7 +846,7 @@ function endTurn(B, ev) {
     if (ba === 'speedboost' && b.sg[5] < 6) { abSay(ev, s, b); changeStats(B, s, [[6, 1]], ev); }
     else if (ba === 'shedskin' && b.status && Math.random() < 0.33) { b.status = ''; b.tox = 0; ev.push({ t: 'status', side: s, st: '' }); abSay(ev, s, b, `${N}'s Shed Skin cured its status!`); }
     else if (ba === 'solarpower' && B.wx.k === 'sun') { abSay(ev, s, b); hurt(s, b, mx(b) / 8, `${N} is hurt by the sunlight!`); if (b.hp <= 0) continue; }
-    else if (ba === 'baddreams' && f.hp > 0 && f.status === 'slp') { abSay(ev, s, b); hurt(o, f, f.max / 8, `${nmOf(o, f)} is tormented!`); }
+    else if (ba === 'baddreams' && f.hp > 0 && f.status === 'slp') { abSay(ev, s, b); hurt(o, f, mx(f) / 8, `${nmOf(o, f)} is tormented!`); }
     if (V.slow && --V.slow <= 0) say(`${N} finally got its act together!`);
     berryCheck(B, s, ev);
     V.t = (V.t || 0) + 1;
