@@ -1900,7 +1900,7 @@ function rulesSheet() {
     <div class="card stack"><b>Encounter packs</b><p class="sm">Three encounters a pack, bought in the Shop. The dearer the pack, the better the last card. Pokémon from packs sell for ${Math.round(PKSELL * 100)} % of the usual price.</p>
       ${row('Prices', ['poke', 'great', 'ultra', 'master'].map(pk).join('<br>'))}
       ${row('Legendary in the last card', ['poke', 'great', 'ultra', 'master'].map(k => `${PACKS[k].n.replace(' Pack', '')} ${+(PACKS[k].slots[2].leg * 100).toFixed(1)} %`).join(' · '))}
-      <p class="sm">A legendary card does not say who it is: you find out when you meet it in the grass. It can be any legendary you do not own from your areas. Mythical Pokémon come a little more often, and the greatest ones are rare in packs. They are more often met in raids.</p></div>
+      <p class="sm">A legendary card does not say who it is: you find out when you meet it in the grass. It can be any legendary from your areas, also one you already have: the odds stay the same however many you own. Mythical Pokémon come a little more often, and the greatest ones are rare in packs. They are more often met in raids.</p></div>
     </div><button type="button" class="btn wide" data-a="close" style="margin-top:12px">Close</button>`);
   rulesFold();
 }
