@@ -1745,7 +1745,25 @@ function ghStore() { try { if (GH) localStorage.setItem(GHK, JSON.stringify(GH))
    ok settes først når nøkkelen har virket. Appen har ingen tjener, så dette er en lukket dør, ikke en lås: den som endrer lagringen eller koden for
    hånd, kommer forbi – som med alt annet her. */
 const ADMIN = ['mwalderhaug'];
-function isAdmin() { return !!(GH && GH.ok && ADMIN.includes(String(GH.repo || '').split('/')[0].trim().toLowerCase())); }
+/* SPILLEREN (Jazz 21.11): en ny venn får sitt eget lagringsrepo på eierens konto, med navnet sitt bak «save» i reponavnet (for eksempel
+   noe_save_Ola). Navnet skiller spillerne fra hverandre: det står i Sync-arket og på raden i Profile, og det er det koden ser etter når noe
+   skal gis til én bestemt venn (sammenlign ghWho().toLowerCase()). Et repo med navn er aldri eierens eget, selv om det ligger på kontoen hans.
+   ghWho() = navnet med stor forbokstav ('Ola', 'Ola Nordmann'), '' når reponavnet ikke har noe navn bak save. Skilletegnet er _ eller -. */
+function ghWho() {
+  const n = (String((GH && GH.repo) || '').split('/')[1] || '').trim(), m = /save[_-]+([A-Za-z0-9][\w-]*)$/i.exec(n);
+  return m ? m[1].split(/[_-]+/).filter(Boolean).map(w => w[0].toUpperCase() + w.slice(1)).join(' ') : '';
+}
+function isAdmin() { return !!(GH && GH.ok && ADMIN.includes(String(GH.repo || '').split('/')[0].trim().toLowerCase()) && !ghWho()); }
+/* KODEN (Jazz 21.11): eieren sender en ny spiller repoet og nøkkelen i én melding. Hele meldingen kan limes inn i ett av feltene i Sync-arket.
+   ghCode(tekst) = { r: 'eier/navn' eller '', t: nøkkelen eller '' }: nøkkelen er det som ser ut som en GitHub-nøkkel, repoet det første
+   ordet på formen eier/navn (ikke en nettadresse). Står det noe rundt, som «Repo:» eller lenken til appen, hoppes det over. */
+function ghCode(s) {
+  s = String(s || '');
+  const t = (/(?:^|[^\w])(github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{20,})(?![\w])/.exec(s) || [])[1] || '';
+  let r = '';
+  for (const w of s.split(/\s+/)) { const x = w.replace(/^[^\w]+|[^\w]+$/g, ''); if (/^[\w.-]+\/[\w.-]+$/.test(x) && !/\.(io|com|no|net|org)\//i.test(x)) { r = x; break; } }
+  return { r, t };
+}
 /* ok = 1 først når brukeren har valgt hvilken lagring som gjelder (ghLink). Før det synkes ingenting. */
 function ghSet(t, repo) { GH = t && repo ? { t, repo, ok: 0 } : null; ghSha = ''; ghState = ''; ghStore(); }
 function ghReq(method, body) {
