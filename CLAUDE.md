@@ -48,6 +48,12 @@ per art, fra steg 2), `raid1` (de vanlige legendariske, klasse 1), `raid3d` (mot
 4. Ny form på lagringen: ny `migrateNN` og `fresh().mig`.
 5. Commit på engelsk, push til `main`. Skriv det i `work/NOTES.md` og oppdater `work/HANDOFF.md`.
 
+## Lokalt på Macen
+Kjører økta i Claude Code på Macen (Code-fanen), gjelder ikke klone-stegene under: repoene er Jazz sine egne kloner, og det private er lagt til som ekstra mappe.
+Les `work/LOKALT.md` i det private repoet (`dev/LOKALT.md`) først: stiene (`FDX_ROOT`, `FDX_CHROME`), lenkene, serveren og hvordan en film ses live med lyd.
+Uten variablene bruker verktøyene skyens stier, så skyen virker som før. Gjelder oppgaven raidintroer, arenaer eller 3D: les `work/KORT.md` (reglene, én linje hver)
+i stedet for de lange notatene, og bare avsnittene du trenger av `RAIDS.md` og `RAIDS3D.md`.
+
 ## Ny økt
 Klon appen til `/home/claude/fokusdex` og eierens private repo til `/home/claude/pokemon_save`, og kjør `sh /home/claude/pokemon_save/dev/setup.sh`.
 Les så `work/HANDOFF.md`, `work/MONDAY.md` hvis oppgaven er layout, raidkamper eller traileren, og `work/RAIDS.md` og `work/STEG2.md` hvis den er
