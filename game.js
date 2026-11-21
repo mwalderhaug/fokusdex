@@ -135,14 +135,16 @@ const shopFull = k => k === 'egg' ? S.eggs.length >= 3 : k === 'incense' ? !!S.i
    Steg 1.7: plassene er satt etter den nye sjeldenheten, så pakkene gir det samme som før: like mange pseudo-legendariske (de er nå en del av
    epic), like mange legendariske, og like ofte en utviklet Pokémon. Kortene har det den er født med (stjerner, natur, størrelse), og det
    følger med når den fanges. Nye regler per plass (vern mot duplikater, flere stjerner) kan legges i slots uten å endre resten. lv = trenernivået pakken krever. Alle pakker har en liten sjanse for en legendarisk, som et lodd: hvem som helst
-   av dem du ikke eier, i områdene dine. Vekten per art (PKLEGW, etter sjeldenhet): vanlige 1, mytiske 1,3, de største 0,25 (også Mewtwo og Deoxys), Arceus 0,1 –
-   så de mytiske kommer litt oftere, og de aller største er sjeldne her og kommer heller i raid. Kortet viser ikke hvem det er (myst = 1):
-   det får du vite i gresset, i introen. */
+   av dem i områdene dine, også en du har fra før. Vekten per art (PKLEGW, etter sjeldenhet): vanlige 1, mytiske 1,3, de største 0,25 (også Mewtwo og Deoxys), Arceus 0,1 –
+   så de mytiske kommer litt oftere, og de aller største er sjeldne her og kommer heller i raid. Oddsene er faste: hvor mange du eier, endrer dem ikke
+   (legEnc). Kortet viser ikke hvem det er (myst = 1): det får du vite i gresset, i introen. */
 const PKLEGW = [0, 1, 0.25, 1.3, 0.1];
-/* Et legendarisk møte utenom raid (pakker, økter, merker og bosser): samme trekning overalt. Har du alle i områdene dine, kan det bli en du har fra før. */
+/* Et legendarisk møte utenom raid (pakker, økter, merker, bosser og ekspedisjonen): samme trekning overalt, et lodd med faste odds. Hver legendarisk i
+   områdene dine har sin vekt (PKLEGW) uansett hvor mange du eier, så det kan bli en du har fra før. Bare raidene følger samlingen (raidPick).
+   Før v88 ble de du eier, holdt utenfor, og den siste som manglet fikk hele sjansen: med alle andre fanget ble hvert legendariske kort Arceus
+   (Jazz 20.11: «denne endringen skjer i Raids, ikke packs»; sim/t_lp.js). */
 function legEnc(shm) {
-  const all = typeof LEG === 'undefined' ? [] : Object.keys(LEG).map(Number).filter(id => (PKLEGW[LEG[id].t] || 0) > 0 && S.regions.includes(regOf(id)));
-  const fresh = all.filter(id => !S.mons.some(m => m.id === id) && !S.pend.some(e => e.id === id)), ids = fresh.length ? fresh : all;
+  const ids = typeof LEG === 'undefined' ? [] : Object.keys(LEG).map(Number).filter(id => (PKLEGW[LEG[id].t] || 0) > 0 && S.regions.includes(regOf(id)));
   if (!ids.length) return Object.assign(genEnc({ leg: 1, shm }), { myst: 1 });
   let tot = 0; const w = ids.map(id => { const x = PKLEGW[LEG[id].t]; tot += x; return x; });
   let x = Math.random() * tot, id = ids[ids.length - 1];
@@ -212,20 +214,25 @@ const D = id => DEX[id - 1];
 const _st = {};
 const stageOf = id => { if (_st[id] != null) return _st[id]; let s = 0, d = D(id); while (d[4] && s < 2) { s++; d = D(d[4]); } return (_st[id] = s); };
 const isLeg = id => !!(D(id)[6] & 3);
-const wOf = id => D(id)[3] * STMULT[stageOf(id)];
-/* SJELDENHET (steg 1, ønske 4): hele utviklingslinja har samme klasse, og klassen er summen av to ting (Jazz 16.11: «kombiner hvor vanskelig de
-   er å finne med potensial i base power de har også»):
+/* Hvor ofte en art dukker opp i trekningen: fangstraten, mindre for de utviklede. Epic-linjene er alltid vanskelige å finne: fangstraten teller
+   høyst som EPICCR (Magikarp 255 og Axew 75 teller som 30), så de 19 linjene deler omtrent den samme sjansen som de tolv før v88. */
+const wOf = id => (tierOf(id) === 3 ? Math.min(D(id)[3], EPICCR) : D(id)[3]) * STMULT[stageOf(id)];
+/* SJELDENHET (steg 1, ønske 4): hele utviklingslinja har samme klasse.
+     Epic      alle linjer der den sterkeste sisteformen har samlet basisverdi EPICTOP eller mer, uansett hvor vanlig førsteformen er (v88, Jazz
+               20.11: «noen pokemons kan flyttes over på epic slik at det blir mer variasjon i epic, da man får mange av de samme. Tenker f.eks
+               gyarados som epic»). 19 linjer, 51 arter: de pseudo-legendariske, Snorlax, Volcarona, Haxorus, Archeops, Electivire og Magmortar
+               som før, og Gyarados, Milotic, Kingdra, Arcanine, Togekiss, Slaking og Blissey (før rare: like sterke, men vanlige å finne).
+               De dukker sjelden opp (EPICCR i wOf). Før v88: 7 poeng (funn + styrke), 12 linjer.
+   Under det er klassen summen av to ting (Jazz 16.11: «kombiner hvor vanskelig de er å finne med potensial i base power de har også»):
      funn    RTYF: fangstraten til førsteformen (den styrer også hvor ofte linja dukker opp):  ≤ 75 = 3 · ≤ 130 = 2 · ≤ 200 = 1 · ellers 0
      styrke  RTYP: samlet basisverdi for den sterkeste sisteformen:  600 = 5 · 540 = 4 · 500 = 3 · 440 = 1 · ellers 0
-   RTYCUT: 7 poeng = Epic, 4 = Rare, 3 = Uncommon, ellers Common.
-     Epic      vanskelig å finne og svært sterk: de pseudo-legendariske, Snorlax, Volcarona, Haxorus, Archeops, Electivire og Magmortar
-               (12 linjer, 33 arter; før steg 1: 173, blant dem Pidgeot).
-     Rare      sterk nok til at det teller (Gyarados, Milotic, Kingdra, Slaking, Arcanine, Gengar), eller vanskelig å finne og ikke svak
-               (starterne med 6 poeng, Eevee, Lapras, fossilene, Scyther).
+   RTYCUT: 4 poeng = Rare, 3 = Uncommon, ellers Common.
+     Rare      sterk nok til at det teller (Gengar, Lapras, Rhyperior), eller vanskelig å finne og ikke svak (starterne med 6 poeng, Eevee,
+               fossilene, Scyther).
      Uncommon  vanlige linjer som blir sterke (Crobat, Flygon, Gardevoir), og sjeldne som ikke blir det (Sableye, Ditto, Drifblim).
      Common    alt annet.
-   Trekningen av møter er den samme som før (wOf): det er merkelappen, flaksen og plassene i pakkene som følger klassen. */
-const RTYF = [[75, 3], [130, 2], [200, 1]], RTYP = [[600, 5], [540, 4], [500, 3], [440, 1]], RTYCUT = [3, 4, 7];
+   Flaksen, plassene i pakkene, nivået på møtet, SELL og NEWCOIN følger klassen. */
+const RTYF = [[75, 3], [130, 2], [200, 1]], RTYP = [[600, 5], [540, 4], [500, 3], [440, 1]], RTYCUT = [3, 4], EPICTOP = 540, EPICCR = 30;
 const _lr = {}, _lt = {};
 const lineRoot = id => { if (_lr[id]) return _lr[id]; let r = id; while (D(r)[4]) r = D(r)[4]; return (_lr[id] = r); };
 const lineTop = id => { const r = lineRoot(id); if (_lt[r] == null) for (let i = 1; i <= DEX.length; i++) { const q = lineRoot(i), t = BST[i - 1].reduce((a, b) => a + b, 0); if (!(_lt[q] >= t)) _lt[q] = t; } return _lt[r]; };
@@ -235,8 +242,8 @@ const _tr = {};
 const tierOf = id => {
   if (_tr[id] != null) return _tr[id];
   if (isLeg(id)) return (_tr[id] = 4);
-  const s = rarePts(id).s;
-  return (_tr[id] = s >= RTYCUT[2] ? 3 : s >= RTYCUT[1] ? 2 : s >= RTYCUT[0] ? 1 : 0);
+  const q = rarePts(id);
+  return (_tr[id] = q.top >= EPICTOP ? 3 : q.s >= RTYCUT[1] ? 2 : q.s >= RTYCUT[0] ? 1 : 0);
 };
 const regOf = id => id <= 151 ? 1 : id <= 251 ? 2 : id <= 386 ? 3 : id <= 493 ? 4 : 5;
 const EVO = {};
@@ -527,7 +534,7 @@ function chainCaught(e, mon) {
 const KEY = 'fokusdex.v1';
 function fresh() {
   return {
-    v: 1, mig: 17, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
+    v: 1, mig: 18, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
     items: { poke: 20, great: 0, ultra: 0, dusk: 0, master: 0, gberry: 0, candy: 0, stone: 0, mstone: 0, incense: 0, potion: 0, super: 0, hyper: 0, maxp: 0, heal: 0, revive: 0, maxrev: 0, ash: 0 }, charm: 0, ring: 0, lst: {},
     lure: 0, slure: 0, prism: 0, shb: null,
     mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, routes: [1], eggs: [], pend: [], incOn: 0,
@@ -716,6 +723,7 @@ const LNO = {
   'Battles point out where to tap to see what the foe is weak to.': 'Kampene viser hvor du trykker for å se hva motstanderen er svak mot.',
   'Size and training are easier to read on a Pokémon\'s card.': 'Størrelse og trening er lettere å lese på kortet til en Pokémon.',
   'Bug fixes.': 'Feilrettinger.',
+  'Some adjustments to rarity and encounter packs.': 'Noen justeringer av sjeldenhet og pakkene.',
   'Every other type: normal damage': 'Alle andre typer: vanlig skade',
   '{b} is immune to {a} moves.': '{b} er immun mot {a}-angrep.',
   '{a} moves cannot reach it right now.': '{a}-angrep når den ikke akkurat nå.',
@@ -751,7 +759,7 @@ const LNO = {
   // Steg 1.7: pakkene
   'Three encounters in every pack. Tap a pack to see your odds, and open one or ten.': 'Tre møter i hver pakke. Trykk på en pakke for å se sjansene dine, og åpne én eller ti.',
   'Your odds in one pack right now': 'Sjansene dine i én pakke akkurat nå',
-  'What is inside follows your routes and the level of your team. Ten at once always hold at least one rare or better. Pokémon from packs sell for less than wild ones, and the greatest legendaries are only met in raids.': 'Innholdet følger rutene dine og nivået på laget. Ti om gangen har alltid minst én rare eller bedre. Pokémon fra pakker selges for mindre enn ville, og de største legendariske møtes bare i raid.',
+  'What is inside follows your routes and the level of your team. Ten at once always hold at least one rare or better. Pokémon from packs sell for less than wild ones, and the greatest legendaries are rare in packs: they are mostly met in raids.': 'Innholdet følger rutene dine og nivået på laget. Ti om gangen har alltid minst én rare eller bedre. Pokémon fra pakker selges for mindre enn ville, og de største legendariske er sjeldne i pakker: de møtes mest i raid.',
   'The dimmed ones are duplicates no better than what you have. Tap a card to change it.': 'De dempede er duplikater som ikke er bedre enn det du har. Trykk på et kort for å endre det.',
   'Tap a card to let it go for coins instead of catching it.': 'Trykk på et kort for å slippe det for mynter i stedet for å fange det.',
   // Steg 1 (Dusk): flere
@@ -905,7 +913,7 @@ function jFriend() {
 const has = k => !!(S.ulk && S.ulk[k]);
 /* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
    Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
-const WNV = 79, WN = ['A trade now shows who leaves your team, and asks before it happens.'];
+const WNV = 81, WN = ['Some adjustments to rarity and encounter packs.'];
 /* Første linje for dem som går reisen (whatsNew i ui.js). */
 const WNJ = 'Your journey: new things now open one study day at a time. See the card on the Focus page.';
 function featCheck() { S.ulk = S.ulk || {}; if (!jOn()) return 0; let ch = 0; for (const [k, d] of JOURNEY) if (!S.ulk[k] && (S.jd || 0) >= d) { S.ulk[k] = 1; ch = 1; } return ch; }
@@ -953,6 +961,11 @@ function migrate17() {
   for (const e of S.pend || []) if (e && e.id && e.t != null) e.t = tierOf(e.id);
   S.mig = 17;
 }
+/* v88: flere linjer er Epic (EPICTOP). Møtene som alt venter i gresset, får klassen etter regelen nå, som i migrate17. */
+function migrate18() {
+  for (const e of S.pend || []) if (e && e.id && e.t != null) e.t = tierOf(e.id);
+  S.mig = 18;
+}
 function adopt(o) {
   S = Object.assign(fresh(), o);
   S.lad = Object.assign(fresh().lad, o.lad || {}); S.fac = Object.assign(fresh().fac, o.fac || {});
@@ -976,6 +989,7 @@ function adopt(o) {
   if (!o.mig || o.mig < 15) migrate15();
   if (!o.mig || o.mig < 16) migrate16();
   if (!o.mig || o.mig < 17) migrate17();
+  if (!o.mig || o.mig < 18) migrate18();
   /* Et forsøk kan ikke være eldre enn raidet selv (S.raid.at = dagen det kom). Et slikt merke kommer fra en eldre appversjon som flettet inn
      forsøkene fra et tidligere raid av samme art: de gjelder ikke dette. */
   if (S.raid && S.raid.at && S.raid.day && S.raid.day < S.raid.at) { S.raid.tries = 0; S.raid.day = ''; }
@@ -1731,7 +1745,25 @@ function ghStore() { try { if (GH) localStorage.setItem(GHK, JSON.stringify(GH))
    ok settes først når nøkkelen har virket. Appen har ingen tjener, så dette er en lukket dør, ikke en lås: den som endrer lagringen eller koden for
    hånd, kommer forbi – som med alt annet her. */
 const ADMIN = ['mwalderhaug'];
-function isAdmin() { return !!(GH && GH.ok && ADMIN.includes(String(GH.repo || '').split('/')[0].trim().toLowerCase())); }
+/* SPILLEREN (Jazz 21.11): en ny venn får sitt eget lagringsrepo på eierens konto, med navnet sitt bak «save» i reponavnet (for eksempel
+   noe_save_Ola). Navnet skiller spillerne fra hverandre: det står i Sync-arket og på raden i Profile, og det er det koden ser etter når noe
+   skal gis til én bestemt venn (sammenlign ghWho().toLowerCase()). Et repo med navn er aldri eierens eget, selv om det ligger på kontoen hans.
+   ghWho() = navnet med stor forbokstav ('Ola', 'Ola Nordmann'), '' når reponavnet ikke har noe navn bak save. Skilletegnet er _ eller -. */
+function ghWho() {
+  const n = (String((GH && GH.repo) || '').split('/')[1] || '').trim(), m = /save[_-]+([A-Za-z0-9][\w-]*)$/i.exec(n);
+  return m ? m[1].split(/[_-]+/).filter(Boolean).map(w => w[0].toUpperCase() + w.slice(1)).join(' ') : '';
+}
+function isAdmin() { return !!(GH && GH.ok && ADMIN.includes(String(GH.repo || '').split('/')[0].trim().toLowerCase()) && !ghWho()); }
+/* KODEN (Jazz 21.11): eieren sender en ny spiller repoet og nøkkelen i én melding. Hele meldingen kan limes inn i ett av feltene i Sync-arket.
+   ghCode(tekst) = { r: 'eier/navn' eller '', t: nøkkelen eller '' }: nøkkelen er det som ser ut som en GitHub-nøkkel, repoet det første
+   ordet på formen eier/navn (ikke en nettadresse). Står det noe rundt, som «Repo:» eller lenken til appen, hoppes det over. */
+function ghCode(s) {
+  s = String(s || '');
+  const t = (/(?:^|[^\w])(github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{20,})(?![\w])/.exec(s) || [])[1] || '';
+  let r = '';
+  for (const w of s.split(/\s+/)) { const x = w.replace(/^[^\w]+|[^\w]+$/g, ''); if (/^[\w.-]+\/[\w.-]+$/.test(x) && !/\.(io|com|no|net|org)\//i.test(x)) { r = x; break; } }
+  return { r, t };
+}
 /* ok = 1 først når brukeren har valgt hvilken lagring som gjelder (ghLink). Før det synkes ingenting. */
 function ghSet(t, repo) { GH = t && repo ? { t, repo, ok: 0 } : null; ghSha = ''; ghState = ''; ghStore(); }
 function ghReq(method, body) {

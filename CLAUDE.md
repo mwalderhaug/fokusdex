@@ -7,7 +7,10 @@ Teksten i appen er på engelsk. Kommentarene i koden er på norsk.
 ## Eieren
 - Jazz (GitHub `mwalderhaug`). Svar ham på norsk, kort og med konklusjonen først: han leser ofte på mobilen.
   Si alltid hva som er sluppet, og hva som ikke er testet (iPhone, lyd med ører).
-- Vennene hans spiller også. De får endringer i appen, aldri ressurspakken.
+- Vennene hans spiller også. De får endringer i appen, aldri ressurspakken fra dette repoet.
+- Nye venner (fra 21.11) får et eget privat lagringsrepo på eierens konto, med navnet bak «save» i reponavnet (for eksempel
+  noe_save_Ola). `ghWho()` (game.js) gir navnet; skal noe gis til én bestemt venn, sjekk `ghWho().toLowerCase()`. Et repo med navn er
+  aldri admin (`isAdmin`). Koden vennen limer inn (repo og nøkkel i én melding) leses av `ghCode()`.
 
 ## Harde regler
 1. Ingen grafikk, lyd, musikk, fonter eller skript fra Pokémon-spillene eller andre tredjeparter i dette repoet. Slikt ligger bare i

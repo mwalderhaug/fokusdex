@@ -1146,7 +1146,7 @@ function packSheet(k) {
   openSheet(`<div class="shead it" style="--pc:${P.c}"><span class="pk-ic"><i></i></span><div class="sp"><div class="pn">${P.n}</div><div class="sm tn">Three encounters, opened on the spot</div></div>${coinEl(S.coins)}</div>
     <p>${P.d}</p>
     <div class="pkod" id="pkod"><div class="lab" style="margin:0">${tl('Your odds in one pack right now')}</div><div class="pkod-r">${[['r2', 'Rare or better', od.rare], ['r3', 'Epic', od.epic], ['r4', 'Legendary', od.leg], ['sh', 'Shiny', od.shiny]].map(([c, n, v]) => `<span class="pkod-c ${c}"><b class="tn">${pkPct(v)}</b><small>${n}</small></span>`).join('')}</div></div>
-    <p class="sm">${tl('What is inside follows your routes and the level of your team. Ten at once always hold at least one rare or better. Pokémon from packs sell for less than wild ones, and the greatest legendaries are only met in raids.')}</p>
+    <p class="sm">${tl('What is inside follows your routes and the level of your team. Ten at once always hold at least one rare or better. Pokémon from packs sell for less than wild ones, and the greatest legendaries are rare in packs: they are mostly met in raids.')}</p>
     ${lock ? `<p class="sm au">Opens at trainer level ${P.lv}. You are level ${tlv()}.</p>` : full ? '<p class="sm au">Catch some of the encounters that are waiting before you open more packs.</p>' : ''}
     <div class="acts pka"><button type="button" class="btn gold" data-a="pack" data-k="${k}"${can ? '' : ' disabled'}>${free ? 'Open · free' : `Open · ${nb(P.p)}`}</button><button type="button" class="btn" data-a="pack" data-k="${k}" data-n="10"${can10 ? '' : ' disabled'}>Open 10 · ${nb(p10)}</button><button type="button" class="btn nf" data-a="close">Close</button></div>`);
 }
@@ -1225,7 +1225,7 @@ function psetNow(k) {
   if (k === 'battle') return diff().n;
   if (k === 'sound') return S.sound ? (S.music === 0 ? 'On · no music' : 'On') : 'Off';
   if (k === 'lang') return (S.lang === 'no' ? 'Norsk' : 'English') + ' · ' + ['everything', 'some', 'few'][know()];
-  if (k === 'data') return GH && GH.ok ? 'Sync ' + (ghState === 'ok' ? 'on' : ghState || 'connecting') : 'On this device';
+  if (k === 'data') return GH && GH.ok ? 'Sync ' + (ghState === 'ok' ? 'on' : ghState || 'connecting') + (ghWho() ? ' · ' + ghWho() : '') : 'On this device';
   if (k === 'fair') { const n = S.fair ? S.fair.n : 0; return n ? `${n} ${n === 1 ? 'mark' : 'marks'}` : 'Clean'; }
   if (k === 'admin') return admOn() ? 'Admin view on' : 'Sandbox';
   return '';
@@ -1399,10 +1399,10 @@ function exRead(start) {
 function syncSheet() {
   let lb = null; try { lb = JSON.parse(localStorage.getItem('lb.gh') || 'null'); } catch (_) {}
   openSheet(`<h2 class="h">Sync between devices</h2><p class="sm">Your save is stored as one file (fokusdex/save.json) in a private GitHub repo. Use the same key and repo on each device. The first time you connect a device you choose which game to keep.</p>
-    <label class="field">Repo (owner/name)<input id="gh-r" autocapitalize="off" autocomplete="off" value="${esc(GH ? GH.repo : '')}" placeholder="yourname/pokemon-save"></label>
+    <label class="field">Repo (owner/name)<input id="gh-r" autocapitalize="off" autocomplete="off" spellcheck="false" value="${esc(GH ? GH.repo : '')}" placeholder="Paste your code, or owner/name"></label>
     <label class="field">Key (fine-grained token with Contents: read and write)<input id="gh-t" type="password" autocomplete="off" value="${esc(GH ? GH.t : '')}"></label>
     ${lb && lb.t && lb.repo ? '<button type="button" class="btn wide" data-a="synclb">Use the key from Live-blekker</button>' : ''}
-    <p class="sm" id="gh-s">${GH && GH.ok ? (ghState === 'ok' ? 'Sync is on.' : esc(ghState)) : 'Sync is off.'}</p>
+    <p class="sm" id="gh-s">${GH && GH.ok ? (ghState === 'ok' ? 'Sync is on.' : esc(ghState)) + (ghWho() ? ` Player: <b>${esc(ghWho())}</b>.` : '') : 'Sync is off.'}</p>
     <div class="row"><button type="button" class="btn pri sp" data-a="syncsave">Connect</button>${GH && GH.ok ? '<button type="button" class="btn sp danger" data-a="syncoff">Turn off</button>' : ''}</div>
     ${GH && GH.ok ? '' : '<p class="sm" style="margin-top:6px">A pack of your own graphics, sounds and music goes in the same repo: a folder called <b>pack</b> at the top of it, with its manifest.json inside. The app finds it when Sync is connected.</p>'}
     ${GH && GH.ok ? `<p class="sm" style="margin-top:6px">Your own graphics, sound and music pack: put it in a folder called <b>pack</b> at the top of the same repo (pack/manifest.json). ${PACK.ok ? `Found: ${Object.keys(PACK.man.scenes || {}).length} arenas, ${(PACK.man.music || []).length} tracks, ${Object.keys(PACK.man.sfx || {}).length} sounds.` : 'None found yet.'}</p><button type="button" class="btn wide" data-a="packre">Check for the pack again</button>` : ''}`);
@@ -2018,12 +2018,14 @@ const A = {
   sync: () => SBX ? (snd('warn'), toast('Leave the sandbox first: Sync is paused in here.')) : syncSheet(),
   synclb: () => { try { const lb = JSON.parse(localStorage.getItem('lb.gh')); $('#gh-r').value = lb.repo; $('#gh-t').value = lb.t; } catch (_) {} },
   syncsave: async () => {
-    const t = $('#gh-t').value.trim(), r = $('#gh-r').value.trim();
+    /* Hele koden kan stå i ett av feltene (ghCode i game.js). Det som ble funnet, settes inn i feltene, så det synes hva som brukes. */
+    const c = ghCode($('#gh-r').value + ' ' + $('#gh-t').value), t = c.t || $('#gh-t').value.trim(), r = c.r || $('#gh-r').value.trim();
+    $('#gh-r').value = r; $('#gh-t').value = t;
     if (!t || !/^[\w.-]+\/[\w.-]+$/.test(r)) { $('#gh-s').textContent = 'Enter the repo as owner/name and paste the key.'; return snd('warn'); }
     ghSet(t, r); $('#gh-s').textContent = 'Connecting…';
     const p = await ghProbe();
     if (p.st === 'err') { const s = $('#gh-s'); if (s) s.textContent = ghState; GH = null; ghStore(); return sfx.warn(); }
-    if (p.st === 'none') { await ghLink('local'); PACK.init(true); closeSheet(); render(); (ghState === 'ok' ? sfx.saved : sfx.warn)(); toast(ghState === 'ok' ? 'Sync is on. This game is now saved to GitHub.' : ghState); return; }
+    if (p.st === 'none') { await ghLink('local'); PACK.init(true); closeSheet(); render(); (ghState === 'ok' ? sfx.saved : sfx.warn)(); toast(ghState === 'ok' ? `Sync is on${ghWho() ? ' for ' + ghWho() : ''}. This game is now saved to GitHub.` : ghState); return; }
     U.remote = p.o;
     /* Viser hvor langt hver lagring er kommet, og merker den med mest framgang, så det ikke er mulig å velge feil ved et uhell. */
     const top = o => (o.mons || []).reduce((a, m) => Math.max(a, m.lv || 1), 1), mins = o => Object.values(o.log || {}).reduce((a, d) => a + (d.m || 0), 0);
