@@ -269,7 +269,7 @@
     const LAMPS = [[-0.14, 0.55, 0.5, 0.38, '#ffd27a'], [0.14, 0.55, 0.5, 0.38, '#ffd27a'], [0, 2.08, 0.18, 0.5, '#fff0c8'], [0, 1.15, -1.05, 0.6, '#ffcf70']];
 
     G3D.def('c3:382', {
-      len: QI.END, hold: 1, R: QI.RO, at: 0, models: ['kyogre'], edge: 'sea', env: { rim: '#a8c8ff', glow: '#2a6c9a', fog: '#16222e', glowH: 3 },
+      len: QI.END, hold: 1, R: QI.RO, at: 0, mus: { bed: 'sfx/natur/kyogre_intro.mp3' },   /* lydsengen følger kamplåta (raids3d/kyogre/lyd/bed.py) */ models: ['kyogre'], edge: 'sea', env: { rim: '#a8c8ff', glow: '#2a6c9a', fog: '#16222e', glowH: 3 },
       make(K, T) { const S = storm(T), g = S.gr = kyFig(); S.T = T; S.scene.add(g.root); S.figs.push(g); S.v3 = new T.Vector3();
         const su = S.sea.material.uniforms; su.uTime = { value: 0 };            /* havets egen tid (TS), se over */
         S.sprays.forEach(p => slowIn(p, SLOW));
@@ -378,7 +378,7 @@
           K.cam(x, h * 0.4 + 6.2, z, -1.5, mix(2.2, 3.6, k2), 0, 50, -0.03); S.post.fl = max(0.45 * hit(t, QI.RO, 0.12), 0.3 * hit(t, QI.RO + 0.35, 0.1)); S.post.flc = '#eef6ff'; S.post.sh = 1.0 * hit(t, 38.53, 0.8) + 4 * hit(t, QI.RO, 1.2) + 0.6 * S.rw; }],
       ],
     });
-    X.reg('c3:382', { spid: 382, skin: 'sea', back: backS, look: lookS, roar: () => QI.RO, cues: [],
+    X.reg('c3:382', { spid: 382, skin: 'sea', back: backS, look: lookS, roar: () => QI.RO, cues: [[QI.RO, 'cry']],   /* naturlydene ligger i lydsengen; brølet er artens eget */
       over: (x, t, o) => X.plate(x, t - QI.NM, Object.assign({ skin: 'sea' }, o)),
       fx(S, t, P) { rainFx(S, t, S.k || 1, 0.4 + 0.6 * seg(t, 0, QI.UP));
         if (S.shot === 6) { const hz = G3D.view().y; for (const q of S.L || []) if (q.near) { const a = flick(q.d) * q.k; if (a > 0.05) { const x = 256 + q.a * 220; nearBolt(x + (rnd(q.s, 3) - 0.5) * 60, -10, x, hz + 6, a, q.s * 5 + (q.d > 0.12 ? 2 : 0), 3.2); } } } } });   /* lynet i brølet ender i horisonten ved siden av ham, bak ham (Jazz 20.11: aldri på ham) */
@@ -514,7 +514,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
       g.restore(); };
 
     G3D.def('c3:382p', {
-      len: QP.E, R: QP.L, at: 195.7, models: ['kyogre', 'kyogre_primal'], edge: 'sea', env: { rim: '#a8c8ff', glow: '#2a8acc', fog: '#16222e', glowH: 3 },
+      len: QP.E, R: QP.L, at: 195.7, mus: { bed: 'sfx/natur/kyogre_primal.mp3' }, models: ['kyogre', 'kyogre_primal'], edge: 'sea', env: { rim: '#a8c8ff', glow: '#2a8acc', fog: '#16222e', glowH: 3 },
       make(K, T) { const S = storm(T), g = S.gr = kyFig(), p = S.pg = kypFig(); S.scene.add(g.root); S.scene.add(p.root); S.figs.push(g, p); S.T = T;
         S.sea.material.uniforms.uTime = { value: 0 }; S.sprays.forEach(q => slowIn(q, SLOW)); mkStorm(S, K, T); S.cliff = S.scene.children[1];
         const pts = (n, f, o) => { const q = slowP(n, f, o, SLOW); S.scene.add(q); return q; };
@@ -619,7 +619,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
           S.post.fl = max(0.45 * hit(t, QP.L, 0.12), 0.3 * hit(t, QP.L + 0.4, 0.1), seg(t, QP.F, QP.E - 0.04)); S.post.flc = '#f2f8ff'; S.post.sh = 6 * hit(t, QP.L, 1.4) + 0.8 * S.rw; }],
       ].map(([t0, f]) => [t0, (S, u, a, t) => { f(S, u, a, t); stormSort(S, t); }]),
     });
-    X.reg('c3:382p', { spid: 382, swirl: 0, skin: 'sea', back: skyQ, look: lookQ, roar: () => QP.L, cues: [],
+    X.reg('c3:382p', { spid: 382, swirl: 0, skin: 'sea', back: skyQ, look: lookQ, roar: () => QP.L, cues: [[QP.L, 'cry']],
       over(x, t, o) { const S = G3D.S('c3:382p'); let on = false; if (S.black) return false;
         /* α langt nede (Jazz 20.11: svakere, og det skal se ut som det er langt nede under vann): uskarpt, blått, lite, og det blafrer med bølgene. */
         if (S.dg > 0.02) { const q = K.proj(GL[0], -0.2, GL[1]); if (q.z < 1) { const cx = q.x / 2 + 1.6 * sin(t * 2.7) + 0.8 * sin(t * 4.3), cy = q.y / 2 + 1.2 * cos(t * 2.1);
