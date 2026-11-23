@@ -16,7 +16,7 @@ Teksten i appen er på engelsk. Kommentarene i koden er på norsk.
 1. Ingen grafikk, lyd, musikk, fonter eller skript fra Pokémon-spillene eller andre tredjeparter i dette repoet. Slikt ligger bare i
    ressurspakken i eierens private repo (`pack/`), og pakken deles aldri videre.
 2. Ingen hemmeligheter eller private data her: ingen lagringer, tokens eller e-postadresser, og ikke navnet på det private repoet.
-3. De lokale lenkene `_pack`, `_spr`, `_cine.html`, `_g3d` og `_ark` står i `.git/info/exclude` og skal aldri committes.
+3. De lokale lenkene `_pack`, `_spr`, `_cine.html`, `_live.html`, `_fps.html`, `_g3d` og `_ark` står i `.git/info/exclude` og skal aldri committes.
 4. Eierens lagring endres bare etter protokollen i `work/HANDOFF.md`.
 
 ## Filene, i rekkefølgen fra index.html
