@@ -256,7 +256,7 @@ const CINE = (() => {
   C.FILM = FILM;
   const filmOf = id => FILM[id] || (C.calmFilm ? C.calmFilm(id) : null);
   C.has = id => !!filmOf(id);
-  C.info = id => { const f = filmOf(id); return f ? { len: f.len, at: f.at || 0, R: f.R, bg: !!f.bg, plat: f.plat || null, omen: f.omen || 0, arena: f.arena || 0, cues: f.cues || null } : null; };
+  C.info = id => { const f = filmOf(id); return f ? { len: f.len, at: f.at || 0, R: f.R, bg: !!f.bg, plat: f.plat || null, omen: f.omen || 0, arena: f.arena || 0, cues: f.cues || null, mus: f.mus || null } : null; };
   /* Henter det filmen trenger. Venter ikke lenger enn ms. */
   C.prep = async (id, ms, extra) => {
     const f = filmOf(id); if (!f) return false;

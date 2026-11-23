@@ -524,6 +524,10 @@ async function legendIntro(B) {
   /* Dark Mewtwo: den første kamplåta starter med forvandlingen (filmen) og går rett videre inn i kampen. Finnes den ikke i pakken, er alt som før. */
   const V = tr.dk ? PACK.special(/Villain/) : '', tk = V || PACK.trackFor(B), ready = CINE.prep(id, 6000);
   if (V) PACK.cue(V);
+  /* EGEN INTROLÅT (def.mus i artens cutscene i 3D; Groudon først): filmen har sin egen låt fra pakken (song, blant «special») og en lydseng som følger den (bed).
+     Kamplåta kommer etter filmen: Continue venter til neste taktstrek (bar: [første, lengde]), introlåta tones ut (fade), det er stille (gap), kamplåta starter et
+     stykke inn (at), og virvelen ender i hvitt på dens første slag (hit). Har ikke spilleren trykket innen auto, går det videre av seg selv. */
+  const mus = c3 && info.mus ? info.mus : null, own = mus && mus.song ? PACK.special(new RegExp(mus.song)) : '', nx = (mus && mus.next) || {};
   if (calm()) { await ready; if (gone()) return; root.classList.add('on'); await CINE.still(cv, id, Math.min(info.len - 0.6, info.R + 2), o); if (V) PACK.music(V, { loop: false, at: 0, fade: 1.2, from: 0.1 }).then(k => { if (k) music(''); }); else battleMusic(B, { fade: 1.2, from: 0.1 }); cry(f.id, 300, 0.5); await T(2600); if (gone()) return; root.classList.add('d'); await T(260); return; }
   /* Låta og filmen starter samtidig. Uten låt i pakken spilles den innebygde oppbyggingen, med drønnet i det den viser seg. */
   await ready; if (gone()) return;
@@ -533,18 +537,30 @@ async function legendIntro(B) {
     await CINE.fx(cv, 'omen', { cc: tr.cc, warn: tr.dk ? 'WARNING' : '', txt: tr.dk ? 'A power that could end\nthe galaxy is awakening' : tr.leg === 493 ? 'The one who shaped\nthe world draws near' : tr.leg === 150 ? 'It was made to be\nthe strongest of all' : 'Something from beyond\nthe sky draws near', cue: n => { if (gone()) return; if (n === 'beat') { BSFX.beat(); buzz([70, 90, 110]); } else if (n === 'boom') { BSFX.mv('boom', 3); buzz([90, 60, 240]); } } });
     if (gone()) return;
   }
-  const started = tk ? await PACK.music(tk, V ? { at: 0, loop: false, out: 0.3 } : { at: info.at }) : false; if (gone()) return;
+  const started = own ? await PACK.music(own, { at: info.at, loop: false, out: 0.3 }) : tk ? await PACK.music(tk, V ? { at: 0, loop: false, out: 0.3 } : { at: info.at }) : false; if (gone()) return;
+  const ownOn = !!own && started; if (ownOn && mus.bed) PACK.sting(mus.bed, false, () => PACK.clock());
   let stop = () => {};
   if (started) music(''); else { PACK.music(''); stop = epicIntro('ultra', info.R); }
   root.classList.add('on'); sfx.appear(); buzz([40, 60, 40]);
   const cue = (n, v) => { if (gone()) return; if (n === 'cry') { cry(f.id, 0, c3 ? 0.8 : 0.6, c3 ? 1 : 0); buzz([80, 40, 260]); if (!started) battleMusic(B); } else if (c3snd(n)) buzz(c3snd(n)(v) || 30); else if (n === 'slam') { BSFX.slam(); buzz([90, 60, 240]); } else if (n === 'rise') { BSFX.rise(v || 1); buzz([20, 60, 20, 60, 20]); } else if (n === 'boom') buzz([90, 60, 90, 60, 240]); else if (n === 'thud') buzz(45); else buzz(18); };
-  const go = $('#lgigo'), pl = CINE.play(cv, id, Object.assign({ clock: () => started ? PACK.clock() : -1, cue, warp: V && started ? dkWarp : null, onhold: () => { if (gone() || skipped) return; if (sk) sk.hidden = true; if (go) go.hidden = false; } }, o)), sk = $('#lgiskip');
-  let skipped = false; const skip = () => { if (skipped) return; skipped = true; sfx.tap(); stop(); if (c3) { const held = go && !go.hidden; if (sk) sk.hidden = true; if (go) go.hidden = true; if (!held) { cry(f.id, 0, 0.7, 1); buzz([80, 40, 260]); } } pl.skip(); };   /* Continue: brølet er over, ikke et nytt inn i kampen. Skip midt i filmen: brølet han ellers ville gitt */
+  const tp0 = performance.now(), now = () => { const c = started ? PACK.clock() : -1, w = (performance.now() - tp0) / 1000; return c >= 0 && Math.abs(c - w) < 1.5 ? c : w; };   /* filmens tid nå */
+  const go = $('#lgigo'), pl = CINE.play(cv, id, Object.assign({ clock: () => started ? PACK.clock() : -1, cue, warp: V && started ? dkWarp : null, onhold: () => { if (gone() || skipped || leaving) return; if (sk) sk.hidden = true; if (go) go.hidden = false; if (ownOn && tk) PACK.cue(tk); } }, o)), sk = $('#lgiskip');
+  let skipped = false, leaving = false; const tms = [], later = (fn, ms) => tms.push(setTimeout(() => { if (!gone()) fn(); }, Math.max(0, ms)));
+  /* Ut av en film med egen låt, fra tidspunktet tb i filmen: låta og sengen tones ut, stillhet, kamplåta inn, og virvelen (0,85 s) ender i hvitt på kamplåtas første slag. */
+  const leave = tb => { if (leaving || skipped) return; leaving = true; if (sk) sk.hidden = true; if (go) go.hidden = true;
+    const d = (tb - now()) * 1000, fd = nx.fade == null ? 0.6 : nx.fade, gp = nx.gap == null ? 0.5 : nx.gap, lead = Math.max(0, (nx.hit || 0) - (nx.at || 0));
+    later(() => { PACK.music('', { out: fd }); PACK.stingOut(fd); }, d); later(() => battleMusic(B, { at: nx.at || 0 }), d + (fd + gp) * 1000);
+    later(() => { skipped = true; stop(); pl.skip(); }, d + (fd + gp + lead) * 1000 - 850); };
+  const skip = () => { if (skipped || leaving) return; const held = go && !go.hidden;
+    if (ownOn && held) { sfx.tap(); const t = now() + 0.1, b = mus.bar; return leave(b ? b[0] + Math.ceil((t - b[0]) / b[1]) * b[1] : t); }   /* Continue: på neste taktstrek */
+    skipped = true; sfx.tap(); stop(); if (c3) { if (sk) sk.hidden = true; if (go) go.hidden = true; if (!held) { cry(f.id, 0, 0.7, 1); buzz([80, 40, 260]); } } pl.skip();   /* Continue: brølet er over, ikke et nytt inn i kampen. Skip midt i filmen: brølet han ellers ville gitt */
+    if (ownOn) { PACK.music('', { out: 0.3 }); PACK.stingOut(0.3); later(() => battleMusic(B, { at: nx.at || 0 }), 350); } };
   setTimeout(() => { if (!gone() && sk && !skipped && (!go || go.hidden)) sk.hidden = false; }, 1200); if (sk) sk.addEventListener('click', skip); if (go) go.addEventListener('click', skip);
   const key = e => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') skip(); }; document.addEventListener('keydown', key);
-  const watch = setInterval(() => { if (gone()) pl.stop(); }, 300);
+  const watch = setInterval(() => { if (gone()) return pl.stop(); if (ownOn && mus.auto && !leaving && !skipped && now() >= mus.auto - 0.5) leave(mus.auto); }, 200);
   await pl.done; clearInterval(watch); document.removeEventListener('keydown', key);
-  if (gone()) return stop();
+  if (gone()) { tms.forEach(clearTimeout); if (ownOn) PACK.stingOut(0.2); return stop(); }
+  if (ownOn) PACK.stingOut(0.3);
   if (!started && !PACK.playing() && !MUSIC.playing()) battleMusic(B);
   /* Filmen til en arena slutter i hvilestillingen. Bildet males på nytt, så animasjonen i kampen starter fra samme bilde. */
   if (info.arena && BT.arena && !skipped) { const sp = $('#s-foe'); if (sp && sp.classList.contains('pre')) paintSprite('foe', 'ace pre'); }

@@ -73,7 +73,7 @@ const G3C = (() => {
            over(x, t, o): navnet og tegn i figurens oppløsning,
            look(S, t, P, q, sn): stedets etterbehandling (P.bloom, P.heat, P.vig, P.grade, P.rays …); q = det kameraet ba om (S.post),
            roar: t → tidspunktet brølet startet (gnister og lydbølger), fx(S, t, P, q, sn): cutscenens egne tillegg }. */
-  X.reg = (id, d) => { const inf = G3D.info(id), ink = d.skin ? skinOf(d.skin).ink : null; C.film(id, { len: inf.len, R: inf.R, at: inf.at, hold: inf.hold, c3: 1, gl: 1, spid: d.spid, swirl: d.swirl, outc: '#ffffff', cues: d.cues, pre: () => G3D.ready(id),
+  X.reg = (id, d) => { const inf = G3D.info(id), ink = d.skin ? skinOf(d.skin).ink : null; C.film(id, { len: inf.len, R: inf.R, at: inf.at, hold: inf.hold, mus: inf.mus, c3: 1, gl: 1, spid: d.spid, swirl: d.swirl, outc: '#ffffff', cues: d.cues, pre: () => G3D.ready(id),
     draw(t, P, cur) { const g = C.g, c = G3D.isReady(id) ? G3D.frame(id, t, cur, CINE._.rs()) : null; if (!c) { CINE.err = 'g3d: ' + (G3D.err || 'not ready'); g.fillStyle = '#000'; g.fillRect(0, 0, 512, 384); return; } if (G3D.err) CINE.err = G3D.err;
       const S = G3D.S(id), q = G3D.post(id), sn = d.back ? d.back(S, t) : null;
       g.imageSmoothingEnabled = true; g.drawImage(c, 0, 0, 512, 384);

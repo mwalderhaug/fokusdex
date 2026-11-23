@@ -268,7 +268,8 @@ const PACK = (() => {
     const re = new RegExp('(^|[^A-Za-z])' + n + '([^A-Za-z]|$)', 'i'), hit = P.man.music.find(x => x.c === 'intro' && re.test(x.t));
     return hit ? hit.f : '';
   };
-  P.sting = async (path, loop) => { const my = job, d = await decode(path); if (!d || my !== job) return false; P.stingOut(0.05); sting = startBuf(d, { loop: !!loop, tg: tgain(path), path }); return !!sting; };
+  /* at (valgfritt): hvor i lyden den starter (sekunder, eller en funksjon som spørres idet lyden er klar: lydsengen til en cutscene følger låtas klokke). */
+  P.sting = async (path, loop, at) => { const my = job, d = await decode(path); if (!d || my !== job) return false; P.stingOut(0.05); sting = startBuf(d, { loop: !!loop, tg: tgain(path), path, at: Math.max(0, (typeof at === 'function' ? at() : at) || 0) }); return !!sting; };
   P.stinging = () => !!sting;
   P.stingOut = sec => { if (sting) { fadeOut(sting, sec == null ? 1.2 : sec); sting = null; } };
   P.playing = () => !!cur;
