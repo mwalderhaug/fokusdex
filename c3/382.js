@@ -216,7 +216,7 @@
       g.restore();
       if (st > 0.7) { g.fillStyle = `rgba(52,60,68,${(st - 0.7) / 0.3 * 0.55})`; g.fillRect(0, 0, 512, v.y + 4); }
     };
-    const backS = (S, t) => { const r = backdrop(S, t); if ((S.st || 0) > 0 && !S.under) wall(S, t, S.st, S.sta || 0); if (S.shelf) shelf(S, t, S.sta || 0, S.shelf); return r; };
+    const backS = (S, t) => { if (S.sky3) return skyQ(S, t); const r = backdrop(S, t); if ((S.st || 0) > 0 && !S.under) wall(S, t, S.st, S.sta || 0); if (S.shelf) shelf(S, t, S.sta || 0, S.shelf); return r; };
     /* Skisse (Primal-dronen, Jazz 20.11 bilde 4): en tydelig hyllesky over havet til venstre i bildet, med lagdelt underside, regnsøyler og lyn inni. Grov: formen og plassen, ikke stilen. */
     const shelf = (S, t, a0, k0) => {
       const g = C.g, v = G3D.view(), k = v.ppr / UR, L = S.L || []; g.save(); g.translate(v.x, v.y); g.rotate(v.ang); g.scale(k, k);
@@ -291,6 +291,7 @@
         /* Sprut fra baugen (0:10,73) og når båten treffer vannet (0:26,02). */
         S.bow = slowP(140, i => { const a = (rnd(i, 91) - 0.5) * 2.2, q = rnd(i, 92); return { p: [(rnd(i, 93) - 0.5) * 0.8, 0.2, 0.9], v: [sin(a) * (2 + 2.5 * q), 3 + 4 * q, 2 + 2.5 * cos(a) * q], b: rnd(i, 94) * 0.2, l: 1.4 + rnd(i, 95) * 0.6, z: 0.3 + rnd(i, 96) * 0.6 }; }, SP, SLOW); S.scene.add(S.bow);
         S.cap = slowP(420, i => { const a = rnd(i, 101) * TAU, q = rnd(i, 102); return { p: [cos(a) * 1.6, 0.3, sin(a) * 1.6], v: [cos(a) * (2 + 6 * q), 8 + 13 * (1 - q), sin(a) * (2 + 6 * q)], b: rnd(i, 103) * 0.3, l: 1.8 + rnd(i, 104), z: 1.6 + rnd(i, 105) * 3 }; }, Object.assign({}, SP, { px: 140, a: 0.75 }), SLOW); S.scene.add(S.cap);
+        mkStorm(S, K, T);   /* 2b.3 (Fable): stormen i det første bildet er den samme i 3D som i Primal, ikke den flate veggen (Jazz 20.11: «Noter at stormen må forbedres både på intro og til primal») */
         return S; },
       act(S, t, o) {
         const g = S.gr, U = K.U(), su = S.sea.material.uniforms, ts = t * TS; su.uTime.value = ts;
@@ -299,12 +300,20 @@
         const k = 1 + 0.2 * seg(t, 0, QI.B6) + 0.45 * io(seg(t, QI.B6, QI.UP)) + 0.1 * seg(t, QI.RO, QI.RO + 0.6), kk = k - 1;
         su.uSea.value.set(1.15 + 0.5 * kk, 1.3 + 0.5 * kk, 0.3 + 0.1 * kk, min(1, 0.8 + 0.25 * kk)); su.uWind.value.set(0.35, 1, 1.05, 0);
         S.st = 0.32 + 0.3 * seg(t, 0, QI.UP) + 0.1 * seg(t, QI.UP, QI.RO); S.sta = PI; S.grey = 0.5 * S.st;
+        { const far = t < QI.PASS - 0.02, pu = S.puff.m.material.uniforms, ru = S.rain.m.material.uniforms, sf = S.fl || 0; S.sky3 = far; S.stormOn = far; S.puff.m.visible = S.rain.m.visible = far;
+          if (far) { S.st = 0; S.zf = mix(212, 186, t / QI.PASS); S.sy = 0.55; S.ss = 1; S.ov = 0.3; S.sd = 0.35; S.sa = PI; S.sea.material.uniforms.uStm.value.set(S.zf + 4, 5, 1, 1);
+            lerpC(pu.uCL, '#66727e', '#c8dcf4', sf * 0.3); lerpC(pu.uCD, '#20282f', '#5a6f88', sf * 0.3); lerpC(pu.uCB, '#0f1418', '#3e5068', sf * 0.3); lerpC(ru.uCR, '#44505c', '#c8dcf4', sf * 0.25); ru.uFk.value = 0.3; pu.uFk.value = 0.5; for (const q of [pu, ru]) q.uLit.value.set(0, 20, 0, 0); }
+          else S.sea.material.uniforms.uStm.value.set(0, 4, 0, 0);
+          S.cliff = S.cliff || S.scene.children[1]; S.cliff.visible = !far;   /* ingen kyst under stormen: den kommer fra det åpne havet */
+        }
         /* Lynene slår ned et stykke unna, bak og rundt ham, aldri på ham (Jazz 20.11). Bare lynet i brølet står nær, bak ham, som i skisse 1 («Det passet»). */
         const L = []; for (const q of strikes(t, 0.12 + 0.3 * seg(t, 0, QI.RO), 61)) L.push({ d: t - q[0], k: q[1] * 0.7, a: q[2] * 0.5, s: q[3] });
         for (const [tb, kk2, a, near] of [[QI.LY0, 0.7, 0.05, 0], [QI.PASS, 0.6, -0.9, 0], [QI.LY, 1, 0.6, 0], [QI.W2, 0.75, -0.8, 0], [QI.W3, 0.8, 1.1, 0], [QI.W4, 0.9, -1.2, 0], [QI.RO, 1, -0.62, 1], [QI.RO + 0.35, 0.9, 1.3, 0], [QI.RO + 0.7, 0.85, -1.4, 0]])
           L.push({ d: t - tb, k: kk2, a, s: floor(tb * 31), near: !!near });
         S.L = L; const fl = flashOf(L); S.fl = fl;
         lerpC(su.uSkyA, '#2c3c4a', '#b8cce8', fl); lerpC(su.uSkyB, '#0a121e', '#40557a', fl); lerpC(su.uDeep, '#020f18', '#0a2a3a', fl * 0.6); su.uBri.value = 1 + 0.3 * fl;
+        /* 2b.3 (Fable): ovenfra (0:04,57–0:13,2) var havet nesten svart, så skyggen ikke syntes. Sett ovenfra er havet mørkt blågrønt, og skyggen står mørkere mot det. */
+        if (t >= QI.PASS - 0.02 && t < QI.B6 - 0.02) { lerpC(su.uDeep, '#0b2f3e', '#14485a', fl); lerpC(su.uShal, '#1a6274', '#2c8292', fl); lerpC(su.uSkyB, '#16283a', '#40557a', fl); su.uBri.value = 1.25 + 0.3 * fl; }
         /* De fjerne stakkene i kysten: sprut når en topp når dem (i havets tid, gjort om til filmens). */
         S.stacks.forEach((m, i) => S.fx(S.sprays[i], crestAt(su, m.position.x, m.position.z, ts) / TS));
 
@@ -363,7 +372,7 @@
       },
       shots: [
         /* 1 Stormen filmes: lavt over havet mot veggskyen; tråleren klatrer sakte over dønningene. */
-        [0, (S, u, a, t) => { const e = io(u), x = mix(5, 4, e), z = mix(-21, -18, e), h = K.seaH(S.sea.material.uniforms, x, z, t * TS); K.cam(x, h + 2.6, z, mix(1.5, 1, e), 4 + 0.4 * h, 160, 44, 0.02); S.post.fade = 1 - seg(t, 0.9, 1.9); }],
+        [0, (S, u, a, t) => { const e = io(u), x = mix(5, 4, e), z = mix(-21, -18, e), h = K.seaH(S.sea.material.uniforms, x, z, t * TS); K.cam(x, h + 2.6, z, mix(1.5, 1, e), 4 + 0.4 * h, 160, 44, 0.02); S.post.fade = 1 - seg(t, 0.9, 1.9); stormSort(S, t); }],
         /* 2 Ovenfra: båten alene; skyggen kommer inn nedenfra på 0:04,57, glir under båten i stillheten, lynet viser hele kroppen, og den er ute før klippet. */
         [QI.PASS - 0.04, (S, u, a, t) => { K.cam(BT[0] + 0.6, 26, BT[1] + 3.6, BT[0] + 0.6, 0, BT[1] + 0.4, 52, 0); S.post.fl = 0.35 * hit(t, QI.LY, 0.12); S.post.flc = '#e8f2ff'; S.post.sh = 0.6 * hit(t, QI.W1, 0.8); }],
         /* 3 Noe stort kommer: lavt ved båten mot stakkene; det røde skjæret vokser under den. */
