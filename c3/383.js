@@ -3,7 +3,8 @@
    Lastes først når et raid med Groudon viser seg (G3C.load i raid3c.js, der verktøykassa står; motoren og stilen er raid3d.js). Reglene bak hvert valg: work/RAIDS3D.md.
    GROUDON ER STANDARDEN (Jazz 18.11: «Ferdig med Groudon nå»): cutscenen, Primal-cutscenen, arenaen og 3D-figuren i kampen endres ikke uten at han ber om det.
    Sjekk bilde mot bilde etter hver endring i motoren eller verktøykassa: work/g3d/scripts/bildemot.js og bildemot.py.
-   Fila gir 'c3:383' (introen), 'c3:383p' (Primal Reversion ved raseriet), 'c3:383a' og 'c3:383b' (arenaen uten og med 3D-figuren). */
+   Fila gir 'c3:383' (introen på introlåta), 'c3:383p' (Primal Reversion på kamplåta: kyStorm i bui.js styrer låta og raseriet), 'c3:383a' og 'c3:383b' (arenaen
+   uten og med 3D-figuren; etter Primal brenner himmelen der også). */
 (() => {
   const K = G3D.K, C = CINE.kit, X = G3C, { sin, cos, PI, TAU, abs, max, min, floor, c01, mix, seg, io, eo, ei, back, hit, rnd, hex } = K, kf = C.kf, { lerpC, col3, sq } = X;
   /* MODELLENE (pakken, 3d/): 'groudon' er Jazz sin nedlasting fra Omega Ruby. 'groudon_primal' er Switch-modellen fra det åpne arkivet, lagt i pakken: Jazz valgte
@@ -394,7 +395,7 @@ void main(){ float y = vUv.y, x = vUv.x * 6.2832; vec2 c = vec2(cos(x), sin(x));
      lydene (C3SND i bui.js) som reserve for en pakke uten dem. Klippene starter en tidel før smellet sitt, så signalene ligger like før slaget i låta og smellet
      treffer PÅ det. I stillheten (4,0–5,98) er det bare tegnet (en dempet gongong) og en svak knitring som dør inn i låtas eget sug. */
   const pks = (n, v, o) => typeof c3p === 'function' && c3p(n, v, o), old = (n, v) => typeof C3SND !== 'undefined' && C3SND[n] ? C3SND[n](v) : [30], hasT = () => typeof tone === 'function';
-  X.snd.psign = () => { pks('Rock Polish', 0.36, { off: 0.62, len: 0.8 }); if (hasT()) { tone(55, 0, 1.35, 0.12, 'sine', 52); tone(110, 0, 1.1, 0.07, 'sine', 108); tone(165, 0, 0.9, 0.035, 'triangle', 162); } return [80, 40, 160]; };
+  X.snd.psign = () => { pks('Rock Polish', 0.28, { off: 0.62, len: 0.8 }); if (hasT()) { tone(55, 0, 1.35, 0.07, 'sine', 52); tone(110, 0, 1.1, 0.045, 'sine', 108); tone(165, 0, 0.9, 0.022, 'triangle', 162); } return [80, 40, 160]; };   /* dempet: det er stille rundt den (målt uvektet: bassen bærer langt) */
   X.snd.pcrack = d => { d = d || 0.8; if (hasT()) { for (let i = 0; i < 10; i++) { const u = 1 - Math.pow(1 - i / 9, 1.7), a = u * (d - 0.05); noise(a, 0.03, 0.03 + 0.05 * u, 5200 + 1800 * rnd(i, 3), 2400); } swellN(0, d, 0.06, 500, 3600); } return [15, 50, 15, 40, 15, 30, 15]; };
   X.snd.pshatter = () => { if (!pks('Primal Shatter', 1, { len: 2.5, fade: 0.7 })) return old('shatter'); if (hasT()) { tone(66, 0.1, 1.3, 0.3, 'sine', 27); swellN(0.1, 1.1, 0.2, 900, 60, 0.02); } return [120, 40, 90, 40, 260]; };
   X.snd.pblast = () => { const a = pks('Primal Blast', 0.85, { len: 3.4, fade: 1.8 }); pks('Primal Erupt', 0.32, { rate: 0.85, len: 3.4, fade: 1.4 }); if (!a) return old('blast'); if (hasT()) tone(52, 0.08, 1.6, 0.26, 'sine', 24); return [140, 40, 320]; };
