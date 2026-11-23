@@ -578,14 +578,30 @@ void main(){
       if (r0 < 160) h = r0 < 84 ? -9 : mix(2.5, h, c01((r0 - 140) / 20));
       return h; };
 
-    /* Flyturen: Catmull-Rom over vulkanen og ned, så en bue rundt ham (fra bak til venstre for ham og rundt til forsiden) som bremser og stopper foran ansiktet på FACE. */
-    const A0 = 18.9, ARC = t => { const k = seg(t, A0, Q.FACE), e = sin(k * PI / 2), ph = mix(2.62, 0.16, e), r = mix(52, 11.95, e), y = mix(30, 2.3, eo(k)); return [sin(ph) * r, y, 2.8 + cos(ph) * r]; };
-    const FLY = [[0, [-190, 292, -1000]], [1.0, [-175, 285, -960]], [6.0, [-122, 245, -700]], [10.5, [-70, 205, -455]], [Q.TK, [-56, 178, -372]], [15.6, [-34, 130, -252]], [17.4, [-12, 76, -128]], [A0, ARC(A0)], [19.6, ARC(19.6)]];
-    const FLYM = [[0, [-40, 100, -330]], [1.0, [-40, 102, -330]], [6.0, [-40, 108, -330]], [10.5, [-42, 126, -335]], [Q.TK, [-42, 124, -322]], [15.6, [-18, 40, -122]], [17.4, [-2, 6, -10]], [A0, [0, 4.6, 2]], [19.6, [0.1, 4.9, 2.6]]];
-
-    /* Flyturen: banen, siktet og synsvinkelen ved t, og krengingen (kameraet legger seg inn i svingene som en fugl, og retter seg opp før det stopper). */
-    const flyAt = t => { if (t < A0) return [crs(FLY, t), crs(FLYM, t), 50]; const e = sin(seg(t, A0, Q.FACE) * PI / 2); return [ARC(t), [mix(0, 0.1, e), mix(4.6, 4.55, e), mix(2, 6.2, e)], mix(50, 40, io(seg(t, A0, Q.FACE)))]; };
-    const bankAt = t => { const p0 = flyAt(t - 0.2)[0], p1 = flyAt(t)[0], p2 = flyAt(t + 0.2)[0]; let d = Math.atan2(p2[0] - p1[0], p2[2] - p1[2]) - Math.atan2(p1[0] - p0[0], p1[2] - p0[2]); while (d > PI) d -= TAU; while (d < -PI) d += TAU; return max(-0.3, min(0.3, d / 0.2 * 0.2)) * (1 - io(seg(t, 19.9, Q.FACE))); };
+    /* FLYTUREN ER ÉN JEVN BANE (Jazz 23.11, på første utgave: «Plutselig endring i kameravinkel på sekund 18–19 cirka er unaturlig og må kuttes ut»). Før var den
+       satt sammen av to baner som møttes på 18,9: der hoppet farten fra 53 til 91 enheter i sekundet, dreiningen fra 38 til 91 grader i sekundet, og krengingen slo fra
+       +11° til −17° på to tideler. Nå finnes det ingen skjøt: plassen, farten, retningen, siktet, synsvinkelen og krengingen er alle jevne funksjoner av tiden.
+       · Til FT0: en sentripetal Catmull-Rom gjennom punktene (mkPath), tatt ut etter lengden langs banen, så farten styres for seg: marsjfart, og så stupet ned
+         fjellsiden. Marsjfarten er regnet ut så kameraet er over kraterkanten når takten kommer inn (TK).
+       · Fra FT0: en spiral rundt ham i polarkoordinater (avstand, vinkel og høyde som jevne kurver i tiden, med samme fart og retning som banen har der): den bremser
+         som en fugl og stopper lavt foran det bøyde hodet på FACE. Vinkelen går som en S-kurve, så dreiningen stiger og faller mykt (høyst rundt 55 grader i sekundet).
+       · Krengingen følger dreiningen (en myk bue inn i svingen og ut igjen), og siktet glir fra fjellet til ham i én bevegelse. */
+    const mkPath = (W, n) => { const D = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]), P = [W[0].map((v, k) => 2 * v - W[1][k])].concat(W, [W[W.length - 1].map((v, k) => 2 * v - W[W.length - 2][k])]), pts = [], len = [0];
+      for (let i = 1; i < P.length - 2; i++) { const p0 = P[i - 1], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2], t1 = Math.sqrt(D(p0, p1)), t2 = t1 + Math.sqrt(D(p1, p2)), t3 = t2 + Math.sqrt(D(p2, p3));
+        for (let j = i === 1 ? 0 : 1; j <= n; j++) { const t = mix(t1, t2, j / n), L = (a, b, ta, tb) => a.map((v, k) => ((tb - t) * v + (t - ta) * b[k]) / (tb - ta)), A1 = L(p0, p1, 0, t1), A2 = L(p1, p2, t1, t2), A3 = L(p2, p3, t2, t3), C = L(L(A1, A2, 0, t2), L(A2, A3, t1, t3), t1, t2);
+          if (pts.length) len.push(len[len.length - 1] + D(C, pts[pts.length - 1])); pts.push(C); } }
+      return { len: len[len.length - 1], upto: i => len[min(len.length - 1, i * n)], at: d => { d = max(0, min(len[len.length - 1], d)); let lo = 0, hi = len.length - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (len[m] <= d) lo = m; else hi = m; } const u = (d - len[lo]) / max(1e-9, len[hi] - len[lo]); return pts[lo].map((v, k) => mix(v, pts[hi][k], u)); } }; };
+    const FLYP = mkPath([[-190, 292, -1000], [-175, 285, -960], [-122, 245, -700], [-70, 205, -455], [-56, 178, -372], [-36, 131, -253], [-12, 77, -130], [4, 40, -62]], 24), FT0 = 15.6, FV2 = 76, FEND = [11.95, 0.16, 2.3];   /* FEND: avstanden, vinkelen og høyden der den stopper */
+    const flyD = (() => { const fa = t => io(seg(t, 11.5, 15.5)), dt = 1 / 120, n = Math.ceil((FT0 + 0.5) / dt), A = [0], B = [0]; for (let i = 1; i <= n; i++) { const t = (i - 0.5) * dt; A.push(A[i - 1] + (1 - fa(t)) * dt); B.push(B[i - 1] + fa(t) * dt); }
+      const k = Math.round(Q.TK / dt), v1 = (FLYP.upto(4) - FV2 * B[k]) / A[k]; return t => { const f = max(0, min(n, t / dt)), i = min(n - 1, floor(f)), u = f - i; return v1 * mix(A[i], A[i + 1], u) + FV2 * mix(B[i], B[i + 1], u); }; })();
+    const FLY0 = (() => { const h = 0.02, pol = q => [Math.hypot(q[0], q[2] - 2.8), Math.atan2(q[0], q[2] - 2.8), q[1]], a = pol(FLYP.at(flyD(FT0 - h))), b = pol(FLYP.at(flyD(FT0 + h))), p = pol(FLYP.at(flyD(FT0))); let d = b[1] - a[1]; while (d > PI) d -= TAU; while (d < -PI) d += TAU;
+      return { r: p[0], th: p[1] < FEND[1] ? p[1] + TAU : p[1], y: p[2], dr: (b[0] - a[0]) / (2 * h), dth: d / (2 * h), dy: (b[2] - a[2]) / (2 * h) }; })();
+    /* Fra p0 med farten v0 til p1 i ro, uten rykk i noen ende (femtegradskurve: farten OG akselerasjonen er sammenhengende, så bremsen og svingen kommer mykt). */
+    const quint = (k, p0, v0, p1) => { const d = p1 - p0, k3 = k * k * k; return p0 + v0 * k + (10 * d - 6 * v0) * k3 + (8 * v0 - 15 * d) * k3 * k + (6 * d - 3 * v0) * k3 * k * k; };
+    const flyPos = t => { if (t <= FT0) return FLYP.at(flyD(t)); const D = Q.FACE - FT0, k = seg(t, FT0, Q.FACE), r = quint(k, FLY0.r, FLY0.dr * D, FEND[0]), th = quint(k, FLY0.th, FLY0.dth * D, FEND[1]); return [sin(th) * r, quint(k, FLY0.y, FLY0.dy * D, FEND[2]), 2.8 + cos(th) * r]; };
+    const flyAt = t => { const kh = io(seg(t, 17.6, Q.FACE)), w = io(seg(t, 12.4, 17.8)), Mv = [-40 - 2 * io(seg(t, 6, Q.TK)), mix(100, 125, io(seg(t, 0, Q.TK))), -330 + 8 * io(seg(t, 10.5, Q.TK))], Mh = [0.1 * kh, mix(4.6, 4.55, kh), mix(2, 6.2, kh)];
+      return [flyPos(t), Mv.map((v, i) => mix(v, Mh[i], w)), mix(50, 40, kh)]; };
+    const bankAt = t => { const k = seg(t, FT0, Q.FACE), s = 4 * k * (1 - k); return -0.14 * s * s; };   /* samme form som dreiningen */
     const dbg = () => { if (window.SKCAM) { K.far(1600); K.cam(...window.SKCAM); } };
     /* FARGEMANUSET (Fable 23.11): lyset forteller. ASKE: verden er kald og askegrå, og bare lavaen langt borte er varm. ILD: det oransje tar over når fjellet
        flyter over. MØRKT: mens lyset klatrer i steinen, slukner alt annet. RØDT: han sprenger seg fri, og stedet står som arenaen i kampen.
