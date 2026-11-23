@@ -183,7 +183,8 @@
     fig: { models: ['kyogre', 'kyogre_primal'], at: [362, 228], me: [132, 452],   /* vannlinja hans og føttene til din egen med 3D-figuren (oppstillingen fra Black/White); at er der
       kampskjermen setter boksen (.arena.fig3 .bs.foe i style.css ved --cz 1, som Groudon), så treffene og effektene lander på figuren */
       make(S, K, T) { const g = S.gr = kyFig({ mip: 1 }), p = S.pg = kypFig({ mip: 1 }); S.scene.add(g.root); S.scene.add(p.root); S.figs.push(g, p); S.forms = [g, p]; p.root.scale.setScalar(KS * PS); },
-      form: (S, pr) => pr ? { f: S.pg, y: 0.1, stand: [{ Neck: [0, -0.08, 0], '*Shoulder': [0, 0, 0.1] }, 1], duck: DUCK, roar: ROAR, rk: 0.45 } : { f: S.gr, y: 0.15, stand: [{ Neck: [0, -0.06, 0] }, 1], duck: DUCK, roar: ROAR, rk: 0.5 },
+      /* 2b.3 (Jazz 20.11: «Bølgene dekker også til han så han må flyte høyere opp», gjelder også arenaen): han ligger høyere i vannet, så ingen bølge skjuler ham (før: y 0,15 og 0,1) */
+      form: (S, pr) => pr ? { f: S.pg, y: 0.62, stand: [{ Neck: [0, -0.08, 0], '*Shoulder': [0, 0, 0.1] }, 1], duck: DUCK, roar: ROAR, rk: 0.45 } : { f: S.gr, y: 0.8, stand: [{ Neck: [0, -0.06, 0] }, 1], duck: DUCK, roar: ROAR, rk: 0.5 },
       idle(f, t) { SWIM(f, t, 0.35, 1.3); f.add({ Neck: [0, 0.03 * sin(t * 0.8), 0.05 * sin(t * 0.45)], Jaw: [0, -0.04 - 0.03 * sin(t * 2), 0] }, 1); },
       glow(S, f, t, st, pr) { if (pr) lines(f, 1.3 + 0.3 * sin(t * 3.1) + 0.6 * (S.drop && S.drop.hk || 0), 1); else lines(f, 0.75 + 0.5 * st.p2 * (0.6 + 0.4 * sin(t * 4)), 0); },
       ink2: () => 0.85, turn: 0.4 },
