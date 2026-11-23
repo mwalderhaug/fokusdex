@@ -415,7 +415,15 @@ async function dkShift(B) {
   if (B.over) return endBattle();
   return turnIdle(B);
 }
-/* ---------- Kyogre: låta styrer stormen (Jazz 19.11) ----------
+/* ---------- Låta styrer forvandlingen (Kyogre, Jazz 19.11; Groudon og enhver art med et kart over låta, 2b.2) ----------
+   GENERELT FRA 2b.2: navnene (ky…) er Kyogres, men alt her gjelder den arten kartet hører til (tl.leg i manifestet; uten leg er det Kyogre). Nøklene kampskjermen
+   bruker: pre (filmen starter her, og låta hoppes hit), cut (her er oppbyggingen slutt), stab (slaget Skip lander på), slam (der kampen fortsetter etterpå), hold
+   ([fra, til]: låta venter her til filmen har startet) og slack (står låta alt så kort etter pre når filmen starter, hoppes det ikke). Avstander i låta regnes med
+   PACK.rel, så pre kan ligge inne i sløyfa.
+   GROUDON (Jazz 19.11: «Ja enig i primal på brudd i låta som kyogre»): kamplåta er «War Lord». Musikken faller ut 0:50,1 og smeller inn igjen 0:52,08, og sløyfa
+   (0:50,1–2:52,1) gjør at bruddet kommer igjen hver runde. Filmen starter på de to taktene med trommer før bruddet (pre 2:48,1): under halv HP hopper låta dit, og
+   har han ikke blitt Primal når låta kommer dit selv (det andre bruddet, rundt 2:50 inn i kampen), gjør heten ham rasende der, uten noe hopp i låta.
+   KYOGRE:
    Kampen mot Kyogre går på «All-Devouring Narwhal» (pakken), og låta har et kart i manifestet (tl, PACK.tlOf): oppbyggingen fra 3:15, kuttet, slaget og stillheten
    3:43–3:46 (cut, stab, gap), phase 2 som smeller inn på 3:46,15 (slam) og dubstep-dropet på 4:26 (drop). Når låta nærmer seg cutscenens start (pre, 3:34,9) og Kyogre
    ikke er rasende, gjør stormen den rasende (stormRage i league.js), og Primal-cutscenen spilles på låta: han stuper på crashet, α lyser langt nede, han stiger,
@@ -426,8 +434,8 @@ async function dkShift(B) {
    kommer uten ham. Hvor langt låta er kommet, lagres med kampen (B.kys = { ph: 1 før og 2 etter forvandlingen, el: sekunder i låta }), og den fortsetter der når
    appen har vært lagt bort. Uten låta (en eldre pakke eller uten pakke) er alt som før: Primal ved halv HP. */
 const KYLEAD = 2.6;   /* raseriet starter så lenge før pre: teksten og «Primal Reversion!» kommer før cutscenen */
-const kyTk = B => B && B.raid && B.tr && !B.tr.dk && B.tr.leg === KYOGRE && typeof PACK !== 'undefined' ? PACK.trackFor(B) : '';
-const kyTl = B => { const tk = kyTk(B); return tk ? PACK.tlOf(tk) : null; };
+const kyTk = B => B && B.raid && B.tr && !B.tr.dk && B.tr.leg && typeof PACK !== 'undefined' ? PACK.trackFor(B) : '';
+const kyTl = B => { const tk = kyTk(B), tl = tk ? PACK.tlOf(tk) : null; return tl && (tl.leg || KYOGRE) === B.tr.leg ? tl : null; };   /* kartet gjelder bare arten det hører til (en annen legendarisk kan låne låta) */
 const kyOn = B => !!kyTl(B);
 const kyDone = B => !!(B.megaUsed && B.megaUsed.foe) || !!(B.kys && B.kys.ph === 2);
 const kyS = B => B.kys || (B.kys = { ph: kyDone(B) ? 2 : 1, el: 0 });
@@ -438,7 +446,7 @@ function kyCheck(B) {
   s.el = p; if (s.ph === 1 && kyDone(B)) s.ph = 2;
   if (!s.cut) {
     const h = tl.hold; if (h && p >= h[1] - 0.45 && p < tl.cut) PACK.seek(h[0], { when: AC.currentTime + Math.max(0, h[1] - p), x: 0.05 });
-    if (s.ph === 1 && p >= tl.pre - KYLEAD && p < tl.cut) s.due = 1;
+    if (s.ph === 1 && p >= tl.pre - (tl.lead || KYLEAD) && p < tl.cut) s.due = 1;
     if (s.ph === 1 && s.due && !BT.busy && !B.rage && B.foe[B.b].hp > 0) return kyShift(B);
   }
   kyArm(B);
@@ -447,10 +455,10 @@ const kyDue = B => kyOn(B) && !!B.kys && B.kys.ph === 1 && !!B.kys.due && !B.rag
 function kyPause() { const B = BT.B; clearTimeout(BT.kyTm); if (B && B.kys && kyOn(B) && PACK.track() === kyTk(B)) { const p = PACK.pos(1); if (p >= 0) B.kys.el = p; } }
 /* Musikken når kampen starter uten film, hentes fram igjen, eller appen har vært lagt bort: låta fortsetter der den var (aldri forbi oppbyggingen før forvandlingen). */
 async function kyMusic(B, o) {
-  const tk = kyTk(B), tl = PACK.tlOf(tk), s = kyS(B); let at = s.el || 0; if (tl && s.ph === 1 && tl.hold && at >= tl.hold[1]) at = tl.hold[0];
+  const tk = kyTk(B), tl = kyTl(B), s = kyS(B), fresh = !s.el && o && o.at != null; let at = s.el || (o && o.at) || 0; if (tl && s.ph === 1 && tl.hold && at >= tl.hold[1]) at = tl.hold[0];   /* fresh: kampen ber om et sted å starte (Groudon: 1,6 s inn etter introlåta), og låta har ikke spilt ennå */
   if (tl && s.ph === 2) { s.cut = 1; if (at < tl.slam) at = tl.slam - 0.05; }
   if (PACK.track() === tk) { kyArm(B); return music(''); }
-  if (await PACK.music(tk, Object.assign({ fade: 0.5 }, o, { at }))) { music(''); kyArm(B); return; }
+  if (await PACK.music(tk, Object.assign(fresh ? {} : { fade: 0.5 }, o, { at }))) { music(''); kyArm(B); return; }
   if (BT.B !== B || B.over) return;
   PACK.music(''); music(musicKey(B), o);
 }
@@ -1066,10 +1074,11 @@ async function primalCut(B, e) {
   const arn = BT.arena && BT.arena.on && BT.arena.pause ? BT.arena : null; if (arn) arn.pause(1);   /* arenaen står stille under cutscenen */
   c3warm(); buzz([30, 50, 30, 50]);   /* lydene til forvandlingen er signalene i cutscenen (C3SND), ikke den vanlige Mega-lyden */
   const base = fxCue(B), cue = (n, v) => { if (gone()) return; if (n === 'cry') { cry(e.id, 0, 0.8, 1); buzz([80, 40, 260]); } else if (c3snd(n)) buzz(c3snd(n)(v) || 30); else base(n, v); };
-  /* Kyogre: cutscenen går på låta. Låta hoppes til crashet der han stuper (tl.pre), og filmens tid er låtas tid derfra; hoppes den over, hoppes låta til like før slaget. */
-  const tl = kyOn(B) && PACK.track() === kyTk(B) ? kyTl(B) : null; if (tl) { kyS(B).cut = 1; PACK.seek(tl.pre, { x: 0.12 }); }
-  const pl = CINE.play(cv, id, { name: B.tr.n, cc: B.tr.cc, cue, clock: tl ? () => { const q = PACK.pos(); return q < 0 ? -1 : q - tl.pre; } : null }); requestAnimationFrame(() => root.classList.add('on'));
-  let skipped = false; const skip = () => { if (skipped) return; skipped = true; sfx.tap(); sk.hidden = true; if (tl && PACK.pos(1) < tl.stab - 0.75) PACK.seek(tl.stab - 0.72, { x: 0.06 }); pl.skip(); };
+  /* Cutscenen går på låta (Kyogre, Groudon: arter med et kart over låta). Låta hoppes til filmens start (tl.pre), og filmens tid er låtas tid derfra (PACK.rel: med
+     sløyfa regnet inn); hoppes filmen over, hoppes låta til like før slaget. Står låta alt rett etter pre (tl.slack, Groudon ved det andre bruddet), hoppes det ikke. */
+  const tl = kyOn(B) && PACK.track() === kyTk(B) ? kyTl(B) : null; if (tl) { kyS(B).cut = 1; const r0 = PACK.rel(tl.pre, PACK.pos(1)); if (!(tl.slack && r0 >= 0 && r0 <= tl.slack)) PACK.seek(tl.pre, { x: 0.12 }); }
+  const pl = CINE.play(cv, id, { name: B.tr.n, cc: B.tr.cc, cue, clock: tl ? () => { const q = PACK.pos(); return q < 0 ? -1 : PACK.rel(tl.pre, q); } : null }); requestAnimationFrame(() => root.classList.add('on'));
+  let skipped = false; const skip = () => { if (skipped) return; skipped = true; sfx.tap(); sk.hidden = true; if (tl && PACK.rel(tl.pre, PACK.pos(1)) < PACK.rel(tl.pre, tl.stab) - 0.75) PACK.seek(tl.stab - 0.72, { x: 0.06 }); pl.skip(); };
   const tm = setTimeout(() => { if (!gone() && !skipped) sk.hidden = false; }, 900); sk.addEventListener('click', skip);
   const key = k => { if (k.key === 'Enter' || k.key === ' ' || k.key === 'Escape') skip(); }; document.addEventListener('keydown', key);
   const watch = setInterval(() => { if (gone()) pl.stop(); }, 300);
@@ -1091,7 +1100,7 @@ async function megaShow(B, side, e) {
   await say(e.txt, 500);
   if (BT.B !== B || !sp.isConnected) return;
   if (side === 'foe' && B.tr.wild && await primalCut(B, e)) return;
-  if (side === 'foe' && kyOn(B) && PACK.track() === kyTk(B)) { const s = kyS(B); s.cut = 1; s.ph = 2; PACK.seek(kyTl(B).stab - 1.15, { x: 0.1 }); }   /* Kyogre uten cutscene: slaget i låta kommer i blinket */
+  if (side === 'foe' && kyOn(B) && PACK.track() === kyTk(B)) { const s = kyS(B); s.cut = 1; s.ph = 2; PACK.seek(kyTl(B).stab - 1.15, { x: 0.1 }); }   /* uten cutscene (Kyogre, Groudon): slaget i låta kommer i blinket */
   const img = sp.querySelector('img,canvas'), h = Math.max(56, Math.min(230, img ? img.getBoundingClientRect().height : 90));
   const ring = cls => { const fx = document.createElement('i'); fx.className = 'megafx ' + cls + (e.primal ? ' primal' : ''); fx.style.setProperty('--h', h.toFixed(0) + 'px'); sp.appendChild(fx); return fx; };
   ring('gather'); BSFX.mega(); buzz([30, 50, 30, 50, 30, 50, 220]); sp.classList.add('megaev'); if (side === 'foe') fig3Mark('mega', 1);

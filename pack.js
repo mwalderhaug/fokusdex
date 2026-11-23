@@ -299,6 +299,10 @@ const PACK = (() => {
       node = { s, g: g2, t0: w, at, d, v }; return true;
     } catch (_) { return false; }
   };
+  /* Sekunder langs avspillingen fra «from» til x (begge er sekunder i fila), med sløyfa regnet inn: ligger x før from, og from inne i sløyfa, har låta gått rundt
+     i mellomtiden (Groudon: filmen starter på tl.pre like før sløyfa hopper, og fortsetter etter hoppet). Ellers x − from (Kyogre: pre ligger før sløyfa). */
+  P.rel = (from, x) => { let ls = 0, le = 0; try { const s = node && node.s, d = node && node.d; if (s && s.loop && d) { le = s.loopEnd > s.loopStart ? s.loopEnd : d.duration; ls = s.loopEnd > s.loopStart ? s.loopStart : 0; } } catch (_) {}
+    return x < from && le - ls > 0.5 && from >= ls && from < le && x >= ls ? x - ls + le - from : x - from; };
   /* Kartet over låta i manifestet (tl: tidene en cutscene og arenaen følger), eller null. */
   P.tlOf = path => { const e = path && ent(path); return e && e.tl ? e.tl : null; };
   /* Korte lyder (angrep, treff, status) dekodes og spilles gjennom appens vanlige lydutgang, så volumknappen gjelder. Gir false hvis lyden ikke er klar. */

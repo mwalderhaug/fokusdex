@@ -81,7 +81,114 @@
     K.face(S.vflash); const fl = max(b ? 0.75 * hit(t, tb, 0.45) : 0, 0.22 * max(0, min(er, 1.2) - 0.3) * (0.7 + 0.3 * sin(t * 2.3))); S.vflash.scale.setScalar(b && t < tb + 0.45 ? 60 + 260 * eo(seg(t, tb, tb + 0.25)) : 46 + 30 * k); S.vflash.material.uniforms.uA.value = fl; S.vflash.visible = fl > 0.01;
     if (!S.vfnt) return;
     const f0 = tf == null ? tb : tf, f = t >= f0 ? c01((t - f0) / 0.5) : 0; S.vfnt.visible = f > 0; S.vfnt.material.uniforms.uPx.value = 300 * (0.5 + 0.6 * k); S.vfnt.material.uniforms.uA.value = f * 0.85;
-    for (const q of [S.vboom, S.vash, S.vrain]) q.material.uniforms.uT0.value = b ? tb : -1e5; S.vboom2.material.uniforms.uT0.value = b ? tb + 0.7 : -1e5;
+    for (const q of [S.vboom, S.vash, S.vrain]) q.material.uniforms.uT0.value = b ? tb : -1e5; S.vboom2.material.uniforms.uT0.value = b ? tb + (S.boom2 || 0.7) : -1e5;
+  }
+
+  /* ---------- Himmelen brenner (2b.2: Primal på kamplåta, og arenaen etter forvandlingen) ----------
+     Jazz 19.11: i introen blør jorda, i Primal brenner himmelen. Byggeklossene her deles av cutscenen (c3:383p) og arenaen etter forvandlingen, så arenaen står
+     slik filmen sluttet:
+     · toppen av fjellet er sprengt bort (topSet): masken er kuttet lavere, med en flenge mot krateret hans og en hakket, glødende kant
+     · askeskyen som lukker himmelen (S.roof): et tak av valker i 3D som brer seg ut fra søylen over fjellet og inn over oss. Det er mørkt, lyst opp nedenfra av
+       ilden (rødglødende underside), og lynet går inne i skyen (de tynne stedene mellom valkene lyser, valkene står mørke mot lyset). Aldri regn.
+     · askesøylen fra flenga opp i taket (S.col), glødende skred som velter ned fjellsidene (S.flow: unge valker gløder, gamle er mørk aske) og lavabomber med
+       røykhale som slår ned i sjøen (bombs)
+     burn(S, T) bygger dem etter volcano(S, T, 1); burnAct(S, t, B) setter dem for hvert bilde (B = { top, roofR, roofA, hot, col, flow: [starttider], L: lyn }). */
+  const VGN = 96, VGM = 30, BRA = 1.43, ROOFH = 212, wrapA = a => { a = (a + PI) % TAU; if (a < 0) a += TAU; return a - PI; };   /* BRA: retningen fra fjellet mot krateret hans (radianer rundt fjellet) */
+  /* Et punkt på fjellets flate (verden), lest fra masken (P = punktene, hel eller sprengt): au = rundt fjellet (0–1), v = høyden (0–1), out = så langt ut fra flaten. */
+  const volP = (S, P, au, v, out) => { const V = S.V; au = ((au % 1) + 1) % 1; v = c01(v); const fi = au * VGN, i0 = floor(fi), f = fi - i0, fj = v * VGM, j0 = min(VGM - 1, floor(fj)), g = fj - j0,
+      at = (j, i, k) => P[(j * (VGN + 1) + i) * 3 + k], q = k => mix(mix(at(j0, i0, k), at(j0, i0 + 1, k), f), mix(at(j0 + 1, i0, k), at(j0 + 1, i0 + 1, k), f), g), x = q(0), z = q(2), r = Math.hypot(x, z) || 1, o = out || 0;
+    return [V.x + x * (1 + o / r), q(1) - 2, V.z + z * (1 + o / r)]; };
+  const cutV = ia => { const a = ia / VGN * TAU, d = wrapA(a - BRA); return 0.86 - 0.1 * Math.exp(-Math.pow(d / 0.55, 2)) + (rnd(ia, 71) - 0.5) * 0.036 + 0.018 * sin(a * 9 + 1); };   /* der toppen er kuttet: lavest mot krateret hans */
+  const FS_ROOF = `varying vec3 vW; uniform vec3 uV, uLc; uniform float uR, uA, uHot; uniform vec4 uL[4];
+${K.GLSL.COMMON}
+/* En valk per celle: rund og høyest i midten, med mørke søkk mellom cellene. */
+float bil(vec2 q){ q += (vec2(vn(q * .7 + 3.), vn(q * .7 + 9.)) - .5) * .85; vec3 v = voro(q); return (1. - smoothstep(0., .95, v.x)) * (.7 + .3 * v.z); }
+/* Skyens underside: store valker med mindre valker på, som driver fra fjellet og inn over oss (to lag i ulik fart, så det koker). */
+float cl(vec2 p){ vec2 d = vec2(.35, 1.) * uTime; return bil(p * .0105 - d * .11) * .68 + bil(p * .027 - d * .2 + 7.) * .32; }
+void main(){
+  vec2 p = vW.xz - uV.xz; float r = length(p); vec2 dir = p / max(r, 1.);
+  float h = cl(p), hd = cl(p - dir * 13.), face = clamp((h - hd) * 6., -1., 1.);   /* face > 0: flaten vender mot søylen (ilden) */
+  /* Fronten: valkene i kanten stikker lenger fram, så kanten er klumper og ikke en rett strek. */
+  float e = r - uR + (1. - h) * 130. - 40., a = (1. - smoothstep(-46., 0., e)) * uA;
+  if (a < .004) discard;
+  float near = exp(-r / 170.);
+  vec3 col = mix(vec3(.016, .011, .014), vec3(.085, .052, .048), h);
+  /* Ilden nedenfra: valkene som henger lavest, gløder rødt, og sidene som vender mot søylen, er oransje; i søkkene er det mørkt. */
+  col += vec3(.8, .15, .03) * uHot * (.13 + .55 * near) * h * h;
+  col += vec3(1., .42, .09) * uHot * (.1 + 1.7 * near) * max(face, 0.) * (.25 + .75 * h);
+  col += vec3(1., .5, .14) * .34 * uHot * smoothstep(-90., -8., e) * (.4 + .6 * h);   /* fronten er tynn og lyst opp av horisonten */
+  /* Lyn inne i skyen: søkkene mellom valkene lyser, og valkene står mørke mot lyset. */
+  for (int i = 0; i < 4; i++) { vec4 g = uL[i]; if (g.w > 0.) { float d = length(p - g.xy) / g.z; col += uLc * g.w * exp(-d * d) * (.25 + 1.3 * (1. - h) * (1. - h)); } }
+  col = mix(col, uFogC * .8, fogK(vW) * .42);
+  gl_FragColor = vec4(col * a, a);
+}`;
+  /* Fargeskalaen for lava (temperatur 0–1,3: skorpe, rød, oransje, gul, hvitglødende), og en fontene av lava: rennende lava oppover en søyle, varmest nederst,
+     med fillete omriss (kanten mot kameraet kastes) og en fillete topp som blafrer. uOn = hvor høyt den står (0–1 og litt over). */
+  const LRAMP = `vec3 ramp(float x){ vec3 c = vec3(.028, .006, .002); c = mix(c, vec3(.4, .028, .0), smoothstep(0., .3, x)); c = mix(c, vec3(.98, .24, .02), smoothstep(.24, .6, x)); c = mix(c, vec3(1., .66, .14), smoothstep(.56, .92, x)); return mix(c, vec3(1., .95, .72), smoothstep(.9, 1.35, x)); }`;
+  const FS_FNT = `varying vec3 vW, vN; varying vec2 vUv; uniform float uSd, uOn;
+${K.GLSL.COMMON}
+${LRAMP}
+void main(){ float y = vUv.y, x = vUv.x * 6.2832; vec2 c = vec2(cos(x), sin(x));
+  float top = uOn * (.74 + .26 * fbm(c * 1.6 + vec2(uSd, uTime * 1.9))); if (y > top) discard;
+  vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float f = abs(dot(N, V));
+  float n = fbm(c * 2.2 + vec2(uSd, y * 3. - uTime * 3.6)), n2 = fbm(c * 5. + vec2(uSd * 3., y * 7. - uTime * 6.5));
+  if (f < .2 + .3 * n2 * (.4 + y)) discard;
+  float k = y / max(top, .01), temp = 1.1 - .5 * k + .34 * (n - .5) + .2 * (n2 - .5) - .16 * (1. - f);
+  gl_FragColor = vec4(ramp(temp), 1.); }`;
+  /* Lavabomber: glødende klumper i kast fra toppen, med en hale av røyk som blir hengende i banen, og et sprut av klumper der de slår ned. L = [[når den kastes
+     (s etter t0), flytid, x, z, størrelse], …]. Banen er et rent kast (tyngden GB), så hodet og halen regnes ut fra tiden. m.at(t0) starter en salve. */
+  const GB = 120;
+  function bombs(S, L, sd) {
+    const V = S.V, hot = ['#fff6c8', '#ffb234', '#ff7a14'], P0 = L.map((q, i) => [V.x + (rnd(i, sd) - 0.5) * 18, V.h * 0.82 + 4, V.z + (rnd(i, sd + 1) - 0.5) * 18]),
+      V0 = L.map((q, i) => [(q[2] - P0[i][0]) / q[1], -P0[i][1] / q[1] + 0.5 * GB * q[1], (q[3] - P0[i][2]) / q[1]]), pos = (i, a) => [P0[i][0] + V0[i][0] * a, P0[i][1] + V0[i][1] * a - 0.5 * GB * a * a, P0[i][2] + V0[i][2] * a], NT = 18;
+    const head = K.pts(L.length, i => ({ p: P0[i], v: V0[i], b: L[i][0], l: L[i][1] + 0.03, z: 1.1 * L[i][4] }), { t0: -1e5, add: 1, g: GB, px: 110, floor: 0, min: 2, near: 12, c: hot, fade: 0.995 });
+    const trail = K.pts(L.length * NT, k => { const i = floor(k / NT), a = L[i][1] * ((k % NT) + 0.6) / NT, p = pos(i, a); return { p, v: [V0[i][0] * 0.03 + (rnd(k, sd + 2) - 0.5) * 1.5, 1.2 + rnd(k, sd + 3) * 1.6, V0[i][2] * 0.03 + (rnd(k, sd + 4) - 0.5) * 1.5], b: L[i][0] + a, l: 1.0 + rnd(k, sd + 5) * 0.7, z: (2.6 + rnd(k, sd + 6) * 2.4) * L[i][4] }; },
+      { t0: -1e5, shade: 1, drag: 0.6, sz0: 0.45, sz1: 1.7, px: 110, near: 5, c: ['#ffb060', '#6a3a2a', '#201414'], a: 0.62, fade: 0.3 });
+    const NS = 30, spl = K.pts(L.length * NS, k => { const i = floor(k / NS), a = rnd(k, sd + 7) * TAU, q = rnd(k, sd + 8), s = L[i][4]; return { p: [L[i][2] + cos(a) * 0.7 * s, 0.1, L[i][3] + sin(a) * 0.7 * s], v: [cos(a) * (1.5 + 6 * q) * s, (7 + rnd(k, sd + 9) * 13) * Math.sqrt(s), sin(a) * (1.5 + 6 * q) * s], b: L[i][0] + L[i][1] + rnd(k, sd + 10) * 0.08, l: 1.6, z: (0.9 + rnd(k, sd + 11) * 1.5) * s }; },
+      { t0: -1e5, shade: 1, g: 26, px: 60, floor: 0, near: 5, c: ['#ffd070', '#ff7a18', '#a82806'], fade: 0.92 });
+    for (const m of [head, trail, spl]) S.scene.add(m);
+    return { L, at: t0 => { for (const m of [head, trail, spl]) m.material.uniforms.uT0.value = t0; }, show: on => { for (const m of [head, trail, spl]) m.visible = on; } };
+  }
+  function burn(S, T) {
+    const V = S.V, g = S.vol.geometry, PA = g.attributes.position, NA = g.attributes.normal, P0 = PA.array.slice(), N0 = NA.array.slice(), P1 = P0.slice(), rAt = (P, j, i) => Math.hypot(P[(j * (VGN + 1) + i) * 3], P[(j * (VGN + 1) + i) * 3 + 2]);
+    /* Toppen sprengt bort: radene over kuttet legges som en smal, hakket leppe i kuttets høyde (de øverste radene gløder i fjellets materiale, så leppa gløder). */
+    for (let i = 0; i <= VGN; i++) { const ia = i % VGN, a = ia / VGN * TAU, vb = cutV(ia), fj = vb * VGM, j0 = min(VGM - 1, floor(fj)), rb = mix(rAt(P0, j0, i), rAt(P0, j0 + 1, i), fj - j0);
+      for (let j = 0; j <= VGM; j++) { const v = j / VGM; if (v <= vb) continue; const e = (v - vb) / (1 - vb), k = (j * (VGN + 1) + i) * 3, rr = rb * (1 - 0.16 * e); P1[k] = cos(a) * rr; P1[k + 1] = V.h * (vb + 0.012 * e - 0.03 * e * e); P1[k + 2] = sin(a) * rr; } }
+    PA.array.set(P1); g.computeVertexNormals(); const N1 = NA.array.slice(); PA.array.set(P0); NA.array.set(N0); PA.needsUpdate = NA.needsUpdate = true; S.top = { P0, N0, P1, N1 }; S.topOn = 0;
+    /* Askeskyen: taket. */
+    S.roof = new T.Mesh(new T.CircleGeometry(1500, 40).rotateX(PI / 2), K.shader(K.GLSL.VS, FS_ROOF, { uV: K.uv(new T.Vector3(V.x, ROOFH, V.z)), uR: K.uv(0), uA: K.uv(0), uHot: K.uv(1), uLc: K.uv(K.u3('#c8a0ff')), uL: K.uv([0, 1, 2, 3].map(() => new T.Vector4())) }, Object.assign(K.blend.soft(), { side: T.DoubleSide })));
+    S.roof.position.set(V.x, ROOFH, V.z); S.roof.frustumCulled = false; S.roof.renderOrder = -2; S.roof.visible = false; S.scene.add(S.roof);
+    /* Askesøylen fra flenga opp i taket: lyst opp nedenfra av ilden, mørk øverst. */
+    const top = V.h * 0.8;
+    S.col = K.pts(84, i => { const a = rnd(i, 1601) * TAU, q = rnd(i, 1602); return { p: [V.x + cos(a) * 13 * q, top - 4, V.z + sin(a) * 13 * q], v: [cos(a) * (2 + 5 * q) + 1.5, 19 + rnd(i, 1603) * 9, sin(a) * (2 + 5 * q)], b: rnd(i, 1604) * 5.6, l: 5.6, z: 62 + rnd(i, 1605) * 70 }; },
+      { loop: 1, shade: 1, drag: 0.5, sz0: 0.45, sz1: 1.75, px: 150, c: ['#ffa850', '#6a3428', '#191012'], a: 0, fade: 0.7 }); S.col.renderOrder = -1; S.scene.add(S.col);
+    /* Glødende skred ned fjellsidene, fra flenga og på hver side av den: [hvor rundt fjellet (fra flenga), forsinkelse, fart]. Punktene følger fjellets flate; hver valk
+       fødes idet fronten når stedet sitt, så de unge (glødende) ligger i fronten og de gamle (mørk aske) henger igjen bak og over. */
+    const FLOW = [[-0.03, 0, 62], [-0.085, 0.3, 56], [0.055, 0.55, 52], [-0.14, 0.8, 48]], NP = 40;
+    S.flow = FLOW.map(([da, dl, sp], k) => { const au0 = BRA / TAU + da, v0 = cutV(Math.round(au0 * VGN) % VGN) - 0.01, pts = [], len = [0];
+      for (let m = 0; m <= NP; m++) { const v = mix(v0, 0.015, m / NP); pts.push(volP(S, P1, au0 + 0.011 * sin(v * 8 + k * 2.1) * (1 - v), v, 2.5)); if (m) len.push(len[m - 1] + Math.hypot(pts[m][0] - pts[m - 1][0], pts[m][1] - pts[m - 1][1], pts[m][2] - pts[m - 1][2])); }
+      const Lt = len[NP], at = s => { let m = 0; while (m < NP - 1 && len[m + 1] < s) m++; const u = c01((s - len[m]) / (len[m + 1] - len[m])), a = pts[m], b = pts[m + 1], d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], dl2 = Math.hypot(d[0], d[1], d[2]) || 1; return { p: a.map((x, q) => mix(x, b[q], u)), d: d.map(x => x / dl2) }; };
+      const side = (q, w) => { const hl = Math.hypot(q.d[0], q.d[2]) || 1; return [-q.d[2] / hl * w, q.d[0] / hl * w]; };
+      const ash = K.pts(78, i => { const s = Lt * (i + rnd(i, 1700 + k)) / 78, q = at(s), sw = side(q, (rnd(i, 1701 + k) - 0.5) * (14 + 0.11 * s)), vd = 5 + rnd(i, 1702 + k) * 8; return { p: [q.p[0] + sw[0], q.p[1] + 3 + rnd(i, 1703 + k) * 4, q.p[2] + sw[1]], v: [q.d[0] * vd + sw[0] * 0.12, 6 + rnd(i, 1704 + k) * 9 + q.d[1] * vd * 0.4, q.d[2] * vd + sw[1] * 0.12], b: dl + s / sp + 0.25 + rnd(i, 1705 + k) * 0.3, l: 4.4 + rnd(i, 1706 + k) * 2.8, z: 30 + 0.13 * s + rnd(i, 1707 + k) * 24 }; },
+        { t0: -1e5, shade: 1, drag: 1.15, sz0: 0.3, sz1: 2.1, px: 150, c: ['#7a3a22', '#2c1614', '#0c090a'], a: 0.94, fade: 0.55 });
+      const hot = K.pts(60, i => { const s = Lt * (i + rnd(i, 1710 + k)) / 60, q = at(s), sw = side(q, (rnd(i, 1711 + k) - 0.5) * (10 + 0.07 * s)), vd = 10 + rnd(i, 1712 + k) * 10; return { p: [q.p[0] + sw[0], q.p[1] + 1.5, q.p[2] + sw[1]], v: [q.d[0] * vd, 2.5 + rnd(i, 1713 + k) * 4 + q.d[1] * vd, q.d[2] * vd], b: dl + s / sp - 0.06 + rnd(i, 1714 + k) * 0.15, l: 1.1 + rnd(i, 1715 + k) * 0.7, z: 15 + 0.06 * s + rnd(i, 1716 + k) * 12 }; },
+        { t0: -1e5, shade: 1, drag: 0.8, px: 150, sz0: 0.5, sz1: 1.5, c: ['#ffc060', '#f0561a', '#52180e'], a: 0.95, fade: 0.6 }); hot.renderOrder = 1;
+      S.scene.add(ash); S.scene.add(hot); return { ash, hot, len: Lt, sp, dl, head: s => at(min(Lt, max(0, s))).p }; });
+  }
+  /* Lynet tegnet over 3D-bildet (fiolett, vulkansk, uten regn): en kort gren langs undersiden av skyen der den lyser, og (radius 0) et lyn i selve askesøylen.
+     LT = [[når, styrke, x, z (fra fjellets akse), radius], …]. */
+  const skyBolts = (S, t, P, LT) => { const V = S.V; for (let j = 0; j < LT.length; j++) { const q = LT[j], a = t - q[0]; if (a < 0 || a > 0.5) continue; const k = lflick(a) * q[1]; if (k < 0.04) continue;
+      const col = !q[4], an = rnd(j, 811) * TAU, ln = col ? 0 : q[4] * 0.8, A = col ? K.proj(V.x + q[2], ROOFH - 10, V.z + q[3]) : K.proj(V.x + q[2] - cos(an) * ln, ROOFH - 3, V.z + q[3] - sin(an) * ln), B = col ? K.proj(V.x - 6 + (rnd(j, 812) - 0.5) * 20, V.h * 0.8 + 12, V.z) : K.proj(V.x + q[2] + cos(an) * ln, ROOFH - 3, V.z + q[3] + sin(an) * ln);
+      if (A.z > 1 || B.z > 1) continue; const mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2, sz = max(40, Math.hypot(A.x - B.x, A.y - B.y));
+      C.blob(mx, my, sz * (col ? 1.1 : 0.8), '#8a4ce8', 0.3 * k, 1); C.bolt(A.x, A.y, B.x, B.y, { seed: 31 + j * 7 + (a > 0.12 ? 1 : 0), w: col ? 2.4 : 1.7, col: '#b060ff', core: '#ffeaff', a: k, br: col ? 3 : 2, jag: 0.32, depth: col ? 5 : 4 }); P.bloom += 0.12 * k; } };
+  const topSet = (S, on) => { on = on ? 1 : 0; if (S.topOn === on) return; S.topOn = on; const g = S.vol.geometry, Q = S.top; g.attributes.position.array.set(on ? Q.P1 : Q.P0); g.attributes.normal.array.set(on ? Q.N1 : Q.N0); g.attributes.position.needsUpdate = g.attributes.normal.needsUpdate = true; };
+  /* Lynet inne i skyen: L = [[alder (s), styrke, x, z (fra fjellets akse), radius], …]. Det blinker to–tre ganger som ekte lyn. */
+  const lflick = d => d < 0 ? 0 : d < 0.05 ? 1 : d < 0.1 ? 0.3 : d < 0.17 ? 0.85 : d < 0.24 ? 0.25 : max(0, 1 - (d - 0.24) / 0.3) * 0.5;
+  function burnAct(S, t, B) {
+    topSet(S, B.top); const ru = S.roof.material.uniforms, on = B.roofA > 0.005 && B.roofR > 1; S.roof.visible = on; ru.uR.value = B.roofR; ru.uA.value = B.roofA; ru.uHot.value = B.hot == null ? 1 : B.hot;
+    let lit = 0; for (let i = 0; i < 4; i++) { const q = (B.L || [])[i], k = q ? lflick(q[0]) * q[1] : 0; ru.uL.value[i].set(q ? q[2] : 0, q ? q[3] : 0, q ? q[4] : 1, k); lit = max(lit, k); } S.rlit = on ? lit : 0;
+    S.col.visible = B.col > 0.01; S.col.material.uniforms.uA.value = 0.9 * (B.col || 0);
+    S.flow.forEach((f, k) => { const t0 = B.flow && B.flow[k] != null ? B.flow[k] : -1e5; f.ash.material.uniforms.uT0.value = f.hot.material.uniforms.uT0.value = t0; f.ash.visible = f.hot.visible = t0 > -1e4; });
   }
 
 
@@ -94,19 +201,37 @@
   const SHELL = ['Head', 'Head', 'Neck1', 'Spine3', 'Spine3', 'Spine2', 'Spine2', 'Spine1', 'Hips', 'LArm', 'RArm', 'LHand', 'RHand', 'LThigh', 'RThigh', 'LLeg', 'RLeg', 'Tail1', 'Tail2', 'Tail3'];
   const bodyPts = (g, pose) => { g.clear(); if (pose) g.add(pose, 1); g.root.position.set(HOME[0], HOME[1], HOME[2]); g.apply(); const r = SHELL.filter(n => g.bones[n]).map(n => g.at(n).toArray()); g.clear(); g.apply(); return r; };
 
-  /* ---------- Primal Reversion (raseriet ved halv HP), som i Omega Ruby ----------
-     Jazz 18.11: en kort cutscene midt i kampen (krystallen, Ω-tegnet, den knuses), og det er HER vulkanen bryter ut, med masse røyk, lava og lavapartikler.
-     Lyset samler seg om ham og stivner til en rosa krystall, krystallen mørkner, Ω-tegnet tennes på den og den slår sprekker, og så knuses den: Primal Groudon
-     står der med glødende årer mens vulkanen bryter ut bak ham. Et langt nærbilde oppover kroppen, og så brølet i et vidt bilde der vulkanen eksploderer.
-     Den følger ikke slagene i låta (kamplåta går videre under), og den venter ikke på Continue: den ender i et hvitt blink og går rett tilbake til kampen. */
-  /* Runde 9: «Etter forvandlingen til Primal: litt lengre oppladning før brølet.» Brølet kommer 0,95 s senere (før: R 8,35, lengden 12,55 s), og oppladningen (Q) går i det vide bildet. */
-  const PT = { G0: 1.0, G1: 1.75, D0: 3.0, D1: 3.8, O: 4.05, K: 4.9, S: 6.0, C: 6.55, Q: 8.2, R: 9.3, P: 9.9, F: 13.05, E: 13.5 };
-  const PHOME = [0, -1.2, 2.8], GEM = [0, 5, 2.9], GEMR = 6.7;
+  /* ---------- Primal Reversion på kamplåta (2b.2, Fable 23.11; planen er låst av Jazz i sparringen 19.11, RAIDS.md nr. 42) ----------
+     Som i Omega Ruby (krystallen, Ω-tegnet, den knuses), men nå på låtas klokke, som Kyogre sin: kamplåta er «War Lord» (pakken), og filmen starter på de to
+     taktene med trommer før bruddet (tl.pre, 2:48,1 i sløyfa; primalCut i bui.js hopper dit under halv HP, og ved det andre bruddet er låta der av seg selv).
+       0,00  lyset samler seg om ham, i støt på trommeslagene (0,53 · 1,04 · 1,16 · 1,28 · 1,53 · 1,65 · 1,78), til han er bare lys
+       1,97  et rosa blink, og krystallen står der hel (ting kommer til syne ut av LYS, aldri rastrert) og faller på plass
+       3,03  virvelen (åtte sekstendedeler): lyset i krystallen dør i åtte trinn, og stedet mørkner med den
+       4,00  MUSIKKEN FALLER UT (sløyfa hopper til 0:50,1): helt stille, krystallen er svart. Ω tennes (4,50), sprekker av lys brer seg fra tegnet (fra 4,95),
+             og lyset presser på i suget før slaget (5,75)
+       5,98  SMELLET (0:52,08): krystallen knuses mot kameraet, og Primal Groudon står der. Han reiser seg sakte (nærbildet fra kneet og opp), og lader opp (9,00)
+       9,98  BRØLET på cymbalslaget (0:56,08), og fjellet svarer: toppen sprenges (ny eksplosjon 10,48), askesøylen står opp, og HIMMELEN BRENNER: askeskyen
+             brer seg inn over oss og lukker himmelen, rødglødende på undersiden, med lyn inne i skyen; glødende skred velter ned sidene; navnet 10,98
+      11,98  trykket fra fjellet når fram (en bølge i lavaen), og lavasjøen rundt føttene hans bryter ut i fontener: utbruddet kommer til ham. Lavabomber slår ned
+      13,98  hvitt på taktslaget (1:00,08), og rett tilbake til kampen. Arenaen står slik filmen sluttet (burn).
+     Reglene som gjelder (RAIDS3D.md): utbruddet starter ikke før brølet · hver ting har en grunn (brølet → fjellet → trykket → fontenene) · store ting går langsomt
+     (skredene og skyen er underveis når det blir hvitt, og arenaen tar over) · utbrudd er klumper, ikke hvite baller · blink er korte og står på begge sider av et klipp.
+     Tidene er sekunder i filmen. sP og sL gjør låtas sekunder om: før bruddet (2:48,1 = 0) og etter (0:50,1 = 4,0). */
+  const sP = x => Math.round((x - 168.1) * 100) / 100, sL = x => Math.round((x - 46.1) * 100) / 100;
+  const PT = { H: [168.63, 169.14, 169.26, 169.38, 169.63, 169.75, 169.88].map(sP), G1: sP(170.07), GL: sP(170.63), D: [171.13, 171.26, 171.38, 171.51, 171.63, 171.76, 171.88, 172.01].map(sP), C: 4, O: sL(50.6), K: sL(51.05), SW: sL(51.85), S: sL(52.08),
+    CU: sL(52.63), W: sL(54.6), Q: sL(55.1), R: sL(56.08), B2: sL(56.58), P: sL(57.08), FN: sL(58.08), F: sL(59.74), WH: sL(60.08), E: sL(60.4) };
+  const PHOME = [0, -1.2, 2.8], GEM = [0, 5, 2.9], GEMR = 6.7, CYAW = 0.06;   /* CYAW: retningen til kameraet i stillheten (krystallens forside vender dit, så sprekkene brer seg fra tegnet) */
   const PROAR = { Neck1: [0, 0.17, 0], Neck2: [0, 0.13, 0], Neck3: [0, 0.09, 0], Head: [0, 0.1, 0], Jaw: [0, -0.85, 0], Spine1: [0, 0.08, 0], Spine2: [0, 0.14, 0], Hips: [0, -0.05, 0], Tail2: [0, 0.1, 0], Tail3: [0, 0.1, 0], '*Arm': [-0.35, 0.15, 0.75], '*Hand': [0.3, 0, 0] };
   const PDUCK = { Neck1: [0, -0.18, 0], Neck2: [0, -0.1, 0], Neck3: [0, -0.06, 0], Head: [0, -0.12, 0], Spine2: [0, -0.08, 0], '*Arm': [0, -0.25, -0.2] };
-  const BOMBS = [[1.2, -15, 9], [1.55, 13, -2], [1.95, -5, 17], [2.35, 17, 12], [2.8, -20, -4], [3.25, 6, 20]];   /* lavabomber som slår ned i sjøen etter eksplosjonen: [sekunder etter brølet, x, z] */
+  /* Lavabombene i filmen: [kastes (s etter brølet), flytid, x, z, størrelse]. De slår ned på slagene i låta (0:58,58 · 58,83 · 59,08 · 59,33 · 59,58). */
+  const PBOMB = [[0.12, 2.38, 13, -8, 1.3], [0.3, 2.45, -24, -30, 1], [0.5, 2.5, 26, -34, 1.05], [0.62, 2.63, -10, -17, 1.1], [0.8, 2.7, 20, -15, 1.15]];
+  /* Fontenene i lavasjøen rundt ham: [x, z, høyde, forsinkelse]. Trykket kommer fra fjellet, så de bakerste bryter ut først. */
+  const PFNT = [[14, -16, 1.25, 0], [-24, -8, 1.1, 0.06], [8.5, -1, 1.15, 0.14], [-9, 4, 1, 0.2]];
+  /* Lynet inne i skyen, på slagene: [når, styrke, x, z (fra fjellets akse), radius]. */
+  const PLT = [[PT.B2, 1, 26, 46, 70], [sL(57.33), 0.8, -84, 96, 80], [sL(57.58), 0.9, 96, 118, 76], [sL(58.58), 1, -34, 186, 92], [sL(59.33), 0.85, 128, 74, 80], [sL(59.58), 0.7, -110, 150, 84]];
+  const pdbg = S => { if (window.SKCAM) K.cam(...window.SKCAM); if (window.HOOK) window.HOOK(S); };   /* kroken til prøveverktøyet (eget kamera, egen kode etter act); gjør ingenting i appen */
   G3D.def('c3:383p', {
-    len: PT.E, R: PT.R, at: 0, models: ['groudon', 'groudon_primal'],
+    len: PT.E, R: PT.R, at: 168.1, models: ['groudon', 'groudon_primal'],   /* at: låta står på tl.pre når filmen starter (verktøyene spiller låta derfra, med sløyfa) */
     make(K, T) {
       const S = crater(T), g = S.gr = K.figure(K.model('groudon')), p = S.pg = primalFig(); S.scene.add(g.root); S.scene.add(p.root); S.figs.push(g, p);
       g.set('uGl', 0.5); p.set('uGl', 0.8); g.set('uWk', 0.7); p.set('uWk', 0.7);
@@ -119,27 +244,51 @@
         return { p: [GEM[0] + d[0] * GEMR * 0.85, GEM[1] + d[1] * GEMR * 0.85, GEM[2] + d[2] * GEMR * 0.85], v: [d[0] * v, d[1] * v + 5, d[2] * v], r: [(rnd(i, sd + 3) - 0.5) * 12, (rnd(i, sd + 4) - 0.5) * 12, (rnd(i, sd + 5) - 0.5) * 12], s: rnd(i, sd + 6), b: rnd(i, sd + 7) * 0.06, l: 2.8, z: big ? 0.8 + rnd(i, sd + 8) * 0.6 : 0.25 + rnd(i, sd + 9) * 0.45 }; }, { c, em, grey: 0, sy: 0.5, id: 202 });
       S.sh1 = sh(54, '#3c1a40', 0.25, 71); S.sh2 = sh(34, '#ff7ad0', 0.75, 91); S.scene.add(S.sh1); S.scene.add(S.sh2);
       S.puff = K.pts(48, i => { const a = rnd(i, 21) * TAU, el = (rnd(i, 22) - 0.3) * 2, v = 3 + rnd(i, 23) * 7; return { p: [GEM[0] + cos(a) * cos(el) * 5, GEM[1] + sin(el) * 5, GEM[2] + sin(a) * cos(el) * 5], v: [cos(a) * cos(el) * v, sin(el) * v + 1, sin(a) * cos(el) * v], b: rnd(i, 24) * 0.2, l: 1.4 + rnd(i, 25) * 1, z: 4 + rnd(i, 26) * 5 }; }, { t0: -1e5, shade: 1, drag: 1.5, sz0: 0.4, sz1: 2, px: 60, c: ['#ffd0f0', '#b05a9c', '#3a1c3c'], a: 0.5, fade: 0.25 }); S.scene.add(S.puff);
-      volcano(S, T, 1);
+      volcano(S, T, 1); burn(S, T); S.boom2 = PT.B2 - PT.R;
+      S.bomb = bombs(S, PBOMB, 1800);
+      /* Smellet i fjellet (filmens eget; volcano sine gnister er lys oppå lys og blir en hvit ball): en smal stråle av lava fra flenga (pjet), blokker som
+         kastes ut (pblk), og en sky av aske som velter opp og ut, glødende innenfra og mørk utenpå (pcau). */
+      { const V = S.V, VT = [V.x, V.h * 0.8, V.z], hc = ['#fff2a8', '#ffa020', '#c83008'], d2 = PT.B2 - PT.R, add = m => { S.scene.add(m); return m; };
+        S.pjet = add(K.pts(70, i => { const a = rnd(i, 2101) * TAU, q = rnd(i, 2102); return { p: [VT[0] + cos(a) * 5 * q, VT[1], VT[2] + sin(a) * 5 * q], v: [cos(a) * (3 + 9 * q) + 2, 46 + rnd(i, 2103) * 52, sin(a) * (3 + 9 * q)], b: rnd(i, 2104) * 2.6, l: 2.6, z: 3 + rnd(i, 2105) * 3.5 }; }, { loop: 1, add: 1, g: 34, px: 150, sz0: 1.1, sz1: 0.6, c: hc, a: 0, fade: 0.6 }));
+        S.pblk = add(K.pts(22, i => { const a = rnd(i, 2111) * TAU, el = 0.5 + rnd(i, 2112) * 0.9, v = 70 + rnd(i, 2113) * 80; return { p: [VT[0], VT[1] + 4, VT[2]], v: [cos(a) * cos(el) * v, sin(el) * v, sin(a) * cos(el) * v], b: rnd(i, 2114) * 0.12 + (i % 3 === 0 ? d2 : 0), l: 3 + rnd(i, 2115) * 1.5, z: 3.2 + rnd(i, 2116) * 3 }; }, { t0: -1e5, add: 1, g: 38, px: 150, sz0: 1.15, sz1: 0.6, c: ['#fff6d0', '#ffa830', '#b82a08'], fade: 0.8 }));
+        S.pfire = add(K.pts(44, i => { const a = rnd(i, 2131) * TAU, el = 0.1 + rnd(i, 2132) * 1.3, v = 34 + rnd(i, 2133) * 44; return { p: [VT[0] + cos(a) * 5, VT[1] + 3, VT[2] + sin(a) * 5], v: [cos(a) * cos(el) * v, sin(el) * v + 10, sin(a) * cos(el) * v], b: rnd(i, 2134) * 0.1 + (i % 3 === 0 ? d2 : 0), l: 1.6 + rnd(i, 2135) * 1.0, z: 44 + rnd(i, 2136) * 44 }; }, { t0: -1e5, shade: 1, drag: 1.7, sz0: 0.3, sz1: 1.7, px: 150, c: ['#ffb44a', '#e04a16', '#2a100e'], a: 0.96, fade: 0.7 }));
+        S.pcau = add(K.pts(56, i => { const a = rnd(i, 2121) * TAU, el = 0.25 + rnd(i, 2122) * 1.2, v = 46 + rnd(i, 2123) * 50; return { p: [VT[0] + cos(a) * 8, VT[1] + 2, VT[2] + sin(a) * 8], v: [cos(a) * cos(el) * v, sin(el) * v * 1.25 + 14, sin(a) * cos(el) * v], b: 0.15 + rnd(i, 2124) * 0.3 + (i % 4 === 0 ? d2 : 0), l: 4 + rnd(i, 2125) * 2, z: 46 + rnd(i, 2126) * 60 }; }, { t0: -1e5, shade: 1, drag: 1.6, sz0: 0.3, sz1: 1.9, px: 150, c: ['#a04a22', '#341a17', '#100b0c'], a: 0.95, fade: 0.6 })); S.pcau.renderOrder = -1;
+        /* Blokkene som kastes ut til alle kanter, med røykhale (bombs): de tegner utbruddet som stråler fra toppen. */
+        S.parc = bombs(S, [[0, 3.2, -260, -250, 1.6], [0.05, 3.6, 150, -200, 1.7], [0.1, 3, -150, -420, 1.4], [0.12, 3.4, 60, -520, 1.5], [0.5, 3.3, -330, -330, 1.6], [0.55, 3.5, 230, -320, 1.7], [0.6, 2.9, -90, -160, 1.5], [0.62, 3.1, 40, -150, 1.5]], 2200); }
+      /* Fontenene i lavasjøen: en søyle av rennende lava med fillete kanter og topp (en maske, så den er en form og ikke lys oppå lys), klumper som kastes av toppen
+         og faller rundt den, noen gnister, og et lys ved foten. */
+      const hot = ['#ffe9a0', '#ff8a1c', '#a82a06'], fg = new T.LatheGeometry([[1, 0], [0.66, 0.22], [0.52, 0.5], [0.6, 0.76], [0.92, 0.94], [1.1, 1]].map(q => new T.Vector2(q[0], q[1])), 16);
+      S.fnt = PFNT.map(([x, z, hs, dl], k) => { const H = 11.5 * hs, R = 1.7 * Math.sqrt(hs), m = new T.Mesh(fg, K.shader(K.GLSL.VS, FS_FNT, { uSd: K.uv(k * 3.7 + 1), uOn: K.uv(0) }, { side: T.DoubleSide })); m.position.set(x, -0.1, z); m.scale.set(R, H, R); m.visible = false; S.scene.add(m);
+        const mk = (n, sd, o, f) => { const q = K.pts(n, f, Object.assign({ g: 30, px: 60, floor: 0, near: 5, c: hot, fade: 0.97 }, o)); q.position.set(x, 0, z); S.scene.add(q); return q; };
+        const clot = mk(26, 1950 + k * 9, { loop: 1, shade: 1, a: 0 }, i => { const a = rnd(i, 1951 + k) * TAU, w = 1.4 + rnd(i, 1952 + k) * 3.4, v = 6 + rnd(i, 1953 + k) * 9; return { p: [cos(a) * R * 0.7, H * (0.72 + rnd(i, 1954 + k) * 0.22), sin(a) * R * 0.7], v: [cos(a) * w, v, sin(a) * w], b: rnd(i, 1955 + k) * 2.4, l: (v + Math.sqrt(v * v + 60 * H * 0.8)) / 30, z: 0.9 + rnd(i, 1956 + k) * 1.1 }; });
+        const one = mk(30, 1910 + k * 9, { t0: -1e5, shade: 1 }, i => { const a = rnd(i, 1911 + k) * TAU, w = 1 + rnd(i, 1912 + k) * 4.5, v = (20 + rnd(i, 1913 + k) * 12) * Math.sqrt(hs); return { p: [cos(a) * R * 0.5, 0.2, sin(a) * R * 0.5], v: [cos(a) * w, v, sin(a) * w], b: rnd(i, 1914 + k) * 0.1, l: 2 * v / 30 + 0.05, z: 1 + rnd(i, 1915 + k) * 1.3 }; });
+        const sp = mk(18, 1990 + k * 9, { t0: -1e5, add: 1 }, i => { const a = rnd(i, 1991 + k) * TAU, w = 2 + rnd(i, 1992 + k) * 6, v = (22 + rnd(i, 1993 + k) * 16) * Math.sqrt(hs); return { p: [0, 0.3, 0], v: [cos(a) * w, v, sin(a) * w], b: rnd(i, 1994 + k) * 0.08, l: 2 * v / 30, z: 0.35 + rnd(i, 1995 + k) * 0.4 }; });
+        const lt = K.light(1, '#ff8a2a'); lt.position.set(x, 1.6, z); S.scene.add(lt);
+        return { m, clot, one, sp, lt, x, z, hs, dl, H }; });
       return S;
     },
     act(S, t, o) {
-      const g = S.gr, p = S.pg, U = K.U(), L = S.lava.material.uniforms, pre = t < PT.S, gm = S.gem.material.uniforms;
+      const g = S.gr, p = S.pg, U = K.U(), L = S.lava.material.uniforms, pre = t < PT.S, gm = S.gem.material.uniforms, R1 = t >= PT.R, V = S.V;
       g.root.visible = t < PT.G1 - 0.03; p.root.visible = !pre;
-      /* 1 Groudon (vanlig form): rasende, sammentrukket og skjelvende, mens det rosa lyset samler seg om ham og han blir til lys. */
-      const str = io(seg(t, 0, 0.9)); g.root.position.set(HOME[0] + 0.03 * sin(t * 61) * str, HOME[1], HOME[2]);
+      /* 1 Groudon (vanlig form): rasende, sammentrukket og skjelvende. Lyset samler seg om ham i støt på trommeslagene: for hvert slag er han mer lys, til han er bare lys. */
+      const pul = PT.H.reduce((s, h) => max(s, hit(t, h, 0.26)), 0), nh = PT.H.filter(h => t >= h).length / PT.H.length, lastH = PT.H.reduce((s, h) => t >= h ? h : s, -9);
+      const str = io(seg(t, 0, 0.7)); g.root.position.set(HOME[0] + 0.03 * sin(t * 61) * str, HOME[1], HOME[2]);
       g.add(STAT, 0.2); g.add(DUCK, 0.9 * str); g.add({ Jaw: [0, -0.3, 0] }, str); g.rot('Jaw', 0, 0.03 * sin(t * 48) * str, 0);
-      g.mats.Eye1.uniforms.uUvOff.value.set(0, 0.75); g.set('uStone', 0); g.set('uCrack', 0); g.set('uFlC', '#ffb4e6'); g.set('uFlK', 0.92 * io(seg(t, 0.3, PT.G0 + 0.3)) + 0.08 * seg(t, PT.G0, PT.G1));
-      /* 2 Krystallen: vokser fram rastrert (han skimtes inni), lukker seg på G1, dreier sakte, mørkner (D0–D1) og slår sprekker av lys fra K til den knuses på S. */
-      const gk = seg(t, PT.G1 - 0.03, PT.G1 + 0.3), spin = 0.22 * (t - PT.G1); S.gem.visible = t >= PT.G1 - 0.03 && pre; S.gem.scale.setScalar(GEMR * (pre ? mix(0.8, 1, back(gk, 1.6)) + 0.012 * sin(t * 40) * seg(t, PT.K, PT.S) : 1)); S.gem.rotation.set(0.08 * sin(spin * 1.3), spin, 0);
-      gm.uAl.value = 1; gm.uDark.value = io(seg(t, PT.D0, PT.D1)) * 0.96; gm.uCrk.value = t >= PT.K ? 1 : 0; gm.uCrkR.value = 2.3 * eo(seg(t, PT.K, PT.S - 0.1)); lerpC(gm.uCrkC, '#ffc21e', '#fff6c0', seg(t, PT.S - 0.5, PT.S));
-      S.motes.visible = t < PT.G1 + 0.2; S.motes.material.uniforms.uA.value = seg(t, 0.1, 0.5) * (1 - seg(t, PT.G1 - 0.2, PT.G1 + 0.2));
-      K.face(S.aura); S.aura.position.set(GEM[0], GEM[1], GEM[2] - 1); S.aura.scale.setScalar(15 + 9 * seg(t, 0, PT.G1) + 5 * ei(seg(t, PT.G0, PT.G1))); S.aura.material.uniforms.uA.value = t < PT.D1 ? (0.55 * io(seg(t, 0.2, PT.G0 + 0.4)) + 0.4 * ei(seg(t, PT.G0, PT.G1)) * (t < PT.G1 ? 1 : 0)) * (1 - 0.85 * seg(t, PT.D0, PT.D1)) + 0.5 * hit(t, PT.G1, 0.4) : 0; S.aura.visible = t < PT.D1;
+      g.mats.Eye1.uniforms.uUvOff.value.set(0, 0.75); g.set('uStone', 0); g.set('uCrack', 0); g.set('uFlC', '#ffb4e6'); g.set('uFlK', min(1, 0.22 * io(seg(t, 0.12, 0.5)) + 0.66 * nh + 0.2 * pul + 0.2 * seg(t, PT.G1 - 0.2, PT.G1)));
+      /* 2 Krystallen: står der hel i blinket (G1) og faller på plass, dreier sakte, og lyset i den dør i åtte trinn på virvelen. I stillheten står den svart og helt i ro
+         med forsiden mot kameraet: Ω tennes (O), sprekkene brer seg fra tegnet (K), den skjelver, og lyset presser på i suget før slaget (SW). */
+      const gk = seg(t, PT.G1 - 0.03, PT.G1 + 0.3), nd = PT.D.reduce((s, h) => s + eo(seg(t, h - 0.02, h + 0.05)), 0) / PT.D.length, spin = CYAW - 0.22 * max(0, PT.C - t);
+      S.gem.visible = t >= PT.G1 - 0.03 && pre; S.gem.scale.setScalar(GEMR * (pre ? mix(0.8, 1, back(gk, 1.6)) + 0.012 * sin(t * 40) * seg(t, PT.K, PT.S) : 1)); S.gem.rotation.set(0.08 * sin((spin - CYAW) * 1.3), spin, 0);
+      gm.uAl.value = 1; gm.uDark.value = 0.96 * nd; gm.uCrk.value = t >= PT.K ? 1 : 0; gm.uCrkR.value = 2.3 * (0.6 * eo(seg(t, PT.K, PT.SW)) + 0.4 * ei(seg(t, PT.SW, PT.S - 0.04))); lerpC(gm.uCrkC, '#ffc21e', '#fff6c0', seg(t, PT.SW, PT.S));
+      S.motes.visible = t < PT.G1 + 0.2; S.motes.material.uniforms.uA.value = seg(t, 0.1, 0.5) * (1 - seg(t, PT.G1 - 0.2, PT.G1 + 0.2)) * (0.75 + 0.5 * pul);
+      K.face(S.aura); S.aura.position.set(GEM[0], GEM[1], GEM[2] - 1); S.aura.scale.setScalar(15 + 9 * seg(t, 0, PT.G1) + 5 * pul); S.aura.visible = t < PT.C;
+      S.aura.material.uniforms.uA.value = t < PT.G1 ? 0.25 * io(seg(t, 0.1, 0.5)) + 0.45 * nh + 0.25 * pul : (0.42 + 0.5 * hit(t, PT.G1, 0.4) + 0.2 * hit(t, PT.GL, 0.3)) * (1 - nd);
       const om = t >= PT.O && pre ? min(1, (t - PT.O) / 0.25) * (0.82 + 0.18 * sin((t - PT.O) * (5 + 9 * seg(t, PT.K, PT.S)))) : 0; S.om = om;
-      /* 3 Krystallen knuses (S): skår og støv, et lysglimt, og Primal Groudon står der. Han kommer ut av lyset, reiser seg sakte, trekker seg sammen og brøler (R). */
+      /* 3 Krystallen knuses (S): skår og støv, et lysglimt, og Primal Groudon står der. Han kommer ut av lyset, reiser seg sakte, og lader opp (Q til R): synker sammen,
+         skjelver mer og mer, årene blusser i takt, og lavaen rundt ham koker, før brølet. */
       S.sh1.at(t, PT.S, { g: 16 }); S.sh2.at(t, PT.S, { g: 16 }); S.puff.material.uniforms.uT0.value = PT.S;
-      K.face(S.burst); S.burst.position.set(GEM[0], GEM[1], GEM[2]); S.burst.scale.setScalar(pre ? 10 + 16 * seg(t, PT.S - 0.35, PT.S) : 26 + 70 * eo(seg(t, PT.S, PT.S + 0.5))); S.burst.material.uniforms.uA.value = pre ? 0.8 * ei(seg(t, PT.S - 0.4, PT.S)) : 0.7 * hit(t, PT.S, 0.28); S.burst.visible = t > PT.S - 0.4 && t < PT.S + 0.3;
-      /* Han reiser seg, og så lader han opp (Q til R): synker sammen, skjelver mer og mer, årene blusser i takt, og lavaen rundt ham koker, før brølet. */
-      const rise = io(seg(t, PT.S + 0.2, PT.Q - 0.3)), chg = t < PT.R ? seg(t, PT.Q, PT.R) : 0, rw = t < PT.R ? 0 : back(seg(t, PT.R, PT.R + 0.3), 2.6) * (1 - 0.35 * io(seg(t, PT.R + 2.2, PT.E))), ry = PHOME[1] - 0.4 * sq(t, PT.S, 11, 4) + 0.14 * sq(t, PT.R, 14, 4) - 0.12 * io(chg), chp = (t - PT.Q) * (9 + 7 * chg);
+      K.face(S.burst); S.burst.position.set(GEM[0], GEM[1], GEM[2]); S.burst.scale.setScalar(pre ? 10 + 16 * seg(t, PT.SW, PT.S) : 26 + 70 * eo(seg(t, PT.S, PT.S + 0.5))); S.burst.material.uniforms.uA.value = pre ? 0.8 * ei(seg(t, PT.SW, PT.S)) : 0.7 * hit(t, PT.S, 0.28); S.burst.visible = t > PT.SW && t < PT.S + 0.3;
+      const rise = io(seg(t, PT.S + 0.25, PT.W)), chg = t < PT.R ? seg(t, PT.Q, PT.R) : 0, rw = t < PT.R ? 0 : back(seg(t, PT.R, PT.R + 0.3), 2.6) * (1 - 0.3 * io(seg(t, PT.R + 2.6, PT.E))), ry = PHOME[1] - 0.4 * sq(t, PT.S, 11, 4) + 0.14 * sq(t, PT.R, 14, 4) - 0.12 * io(chg), chp = (t - PT.Q) * (9 + 7 * chg);
       p.root.position.set(PHOME[0] + 0.03 * sin(t * 53) * chg * chg, ry, PHOME[2]);
       p.add(PDUCK, (1 - 0.8 * rise) + kf(t, [[PT.Q, 0], [PT.R - 0.5, 0.75, io], [PT.R - 0.16, 0.98, io], [PT.R - 0.03, 1.22, ei], [PT.R + 0.1, 0, eo]])); S.chg = chg;
       const br = 0.03 * sin(t * 3.1) * (!pre ? 1 : 0); p.add({ Spine1: [0, br, 0], Spine2: [0, br * 0.6, 0], Jaw: [0, -0.16 * rise * (1 - rw), 0] }, 1); for (let i = 1; i <= 5; i++) p.rot('Tail' + i, 0, 0, 0.05 * sin(t * 2.1 + i * 0.55));
@@ -148,38 +297,62 @@
       /* Årene av magma: gløder fra han kommer fram, pulserer som et hjerte, og blusser i brølet. */
       veins(p, pre ? 0 : 0.95 + 0.22 * sin(t * 4.2) + 0.5 * rw + 0.6 * hit(t, PT.S, 0.8) + chg * (0.35 + 0.3 * sin(chp)), c01(0.3 * rw + hit(t, PT.S, 0.7) + hit(t, PT.R, 0.6)));
       p.set('uFlC', '#fff4c8'); p.set('uFlK', pre ? 0 : 0.9 * (1 - eo(seg(t, PT.S, PT.S + 0.4))));
-      /* Stedet: lavaen blir varmere for hvert trinn, og lyset skifter fra rosa (krystallen) til hvitglødende. */
-      const post = pre ? 0 : 1, hot = 0.75 + 0.1 * seg(t, PT.O, PT.S) + 0.15 * post; S.wake = hot; S.heat = 0;
-      L.uHeat.value = 1 + 0.12 * seg(t, PT.O, PT.S) + 0.22 * post + 0.25 * hit(t, PT.S, 1.2) + 0.2 * hit(t, PT.R, 1.6) + 0.25 * chg; L.uBri.value = 0.95 - 0.12 * seg(t, PT.D0, PT.D1) * (1 - post); U.uGlow.value = 1 + 0.2 * post + 0.25 * rw;
-      if (pre) { col3(U.uKeyC, c01(seg(t, 0.2, PT.G1) - seg(t, PT.D0, PT.D1) * 0.5), '#fff0dc', '#ffdcee', '#ffc8ea'); lerpC(U.uShC, '#3c1a22', '#3a1830', seg(t, 0.2, PT.G1)); } else { lerpC(U.uKeyC, '#fff8e0', '#fff0d2', seg(t, PT.S, PT.S + 0.6)); lerpC(U.uShC, '#3c1a22', '#42181a', 1); } U.uRimK.value = 1;
-      const ring = (i, x, z, t0, v, d, a) => L.uRing.value[i].set(x, z, 1.5 + (t - t0) * v, t >= t0 ? a * hit(t, t0, d) : 0);
-      const bi = BOMBS.map(b => t >= PT.R + b[0]), bn = bi.lastIndexOf(true), bb = bn >= 0 ? BOMBS[bn] : null;
-      ring(0, GEM[0], GEM[2], t < PT.O ? PT.G1 : t < PT.S ? PT.O : t < PT.Q + 0.25 ? PT.S : PT.Q + 0.25, t < PT.S ? 12 : t < PT.Q + 0.25 ? 26 : 9, t < PT.Q + 0.25 ? 1.6 : 1.1, 1); ring(1, PHOME[0], PHOME[2], PT.R, 30, 1.7, 1); ring(2, bb ? bb[1] : 0, bb ? bb[2] : 0, bb ? PT.R + bb[0] : 1e5, 15, 1.5, 1); ring(3, bn > 0 ? BOMBS[bn - 1][1] : 0, bn > 0 ? BOMBS[bn - 1][2] : 0, bn > 0 ? PT.R + BOMBS[bn - 1][0] : 1e5, 15, 1.5, 1);
-      L.uWade.value.set(PHOME[0], PHOME[2] + 0.3, pre ? 9.5 : 11, 0.95 + 0.25 * post + 0.5 * hit(t, PT.S, 1.2));
+      /* Himmelen brenner (fra brølet): toppen er borte, søylen står, taket av aske brer seg inn over oss (rk), skredene går, og lynet går inne i skyen på slagene. */
+      const ra = t - PT.R - 0.35, rk = seg(t, PT.R + 0.8, PT.R + 3.4), lt = PLT.filter(q => t >= q[0] && t < q[0] + 0.6).slice(-4).map(q => [t - q[0], q[1], q[2], q[3], q[4]]);
+      burnAct(S, t, { top: t >= PT.R + 0.04, roofR: ra > 0 ? 36 + 190 * Math.pow(ra, 0.67) : 0, roofA: seg(t, PT.R + 0.35, PT.R + 0.8), hot: 1 + 0.6 * hit(t, PT.R, 3), col: seg(t, PT.R + 0.25, PT.R + 1.1), flow: R1 ? [PT.R + 0.2, PT.R + 0.2, PT.R + 0.2, PT.R + 0.2] : null, L: lt });
+      S.bomb.at(R1 ? PT.R : -1e5); S.bomb.show(R1);
+      /* Stedet: lavaen blir varmere for hvert trinn, og lyset skifter fra rosa (krystallen) til hvitglødende. Mens lyset i krystallen dør, mørkner alt (det mørke
+         rommet), og i stillheten står stedet nesten svart. Når taket lukker seg, forsvinner lyset ovenfra, og bare ilden nedenfra er igjen. */
+      const post = pre ? 0 : 1, dk = pre ? nd : 0, hot = 0.75 + 0.1 * seg(t, PT.O, PT.S) + 0.15 * post; S.wake = hot * (1 - 0.5 * dk); S.heat = 0; S.dk = dk; S.rk = rk;
+      L.uHeat.value = min(1.42, 1 + 0.12 * seg(t, PT.O, PT.S) + 0.22 * post + 0.2 * hit(t, PT.S, 1.2) + 0.12 * hit(t, PT.R, 1.6) + 0.14 * chg + 0.12 * hit(t, PT.FN, 1.5)) - 0.25 * dk; L.uBri.value = 0.95 - 0.5 * dk - 0.14 * rk; U.uGlow.value = (1 + 0.2 * post + 0.25 * rw + 0.25 * rk) * (1 - 0.55 * dk);
+      if (pre) { col3(U.uKeyC, c01(seg(t, 0.2, PT.G1)), '#fff0dc', '#ffdcee', '#ffc8ea'); lerpC(U.uShC, '#3c1a22', '#3a1830', seg(t, 0.2, PT.G1)); U.uKeyC.value.multiplyScalar(1 - 0.62 * dk); U.uShC.value.multiplyScalar(1 - 0.5 * dk); }
+      else { lerpC(U.uKeyC, '#fff8e0', '#fff0d2', seg(t, PT.S, PT.S + 0.6)); lerpC(U.uShC, '#3c1a22', '#42181a', 1); if (rk > 0) { lerpC(U.uKeyC, '#fff0d2', '#d8a080', rk); lerpC(U.uShC, '#42181a', '#2e0f11', rk); } if (S.rlit > 0.02) { const c = U.uKeyC.value, k = 0.3 * min(1, S.rlit); c.setRGB(mix(c.r, 0.86, k), mix(c.g, 0.78, k), mix(c.b, 1, k)); } }
+      U.uRimK.value = 1; U.uFog.value.set(60 - 16 * rk, 300 - 50 * rk, 0.8 + 0.08 * rk);
+      for (const m of S.cry) m.uniforms.uPulse.value = 0.5 * (1 - 0.7 * dk);
+      /* Ringene i lavaen: lyset som trekkes inn mot ham på slagene, krystallen, tegnet, knuset, brølet, og trykkbølgen fra fjellet som når ham på FN. */
+      const ring = (i, x, z, r, a) => L.uRing.value[i].set(x, z, r, a), age = t - lastH;
+      if (t < PT.G1) ring(0, GEM[0], GEM[2], 17 - 14 * eo(c01(age / 0.26)), age >= 0 && age < 0.3 ? 0.8 * (1 - age / 0.3) : 0);
+      else { const t0 = t < PT.O ? PT.G1 : t < PT.S ? PT.O : PT.S; ring(0, GEM[0], GEM[2], 1.5 + (t - t0) * (t < PT.O ? 12 : t < PT.S ? 5 : 26), (t < PT.O ? 1 - nd : 1) * hit(t, t0, 1.6)); }
+      ring(1, PHOME[0], PHOME[2], 1.5 + (t - PT.R) * 30, R1 ? 0.55 * hit(t, PT.R, 1.7) : 0);
+      { const dv = Math.hypot(PHOME[0] - V.x, PHOME[2] - V.z), v = dv / (PT.FN - PT.R); ring(2, V.x, V.z, max(1, (t - PT.R) * v), R1 && t < PT.FN + 0.5 ? 0.85 * seg(t, PT.R + 0.6, PT.R + 1.4) * (1 - seg(t, PT.FN, PT.FN + 0.5)) : 0); }
+      ring(3, PHOME[0], PHOME[2], 5 + (t - PT.FN) * 16, t >= PT.FN ? hit(t, PT.FN, 1.5) : 0);
+      L.uWade.value.set(PHOME[0], PHOME[2] + 0.3, pre ? 9.5 : 11, (0.95 + 0.25 * post + 0.5 * hit(t, PT.S, 1.2)) * (1 - 0.5 * dk));
       S.fx(S.spl[0], PT.S, GEM[0], 0, GEM[2] + 1); S.fx(S.dust[0], PT.S, GEM[0], 0.2, GEM[2] + 1);
-      const k0 = max(0, min(BOMBS.length - 3, bn - 2)); for (let i = 0; i < 3; i++) { const b = BOMBS[k0 + i]; S.fx(S.spl[i + 1], PT.R + b[0], b[1], 0, b[2]); }
       S.drip.position.set(PHOME[0], ry + 1, PHOME[2]); S.drip.visible = !pre && t < PT.S + 3; S.drip.material.uniforms.uPx.value = 150 * (1 - seg(t, PT.S + 1.6, PT.S + 3));
-      S.ring.position.set(GEM[0], 0.6, GEM[2]); const rt0 = t >= PT.R ? PT.R : PT.S, ra = t >= PT.S ? hit(t, rt0, 1) : 0; S.ring.scale.setScalar(3 + (t - rt0) * 46); S.ring.material.uniforms.uA.value = ra; S.ring.visible = ra > 0;
-      S.embers.material.uniforms.uPx.value = 120 * (1 + 0.9 * post);
-      /* Vulkanen (Jazz 18.11, runde 6): utbruddet starter IKKE før brølet. Fram til da ryker den bare tyngre. I brølet eksploderer toppen, en ny eksplosjon følger like etter,
-         fontenen står opp, askeskyen velter ut over himmelen, og det regner lavabomber over sjøen. */
-      const R1 = t >= PT.R; volcAct(S, t, 0.42 + 0.1 * seg(t, PT.G1, PT.D1) + 0.12 * seg(t, PT.O, PT.S) + 0.2 * (S.chg || 0) + (R1 ? 1.3 + 0.5 * hit(t, PT.R, 2.5) : 0), PT.R, PT.R);
-      S.erupt = R1 ? 1.7 * eo(seg(t, PT.R, PT.R + 1.4)) : 0.12 * seg(t, PT.O, PT.S); S.smoke = R1 ? 0.8 * seg(t, PT.R + 0.6, PT.R + 3) : 0; S.lit = pre ? 0.7 - 0.2 * seg(t, PT.D0, PT.D1) + 0.15 * seg(t, PT.K, PT.S) : R1 ? 1 : 0.8; S.sun = R1 ? 0.75 * seg(t, PT.R + 0.3, PT.R + 1.3) : 0;
+      S.ring.position.set(GEM[0], 0.6, GEM[2]); const rt0 = PT.S, ra2 = t >= PT.S ? 0.4 * hit(t, rt0, 0.8) : 0; S.ring.scale.setScalar(3 + (t - rt0) * 46); S.ring.material.uniforms.uA.value = ra2; S.ring.visible = ra2 > 0;
+      S.embers.material.uniforms.uPx.value = 120 * (1 + 0.4 * post + 0.2 * rk); S.embers.material.uniforms.uA.value = 1 - 0.6 * dk;
+      /* Fontenene: det første kastet idet trykket når dem; søylen skyter opp forbi høyden sin og faller på plass, og den puster. */
+      for (const f of S.fnt) { const t0 = PT.FN + f.dl, a = t - t0, on = a >= 0, up = back(seg(a, 0, 0.42), 2.2) * (0.92 + 0.08 * sin(t * 6.3 + f.x));
+        f.m.visible = on; f.m.material.uniforms.uOn.value = up; f.one.material.uniforms.uT0.value = f.sp.material.uniforms.uT0.value = on ? t0 : -1e5; f.one.visible = f.sp.visible = on && a < 2.4; f.clot.visible = a > 0.3; f.clot.material.uniforms.uA.value = seg(a, 0.3, 0.7);
+        K.face(f.lt); f.lt.scale.setScalar(8 + 6 * hit(a, 0, 0.5)); f.lt.material.uniforms.uA.value = on ? 0.26 + 0.4 * hit(a, 0, 0.4) : 0; f.lt.visible = on; }
+      /* Vulkanen (Jazz 18.11, runde 6): utbruddet starter IKKE før brølet. Fram til da ryker den bare tyngre, og i stillheten holder også den pusten. */
+      volcAct(S, t, (0.42 + 0.1 * seg(t, 0, PT.G1) + 0.2 * (S.chg || 0)) * (1 - 0.45 * dk) + 0.12 * seg(t, PT.S, PT.Q) + (R1 ? 1.3 + 0.5 * hit(t, PT.R, 2.5) : 0), PT.R, PT.R);
+      for (const q of [S.vboom, S.vboom2, S.vfnt, S.vash, S.vrain]) q.visible = !R1; S.vspat.visible = t < PT.R + 0.3;
+      for (const q of [S.pblk, S.pcau, S.pfire]) { q.material.uniforms.uT0.value = R1 ? PT.R : -1e5; q.visible = R1; } S.parc.at(R1 ? PT.R : -1e5); S.parc.show(R1); S.pjet.visible = R1; S.pjet.material.uniforms.uA.value = 0.5 * seg(t, PT.R, PT.R + 0.3);
+      if (R1) { const a = t - PT.R; S.vflash.scale.setScalar(a < 0.25 ? 50 + 120 * eo(c01(a / 0.2)) : 60); S.vflash.material.uniforms.uA.value = max(0.6 * hit(t, PT.R, 0.16), 0.4 * hit(t, PT.B2, 0.14), 0.1); S.vflash.visible = true; S.boom = 0.8 * hit(t, PT.R, 0.7); }   /* blinket er kort (to–fire bilder) */
+      S.erupt = R1 ? 1.7 * eo(seg(t, PT.R, PT.R + 1.4)) : 0; S.smoke = R1 ? 0.5 * seg(t, PT.R + 0.6, PT.R + 3) : 0; S.lit = pre ? 0.72 - 0.42 * dk : R1 ? 1 - 0.25 * rk : 0.82; S.sun = 0; S.roofK = R1 ? seg(t, PT.R + 0.4, PT.R + 1.6) : 0;
     },
     shots: [
-      /* 1 Lyset samler seg om ham, og krystallen vokser fram (lavt, forfra). */
-      [0, (S, u, a, t) => { const e = io(u); K.cam(mix(4.4, 3.4, e), 1.7, mix(22, 19, e), -0.4, 5, 2.6, 46, -0.03); S.post.fl = max(1 - seg(t, 0, 0.35), 0.85 * seg(t, PT.G1 - 0.14, PT.G1)); S.post.flc = t < 1 ? '#ffffff' : '#ffd6f2'; S.post.sh = 1.2 * seg(t, 0, 0.6); }],
-      /* 2 Krystallen: kameraet glir sakte inn fra siden, med vulkanen bak. Den mørkner, Ω-tegnet tennes, sprekkene brer seg, og den knuses mens vulkanen bryter ut. */
-      [PT.G1 - 0.03, (S, u, a, t) => { const e = io(seg(t, PT.G1, PT.S)); K.cam(mix(-6, -4.5, e), mix(2, 2.7, e), mix(23.5, 18.5, e), mix(-2.3, -0.85, e), mix(6.6, 6.2, e), mix(3.8, -1.2, e), 46, 0.03);   /* krystallen og vulkanen ligger begge innenfor x 64–448 (smal skjerm) */
-        S.post.fl = max(t < PT.G1 ? 0.85 : 0.85 * hit(t, PT.G1, 0.3), 0.5 * hit(t, PT.O, 0.22), t < PT.S ? ei(seg(t, PT.S - 0.2, PT.S)) * 0.8 : 0.9 * hit(t, PT.S, 0.1)); S.post.flc = t < PT.D0 ? '#ffd6f2' : '#fff2b8';
-        S.post.sh = 1.5 * hit(t, PT.O, 0.5) + 2.6 * seg(t, PT.K, PT.S) * (t < PT.S ? 1 : 0) + 6 * hit(t, PT.S, 0.6); S.post.heat = 0.6; }],
-      /* 3 Primal Groudon i ett langt nærbilde: fra kneet med Ω-merket og oppover kroppen til ansiktet, mens årene gløder og han reiser seg. */
-      [PT.C, (S, u, a, t) => { const e = io(u); K.cam(mix(8.4, 4.4, e), mix(1.3, 4.9, e), mix(10.8, 16.5, e), mix(3.3, 0.2, e), mix(1.9, 8.4, e), mix(2.6, 6.4, e), mix(40, 42, e), -0.05); S.post.sh = 0.8; S.post.heat = 1; S.post.vig = 0.7; }],
-      /* 4 Oppladningen og brølet, vidt og nedenfra (runde 9: oppladningen er lengre og går i dette bildet): han synker sammen og skjelver, årene blusser, og så brølet med armene ut,
-         mens vulkanen eksploderer bak ham. Navnet kommer opp, lavabomber slår ned i sjøen, og bildet går i hvitt. */
-      [PT.Q + 0.05, (S, u, a, t) => { const e = eo(u), w = 0.04 * sin(t * 0.5); K.cam(mix(10.6, 9.8, e) + w * 3, 1.25, mix(19.4, 18, e), 1.9, mix(7.4, 7.9, e), 0.2, 54, -0.05);   /* han til venstre for midten og vulkanen til høyre, begge innenfor x 64–448 */
-        S.post.fl = max(0.5 * hit(t, PT.R, 0.16), seg(t, PT.F, PT.E - 0.05)); S.post.flc = '#fff6dc'; S.post.sh = 7 * hit(t, PT.R, 1.2) + 5 * hit(t, PT.R + 0.7, 1) + 2.2 * hit(t, PT.R + 0.3, 2.4) + 0.8 * S.rw + 1.6 * (S.chg || 0) * (S.chg || 0) + BOMBS.reduce((q, b) => q + 2 * hit(t, PT.R + b[0], 0.4), 0);
-        const j = S.pg.at('Jaw'), m = K.proj(j.x, j.y, j.z); S.post.spx = m.x / 2; S.post.spy = m.y / 2; S.post.spr = 0.1; S.post.spd = 0.9 * S.rw * hit(t, PT.R, 2.6); S.mouth = m; S.post.heat = 0.8 + 0.6 * S.rw; }],
+      /* 1 Lyset samler seg om ham (lavt, forfra); kameraet siger inn, og bildet rykker på trommeslagene. */
+      [0, (S, u, a, t) => { const e = io(u), pul = PT.H.reduce((s, h) => max(s, hit(t, h, 0.2)), 0); K.cam(mix(4.4, 3.4, e), 1.7, mix(22, 19, e), -0.4, 5, 2.6, 46, -0.03); S.post.fl = max(1 - seg(t, 0, 0.35), 0.85 * seg(t, PT.G1 - 0.14, PT.G1)); S.post.flc = t < 1 ? '#ffffff' : '#ffd6f2'; S.post.sh = 1.2 * seg(t, 0, 0.6) + 1.6 * pul;  pdbg(S); }],
+      /* 2 Krystallen: fra siden, med vulkanen bak. Kameraet glir sakte inn mens lyset i den dør på virvelen. */
+      [PT.G1 - 0.03, (S, u, a, t) => { const e = io(u); K.cam(mix(-6, -5.2, e), mix(2, 2.35, e), mix(23.5, 21, e), mix(-2.3, -1.6, e), mix(6.6, 6.4, e), mix(3.8, 1.3, e), 46, 0.03);   /* krystallen og vulkanen ligger begge innenfor x 64–448 (smal skjerm) */
+        S.post.fl = max(t < PT.G1 ? 0.85 : 0.85 * hit(t, PT.G1, 0.3), 0.28 * hit(t, PT.GL, 0.14)); S.post.flc = '#ffd6f2'; S.post.sh = 1.4 * hit(t, PT.G1, 0.5) + 0.9 * hit(t, PT.GL, 0.3) + PT.D.reduce((s, h) => s + 0.7 * hit(t, h, 0.1), 0); S.post.heat = 0.6;  pdbg(S); }],
+      /* 3 STILLHETEN: klipp rett forfra idet musikken faller ut. Den svarte krystallen fyller bildet, og kameraet siger nesten umerkelig inn. Ω tennes, sprekkene brer
+         seg, og på smellet knuses den mot oss. Primal Groudon står der i lyset. */
+      [PT.C, (S, u, a, t) => { const e = io(seg(t, PT.C, PT.S)), d = mix(25.5, 23.6, e); K.cam(GEM[0] + sin(CYAW) * d, mix(3.1, 3.3, e), GEM[2] + cos(CYAW) * d, GEM[0], mix(5.9, 5.7, e), GEM[2], 46);
+        S.post.fl = max(0.45 * hit(t, PT.O, 0.2), t < PT.S ? ei(seg(t, PT.S - 0.2, PT.S)) * 0.8 : 0.9 * hit(t, PT.S, 0.1)); S.post.flc = '#fff2b8';
+        S.post.sh = 1.2 * hit(t, PT.O, 0.4) + 2.4 * ei(seg(t, PT.K, PT.S)) * (t < PT.S ? 1 : 0) + 6 * hit(t, PT.S, 0.6); S.post.heat = 0.3; S.post.vig = 0.5 + 0.3 * (S.dk || 0);  pdbg(S); }],
+      /* 4 Primal Groudon i ett langt nærbilde: fra kneet med Ω-merket og oppover kroppen til ansiktet, mens årene gløder og han reiser seg. */
+      [PT.CU, (S, u, a, t) => { const e = io(u); K.cam(mix(8.4, 4.4, e), mix(1.3, 4.9, e), mix(10.8, 16.5, e), mix(3.3, 0.2, e), mix(1.9, 8.4, e), mix(2.6, 6.4, e), mix(40, 42, e), -0.05); S.post.sh = 0.8; S.post.heat = 1; S.post.vig = 0.7;  pdbg(S); }],
+      /* 5 Oppladningen og brølet, vidt og lavt (runde 9: oppladningen går i dette bildet): han til venstre, fjellet til høyre. Han synker sammen og skjelver, og så
+         brølet med armene ut: toppen av fjellet sprenges bak ham, taket av aske brer seg inn over oss, trykket når fram og lavasjøen bryter ut i fontener rundt ham,
+         lavabomber slår ned, og bildet går i hvitt på taktslaget. Horisonten ligger over navneskiltet, så sjøen synes hele veien. Én jevn bevegelse, ingen skjøt. */
+      [PT.W, (S, u, a, t) => { const e = io(u), k = seg(t, PT.R + 0.1, PT.R + 2.9), e2 = k * k * k * (k * (k * 6 - 15) + 10), w = 0.04 * sin(t * 0.5);
+        K.cam(mix(10.2, 9.6, e) + w * 3 + 0.4 * e2, mix(1.45, 1.6, e), mix(19.6, 18.6, e) + 3.2 * e2, mix(1.7, 2.0, e) + 0.9 * e2, mix(5.3, 5.6, e) - 0.3 * e2, 0.2, mix(58, 61, e) + 9 * e2, -0.045);
+        S.post.fl = max(0.5 * hit(t, PT.R, 0.16), seg(t, PT.F, PT.WH)); S.post.flc = '#fff6dc';
+        S.post.sh = 7 * hit(t, PT.R, 1.2) + 5 * hit(t, PT.B2, 1) + 2.2 * hit(t, PT.R + 0.3, 2.4) + 0.8 * S.rw + 1.6 * (S.chg || 0) * (S.chg || 0) + 3.2 * hit(t, PT.FN, 0.7) + PBOMB.reduce((q, b) => q + 1.8 * b[4] * hit(t, PT.R + b[0] + b[1], 0.4), 0);
+        X.mouth(S, S.pg, PT.R, t, 2.6); S.post.heat = 0.8 + 0.6 * S.rw;  pdbg(S); }],
     ],
   });
 
@@ -202,10 +375,10 @@
     g.restore();
     const ca = cos(v.ang), sa = sin(v.ang), cr = K.proj(VOL.x, VOL.h - 3, VOL.z), bs = K.proj(VOL.x, 0, VOL.z), q = abs(bs.y - cr.y) / 92;
     /* Røyken: en bred, lys søyle som velter opp av krateret og legger seg med vinden, lyst opp nedenfra av gløden. I utbruddet (S.boom) vokser den og blir mørkere av aske. */
-    if (cr.z < 1 && q > 0.05) { const ek = min(1.6, er), bm = S.boom || 0, big = S.erupt || 0;
+    if (cr.z < 1 && q > 0.05) { const ek = min(1.6, er), bm = S.boom || 0, big = S.erupt || 0, rfk = S.roofK || 0;   /* rfk: askeskyen står som et tak (Primal), og søylen går rett opp i det */
       C.blob(cr.x, cr.y - 10 * q, (150 + 90 * big) * q, '#ff4a10', (0.1 + 0.16 * ek) * lit, 1, 0.8);
-      C.plume(cr.x + 26 * q, cr.y - 30 * q, { n: 22, h: (250 + 120 * big) * q, w0: 30 * q, w1: (120 + 60 * big) * q, wind: 0.75, seed: 9, spd: 0.022 + 0.02 * ek, c: bl('#221a1c', '#4a3b3a', lit), top: '#120c0e', hot: '#b8400e', ha: 0.35 * min(1, ek), a: 0.5 + 0.3 * min(1, ek), t });
-      C.plume(cr.x, cr.y + 2, { n: 40, h: (215 + 90 * big) * q * (1 + 0.5 * bm), w0: (13 + 8 * big) * q, w1: (96 + 50 * big) * q * (1 + 0.6 * bm), wind: 0.62 + 0.2 * min(1, er), seed: 5, spd: 0.04 + 0.035 * min(1.5, er), c: bl('#2a2022', bl('#6e5a54', '#4a3936', big), lit), top: '#150e10', hot: er > 0.2 ? '#f0540e' : '#6a1c08', ha: 0.5 + 0.5 * min(1, er), a: 0.8 + 0.2 * min(1, er * 1.4), t }); }
+      C.plume(cr.x + 26 * q * (1 - rfk), cr.y - 30 * q, { n: 22, h: (250 + 120 * big) * q * (1 - 0.6 * rfk), w0: 30 * q, w1: (120 + 60 * big) * q, wind: 0.75 * (1 - 0.8 * rfk), seed: 9, spd: 0.022 + 0.02 * ek, c: bl('#221a1c', '#4a3b3a', lit), top: '#120c0e', hot: '#b8400e', ha: 0.35 * min(1, ek), a: 0.5 + 0.3 * min(1, ek), t });
+      C.plume(cr.x, cr.y + 2, { n: 40, h: (215 + 90 * big) * q * (1 + 0.5 * bm) * (1 - 0.6 * rfk), w0: (13 + 8 * big) * q, w1: (96 + 50 * big) * q * (1 + 0.6 * bm), wind: (0.62 + 0.2 * min(1, er)) * (1 - 0.8 * rfk), seed: 5, spd: 0.04 + 0.035 * min(1.5, er), c: bl('#2a2022', bl('#6e5a54', '#4a3936', big), lit), top: '#150e10', hot: er > 0.2 ? '#f0540e' : '#6a1c08', ha: 0.5 + 0.5 * min(1, er), a: 0.8 + 0.2 * min(1, er * 1.4), t }); }
     return { x: v.x + k * (sx * ca - sy * sa), y: v.y + k * (sx * sa + sy * ca), hz: v.y, cx: cr.x, cy: cr.y, cq: q };
   };
 
@@ -217,14 +390,15 @@
     if (S.boom > 0.02 && sn.cq > 0.05) P.rays = { x: sn.cx, y: sn.cy, a: 0.55 * S.boom, len: 0.9 }; else if (S.sun > 0.3 && sn.y > -80 && sn.y < 300) P.rays = { x: sn.x, y: sn.y, a: 0.7 * (S.sun - 0.3), len: 0.85 }; };
   /* Primal-forvandlingen: Ω-tegnet tegnes i figurens oppløsning på krystallen (midt på den, sett fra kameraet), og stråler ut fra det. Ingen virvel ut (swirl: 0). */
   const gemAt = () => { const c = K.proj(GEM[0], GEM[1], GEM[2]), e = K.proj(GEM[0], GEM[1] + GEMR, GEM[2]); return { x: c.x / 2, y: c.y / 2, r: abs(c.y - e.y) / 2, z: c.z }; };
-  X.reg('c3:383p', { spid: 383, swirl: 0, skin: 'lava', back: backdrop, look, cues: [[0, 'gather', PT.G1], [PT.G1, 'gem'], [PT.D0, 'dark', PT.D1 - PT.D0], [PT.O, 'sign'], [PT.K, 'crack', PT.S - PT.K], [PT.S, 'shatter'], [PT.Q, 'charge', PT.R - PT.Q], [PT.R, 'cry'], [PT.R + 0.05, 'boom'], [PT.R + 0.7, 'boom']].concat(BOMBS.map(b => [PT.R + b[0], 'thud'])), roar: () => PT.R,
+  X.reg('c3:383p', { spid: 383, swirl: 0, skin: 'lava', back: backdrop, look, roar: () => PT.R,
+    cues: [[0, 'gather', PT.G1], [PT.G1, 'gem'], [PT.O, 'sign'], [PT.K, 'crack', PT.S - PT.K], [PT.S, 'shatter'], [PT.Q, 'charge', PT.R - PT.Q], [PT.R, 'cry'], [PT.R + 0.05, 'boom'], [PT.B2, 'boom']].concat(PBOMB.map(b => [PT.R + b[0] + b[1], 'thud'])),
     over(x, t, o) { const S = G3D.S('c3:383p'); let on = false;
-      if (S.om > 0 && S.shot === 1) { const q = gemAt(); if (q.z < 1 && (t - PT.O > 0.22 || floor(t * 30) % 2)) { X.omega(x, Math.round(q.x), Math.round(q.y + q.r * 0.04), q.r * 0.6 * (0.94 + 0.06 * S.om), S.om); on = true; } }
+      if (S.om > 0 && S.shot === 2) { const q = gemAt(); if (q.z < 1 && (t - PT.O > 0.22 || floor(t * 30) % 2)) { X.omega(x, Math.round(q.x), Math.round(q.y + q.r * 0.04), q.r * 0.6 * (0.94 + 0.06 * S.om), S.om); on = true; } }
       return X.plate(x, t - PT.P, { name: o.name, cap: 'Primal Reversion', sign: X.omega }) || on; },
-    fx(S, t, P) { if (S.om > 0 && S.shot === 1) { const q = gemAt(); if (q.z < 1) P.rays = { x: q.x * 2, y: q.y * 2, a: 1.6 * S.om * (0.5 + 0.5 * seg(t, PT.O, PT.S)), len: 0.7 }; P.bloom += 0.2 * S.om; }
+    fx(S, t, P) { if (S.om > 0 && S.shot === 2) { const q = gemAt(); if (q.z < 1) P.rays = { x: q.x * 2, y: q.y * 2, a: 1.6 * S.om * (0.5 + 0.5 * seg(t, PT.O, PT.S)), len: 0.7 }; P.bloom += 0.2 * S.om; }
       if (t >= PT.S && t < PT.S + 0.5) P.bloom += 0.25 * hit(t, PT.S, 0.5);
+      skyBolts(S, t, P, PLT.concat([[PT.R + 0.1, 1.2, 14, 4, 0]]));
       if (t > PT.R + 0.6) C.parts('ash', { n: 80, seed: 8, cols: ['#3a2c2a', '#57423c', '#1c1414'], a: 0.9 * seg(t, PT.R + 0.6, PT.R + 2.2), spd: 1.5, z: [0, 1], wind: 0.55 }); } });
-
 
   /* ---------- Arenaen i kampen: samme sted som cutscenene ----------
      Jazz 18.11 (runde 5): kamparenaen fra steg 2 (den flate lavasletta) så «fryktelig unaturlig» ut etter cutscenen og «må ha samme layout som introen med steinene».

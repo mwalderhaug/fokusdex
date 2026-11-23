@@ -1653,10 +1653,11 @@ function darkShift(B, ev) {
 /* KYOGRE I RAID (Jazz 19.11): kamplåta («All-Devouring Narwhal») bygger seg opp mot phase 2 ved 3:43. Har ikke halv HP gjort Kyogre rasende innen da, gjør stormen
    det: raseriet kommer som ellers (verdiene, hendelsene hver RAIDEV2-te runde) med Primal Reversion. Kampskjermen bestemmer når (kyShift i bui.js: når låta når
    cutscenens start), reglene står her. Skjer bare med låta (uten den: halv HP som før), og høyst én gang. */
-const KYOGRE = 382;
+/* GENERELT FRA 2b.2: gjelder arten kampskjermen ber om (den som har et kart over låta: kyTl i bui.js). Groudon: låta («War Lord») når bruddet for andre gang. */
+const KYOGRE = 382, PEAK = { 382: 'The storm reaches its peak!', 383: 'The heat reaches its peak!' };
 function stormRage(B, ev) {
-  const f = B.foe[B.b], D0 = raidDom(B.tr); if (!B.tr || B.tr.dk || B.tr.leg !== KYOGRE || B.rage || B.over || !f || f.hp <= 0 || !D0) return false;
-  B.rage = 1; ev.push({ t: 'env', k: 'rage', s: `The storm reaches its peak! ${f.name} is enraged!` });
+  const f = B.foe[B.b], D0 = raidDom(B.tr); if (!B.tr || B.tr.dk || !B.tr.leg || B.rage || B.over || !f || f.hp <= 0 || !D0) return false;
+  B.rage = 1; ev.push({ t: 'env', k: 'rage', s: `${PEAK[B.tr.leg] ? PEAK[B.tr.leg] + ' ' : ''}${f.name} is enraged!` });
   if (!megaEvolve(B, 'foe', ev, 'rage')) changeStats(B, 'foe', D0.up, ev);
   return true;
 }
