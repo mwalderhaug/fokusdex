@@ -273,7 +273,8 @@ void main(){
      figur følger sjøen (dybden avgjør, som med lavaen). Lyset regnes fra hellingen: mørkt der vi ser rett ned, himmelen speilet der vi ser langs flaten (uSkyA ved
      horisonten, uSkyB oppe), grønnblått lys i tynne bølgetopper, skum på toppene og i striper etter vinden, og ringer etter regnet. Himmelen bak er 2D (bakteppet),
      så speilingen er fargene stedet setter, ikke et bilde. SEA_H er høyden; K.seaH i JavaScript er samme regning (tallene MÅ være like begge steder).
-     uSea = (dønning i enheter, krapp sjø, skum 0–1, regn 0–1) · uWind = (retning x, z, fart, 0) · uRing og uWade som lavaen (ringer ved nedslag, skum rundt det som står i vannet). */
+     uSea = (dønning i enheter, krapp sjø, skum 0–1, regn 0–1) · uWind = (retning x, z, fart, 0) · uRing og uWade som lavaen (ringer ved nedslag, skum rundt det som står i vannet).
+     uSk = 1: havet slik det var før s2b_23 (skyggen med runde finner, skummet uten blonder, regnringer i ruter på 1,9): Kyogres bilde ovenfra i introen (Jazz 24.11). */
   const SEA_H = `uniform vec4 uSea, uWind; uniform vec4 uRH[4];
 float crest(float p){ float s = .5 + .5 * sin(p); return 2. * s * s - .75; }
 float seaH(vec2 w, float t){ vec2 d = normalize(uWind.xy + vec2(1e-4, 0.)), e = vec2(-d.y, d.x); float a = dot(w, d), b = dot(w, e), sp = uWind.z;
@@ -285,7 +286,7 @@ float seaH(vec2 w, float t){ vec2 d = normalize(uWind.xy + vec2(1e-4, 0.)), e = 
   const VS_SEA = `varying vec3 vW; varying float vH; uniform float uTime;
 ${SEA_H}
 void main(){ vec4 w = modelMatrix * vec4(position, 1.); float k = 1. - smoothstep(180., 420., length(w.xz)); vH = seaH(w.xz, uTime) * k; w.y += vH; vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
-  const FS_SEA = `varying vec3 vW; varying float vH; uniform vec4 uRing[4]; uniform vec4 uWade, uBody, uBodyD, uGlo, uStm, uDL; uniform vec3 uDeep, uShal, uSkyA, uSkyB, uFoamC, uGloC; uniform float uBri;
+  const FS_SEA = `varying vec3 vW; varying float vH; uniform vec4 uRing[4]; uniform vec4 uWade, uBody, uBodyD, uGlo, uStm, uDL; uniform vec3 uDeep, uShal, uSkyA, uSkyB, uFoamC, uGloC; uniform float uBri, uSk;
 ${COMMON}
 ${SEA_H}
 float chop(vec2 w, float t){ return (fbm(w * .32 + vec2(t * .5, t * .31)) - .5) * 1.4 + .3 * sin(w.x * .9 + w.y * .7 + t * 2.3); }
@@ -303,6 +304,7 @@ void main(){
   if (uBody.w > 0.) { vec2 dd = normalize(uBodyD.xy + vec2(1e-4, 0.)), q = w - uBody.xy; float a = dot(q, dd) / uBody.z, b = dot(q, vec2(-dd.y, dd.x)) / uBodyD.z, nz = (fbm(w * .09 + t * .05) - .5) * .25;
     /* 2b.3: finnene er feid bakover og halen har to fliker, så skyggen har hans omriss sett ovenfra (før: to runde lapper rett ut til sidene) */
     float ab = abs(b), e = a * a + b * b * (1. + .6 * max(0., -a)), f = pow((a - .34 + .3 * (ab - .8)) / .34, 2.) + pow((ab - 1.85) / 1.3, 2.), g2 = pow((a + 1.08 + .5 * ab) / .16, 2.) + pow((ab - .5) / .52, 2.);
+    if (uSk > .5) { f = pow((a - .15) / .42, 2.) + pow((ab - 1.9) / 1.15, 2.); g2 = 9.; }   /* uSk: de runde finnene fra før, og ingen hale */
     float k = max(max(1. - smoothstep(.45, 1.1, e + nz), (1. - smoothstep(.4, 1.1, f + nz)) * uBodyD.w), (1. - smoothstep(.4, 1.1, g2 + nz)) * uBodyD.w);
     body *= 1. - .82 * k * uBody.w; }
   if (uGlo.w > 0.) { float d = length(w - uGlo.xy) / max(uGlo.z, .01); gl = exp(-d * d * 2.2) * uGlo.w; body += uGloC * gl; }
@@ -318,17 +320,21 @@ void main(){
   float lace = smoothstep(.4, .6, fbm(wp * vec2(1.3, 2.9) + vec2(-t * .3, t * .1) + 2.2 * fn)) * (.3 + .7 * smoothstep(.42, .6, fbm(wp * vec2(3.4, 7.1) + vec2(-t * .45, -t * .12) + 1.4 * fn)));
   float brk = smoothstep(1.3, 1.62, hN + (fn - .5) * .9 + c0 * .12 * uSea.y), top = max(brk * (.35 + .65 * lace) * (.55 + .45 * nf), smoothstep(.9, 1.4, hN + (fn - .5) * 1.2) * lace * .6 * (.3 + .7 * nf)) * min(1., uSea.z * 2.5) / max(uSea.z, .01);
   float st = fbm(vec2(wp.x * .12 - t * .2, wp.y * 2.1)), streak = smoothstep(.64, .8, st) * smoothstep(.35, .7, fn) * .5 * (.4 + .6 * lace);
+  if (uSk > .5) { top = smoothstep(.92, 1.35, hN + (fn - .5) * 1.1 + c0 * .12 * uSea.y); st = fbm(vec2(wp.x * .12 - t * .2, wp.y * 1.4)); streak = smoothstep(.62, .82, st) * smoothstep(.35, .7, fn) * .55; }   /* uSk: skummet fra før */
   float dw = length(w - uWade.xy), wr = uWade.w * (1. - smoothstep(uWade.z * .55, uWade.z, dw)) * smoothstep(.38, .62, fbm(w * 1.3 + vec2(t * .4, 0.)) + .16 * sin(dw * 1.5 - t * 2.2 + 5. * fbm(w * .35)));
   float rg = 0.; for (int i = 0; i < 4; i++) { vec4 g = uRing[i]; if (g.w > 0.) rg = max(rg, g.w * (1. - smoothstep(0., .45 + g.z * .06, abs(length(w - g.xy) - g.z + (fn - .5) * (.6 + g.z * .07))))); }
   rg *= .4 + .6 * lace;   /* 2b.3: ringene vingler og har hull, så de ikke står som tegnede sirkler */
+  if (uSk > .5) { rg = 0.; for (int i = 0; i < 4; i++) { vec4 g = uRing[i]; if (g.w > 0.) rg = max(rg, g.w * (1. - smoothstep(0., .45 + g.z * .06, abs(length(w - g.xy) - g.z)))); } }   /* uSk: ringene fra før */
   float wc = sz * uStm.w * .8 * (.15 + .85 * smoothstep(8., 34., cd)) * smoothstep(.6, .78, fbm(vec2(wp.x * 1.7, wp.y * .55) + vec2(-t * .5, t * .12)) + .3 * c0) * (.3 + .7 * lace), gf = uStm.z * uStm.w * exp(-pow((vW.z - uStm.x + 2.) / 3., 2.)) * smoothstep(.3, .65, fn);
+  if (uSk > .5) wc = sz * uStm.w * .85 * (.15 + .85 * smoothstep(8., 34., cd)) * smoothstep(.6, .8, fbm(w * .9 + vec2(t * .4, t * .25)) + .3 * c0);
   float foam = clamp(max(max(top, streak) * uSea.z * (1. + .35 * sz), max(max(wr, rg * .8), max(wc, gf * .85))), 0., 1.) * (.55 + .45 * lod);
   col = mix(col, uFoamC * (.72 + .28 * smoothstep(-.2, .8, dot(N, uKey))), foam);
   /* Regnet (2b.3): små ringer som bare synes tett på (fw er bildepunktets størrelse i verden), og lenger unna et svakt slør i himmelens farge. Før: ringer i ruter
      på 1,9 enheter, som ble prikker på 13 meter i filmenes målestokk. */
   if (uSea.w > 0.) { float rk = min(1., uSea.w + .7 * sz), l2 = 1. - smoothstep(.008, .03, fw);
-    if (l2 > 0.) { vec2 gp = w / .24, ci = floor(gp), o = h22(ci); float ph = fract(t * (2.2 + o.x * 1.6) + o.y), rr = length(fract(gp) - .5 - (o - .5) * .5); col += uSkyA * exp(-pow((rr - ph * .4) / .07, 2.)) * (1. - ph) * step(o.x, rk) * .26 * l2; }
-    col += uSkyA * rk * .05 * (1. - l2) * (.6 + .8 * vn(w * 3. + vec2(t * 2., -t * 1.3)) * lod); }
+    if (uSk > .5) { vec2 gp = w / 1.9, ci = floor(gp), o = h22(ci); float ph = fract(t * (.8 + o.x * .6) + o.y), rr = length(fract(gp) - .5 - (o - .5) * .5), ring = exp(-pow((rr - ph * .42) / .05, 2.)) * (1. - ph) * step(o.x, rk); col += uSkyA * ring * .5 * lod; }   /* uSk: regnringene fra før */
+    else { if (l2 > 0.) { vec2 gp = w / .24, ci = floor(gp), o = h22(ci); float ph = fract(t * (2.2 + o.x * 1.6) + o.y), rr = length(fract(gp) - .5 - (o - .5) * .5); col += uSkyA * exp(-pow((rr - ph * .4) / .07, 2.)) * (1. - ph) * step(o.x, rk) * .26 * l2; }
+    col += uSkyA * rk * .05 * (1. - l2) * (.6 + .8 * vn(w * 3. + vec2(t * 2., -t * 1.3)) * lod); } }
   col *= uBri;
   gl_FragColor = vec4(mix(col, uFogC, fogK(vW)), 1.);
 }`;
@@ -594,7 +600,7 @@ void main(){
      · sea: o = { size, seg (ruter i flaten: flere gir jevnere dønninger), swell, chop, foam, rain, wind: [x, z, fart], deep, shal, skyA, skyB, foamC }. Uniformene uSea og uWind kan endres i act.
      · ice: o = { size, mirror, rime, cracks, snow, deep, shal, skyA, skyB, foamC }. uStar = sprekk-stjernen. */
   const gU = () => ({ uStm: uv(new T.Vector4(0, 4, 0, 0)), uDL: uv(new T.Vector4(0, 0, 1, 0)), uRH: uv([0, 1, 2, 3].map(() => new T.Vector4(0, 0, 0, 0))), uRing: uv([0, 1, 2, 3].map(() => new T.Vector4())), uWade: uv(new T.Vector4()), uBri: uv(1), uBody: uv(new T.Vector4()), uBodyD: uv(new T.Vector4(0, 1, 1, 1)), uGlo: uv(new T.Vector4()), uGloC: uv(new T.Vector3(0.3, 0.8, 1)) });
-  K.sea = o => { o = o || {}; const n = o.seg || 160; return new T.Mesh(new T.PlaneGeometry(o.size || 900, o.size || 900, n, n).rotateX(-PI / 2), sm(VS_SEA, FS_SEA, Object.assign(gU(), { uSea: uv(new T.Vector4(o.swell == null ? 0.6 : o.swell, o.chop == null ? 1 : o.chop, o.foam == null ? 0.7 : o.foam, o.rain || 0)), uWind: uv(new T.Vector4(...(o.wind || [0.25, 1, 1]), 0)),
+  K.sea = o => { o = o || {}; const n = o.seg || 160; return new T.Mesh(new T.PlaneGeometry(o.size || 900, o.size || 900, n, n).rotateX(-PI / 2), sm(VS_SEA, FS_SEA, Object.assign(gU(), { uSk: uv(0), uSea: uv(new T.Vector4(o.swell == null ? 0.6 : o.swell, o.chop == null ? 1 : o.chop, o.foam == null ? 0.7 : o.foam, o.rain || 0)), uWind: uv(new T.Vector4(...(o.wind || [0.25, 1, 1]), 0)),
     uDeep: uv(u3(o.deep || '#06202e')), uShal: uv(u3(o.shal || '#1c7c8c')), uSkyA: uv(u3(o.skyA || '#8aa2b4')), uSkyB: uv(u3(o.skyB || '#1c2c44')), uFoamC: uv(u3(o.foamC || '#e8f4fa')) }))); };
   K.ice = o => { o = o || {}; return new T.Mesh(new T.PlaneGeometry(o.size || 900, o.size || 900).rotateX(-PI / 2), sm(VS, FS_ICE, Object.assign(gU(), { uStar: uv(new T.Vector4()), uIce: uv(new T.Vector4(o.mirror == null ? 0.8 : o.mirror, o.rime == null ? 0.7 : o.rime, o.cracks == null ? 0.8 : o.cracks, o.snow == null ? 0.6 : o.snow)),
     uDeep: uv(u3(o.deep || '#16304e')), uShal: uv(u3(o.shal || '#5a9ac8')), uSkyA: uv(u3(o.skyA || '#e8b8d8')), uSkyB: uv(u3(o.skyB || '#5a5a9c')), uFoamC: uv(u3(o.foamC || '#f2f8ff')) }))); };

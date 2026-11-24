@@ -334,6 +334,15 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
     const TS = 0.48, SLOW = 0.35;   /* havets tid og tiden i sprutet (se over) */
     const KYH = 0.9;                /* hvor høyt han ligger når han er oppe (skisse 1: 0,25). Han rir på dønningene, og ingen bølge skal skjule ham (Jazz 20.11) */
     const BT = [0, 2.5];            /* båten (x, z): rett over hodet hans, mellom finnene (han kommer opp med hodet mot kameraet, +Z). Hodet løfter den høyest */
+    /* Skyggen under båten går jevnt i bildet (Jazz 24.11: «gjør også at kyogre svømmer jevnt fart under båten i klippet»). Kameraet i bilde 2 (CAM2) står 7° skrått,
+       så en jevn fart i havet (før: 8 enheter i sekundet) gikk 134 px/s nederst i bildet og 106 px/s øverst. Nå går midten av skyggen jevnt i bildet (128 px/s):
+       snuten (11,5 foran midten) kommer inn nederst på slaget 0:04,57, midten er under båten i lynet 0:07,66 som før, og halen er ute øverst 0:10,28 (før 0:10,8).
+       ndc(z) = høyden i bildet (−1 nederst, 1 øverst) for et punkt i havet under kameraet, zAt(n) = det motsatte. */
+    const CAM2 = [BT[0] + 0.6, 26, BT[1] + 3.6, BT[0] + 0.6, 0, BT[1] + 0.4, 52];
+    const PASSZ = (() => { const [, cy, cz, , ty, tz, fov] = CAM2, L = Math.hypot(ty - cy, tz - cz), fy = (ty - cy) / L, fz = (tz - cz) / L, k = Math.tan(fov * PI / 360);
+      const ndc = z => (cy * fz + (z - cz) * fy) / (k * ((z - cz) * fz - cy * fy)), zAt = n => cz + cy * (fz + n * k * fy) / (n * k * fz - fy);
+      const n0 = ndc(2.9), v = (n0 - ndc(zAt(-1) + 11.5)) / (QI.LY - QI.PASS);
+      return t => zAt(n0 + v * (t - QI.LY)); })();
     const RK = [[-17, -7, 3.6, 8, 41], [21, -13, 4.4, 11, 43], [-27, 10, 3, 6, 47]];   /* sjøstakkene nær ham: x, z, r, h, frø */
     /* Ringbølgene: [start, stakken den knuser mot (−1: ingen), når den knuser, høyde]. Hver større og raskere (lange bølger går fortere). */
     const RINGS = [[QI.R1, 0, QI.R2, 1.0], [QI.R2, 2, QI.R3, 1.3], [QI.R3, 1, 38.53, 1.6], [QI.RO + 0.05, -1, QI.RO + 5, 1.9]];
@@ -424,15 +433,21 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         if (t < QI.PASS - 0.02) for (const [tb, kb, a] of [[QI.LY0, 0.9, PI - 0.1], [2.62, 0.55, PI + 0.16], [3.45, 0.8, PI + 0.05]]) L.push({ d: t - tb, k: kb, a, s: floor(tb * 29), lo: 1 });   /* 2b.3: lyn inne i regnet under stormen langt ute */
         S.L = L; const fl = flashOf(L); S.fl = fl;
         lerpC(su.uSkyA, '#2c3c4a', '#8fa6c6', fl); lerpC(su.uSkyB, '#0a121e', '#34486a', fl); lerpC(su.uDeep, '#020f18', '#0a2a3a', fl * 0.6); su.uBri.value = 1 + 0.16 * fl;   /* 2b.3: lynet viser bølgene, det bleker dem ikke (før '#b8cce8' og 1,3) */
-        /* 2b.3 (Fable): ovenfra (0:04,57–0:13,2) var havet nesten svart, så skyggen ikke syntes. Sett ovenfra er havet mørkt blågrønt, og skyggen står mørkere mot det. */
-        if (t >= QI.PASS - 0.02 && t < QI.B6 - 0.02) { lerpC(su.uDeep, '#0b2f3e', '#14485a', fl); lerpC(su.uShal, '#1a6274', '#2c8292', fl); lerpC(su.uSkyB, '#16283a', '#40557a', fl); su.uBri.value = 1.25 + 0.3 * fl; }
+        /* Bilde 2 ovenfra (0:04,57–0:13,2) er slik det var før 2b.3 (Jazz 24.11: «Vannet ble for lyst nå kyogre svømte under båten. Likte bedre fargen og at du så
+           skyggen av den. Skyggen var også dårligere under vann hos fable. Kan du bytte om det tilbake bare den scenen slik den var før fable byttet?»): det mørke havet,
+           lynet, skummet, gråtonen og disen fra 5ea1b7e, ingen stormsone, og havet fra før s2b_23 (uSk: skyggen med runde finner, regnringene i ruter). Fable hadde gjort
+           havet mørkt blågrønt her (01de9d3) og gitt skyggen hans omriss (s2b_23); det står i resten av filmen. uShal settes i hvert bilde (før ble den stående fra bilde 2
+           og ut filmen): '#0d4a58' til og med bilde 2 og '#1a6274' etter, som i filmen Jazz godkjente 24.11. */
+        const ovf = S.ovf = t >= QI.PASS - 0.02 && t < QI.B6 - 0.02, st0 = 0.32 + 0.3 * seg(t, 0, QI.UP); if (su.uSk) su.uSk.value = ovf ? 1 : 0;
+        if (ovf) { lerpC(su.uSkyA, '#2c3c4a', '#b8cce8', fl); lerpC(su.uSkyB, '#0a121e', '#40557a', fl); su.uBri.value = 1 + 0.3 * fl; su.uSea.value.z = 0.3 + 0.1 * kk; su.uStm.value.set(0, 4, 0, 0); S.grey = 0.5 * st0; }
+        { const c = t < QI.B6 - 0.02 ? '#0d4a58' : '#1a6274'; lerpC(su.uShal, c, c, 0); }
         /* De fjerne stakkene i kysten: sprut når en topp når dem (i havets tid, gjort om til filmens). */
         S.stacks.forEach((m, i) => { const t0 = crestAt(su, m.position.x, m.position.z, ts) / TS; S.fx(S.sprays[i], t0); S.scr[i].at(t, t0); });
 
         /* Kyogre: forbi under båten (0:04,57–0:12,5), opp fra dypet under den (0:13,2–0:23), finnene først (0:23,03), ryggen som en øy, så ligger han høyt og rir på dønningene. */
         let x = 0, y = -40, z = 0, yaw = 0, pit = 0, sh = 0, fin = 0, gl = 0;
         if (t >= QI.PASS - 0.3 && t < QI.W2 + 0.6) {
-          z = 2.9 - 8 * (t - QI.LY);   /* jevn fart, han stopper aldri (Jazz 20.11): inn på 0:04,57, midt under båten i lynet 0:07,66, halen ute på 0:10,73 */ x = BT[0] + 0.4; y = -7; yaw = PI; sh = 0.8; gl = 0.12; }
+          z = PASSZ(t);   /* jevn fart i bildet, han stopper aldri (Jazz 20.11 og 24.11): inn på 0:04,57, midt under båten i lynet 0:07,66, halen ute før 0:10,73 (PASSZ) */ x = BT[0] + 0.4; y = -7; yaw = PI; sh = 0.8; gl = 0.12; }
         else if (t >= QI.B6 && t < QI.UP) { const u = seg(t, QI.B6, QI.UP); y = mix(-30, -6.6, io(u)); yaw = 0; sh = 0.25 + 0.65 * u; gl = 0.06 + 0.4 * u * u; fin = 0.75 * seg(t, QI.B6 + 4, QI.UP - 1.5); }
         else if (t >= QI.UP) { const sea = H(0, 0), y1 = KYH + 0.8 * sea + 0.9 * (t >= QI.RO ? back(seg(t, QI.RO, QI.RO + 0.35), 2) * (1 - 0.6 * io(seg(t, QI.NM, QI.NM + 1.2))) : 0);   /* i brølet reiser han seg av vannet */
           y = kf(t, [[QI.UP, -6.4], [24.0, -3.9, io], [26.0, y1, io]]); if (t >= 26.0) y = y1;
@@ -483,14 +498,14 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         /* Lyset: kaldt og mørkt, gråere og tettere dis jo nærmere stormen er; lynet lyser opp alt. */
         lerpC(U.uKeyC, '#5a6c80', '#e8f2ff', fl); lerpC(U.uShC, '#0a141e', '#3a4c66', fl); U.uRimK.value = 0.85; U.uGlow.value = 0.25;
         /* 2b.3: i bilde 1 er det skumring, ikke natt: disen er lysere enn skyen, så stormen står mørk og tydelig mot himmelen («man skal se hva som er storm og hva som ikke er det») */
-        if (S.far) { U.uFog.value.set(40, 500, 0.8); lerpC(U.uFogC, '#46535f', '#5d7290', fl); } else { U.uFog.value.set(mix(40, 24, S.inn), mix(320, 200, S.inn), 0.88); lerpC(U.uFogC, C.blend('#121c26', '#222c36', S.inn), '#4a5f7e', fl); }
+        if (S.far) { U.uFog.value.set(40, 500, 0.8); lerpC(U.uFogC, '#46535f', '#5d7290', fl); } else if (S.ovf) { U.uFog.value.set(40 - 14 * st0, 320 - 120 * st0, 0.88); lerpC(U.uFogC, '#121c26', '#5a7090', fl); } else { U.uFog.value.set(mix(40, 24, S.inn), mix(320, 200, S.inn), 0.88); lerpC(U.uFogC, C.blend('#121c26', '#222c36', S.inn), '#4a5f7e', fl); }
         S.k = k; S.glo = 0;
       },
       shots: [
         /* 1 Stormen filmes: lavt over havet mot veggskyen; tråleren klatrer sakte over dønningene. */
         [0, (S, u, a, t) => { const e = io(u), x = mix(5, 4, e), z = mix(-21, -18, e), h = K.seaH(S.sea.material.uniforms, x, z, t * TS); K.cam(x, h + 2.6, z, mix(1.5, 1, e), 4 + 0.4 * h, 160, 44, 0.02); S.post.fade = 1 - seg(t, 0.9, 1.9); }],
         /* 2 Ovenfra: båten alene; skyggen kommer inn nedenfra på 0:04,57, glir under båten i stillheten, lynet viser hele kroppen, og den er ute før klippet. */
-        [QI.PASS - 0.04, (S, u, a, t) => { K.cam(BT[0] + 0.6, 26, BT[1] + 3.6, BT[0] + 0.6, 0, BT[1] + 0.4, 52, 0); S.post.fl = 0.35 * hit(t, QI.LY, 0.12); S.post.flc = '#e8f2ff'; S.post.sh = 0.6 * hit(t, QI.W1, 0.8); }],
+        [QI.PASS - 0.04, (S, u, a, t) => { K.cam(...CAM2, 0); S.post.fl = 0.35 * hit(t, QI.LY, 0.12); S.post.flc = '#e8f2ff'; S.post.sh = 0.6 * hit(t, QI.W1, 0.8); }],
         /* 3 Noe stort kommer: lavt ved båten mot stakkene; det røde skjæret vokser under den. */
         [QI.B6, (S, u, a, t) => { const e = io(u), x = mix(6.4, 5.2, e), z = mix(10.8, 9.2, e), h = K.seaH(S.sea.material.uniforms, x, z, t * TS); K.cam(x, h + 2.5, z, -2.5, 1.4, -10, 48, -0.02);   /* 2b.3: nærmere og lavere (før 14 enheter unna), så tråleren er stor og tung i bildet */ S.post.sh = 0.7 * hit(t, QI.W3, 0.6) + 0.8 * hit(t, QI.W4, 0.6) + 0.25 * seg(t, QI.B6, QI.UP); }],
         /* 4 Finnene først: lavt og rett forfra; båten midt i bildet mellom finnene. Ryggen løfter den, den glir av og velter. */
