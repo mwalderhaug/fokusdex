@@ -183,7 +183,7 @@ function raidScreen() {
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Legendary raid</span></div>
     <div class="card k-ultra raidc" style="--cc:${L.cc}"><div class="pre-foe"><span class="raid-sp">${spr(R.id, { ani: 1, sh: V.sh, mega: defForm(R.id) })}</span><div class="sp"><div class="sm">${V.sh === 2 ? 'Shadow Pokémon · the rarest of all' : raidTitle(R.id, 0)}</div><b class="bossn" style="font-size:21px">${esc(V.n)}</b><div class="sm tn" style="margin-top:4px">${RAIDHP[t - 1]}× the HP of a normal Pokémon</div></div></div>
       <p class="sm" style="margin-top:10px">One Pokémon against your whole team, with the Bag. Its level was set by your team when it appeared, so training before you try again helps.</p>
-      ${dom ? `<p class="sm" style="margin-top:6px"><b>${dom.n}.</b> The place fights with it: every third turn ${dom.d}. Below half HP it becomes enraged, grows stronger, and it happens every second turn.</p>` : ''}
+      ${dom ? `<p class="sm" style="margin-top:6px"><b>${dom.n}.</b> The place fights with it: every third turn ${dom.d}. Below ${rageTxt(V.sh === 2 ? 0 : R.id)} it becomes enraged, grows stronger, and it happens every second turn.</p>` : ''}
       <p class="sm" style="margin-top:6px">Win: it is yours, with ${nb(Math.round(RAIDCOIN[t - 1] * diff().coin))} coins, ${RAIDCANDY[t - 1]} Rare Candy and a lot of XP for the whole team. Lose: ${lose}</p></div>
     ${team}`, 'tint', L.cc);
   if (V.sh === 1 && BT.rsh !== R.at + ':' + R.id) { BT.rsh = R.at + ':' + R.id; setTimeout(() => { const h = $('#ov .raid-sp'); if (h) { h.style.position = 'relative'; shinyFx(h); } }, 450); }

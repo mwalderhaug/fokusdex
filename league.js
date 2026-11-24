@@ -1425,6 +1425,7 @@ const LEG = {}; LEGD.split('|').forEach(r => { const q = r.split(','); LEG[+q[0]
    Så drar den videre, så du aldri blir stående fast mot en du ikke klarer.
    NIVÅ: settes i det den viser seg, etter laget ditt (snittet av de tre sterkeste + RAIDOFF for sjeldenheten), og aldri over artens toppnivå (RAIDLV).
         Den står godt over laget ditt (RAIDOFF ble løftet da raid ble sjeldnere): et raid skal være vanskelig. Vanskelighetsgraden senker nivå og HP litt på Easy og Normal.
+        I kampen står den aldri under laget ditt (gulvet, raidFoeLv, v90).
         Det som gjør et raid tungt, er ikke nivået, men at den legendariske har flere ganger så mye HP (RAIDHP) og de sterkeste artene i spillet.
         Stilt inn med simulerte kamper (med stedets hendelser og raseriet): et jevnt lag uten veske slår de vanlige omtrent annenhver gang på Hard, de største bare av og til.
    STEDET: hver legendarisk har et domene som kjemper med (se DOM lenger ned): en liten hendelse hver tredje runde, og raseri under halv HP.
@@ -1436,8 +1437,10 @@ const LEG = {}; LEGD.split('|').forEach(r => { const q = r.split(','); LEG[+q[0]
 const RAIDLV = [75, 88, 82, 96, 100], RAIDHP = [2.0, 3.2, 1.8, 3.4, 3.6], RAIDCOIN = [1800, 3800, 2700, 7500, 12000], RAIDCANDY = [3, 5, 4, 8, 10], RAIDOFF = [6, 12, 5, 13, 16], RAIDREL = [0.16, 0.32, 0.13, 0.36, 0.45], RAIDCAPHP = 0.025;
 const RAIDTRIES = 2, RAIDP0 = 0.08, RAIDPITY = 0.035, RAIDWIN = 0.25, RAIDCOOL = 3, MEWP = 0.08, MEWP1 = 0.16;
 /* Egen HP-faktor for enkelte arter, oppå klassens (RAIDHP). Innen «de største» var spredningen for stor: Dialga, Palkia, Zekrom og Reshiram var nesten
-   uslåelige for alle lag uten legendariske, og hardere enn Mewtwo og Arceus, som skal være de to vanskeligste. Stilt inn med sim/perleg.js. */
-const RAIDX = { 144: [1.15, 1.04], 145: [1.07, 1], 146: [1.2, 1.05], 150: [0.51, 0.9], 151: [1.5, 1.06], 243: [0.87, 1], 244: [1.17, 1.02], 245: [0.91, 1], 249: [0.8, 0.98], 251: [1.26, 1.1], 377: [1.16, 1.02], 378: [1.2, 1.05], 379: [1.2, 1.05], 380: [0.89, 1], 381: [0.66, 1], 382: [0.7, 0.88], 383: [0.95, 1], 384: [0.9, 1], 385: [1.39, 1.04], 386: [1.4, 1], 480: [1.2, 1.02], 481: [0.85, 1], 482: [1.2, 1.05], 483: [0.64, 0.86], 484: [0.6, 0.86], 485: [1.2, 1.05], 486: [1.07, 1.02], 487: [0.65, 0.96], 488: [1.05, 1.04], 490: [0.61, 1], 491: [0.98, 1], 492: [1.21, 1], 493: [0.85, 1], 494: [1.5, 1.1], 638: [0.92, 1], 639: [0.69, 1], 640: [1.07, 1], 641: [1.2, 1.05], 642: [1.2, 1.05], 643: [0.73, 0.94], 644: [0.73, 0.97], 645: [1.2, 1.05], 646: [0.67, 0.98], 647: [0.63, 0.88], 648: [1.5, 1.1], 649: [1.07, 1] };
+   uslåelige for alle lag uten legendariske, og hardere enn Mewtwo og Arceus, som skal være de to vanskeligste. Stilt inn med sim/perleg.js.
+   Rayquaza 0,9 → 1,2 (v90, Jazz 24.11: et lag på nivå 60 holdt på å slå den på Normal). Med Mega under 70 % (RAGEAT), perleg Normal med Sacred Ash, lag på
+   60/70: T2 12/17 % → 2/4 %, T3 32/40 % → 12/12 % (uten Sacred Ash 0–4 %); Hard: laget til Jazz på 97 95 % → rundt 50 %, T3@100 74 → 22 %, fortsatt lettere enn Arceus. */
+const RAIDX = { 144: [1.15, 1.04], 145: [1.07, 1], 146: [1.2, 1.05], 150: [0.51, 0.9], 151: [1.5, 1.06], 243: [0.87, 1], 244: [1.17, 1.02], 245: [0.91, 1], 249: [0.8, 0.98], 251: [1.26, 1.1], 377: [1.16, 1.02], 378: [1.2, 1.05], 379: [1.2, 1.05], 380: [0.89, 1], 381: [0.66, 1], 382: [0.7, 0.88], 383: [0.95, 1], 384: [1.2, 1], 385: [1.39, 1.04], 386: [1.4, 1], 480: [1.2, 1.02], 481: [0.85, 1], 482: [1.2, 1.05], 483: [0.64, 0.86], 484: [0.6, 0.86], 485: [1.2, 1.05], 486: [1.07, 1.02], 487: [0.65, 0.96], 488: [1.05, 1.04], 490: [0.61, 1], 491: [0.98, 1], 492: [1.21, 1], 493: [0.85, 1], 494: [1.5, 1.1], 638: [0.92, 1], 639: [0.69, 1], 640: [1.07, 1], 641: [1.2, 1.05], 642: [1.2, 1.05], 643: [0.73, 0.94], 644: [0.73, 0.97], 645: [1.2, 1.05], 646: [0.67, 0.98], 647: [0.63, 0.88], 648: [1.5, 1.1], 649: [1.07, 1] };
 const raidX = id => RAIDX[id] || [1, 1];
 /* Ingen legendarisk går tom for PP i et raid (steg 1b.4, useMove i battle.js). Før gjaldt det bare Mewtwo, Arceus, Deoxys og den mørke, og de andre
    mistet de sterkeste angrepene sine i en lang kamp. */
@@ -1449,6 +1452,15 @@ const RAIDGATE = [0, 35, 25, 45, 45];
 const raidWant = t => { const l = leagueLv(); return Math.round(Math.max(l + RAIDOFF[t - 1], l * (1 + RAIDREL[t - 1]))); };
 const raidCap = t => Math.min(100, RAIDLV[t - 1] + 3 * Math.min(5, S.lad.lap || 0));
 const raidLvFor = t => Math.max(15, Math.min(raidCap(t), raidWant(t)));
+/* GULVET (v90, Jazz 24.11: «mitt lag er nivå 100, da skal ingen legendaries være mindre enn nivå 100»): i kampen står den legendariske aldri under laget ditt,
+   men minst RAIDFLOOR nivåer over det (høyst 100), uansett taket over, vanskelighetsgraden (rlv) og artens nivåfaktor (RAIDX). Før sto de vanlige 4–11 nivåer
+   under et lag på 97 (taket), og de største med lav nivåfaktor (Kyogre, Dialga, Palkia, Mewtwo) på 86–90. Gulvet settes etter laget i det den viser seg (S.raid.fl),
+   som nivået ellers, så trening før neste forsøk hjelper; et raid fra før v90 får det etter laget slik det er nå. HP-en (raidHx) er som før, så raidene blir
+   tøffere for lag på 90–100, og det er meningen (perleg Hard, T3@100: de største 88 → 74 %). Taket selv tas i 7.0 (MONDAY.md, «Nivåtaket»). */
+const RAIDFLOOR = 3;
+const raidFloor = () => Math.min(100, Math.round(leagueLv()) + RAIDFLOOR);
+/* Nivået i kampen: raidnivået (R.lv) etter vanskelighetsgraden og arten, aldri under gulvet. Gaven (R.ev) står på 100. */
+const raidFoeLv = R => R.ev ? 100 : Math.max(R.fl || raidFloor(), Math.max(10, Math.round(R.lv * diff().rlv * (R.dk ? 1 : raidX(R.id)[1]))));
 /* Dark Mewtwo (5) får ikke dette tillegget: den står alltid på toppnivået sitt, og med tillegget hadde den nær ti ganger vanlig HP mot et lag på
    nivå 100. Da var den umulig for alle, uansett lag. Nå er den RAIDHP[4] ganger vanlig HP, og fortsatt den hardeste i spillet. */
 const raidHx = t => t === 5 ? 1 : 1 + RAIDCAPHP * Math.max(0, raidWant(t) - Math.max(15, raidCap(t)));
@@ -1521,7 +1533,7 @@ function raidSpawn(res) {
   /* hid = ikke vist ennå: den viser seg først når dagens kamper er spilt, simulert eller hoppet over (raidUnhide), som en overraskelse.
      sh = shiny: 1 av SHINYN, eller PRISMP når en Prism Lure er kjøpt (den brukes opp her). */
   const sh = Math.random() < (S.prism ? PRISMP : 1 / SHINYN) ? 1 : 0; S.prism = 0;
-  S.raid = { id, lv: raidLvFor(t), hx: +raidHx(t).toFixed(2), day: '', tries: 0, at: dayKey(), nw: 0, hid: 1, sh }; S.rwait = 0; delete S.rnot;
+  S.raid = { id, lv: raidLvFor(t), fl: raidFloor(), hx: +raidHx(t).toFixed(2), day: '', tries: 0, at: dayKey(), nw: 0, hid: 1, sh }; S.rwait = 0; delete S.rnot;
   if (res) res.raid = id;
   return true;
 }
@@ -1583,13 +1595,16 @@ const DOM = {
   dark: { n: 'Shadow Field', k: 'both', st: 5, imm: [], s: 'Shadows tear at {N}!', d: "the shadows hurt your Pokémon a little and lower its Sp. Def", up: [[2, 1], [4, 1]] }
 };
 const domKey = tr => tr.dk ? 'dark' : tr.lbg === 'flame' ? 'magma' : tr.lbg, raidDom = tr => DOM[domKey(tr)] || null;
+/* Raseriet kommer under halv HP, men noen arter blir rasende tidligere (RAGEAT: andel av HP-en). Rayquaza (v90, Jazz 24.11: «Mega rayquaza bør og se litt før»):
+   Mega Rayquaza under 70 %, så Delta Stream tar firedobbel is-svakhet fra den tidligere. rageTxt er det raidkortet sier. */
+const RAGEAT = { 384: 0.7 }, rageAt = id => RAGEAT[id] || 0.5, rageTxt = id => rageAt(id) === 0.5 ? 'half HP' : Math.round(rageAt(id) * 100) + ' % of its HP';
 /* Kalles på slutten av hver runde i en raid (fra endTurn i battle.js). */
 function raidField(B, ev) {
   const D0 = raidDom(B.tr), f = B.foe[B.b], b = B.me[B.a]; if (!D0 || B.over || f.hp <= 0) return;
   const N = nmOf('me', b), F = f.name;
   /* Deoxys åpner i Attack Forme, går i Defense Forme når to runder er gått, og tilbake i Attack Forme når den blir rasende. */
   if (f.id === DEOXYS && f.mega === DEOXA && !B.rage && B.turn >= DEOXT && f.hp > f.max / 2) raidForm(B, ev, DEOXD);
-  if (!B.rage && f.hp <= f.max / 2) { B.rage = 1; ev.push({ t: 'env', k: 'rage', s: `${F} is enraged!` }); if (!(f.id === DEOXYS && raidForm(B, ev, DEOXA)) && !(f.id === 648 && formTo(B, 'foe', f, PIROU, ev)) && !megaEvolve(B, 'foe', ev, 'rage')) changeStats(B, 'foe', D0.up, ev); }
+  if (!B.rage && f.hp <= f.max * rageAt(B.tr.dk ? 0 : f.id)) { B.rage = 1; ev.push({ t: 'env', k: 'rage', s: `${F} is enraged!` }); if (!(f.id === DEOXYS && raidForm(B, ev, DEOXA)) && !(f.id === 648 && formTo(B, 'foe', f, PIROU, ev)) && !megaEvolve(B, 'foe', ev, 'rage')) changeStats(B, 'foe', D0.up, ev); }
   if (b.hp <= 0 || b.v.away) return;
   /* Arceus bytter plate: første gang når første runde er over, så hver ARCEV-te runde (hver ARCEV2-te når den er rasende). */
   if (f.id === ARCEUS && !B.tr.dk) { B.arc = (B.arc == null ? ARCEV : B.arc) + 1; if (B.arc > (B.rage ? ARCEV2 : ARCEV)) { B.arc = 1; arcPlate(B, ev); } }
@@ -1839,8 +1854,8 @@ function raidBattle(lead, demo) {
   party.sort((a, b) => (b.u === lead) - (a.u === lead));
   /* Hvem som venter, er hemmelig til filmen har gått: fra første forsøk er den kjent (R.seen), og kortet viser den. */
   if (!demo && S.raid && !S.raid.seen) { S.raid.seen = 1; save(); }
-  /* Vanskelighetsgraden senker nivået og HP-en til den legendariske (Hard = som før). */
-  const dd = diff(), lv = R.ev ? 100 : Math.max(10, Math.round(R.lv * dd.rlv * (R.dk ? 1 : raidX(R.id)[1]))), e = Math.round((R.dk ? 85 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : R.sh ? 1 : 0, g: rollG(R.id), mega: R.id === DEOXYS ? DEOXA : defForm(R.id), ms: raidMega(R), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: demo === 150 ? legLevelMoves(150, lv) : raidMoves(R.id, lv, R.dk, party), drive: R.id === 649 ? driveFor(party) : null };
+  /* Vanskelighetsgraden senker nivået og HP-en til den legendariske (Hard = som før), men nivået står aldri under laget (raidFoeLv, gulvet fra v90). */
+  const dd = diff(), lv = raidFoeLv(R), e = Math.round((R.dk ? 85 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : R.sh ? 1 : 0, g: rollG(R.id), mega: R.id === DEOXYS ? DEOXA : defForm(R.id), ms: raidMega(R), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: demo === 150 ? legLevelMoves(150, lv) : raidMoves(R.id, lv, R.dk, party), drive: R.id === 649 ? driveFor(party) : null };
   const B = mkBattle(demo ? party : party.map(evSrc), [foe], legTr(R.id, R.dk), { mode: demo ? 'lab' : 'raid', raid: 1, st: TCL.supreme, k: 'legend', rd: 0, n: 0, lap: 0, ti: 0, bag: bagN(), xm: 3 * dd.xp, sm: 1, dc: dd.coin, boost: { mode: '', m: 1, xp: 1 } });
   B.tr.skill = dd.sk; if (demo) labMega(B); else evApply(B);
   /* I demoen har Mewtwo vanlig HP (ikke raid-HP), så en kommer fram til forvandlingen: det er den demoen er til for. */
@@ -1867,7 +1882,7 @@ function finishRaid(B) {
       const regs = S.mons.filter(m => m.id === 150 && m.sh !== 2), give = !regs.length || (!!R.sh && !regs.some(m => m.sh === 1));
       if (give) raidCatch(150, 0, res, R.sh);
       const tg = dkTarget(), nc = res.cau && res.cau.c ? `, ${res.cau.c} coins for a new species` : '';
-      S.raid = { id: 150, dk: 1, seen: 1, lv: raidLvFor(5), hx: +raidHx(5).toFixed(2), day: '', tries: 0, mu: tg ? tg.u : null, r1: `${res.coins.toLocaleString('en-US')} coins, ${res.items.join(', ')}${nc}` };
+      S.raid = { id: 150, dk: 1, seen: 1, lv: raidLvFor(5), fl: raidFloor(), hx: +raidHx(5).toFixed(2), day: '', tries: 0, mu: tg ? tg.u : null, r1: `${res.coins.toLocaleString('en-US')} coins, ${res.items.join(', ')}${nc}` };
       res.dark = 1; res.mew = give ? 1 : 0; res.note = give ? 'Mewtwo is yours, but its shadow is not finished.' : 'Mewtwo is beaten, but its shadow is not.';
     } else if (B.tr.dk) {
       /* Den mørke tar plassen til Mewtwoen din (darkTake). Har du ingen lenger (eller bare en shiny, som aldri overskrives), kommer den som ny. */

@@ -360,7 +360,7 @@ function sbxFac(r, o) {
   S.fac.run = { round: r, w, streak: (r - 1) * FACN + w, offer: facOffer(r, Object.assign({ mg: o.mega ? 1 : 0 }, o.rare && o.rare !== 'luck' ? { rare: o.rare === 'none' ? '' : o.rare } : {})), open: 0, team: null, foe: null };
   if (o.top) S.fac.run.top = 1;
 }
-function sbxRaid(id, sh, show) { const t = LEG[id].t; S.raid = { id, lv: raidLvFor(t), hx: +raidHx(t).toFixed(2), day: '', tries: 0, at: dayKey(), nw: 0, hid: 1, sh: sh ? 1 : 0 }; if (show) raidUnhide(); }
+function sbxRaid(id, sh, show) { const t = LEG[id].t; S.raid = { id, lv: raidLvFor(t), fl: raidFloor(), hx: +raidHx(t).toFixed(2), day: '', tries: 0, at: dayKey(), nw: 0, hid: 1, sh: sh ? 1 : 0 }; if (show) raidUnhide(); }
 const SBXT = [['coins', '+100 000 coins'], ['level', 'Trainer level +10'], ['items', '5 of every item in the Shop'], ['held', 'One of everything a Pokémon can hold'], ['team', 'My team to Lv 100'], ['enc', 'A legendary encounter in the grass'], ['shenc', 'A shiny encounter in the grass'], ['raid', 'A legendary raid · hidden until the battles are done'], ['raidnow', 'A legendary raid · shown now'], ['shraid', 'A shiny legendary raid · shown now'], ['day', 'A new battle day · all three modes open'], ['dayl', 'A new battle day · League only (Simulate works)'], ['dayf', 'A new battle day · Frontier only'], ['dayp', 'A new battle day · Tournament only']];
 function sbxTool(k) {
   if (!SBX) return;
