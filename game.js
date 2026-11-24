@@ -168,8 +168,15 @@ function packDraw(k, demo) {
   const P = PACKS[k];
   return P.slots.map(sl => { const r = Math.random(), lg = r < (sl.leg || 0) ? legEnc(P.shm) : null, ep = !lg && r < (sl.leg || 0) + (sl.ep || 0), e = packCard(lg || genEnc({ min: ep ? 3 : sl.min || 0, luck: sl.luck || 0, shm: P.shm, evo: P.evo || 0 })); if (demo) { delete e.myst; if (lg) e.lg = 1; if (PKPS.includes(lineRoot(e.id))) e.ps = 1; } return e; });
 }
-/* Kjøp og åpne n pakker på én gang (ønske 13). Gratispakker brukes først. Ti eller flere har alltid minst én rare eller bedre. Møtene legges i
-   gresset med en gang, så ingenting går tapt om appen lukkes midt i åpningen. Svaret er pakkene (en liste med tre møter per pakke), eller null. */
+/* PAKKEKORTENE ER DINE (v92, Jazz 24.11: «Valg B»): de vanlige kortene går rett i samlingen når pakken åpnes, uten kast og uten baller. Bare de
+   store må fanges (pkCatch: en legendarisk, epic eller shiny; de samme gjør pakken urolig i åpningen), og de venter i gresset som før. Et kort som går
+   rett inn, gir det en fangst ville gitt av arten: mynter for en ny art (NEWCOIN, én gang per art), men det teller ikke i rekka (S.cst) og starter
+   ingen kjede. */
+const pkCatch = e => !!(e.myst || e.t >= 3 || e.sh);
+/* Kjøp og åpne n pakker på én gang (ønske 13). Gratispakker brukes først. Ti eller flere har alltid minst én rare eller bedre. Alt avgjøres og lagres
+   med en gang, så ingenting går tapt om appen lukkes midt i åpningen: de vanlige kortene går rett i samlingen (e.u = Pokémonen kortet ble), de store
+   (pkCatch) i gresset. Svaret er pakkene (en liste med tre kort per pakke), eller null. På lista: cw = artene du hadde fanget før pakkene ble åpnet
+   («NEW» på kortene), nc = myntene for nye arter. */
 function openPacks(k, n) {
   const P = PACKS[k]; n = Math.max(1, Math.floor(n || 1)); if (!P) return null;
   const free = Math.min(n, (S.fpk && S.fpk[k]) || 0), pay = n - free;
@@ -177,10 +184,12 @@ function openPacks(k, n) {
   const out = Array.from({ length: n }, () => packDraw(k));
   if (n >= 10 && !out.some(p => p.some(e => e.t >= 2))) { const p = out[n - 1], sl = P.slots[P.slots.length - 1]; p[p.length - 1] = packCard(genEnc({ min: 2, luck: sl.luck || 0, shm: P.shm, evo: P.evo || 0 })); }
   if (free) { S.fpk[k] -= free; if (S.fpk[k] <= 0) delete S.fpk[k]; }
-  S.coins -= P.p * pay; for (const p of out) S.pend.push(...p); S.packs = (S.packs || 0) + n; save();
+  S.coins -= P.p * pay; out.cw = Object.assign({}, S.caught); out.nc = 0;
+  for (const p of out) for (const e of p) { if (pkCatch(e)) { S.pend.push(e); continue; } const nw = !S.caught[e.id]; e.u = encMon(e).u; if (nw) out.nc += NEWCOIN[e.t] || 0; }
+  S.coins += out.nc; S.packs = (S.packs || 0) + n; save();
   return out;
 }
-function openPack(k) { const o = openPacks(k, 1); return o ? o[0] : null; }
+function openPack(k) { const o = openPacks(k, 1); if (!o) return null; o[0].cw = o.cw; o[0].nc = o.nc; return o[0]; }
 /* Sjansene i en pakke slik de er for deg akkurat nå (rutene og nivået ditt teller), regnet nøyaktig: hver plass har sin fordeling
    (tierDist, pluss plassens egne sjanser for epic og legendarisk), og plassene er uavhengige. rare og epic = minst én i pakken,
    t = andelen av kortene i hver klasse. */
@@ -198,9 +207,31 @@ function packOdds(k) {
    STARSELL etter fødte stjerner (1–5), SZSELL etter størrelsen. En shiny har alltid fem stjerner, og det ligger alt i de fem gangene. */
 const SELL = [10, 30, 100, 1000, 3000], STARSELL = [1, 1, 1, 1.2, 2, 4], SZSELL = [1, 1, 1.2, 3];
 const qualM = m => (m.iv && !m.sh ? STARSELL[starsFor(m.iv.reduce((a, b) => a + b, 0))] : 1) * SZSELL[szOf(m)];
-/* Et møte fra en pakke kan slippes uten å fanges (sammendraget etter åpningen): det gir det den ville vært verdt solgt. Legendariske slippes ikke. */
+/* Et kort fra en pakke kan slippes for mynter (sammendraget etter åpningen): det gir det den ville vært verdt solgt. Et vanlig kort er alt i samlingen
+   (e.u, v92) og selges derfra (sell, samme verdi); et som venter i gresset, tas bort derfra. Legendariske slippes ikke. */
 const encValue = e => Math.round(SELL[e.t] * (e.sh ? 5 : 1) * (e.pk ? PKSELL : 1) * qualM(e));
-function releaseEncs(list) { let v = 0, n = 0; for (const e of list) { const i = S.pend.indexOf(e); if (i < 0 || e.myst || e.t >= 4) continue; S.pend.splice(i, 1); v += encValue(e); n++; } if (n) { S.coins += v; save(); } return { v, n }; }
+function releaseEncs(list) {
+  let v = 0, n = 0;
+  for (const e of list) {
+    if (e.myst || e.t >= 4) continue;
+    const i = S.pend.indexOf(e), m = i < 0 && e.u ? monBy(e.u) : null;
+    if (i >= 0) { S.pend.splice(i, 1); const x = encValue(e); S.coins += x; v += x; n++; }
+    else if (m && m.pk) { const x = sell(m); if (x) { v += x; n++; } }
+  }
+  if (n) save();
+  return { v, n };
+}
+/* Vanlige pakkekort hører ikke hjemme i gresset (v92). Ventet noen der fra en eldre versjon av appen, går de inn i samlingen (ved lasting, adopt),
+   med myntene for en ny art som en fangst ville gitt. De store blir der.
+   Kort for kort, og et kort som feiler, blir liggende: lasting av lagringen (load) skal aldri stoppe her. */
+function pkSweep() {
+  let n = 0;
+  for (const e of Array.isArray(S.pend) ? S.pend.slice() : []) {
+    if (!(e && e.pk && e.id && !pkCatch(e))) continue;
+    try { const nw = !S.caught[e.id]; encMon(e); S.pend.splice(S.pend.indexOf(e), 1); if (nw) S.coins += NEWCOIN[e.t] || 0; n++; } catch (_) {}
+  }
+  return n;
+}
 const STMULT = [1, 0.22, 0.07];
 /* Dagens mål: tre små delmål som gir noe med en gang de nås. */
 const QUESTS = [
@@ -723,6 +754,8 @@ const LNO = {
   'Battles point out where to tap to see what the foe is weak to.': 'Kampene viser hvor du trykker for å se hva motstanderen er svak mot.',
   'Size and training are easier to read on a Pokémon\'s card.': 'Størrelse og trening er lettere å lese på kortet til en Pokémon.',
   'Bug fixes.': 'Feilrettinger.',
+  'Pokémon from packs go straight into your collection. Only the special ones wait in the grass.': 'Pokémon fra pakker går rett i samlingen. Bare de spesielle venter i gresset.',
+  'Encounters in the grass are quicker.': 'Møtene i gresset går raskere.',
   'Some legendary Pokémon have new intros.': 'Noen legendariske Pokémon har fått nye introer.',
   'Some adjustments to raids, sound and music.': 'Noen justeringer av raid, lyd og musikk.',
   'Some adjustments to rarity and encounter packs.': 'Noen justeringer av sjeldenhet og pakkene.',
@@ -759,11 +792,11 @@ const LNO = {
   'Nothing is marked to be sold.': 'Ingenting er merket for salg.',
   'The team, shinies, favourites and trained ones are never sold from here. The ones that stay sell for more if you ever sell them from their own card.': 'Laget, shinies, favoritter og trente selges aldri herfra. De som blir, gir mer hvis du en gang selger dem fra sitt eget kort.',
   // Steg 1.7: pakkene
-  'Three encounters in every pack. Tap a pack to see your odds, and open one or ten.': 'Tre møter i hver pakke. Trykk på en pakke for å se sjansene dine, og åpne én eller ti.',
+  'Three Pokémon in every pack. Tap a pack to see your odds, and open one or ten.': 'Tre Pokémon i hver pakke. Trykk på en pakke for å se sjansene dine, og åpne én eller ti.',
   'Your odds in one pack right now': 'Sjansene dine i én pakke akkurat nå',
   'What is inside follows your routes and the level of your team. Ten at once always hold at least one rare or better. Pokémon from packs sell for less than wild ones, and the greatest legendaries are rare in packs: they are mostly met in raids.': 'Innholdet følger rutene dine og nivået på laget. Ti om gangen har alltid minst én rare eller bedre. Pokémon fra pakker selges for mindre enn ville, og de største legendariske er sjeldne i pakker: de møtes mest i raid.',
   'The dimmed ones are duplicates no better than what you have. Tap a card to change it.': 'De dempede er duplikater som ikke er bedre enn det du har. Trykk på et kort for å endre det.',
-  'Tap a card to let it go for coins instead of catching it.': 'Trykk på et kort for å slippe det for mynter i stedet for å fange det.',
+  'Tap a card to let it go for coins instead of keeping it.': 'Trykk på et kort for å slippe det for mynter i stedet for å beholde det.',
   // Steg 1 (Dusk): flere
   'Every number in the game. Tap a topic to open it.': 'Hvert tall i spillet. Trykk på et tema for å åpne det.',
   'Study': 'Lesing',
@@ -866,7 +899,7 @@ const LNO = {
   'Every minute you study today raises today\'s battle bonus, from ×0.5 up to ×{top} at your goal. It multiplies the coins your battles pay.': 'Hvert minutt du leser i dag, øker dagens kampbonus, fra ×0.5 opp til ×{top} ved målet ditt. Den ganger opp myntene kampene gir.',
   'About every third battle day is special: more coins, Mega forms for three of yours, better shiny odds and more. Events are only ever for you, never for your opponents.': 'Omtrent hver tredje kampdag er spesiell: flere mynter, Mega-former for tre av dine, bedre shiny-sjanser og mer. Hendelsene er bare for deg, aldri for motstanderne.',
   'Now and then a legendary Pokémon shows itself after the day\'s battles. It fights your whole team, and you get {n} attempts, one a day. Win, and it is yours.': 'Av og til viser en legendarisk Pokémon seg etter dagens kamper. Den kjemper mot hele laget ditt, og du får {n} forsøk, ett om dagen. Vinn, og den er din.',
-  'Coins come from study and battles. They buy balls, packs of three encounters and things for your team. Every pack shows your own odds before you buy.': 'Mynter kommer fra lesing og kamper. De kjøper baller, pakker med tre møter og ting til laget. Hver pakke viser dine egne sjanser før du kjøper.',
+  'Coins come from study and battles. They buy balls, packs of Pokémon and things for your team. Every pack shows your own odds before you buy.': 'Mynter kommer fra lesing og kamper. De kjøper baller, pakker med Pokémon og ting til laget. Hver pakke viser dine egne sjanser før du kjøper.',
   'Medals for what you do: study hours, species caught, League wins. Each step pays coins, and your medals raise your rank, the frame around your picture.': 'Medaljer for det du gjør: studietimer, arter fanget, seire i ligaen. Hvert trinn gir mynter, og medaljene løfter rangen din, rammen rundt bildet ditt.',
   'Fokusdex cannot see whether you really study, and trusts you with that. It only closes the shortcuts it can: the clock, old saves and abandoned battles.': 'Fokusdex kan ikke se om du faktisk leser, og stoler på deg. Det stenger bare snarveiene det kan: klokka, gamle lagringer og kamper du forlater.',
   'Locked during your League lap.': 'Låst under runden din i ligaen.', 'It opens when the lap is won or lost.': 'Det åpnes når runden er vunnet eller tapt.',
@@ -915,7 +948,7 @@ function jFriend() {
 const has = k => !!(S.ulk && S.ulk[k]);
 /* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
    Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
-const WNV = 83, WN = ['Some legendary Pokémon have new intros.', 'Some adjustments to raids, sound and music.', 'Bug fixes.'];
+const WNV = 84, WN = ['Pokémon from packs go straight into your collection. Only the special ones wait in the grass.', 'Encounters in the grass are quicker.', 'Bug fixes.'];
 /* Første linje for dem som går reisen (whatsNew i ui.js). */
 const WNJ = 'Your journey: new things now open one study day at a time. See the card on the Focus page.';
 function featCheck() { S.ulk = S.ulk || {}; if (!jOn()) return 0; let ch = 0; for (const [k, d] of JOURNEY) if (!S.ulk[k] && (S.jd || 0) >= d) { S.ulk[k] = 1; ch = 1; } return ch; }
@@ -998,6 +1031,7 @@ function adopt(o) {
   /* Raid som ble stilt på nytt av den første utgaven av migrate10 (ingen hx), fikk ikke nytt nivå: det får de her. */
   if (S.raid && S.raid.at && S.raid.hx == null) raidRelevel(S.raid);
   S.routes = (S.routes || []).filter(r => S.regions.includes(r)); if (!S.routes.length) S.routes = [S.regions.includes(S.region) ? S.region : S.regions[0]];
+  try { pkSweep(); } catch (_) {}
   S.mons.forEach(ensure);
   unlockRegions();
   buildFags();
@@ -1341,6 +1375,13 @@ function genEnc(o = {}) {
   const lv = o.egg ? 1 : wildLv(id, tierOf(id));
   return { id, lv, sh: Math.random() < Math.min(SHINYCAP, shinyOdds() * (o.egg ? 4 : 1) * (o.shm || 1) * (typeof evShiny === 'function' ? evShiny() : 1)) ? 1 : 0, t: tierOf(id), tp: temperOf(id), tr: isLeg(id) ? 4 : TEMPER[temperOf(id)].tr, g: rollG(id) };
 }
+/* Pokémonen et møte blir: arten, nivået, shiny og kjønnet, og fra et pakkekort det den er født med (IV-ene, naturen og størrelsen). Fangsten (throwBall)
+   og et pakkekort som går rett i samlingen (openPacks, pkSweep) går begge gjennom her. */
+function encMon(e) {
+  const m = addMon(e.id, e.lv, e.sh, 0, e.g); if (e.pk) m.pk = 1;
+  if (e.iv && e.iv.length === 6) { m.iv = e.iv.slice(); if (e.nat != null) m.nat = e.nat; if (e.sz != null && !isLeg(e.id)) m.sz = e.sz; else delete m.sz; }
+  return m;
+}
 /* Sjansen for fangst. zone: 0 = bom, 1 = grønn sone, 2 = gull. */
 const catchP = (id, ball, zone, e) => ball === 'master' || (e && e.sure) ? 1 : Math.min(0.97, Math.pow(D(id)[3] / 255, 0.45) * BALLM[ball] * (ball === 'dusk' && isLeg(id) ? LEGBALL : 1) * (e && e.fed ? BERRYM : 1) * [0.5, 1, 1.6][zone]);
 /* Sonene på timing-måleren i prosent: grønn bredde og gull bredde. Sjeldnere = smalere og raskere. */
@@ -1362,8 +1403,7 @@ function throwBall(e, ball, zone) {
   S.seen[e.id] = 1;
   let mon = null, isNew = false, chn = null, chb = 0; const bonus = { c: 0, why: [] };
   if (ok) {
-    isNew = !S.caught[e.id]; mon = addMon(e.id, e.lv, e.sh, 0, e.g); if (e.pk) mon.pk = 1;
-    if (e.iv && e.iv.length === 6) { mon.iv = e.iv.slice(); if (e.nat != null) mon.nat = e.nat; if (e.sz != null && !isLeg(e.id)) mon.sz = e.sz; else delete mon.sz; }
+    isNew = !S.caught[e.id]; mon = encMon(e);
     dropPend(e); chn = chainCaught(e, mon);
     S.cst = (S.cst || 0) + 1;
     const add = (n, s) => { if (n > 0) { bonus.c += n; bonus.why.push(`${s} +${n}`); } };
@@ -1624,12 +1664,12 @@ function dupGroups() {
 function dupes() { const out = []; for (const g of dupGroups()) for (const m of g.list) if (!dupWhy(m) && !dupKeep(m, g)) out.push(m); return out; }
 /* SAMMENDRAGET ETTER EN PAKKEÅPNING (ønske 13): hvilke kort det er verdt å beholde, etter samme regler som duplikatene. Alt som er shiny, epic
    eller legendarisk blir. Av hver art blant kortene blir den med flest fødte stjerner og den største, hvis du ikke har arten eller de er bedre
-   enn det du eier. Resten foreslås sluppet for mynter (releaseEncs). */
+   enn det du eier. Resten foreslås sluppet for mynter (releaseEncs). Pokémonene kortene selv ble (e.u, v92), teller ikke som det du eier. */
 function packKeepers(cards) {
-  const keep = new Set(), by = {};
+  const keep = new Set(), by = {}, mine = new Set(cards.map(e => e.u).filter(Boolean));
   for (const e of cards) { if (e.myst || e.t >= 3 || e.sh) keep.add(e); else (by[e.id] = by[e.id] || []).push(e); }
   for (const id in by) {
-    const l = by[id], own = S.mons.filter(m => m.id === +id), big = l.slice().sort(szCmp)[0], star = l.slice().sort(ivCmp)[0];
+    const l = by[id], own = S.mons.filter(m => m.id === +id && !mine.has(m.u)), big = l.slice().sort(szCmp)[0], star = l.slice().sort(ivCmp)[0];
     if (!own.length) { keep.add(star); if (szOf(big) > szOf(star)) keep.add(big); continue; }
     if (szOf(big) > Math.max(...own.map(szOf))) keep.add(big);
     if (ivSum(star) > Math.max(...own.map(ivSum))) keep.add(star);

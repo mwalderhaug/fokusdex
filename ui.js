@@ -1143,7 +1143,7 @@ function itemSheet(k) {
 function packSheet(k) {
   const P = PACKS[k]; if (!P) return; const od = packOdds(k);
   const nf = (S.fpk && S.fpk[k]) || 0, free = nf > 0, lock = !free && P.lv && tlv() < P.lv, full = S.pend.length > PACKMAX, can = (free || S.coins >= P.p) && !lock && !full, p10 = P.p * Math.max(0, 10 - nf), can10 = !full && !(P.lv && tlv() < P.lv) && S.coins >= p10;
-  openSheet(`<div class="shead it" style="--pc:${P.c}"><span class="pk-ic"><i></i></span><div class="sp"><div class="pn">${P.n}</div><div class="sm tn">Three encounters, opened on the spot</div></div>${coinEl(S.coins)}</div>
+  openSheet(`<div class="shead it" style="--pc:${P.c}"><span class="pk-ic"><i></i></span><div class="sp"><div class="pn">${P.n}</div><div class="sm tn">Three Pokémon, opened on the spot</div></div>${coinEl(S.coins)}</div>
     <p>${P.d}</p>
     <div class="pkod" id="pkod"><div class="lab" style="margin:0">${tl('Your odds in one pack right now')}</div><div class="pkod-r">${[['r2', 'Rare or better', od.rare], ['r3', 'Epic', od.epic], ['r4', 'Legendary', od.leg], ['sh', 'Shiny', od.shiny]].map(([c, n, v]) => `<span class="pkod-c ${c}"><b class="tn">${pkPct(v)}</b><small>${n}</small></span>`).join('')}</div></div>
     <p class="sm">${tl('What is inside follows your routes and the level of your team. Ten at once always hold at least one rare or better. Pokémon from packs sell for less than wild ones, and the greatest legendaries are rare in packs: they are mostly met in raids.')}</p>
@@ -1156,7 +1156,7 @@ VIEW.butikk = () => {
   if (tab === 'packs') body = `<div class="packs">${Object.keys(PACKS).map(k => { const P = PACKS[k], free = !!(S.fpk && S.fpk[k] > 0), lock = !free && P.lv && l < P.lv, can = (free || S.coins >= P.p) && !lock && !full;
       const ep = pkPct(packOdds(k).epic);
       return `<div class="pkb${can ? '' : ' off'}${free ? ' free' : ''}" style="--pc:${P.c}"><button type="button" class="pkb-m" data-a="pinfo" data-k="${k}" aria-label="${P.n}, ${free ? 'free' : lock ? 'opens at trainer level ' + P.lv : nb(P.p) + ' coins'}. ${ep} chance of an epic. See what is inside"><span class="pk-ic"><i></i></span><b>${P.n}</b><span class="pk-p tn">${free ? `${icn('gift')}Free` : lock ? `${icn('lock')}Level ${P.lv}` : coinEl(P.p)}</span><span class="pk-o tn"><b>${ep}</b> epic</span></button></div>`; }).join('')}</div>
-    <p class="sm" style="text-align:center">${full ? 'Catch some of the encounters that are waiting before you open more packs.' : tl('Three encounters in every pack. Tap a pack to see your odds, and open one or ten.')}</p>`;
+    <p class="sm" style="text-align:center">${full ? 'Catch some of the encounters that are waiting before you open more packs.' : tl('Three Pokémon in every pack. Tap a pack to see your odds, and open one or ten.')}</p>`;
   else if (tab === 'tutors') body = `<p class="sm">${tl('Tutors teach moves a Pokémon never learns by level. Pick a move, see who on your team can learn it, and teach it with one tap.')}</p>${lockEl()}<div class="stack">${TUTORS.map(tutCard).join('')}</div>
     <p class="sm">${tl('An evolved Pokémon can also pick the moves its earlier forms learned, and one hatched from an egg knows an egg move. Both are free: open its card in Team and tap Change.')}</p>`;
   else body = SHOPGRP[tab].map(name => { const ks = SHELF.find(s => s[0] === name)[1]; return `${SHOPGRP[tab].length > 1 ? `<div class="lab sh">${name}</div>` : ''}<div class="card slist">${ks.map(shopRow).join('')}</div>`; }).join('');
@@ -1462,10 +1462,15 @@ const pkPct = x => x >= 0.9995 ? '100 %' : x >= 0.995 ? '99 %' : x >= 0.1 ? Math
    klassens farge, kortet løftes fram, og ordet står over. Giant og fem stjerner røpes ikke på forhånd, så også en rolig pakke kan overraske.
    Med flere pakker fylles raden øverst pakke for pakke, og til slutt kommer SAMMENDRAGET: alt du fikk, det beste først, der du beholder det
    som er verdt det og slipper resten for mynter med ett trykk (samme regler som duplikatene, packKeepers i game.js).
-   Møtene ligger alt i gresset når åpningen starter (openPacks), så ingenting går tapt om appen lukkes underveis.
+   Alt er avgjort og lagret når åpningen starter (openPacks), så ingenting går tapt om appen lukkes underveis: de vanlige kortene er alt i samlingen,
+   og de store (pkCatch i game.js: legendarisk, epic, shiny) venter i gresset (v92, Jazz 24.11: «Valg B»).
    U.pk = { k, packs (hver sortert med det beste sist), i = pakken som står framme, demo, rel = settet som slippes, fin = ferdig valgt, pick }. */
 const pkIv = e => e.iv ? e.iv.reduce((a, b) => a + b, 0) : 0;
-const pkHot = e => !!(e.myst || e.t >= 3 || e.sh);
+const pkHot = pkCatch;
+/* Kortet er fortsatt ditt: i gresset (de store) eller i samlingen (de vanlige, e.u = Pokémonen det ble). */
+const pkMine = e => S.pend.includes(e) || !!(e.u && monBy(e.u));
+/* NEW: arten var ikke fanget før pakkene ble åpnet (U.pk.cw fra openPacks; de vanlige kortene er alt lagt i samlingen når de snus). */
+const pkNew = e => !e.myst && !((U.pk && U.pk.cw) || S.caught)[e.id];
 /* Valget mellom å beholde og å slippe for mynter: på reisen først fra dag 4 (steget «nature»). */
 const pkPickOn = () => !jOn() || has('nature');
 const pkBig = e => pkHot(e) || (szOn() && e.sz === 3) || !!(potOn() && e.iv && starsFor(pkIv(e)) >= 5);
@@ -1473,19 +1478,21 @@ const pkQ = e => (e.myst ? 100 : 0) + e.t * 10 + (e.sh ? 25 : 0) + (e.iv ? stars
 const pkWord = e => e.myst ? 'Legendary' : [e.sh ? 'Shiny' : '', szOn() && e.sz === 3 ? 'Giant' : '', e.t >= 3 ? TIERS[e.t] : !e.sh && potOn() && e.iv && starsFor(pkIv(e)) >= 5 ? 'Five stars' : ''].filter(Boolean).join(' · ');
 function pkFront(e) {
   if (e.myst) return '<span class="pk-front pkq"><span class="pkq-o" aria-hidden="true"><i>?</i></span><b>? ? ?</b><span class="tier r4">Legendary</span><span class="sm">Who is it? Find out in the grass</span></span>';
-  return `<span class="pk-front">${S.caught[e.id] ? '' : '<i class="pk-new">NEW</i>'}${spr(e.id, { ani: 1, sh: e.sh, mega: defForm(e.id) })}<b>${esc(D(e.id)[0])}${gs(e)}</b><span class="tier r${e.t}">${e.sh ? 'Shiny · ' : ''}${TIERS[e.t]}</span><span class="pk-m tn">Lv ${e.lv}${potOn() && e.iv ? starRow(e) : ''}</span>${szOn() && e.sz != null && e.sz !== 1 ? `<span class="szt sz${e.sz}">${SZN[e.sz]}</span>` : ''}</span>`;
+  return `<span class="pk-front">${pkNew(e) ? '<i class="pk-new">NEW</i>' : ''}${spr(e.id, { ani: 1, sh: e.sh, mega: defForm(e.id) })}<b>${esc(D(e.id)[0])}${gs(e)}</b><span class="tier r${e.t}">${e.sh ? 'Shiny · ' : ''}${TIERS[e.t]}</span><span class="pk-m tn">Lv ${e.lv}${potOn() && e.iv ? starRow(e) : ''}</span>${szOn() && e.sz != null && e.sz !== 1 ? `<span class="szt sz${e.sz}">${SZN[e.sz]}</span>` : ''}</span>`;
 }
-/* Et lite kort (raden øverst og sammendraget). o.act = knapp (trykk bytter mellom å beholde og å slippe), o.rel = slippes, o.in = kommer inn i raden. */
+/* Et lite kort (raden øverst og sammendraget). o.act = knapp (trykk bytter mellom å beholde og å slippe), o.rel = slippes, o.in = kommer inn i raden,
+   o.wild = venter i gresset (står «catch» under). */
 function pkMini(e, i, o) {
   o = o || {}; const tag = o.act ? `button type="button" data-a="${o.act}" data-k="${i}" aria-pressed="${!o.rel}" aria-label="${e.myst ? 'A legendary' : esc(D(e.id)[0])}: ${o.rel ? 'let go for ' + encValue(e) + ' coins' : 'kept'}"` : `span${o.in ? ` style="--i:${i}"` : ''}`;
-  return `<${tag} class="pkm r${e.t}${e.sh ? ' shy' : ''}${o.rel ? ' rel' : ''}${o.in ? ' in' : ''}">${e.myst ? '<span class="pkm-q">?</span>' : spr(e.id, { sh: e.sh, s: '42px', mega: defForm(e.id), lazy: 1 })}${!e.myst && !S.caught[e.id] ? '<i class="pkm-n" title="New species"></i>' : ''}${e.sz === 3 && szOn() ? '<i class="pkm-g" title="Giant">G</i>' : ''}${o.act ? `<small class="tn">${o.rel ? '+' + nb(encValue(e)) : e.myst ? '? ? ?' : potOn() && e.iv ? '★'.repeat(starsFor(pkIv(e))) : 'keep'}</small>` : ''}</${o.act ? 'button' : 'span'}>`;
+  return `<${tag} class="pkm r${e.t}${e.sh ? ' shy' : ''}${o.rel ? ' rel' : ''}${o.in ? ' in' : ''}${o.wild ? ' wild' : ''}">${e.myst ? '<span class="pkm-q">?</span>' : spr(e.id, { sh: e.sh, s: '42px', mega: defForm(e.id), lazy: 1 })}${pkNew(e) ? '<i class="pkm-n" title="New species"></i>' : ''}${e.sz === 3 && szOn() ? '<i class="pkm-g" title="Giant">G</i>' : ''}${o.act ? `<small class="tn">${o.rel ? '+' + nb(encValue(e)) : e.myst ? '? ? ?' : potOn() && e.iv ? '★'.repeat(starsFor(pkIv(e))) : 'keep'}</small>` : o.wild ? '<small class="tn">catch</small>' : ''}</${o.act ? 'button' : 'span'}>`;
 }
 function packShow(k, packs, demo) {
+  const cw = packs.cw || null, nc = packs.nc || 0;
   if (packs.length && !Array.isArray(packs[0])) packs = [packs];
   packs = packs.map(p => p.slice().sort((a, b) => pkQ(a) - pkQ(b)));
   if (packs.length > 1) { const top = p => pkQ(p[p.length - 1]); let bi = 0; packs.forEach((p, i) => { if (top(p) > top(packs[bi])) bi = i; }); packs.push(packs.splice(bi, 1)[0]); }
   const P = PACKS[k], n = packs.length, slots = packs.slice(0, -1).reduce((a, p) => a + p.length, 0);
-  U.pk = { k, packs, i: 0, demo: demo ? k : '', rel: null, fin: 0 }; U.pkDemo = demo ? k : '';
+  U.pk = { k, packs, i: 0, demo: demo ? k : '', rel: null, fin: 0, cw, nc }; U.pkDemo = demo ? k : '';
   ov(`<div class="pko" id="pko" style="--pc:${P.c}">
     <div class="pk-top"${n > 1 ? '' : ' hidden'}><span class="pill tn" id="pkn"></span><button type="button" class="btn sm2 nf" data-a="pkskip">Open them all</button></div>
     <div class="pk-tray" id="pktray" style="--tc:${Math.min(9, slots)}" aria-hidden="true"${n > 1 ? '' : ' hidden'}>${'<span class="pkm e"></span>'.repeat(slots)}</div>
@@ -1518,26 +1525,30 @@ function pkPackDone(big) {
   if (last) { clearTimeout(pkPackDone.t); if (X.packs.length > 1) pkPackDone.t = setTimeout(() => { if (U.pk === X) pkEnd(); }, big ? 1900 : 800); else pkEnd(); return; }
   $('#pkt').textContent = 'Tap for the next pack'; $('#pka').innerHTML = '<button type="button" class="btn gold" data-a="pknext">Next pack</button>';
 }
-/* Slutten. Én pakke: kortene blir stående. Flere: sammendraget med det beste først. X.rel = de som slippes (forslaget følger reglene for duplikater). */
+/* Slutten. Én pakke: kortene blir stående. Flere: sammendraget med det beste først. X.rel = de som slippes (forslaget følger reglene for duplikater).
+   v92 (Valg B): de vanlige kortene er alt i samlingen, og bare de store venter i gresset. live = kortene som fortsatt er dine (i samlingen eller i
+   gresset), wild = de som venter i gresset; «Catch them now» gjelder bare dem. X.nc = myntene for nye arter (openPacks). */
 function pkEnd() {
   const X = U.pk, st = $('#pkst'); if (!X || !st) return; clearTimeout(pkPackDone.t);
-  const all = X.packs.reduce((a, p) => a.concat(p), []), n = X.packs.length, live = all.filter(e => X.demo || S.pend.includes(e));
+  const all = X.packs.reduce((a, p) => a.concat(p), []), n = X.packs.length, live = all.filter(e => X.demo || pkMine(e)), wild = X.demo ? [] : live.filter(e => S.pend.includes(e));
   const tray = $('#pktray'), top = $('#pko .pk-top'); if (tray) tray.hidden = true; if (top) top.hidden = true;
   const sum = n > 1 || !!X.pick; if (sum && !pkPickOn()) X.fin = 1;
   if (!X.rel) { const keep = X.demo || !sum ? null : packKeepers(all); X.rel = new Set(keep ? all.filter(e => !keep.has(e)) : []); }
-  const best = all.reduce((a, x) => Math.max(a, x.t + (x.sh ? 2 : 0)), 0), nw = new Set(all.filter(e => !e.myst && !S.caught[e.id]).map(e => e.id)).size, cnt = f => live.filter(f).length;
-  const word = all.some(x => x.myst) ? 'A legendary! Step into the grass to see who it is.' : best >= 4 ? 'What a pull!' : best >= 3 ? 'A great pack.' : X.demo ? 'An ordinary pack.' : 'They are waiting in the grass.';
+  const best = all.reduce((a, x) => Math.max(a, x.t + (x.sh ? 2 : 0)), 0), nw = new Set(all.filter(pkNew).map(e => e.id)).size, cnt = f => live.filter(f).length;
+  const lead = best >= 4 ? 'What a pull!' : best >= 3 ? 'A great pack.' : '';
+  const word = all.some(x => x.myst) ? 'A legendary! Step into the grass to see who it is.' : X.demo ? lead || 'An ordinary pack.'
+    : [lead, wild.length === 1 ? 'One waits in the grass for you to catch it.' : wild.length ? `${wild.length} wait in the grass for you to catch them.` : live.length === 1 ? 'It is in your collection.' : 'They are in your collection.'].filter(Boolean).join(' ');
   if (sum) {
-    const sorted = all.map((e, i) => [e, i]).filter(x => X.demo || S.pend.includes(x[0])).sort((a, b) => pkQ(b[0]) - pkQ(a[0]));
+    const sorted = all.map((e, i) => [e, i]).filter(x => X.demo || pkMine(x[0])).sort((a, b) => pkQ(b[0]) - pkQ(a[0]));
     const bits = [`${live.length} ${live.length === 1 ? 'card' : 'cards'}`, nw ? `${nw} new` : '', cnt(e => e.myst) ? `${cnt(e => e.myst)} legendary` : '', cnt(e => !e.myst && e.t === 3) ? `${cnt(e => !e.myst && e.t === 3)} epic` : '', cnt(e => e.sh) ? `${cnt(e => e.sh)} shiny` : ''].filter(Boolean);
-    st.className = 'pk-stage sum'; st.innerHTML = `<div class="pk-sum"><div class="pk-sh"><b>${X.fin ? 'In the grass' : 'Your pull'}</b><span class="sm tn">${bits.join(' · ')}</span></div>
-      <div class="pk-grid">${sorted.map(([e, i]) => pkMini(e, i, X.demo || X.fin ? {} : { act: 'pktog', rel: X.rel.has(e) })).join('')}</div></div>`;
+    st.className = 'pk-stage sum'; st.innerHTML = `<div class="pk-sum"><div class="pk-sh"><b>Your pull</b><span class="sm tn">${bits.join(' · ')}</span></div>
+      <div class="pk-grid">${sorted.map(([e, i]) => pkMini(e, i, X.demo ? {} : X.fin ? { wild: S.pend.includes(e) } : { act: 'pktog', rel: X.rel.has(e) })).join('')}</div></div>`;
   }
-  const rel = [...X.rel].filter(e => S.pend.includes(e)), val = rel.reduce((s, e) => s + encValue(e), 0);
-  $('#pkt').textContent = X.demo ? word : sum && !X.fin ? (rel.length ? tl('The dimmed ones are duplicates no better than what you have. Tap a card to change it.') : tl('Tap a card to let it go for coins instead of catching it.')) : live.length ? word : 'All let go.';
+  const rel = [...X.rel].filter(e => X.demo || pkMine(e)), val = rel.reduce((s, e) => s + encValue(e), 0);
+  $('#pkt').textContent = X.demo ? word : sum && !X.fin ? (rel.length ? tl('The dimmed ones are duplicates no better than what you have. Tap a card to change it.') : tl('Tap a card to let it go for coins instead of keeping it.')) : live.length ? word + (X.nc ? ` New species: +${nb(X.nc)} coins.` : '') : 'All let go.';
   $('#pka').innerHTML = X.demo ? `<button type="button" class="btn gold" data-a="pkdemo" data-k="${X.k}">Open another</button><button type="button" class="btn" data-a="pkdemo" data-k="${X.k}" data-n="10">Open ten</button><button type="button" class="btn nf" data-a="${U.pkFrom === 'odds' ? 'packlab' : 'lab'}">${U.pkFrom === 'odds' ? 'Back to the odds' : 'Back to the Sandbox'}</button>`
     : sum && !X.fin ? `${rel.length ? `<button type="button" class="btn gold" data-a="pkrel">Let ${rel.length} go for ${coinEl(val)}</button>` : ''}<button type="button" class="btn${rel.length ? ' nf' : ' gold'}" data-a="pkkeep">${rel.length ? 'Keep them all' : 'Done'}</button>`
-    : `${live.length ? '<button type="button" class="btn gold" data-a="pkhunt">Catch them now</button>' : ''}<button type="button" class="btn nf" data-a="pkdone">${live.length ? 'Later' : 'Done'}</button>${!sum && pkPickOn() && live.some(e => !e.myst) ? '<button type="button" class="btn nf pk-lg" data-a="pkpick">Let some go for coins</button>' : ''}`;
+    : `${wild.length ? `<button type="button" class="btn gold" data-a="pkhunt">${wild.length === 1 ? 'Catch it now' : 'Catch them now'}</button>` : ''}<button type="button" class="btn ${wild.length ? 'nf' : 'gold'}" data-a="pkdone">${wild.length ? 'Later' : 'Done'}</button>${!sum && pkPickOn() && live.some(e => !e.myst) ? '<button type="button" class="btn nf pk-lg" data-a="pkpick">Let some go for coins</button>' : ''}`;
 }
 function ov(html, cls, tc) { const o = $('#ov'); o.className = 'ov' + (cls ? ' ' + cls : ''); o.style.setProperty('--tc', tc || 'var(--sage)'); o.innerHTML = `<div class="ovin">${html}</div>`; o.hidden = false; }
 function closeOv() { const o = $('#ov'); o.hidden = true; o.innerHTML = ''; if (typeof wkAmbOff === 'function') wkAmbOff(); }
@@ -1717,9 +1728,13 @@ function radarScreen() {
 function hunt() {
   encQuiet(); U.rad = null;
   if (!S.pend.length) { closeOv(); return render(); }
-  if (radarOn() && (S.pend.length >= 2 || chainFuel())) return radarOpen();
+  /* Radaren bare når valget betyr noe (v92): kjedetua (chainFuel), eller glitter fordi en shiny er blant de tre første. Ellers rett i møtet. */
+  if (radarOn() && (chainFuel() || (S.pend.length >= 2 && S.pend.slice(0, 3).some(e => e.sh === 1)))) return radarOpen();
   meet(S.pend[0]);
 }
+/* Et vanlig møte går fortere (v92, Jazz 24.11: «litt mer smooth»): common og uncommon som ikke er shiny dukker opp på 0,7 s (før 1,1) og vingler to
+   ganger før den sitter. De store får den fulle avsløringen og tre vingl. MEETQ = ms før måleren starter: [vanlig, stor]. WOBMS = ms per vingl. */
+const encQ = e => e.t <= 1 && !e.sh && !isLeg(e.id), MEETQ = [650, 1000], WOBMS = 560;
 function meet(e) {
   E.e = e; E.done = null; E.busy = true;
   if (!(S.items[E.ball] > 0)) E.ball = bestBall();
@@ -1728,7 +1743,7 @@ function meet(e) {
   S.seen[E.e.id] = 1;
   drawEnc(true);
   sfx.appear(); cry(E.e.id, 650);
-  setTimeout(() => { E.busy = false; aim(); }, 1150);
+  setTimeout(() => { E.busy = false; aim(); }, MEETQ[encQ(E.e) ? 0 : 1]);
 }
 /* Hvem den legendariske er, vises først her: filmen dens spilles (den samme som i et raid), og så står den i gresset. */
 async function mystIntro(e) {
@@ -1749,7 +1764,7 @@ function drawEnc(reveal) {
   const q = S.pend.filter(x => x !== e).slice(0, 10).map(() => '<i></i>').join('');
   ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="later">Save for later</button><span class="row" style="gap:8px">${(S.cst || 0) >= 2 ? `<span class="pill tn estk">${S.cst} in a row</span>` : ''}<span class="pill tn" id="e-left">${S.pend.length} ${S.pend.length === 1 ? 'encounter' : 'encounters'} left</span></span></div>
     ${q ? `<div class="encq" aria-label="Encounters waiting">${q}</div>` : ''}
-    <div class="mid r${e.t}${e.sh ? ' shy' : ''}"><div class="stage${reveal ? ' rev' : ''}" id="e-stage">${spr(e.id, { ani: 1, sh: e.sh, mega: defForm(e.id) })}<span class="tball">${ballEl(E.ball, '54px')}</span><span class="stars" id="e-stars"></span><span class="egrass" aria-hidden="true">${'<i></i>'.repeat(15)}</span>${reveal && call ? `<span class="ecall">${call}!</span>` : ''}</div>
+    <div class="mid r${e.t}${e.sh ? ' shy' : ''}"><div class="stage${reveal ? ' rev' + (encQ(e) ? ' q' : '') : ''}" id="e-stage">${spr(e.id, { ani: 1, sh: e.sh, mega: defForm(e.id) })}<span class="tball">${ballEl(E.ball, '54px')}</span><span class="stars" id="e-stars"></span><span class="egrass" aria-hidden="true">${'<i></i>'.repeat(15)}</span>${reveal && call ? `<span class="ecall">${call}!</span>` : ''}</div>
       <div><div class="ename">${e.sh === 2 ? 'Dark ' : e.sh ? 'Shiny ' : ''}${esc(d[0])}${gs(e)}</div><div class="row" style="justify-content:center;margin-top:8px;flex-wrap:wrap;gap:6px">${tierEl(e.id)} ${types(e.id)} <span class="pill tn">Level ${e.lv}</span>${e.tp && e.tp !== 'calm' && !isLeg(e.id) ? `<span class="pill tn tpp tp-${e.tp}">${TEMPER[e.tp].n}</span>` : ''}</div>
       <div id="e-info"><p class="sm" style="margin-top:8px" id="e-msg">${e.ch != null && S.chain ? `<b style="color:var(--gold)">Chain ${S.chain.n}</b> · catch it to keep the chain going` : S.caught[e.id] ? (n ? `You already have ${n}.` : 'You have had it before.') : `<b style="color:var(--sage)">New to your collection</b> · +${NEWCOIN[e.t]} coins if you catch it`}</p>
       <div class="hearts" id="e-hearts" aria-label="Attempts left" style="margin-top:10px">${Array.from({ length: encTr(e) + (e.fed ? 1 : 0) }, (_, i) => `<i class="${i < e.tr ? '' : 'off'}"></i>`).join('')}</div>${e.fed ? '<p class="sm tn" style="margin-top:6px;color:var(--gold)">It ate a Golden Razz Berry: one more throw, and better odds.</p>' : ''}</div></div></div>
@@ -1796,18 +1811,18 @@ function doThrow() {
   for (let i = 0; i < hearts.length; i++) hearts[i].className = i < e.tr ? '' : 'off';
   msg.innerHTML = r.p >= 1 ? '<b style="color:var(--gold)">Master Ball</b>' : zone === 2 ? '<b style="color:var(--gold)">Perfect throw</b>' : zone === 1 ? 'Nice throw' : 'Outside the zone';
   st.className = 'stage in'; sfx.thr(); buzz(30);
-  const wobs = r.crit ? 1 : r.ok ? 3 : 1 + (Math.random() < r.p ? 1 : 0);
+  const wobs = r.crit ? 1 : r.ok ? (encQ(e) ? 2 : 3) : 1 + (Math.random() < r.p ? 1 : 0);
   if (r.crit) { st.classList.add('crit'); setTimeout(() => { tone(1568, 0, 0.09, 0.05, 'square'); tone(2093, 0.09, 0.14, 0.05, 'square'); buzz([30, 30, 90]); }, 300); }
   let i = 0;
   const step = () => {
-    if (i < wobs) { st.className = 'stage held'; void st.offsetWidth; st.className = 'stage held wob'; sfx.wob(i); buzz(20); i++; return setTimeout(step, 700); }
+    if (i < wobs) { st.className = 'stage held'; void st.offsetWidth; st.className = 'stage held wob'; sfx.wob(i); buzz(20); i++; return setTimeout(step, WOBMS); }
     if (r.ok) {
       st.className = 'stage held'; if (e.sh || isLeg(e.id)) sfx.caught(); else sfx.got(); buzz([60, 40, 60, 40, 140]);
       $('#e-stars').innerHTML = Array.from({ length: 10 }, (_, k) => { const a = k / 10 * 6.283, d = 70 + Math.random() * 50; return `<i style="--dx:${Math.round(Math.cos(a) * d)}px;--dy:${Math.round(Math.sin(a) * d)}px;animation-delay:${k * 0.02}s"></i>`; }).join('');
       const info = $('#e-info'); if (info) info.innerHTML = catchCard(r, e);
       { const sk = $('.estk'); if (sk) sk.textContent = `${S.cst} in a row`; }
       { const j = judge(r.mon), n = ['Decent', 'Above average', 'Great', 'Outstanding', 'Flawless'].indexOf(j.t) + 1; for (let k = 0; k < n; k++) setTimeout(() => { if ($('.ecard')) { tone(880 + k * 150, 0, 0.06, 0.035, 'triangle'); if (k === n - 1 && n >= 4) { sfx.found(); buzz([30, 30, 120]); } } }, 250 + k * 160); }
-      if (r.bonus.c) setTimeout(() => { if ($('.ecard')) sfx.coin(); }, 1150);
+      if (r.bonus.c) setTimeout(() => { if ($('.ecard')) sfx.coin(); }, 900);
       cry(e.id, 650); E.done = 'got'; $('#e-left').textContent = S.pend.length ? `${S.pend.length} ${S.pend.length === 1 ? 'encounter' : 'encounters'} left` : 'Last encounter';
     } else {
       st.className = 'stage out'; if (r.fled) sfx.flee(); else sfx.fail();
@@ -1819,9 +1834,9 @@ function doThrow() {
       const ctl = $('#e-ctl'); if (!ctl) return;
       if (E.done) { ctl.innerHTML = `<div class="acts">${S.pend.length ? `<button type="button" class="btn gold" data-a="hunt">Next encounter · ${S.pend.length} left</button><button type="button" class="btn nf" data-a="home">Done</button>` : '<button type="button" class="btn pri" data-a="home">Done</button>'}</div>`; }
       else { st.className = 'stage'; drawEnc(false); aim(); }
-    }, r.ok ? 1300 : 650);
+    }, r.ok ? 800 : 500);
   };
-  setTimeout(step, 420);
+  setTimeout(step, 380);
 }
 function evoShow(m, from) {
   closeSheet();
@@ -1962,7 +1977,7 @@ const A = {
     if (el.classList.contains('on')) { if (!st.querySelector('.pk-card:not(.on)') && X.i < X.packs.length - 1) A.pknext(); return; }
     const e = X.packs[X.i][+el.dataset.k]; if (!e) return;
     el.classList.add('on'); if (!e.myst && !X.demo) S.seen[e.id] = 1;
-    el.setAttribute('aria-label', e.myst ? 'A legendary Pokémon. Who it is, you find out in the grass' : `${D(e.id)[0]}, ${e.sh ? 'shiny, ' : ''}${TIERS[e.t]}, level ${e.lv}${S.caught[e.id] ? '' : ', new species'}`);
+    el.setAttribute('aria-label', e.myst ? 'A legendary Pokémon. Who it is, you find out in the grass' : `${D(e.id)[0]}, ${e.sh ? 'shiny, ' : ''}${TIERS[e.t]}, level ${e.lv}${pkNew(e) ? ', new species' : ''}`);
     if (e.myst) { sfx.event(); buzz([80, 50, 80, 50, 80, 50, 320]); } else if (e.t >= 3 || e.sh) { sfx.evo(); buzz([60, 40, 60, 40, 220]); } else if (e.t >= 2) { sfx.got(); buzz(40); } else { sfx.found(); buzz(15); }
     if (!e.myst) cry(e.id, 280, 0.35);
     const big = pkBig(e); if (big) pkHero(el, e);
@@ -1975,7 +1990,8 @@ const A = {
   pkkeep: () => { const X = U.pk; if (!X) return; X.rel = new Set(); X.fin = 1; pkEnd(); },
   pkpick: () => { const X = U.pk; if (!X) return; X.pick = 1; X.rel = null; pkEnd(); },
   pkdone: () => { U.pk = null; closeOv(); render(); },
-  pkhunt: () => { U.pk = null; hunt(); },
+  /* Fang nå (v92): de store fra pakkene står først i gresset, så de møtes før det som ventet der fra før. */
+  pkhunt: () => { const X = U.pk; if (X && !X.demo) { const w = X.packs.reduce((a, p) => a.concat(p), []).filter(e => S.pend.includes(e)); if (w.length) { S.pend = w.concat(S.pend.filter(e => !w.includes(e))); save(true); } } U.pk = null; hunt(); },
   sound: () => { S.sound = S.sound ? 0 : 1; save(); sfx.chip(); render(); setRe(); },
   /* Lyden når et møte dukker opp under en økt (S.fsnd = 0: av). Bjella på timeren og knappen under Settings. */
   fsnd: () => { S.fsnd = S.fsnd === 0 ? 1 : 0; save(); const b = $('#t-snd'); if (b) { b.innerHTML = bellSvg(S.fsnd !== 0); b.setAttribute('aria-pressed', S.fsnd !== 0); } else { render(); setRe(); } toast(S.fsnd === 0 ? 'Encounter sound off' : 'Encounter sound on'); },

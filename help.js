@@ -53,7 +53,7 @@ const HELP = [
 
   { k: 'catch', n: 'Encounters and catching', s: 'Rarity, throws, and what a catch gives', ic: () => ballEl('poke', '30px'), body: () => `
     ${hH('Where they come from')}
-    ${hP('A session finds one Pokémon for every 20 minutes, and one more if you finish a session of 25 minutes or longer. Longer sessions find rarer ones. Battles and packs give encounters too. They all wait in the grass until you have time.')}
+    ${hP('A session finds one Pokémon for every 20 minutes, and one more if you finish a session of 25 minutes or longer. Longer sessions find rarer ones. Battles give encounters too. They all wait in the grass until you have time.')}
     ${hH('Rarity')}
     <div class="hgrid tiers">${TIERS.map((t, i) => `<span><b class="tier r${i}">${t}</b><span class="sm tn">+${NEWCOIN[i]}</span></span>`).join('')}</div>
     ${hP('The number is the coins a <b>new species</b> gives the first time you catch it. Before you step in, the dots at the top show what is waiting, by colour.')}
@@ -170,7 +170,7 @@ const HELP = [
     ${hRow(hSym('+', 'var(--violet)'), 'Potions and Revives', 'Used from the Bag in League battles and raids.')}
     ${hRow(hSym('▲', 'var(--red)'), 'Training', 'The big one. It is what makes the hardest bosses possible.')}
     ${hH('Encounter packs')}
-    ${hP('A pack is three encounters, opened like a pack of cards. The glow on the back of a card gives its rarity away before you turn it, and the dearer the pack, the better the last card. Your own odds stand on each pack in the Shop.')}
+    ${hP('A pack is three Pokémon, opened like a pack of cards. The glow on the back of a card gives its rarity away before you turn it, and the dearer the pack, the better the last card. The ordinary ones go straight into your collection; an epic, a shiny or a legendary waits in the grass for you to catch it. Your own odds stand on each pack in the Shop.')}
     ${hP('Open ten at once and at least one is rare or better. Afterwards you see everything you got: keep what is worth catching, and let the rest go for coins with one tap.')}
     <div class="hgrid packs">${['poke', 'great', 'ultra', 'master'].map(k => `<span style="--pc:${PACKS[k].c}"><b>${PACKS[k].n.replace(' Pack', '')}</b><span class="sm tn">${nb(PACKS[k].p)}</span><span class="sm tn">${+(PACKS[k].slots[2].leg * 100).toFixed(1)} %</span></span>`).join('')}</div>
     ${hP('The percentage is the chance of a <b>legendary</b> in the last card. The card does not say who it is: you find out when you meet it in the grass.')}` },
@@ -237,7 +237,7 @@ const HLEAD = {
   bonus: { pic: () => `<div class="tr-bar">${hBar(0.62, 0.5, goalTop().toFixed(1))}</div>`, t: 'Every minute you study today raises today\'s battle bonus, from ×0.5 up to ×{top} at your goal. It multiplies the coins your battles pay.', v: () => ({ top: goalTop().toFixed(1) }) },
   events: { pic: () => `<span class="evc-ic hev" style="--ec:${EVENTS.gold.c};transform:scale(1.5)">${EVENTS.gold.ic}</span>`, t: 'About every third battle day is special: more coins, Mega forms for three of yours, better shiny odds and more. Events are only ever for you, never for your opponents.' },
   raids: { pic: () => '<span class="raid-sp qm hqm tr-raid"><i>?</i></span>', t: 'Now and then a legendary Pokémon shows itself after the day\'s battles. It fights your whole team, and you get {n} attempts, one a day. Win, and it is yours.', v: () => ({ n: RAIDTRIES }) },
-  shop: { pic: () => '<span class="coin hcoin" style="transform:scale(1.6)"><i></i></span>', t: 'Coins come from study and battles. They buy balls, packs of three encounters and things for your team. Every pack shows your own odds before you buy.' },
+  shop: { pic: () => '<span class="coin hcoin" style="transform:scale(1.6)"><i></i></span>', t: 'Coins come from study and battles. They buy balls, packs of Pokémon and things for your team. Every pack shows your own odds before you buy.' },
   ach: { pic: () => { const R = rankOf(); return avFrame(R, 'lg', 1); }, t: 'Medals for what you do: study hours, species caught, League wins. Each step pays coins, and your medals raise your rank, the frame around your picture.' },
   fair: { pic: () => hSym('✓', 'var(--sage)'), t: 'Fokusdex cannot see whether you really study, and trusts you with that. It only closes the shortcuts it can: the clock, old saves and abandoned battles.' },
   sync: { pic: () => hSym('⇅', 'var(--blue)'), t: 'Your game is saved on this device as you go. Sync keeps a copy in a private GitHub repository, so it follows you between devices.' }

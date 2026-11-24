@@ -805,7 +805,7 @@ button.pill{font:inherit;font-size:11.5px;font-weight:600;color:var(--ink2)}butt
 .stage.in .tball{animation:drop .3s ease-out forwards}
 /* Mens den er i ballen, vises bare ballen. */
 .stage.held .sprb,.stage.wob .sprb{visibility:hidden}
-.stage.wob .tball{opacity:1;transform:translateY(34px);animation:wob .55s ease-in-out}
+.stage.wob .tball{opacity:1;transform:translateY(34px);animation:wob .45s ease-in-out}
 .stage.held .tball{opacity:1;transform:translateY(34px)}
 @keyframes burst{0%{opacity:1;transform:translateY(34px) scale(1)}100%{opacity:0;transform:translateY(34px) scale(2.2)}}
 .stage.out .tball{animation:burst .3s ease-out forwards}
@@ -1804,6 +1804,8 @@ button.pkm{cursor:pointer}
 .egrass i{flex:1;margin:0 -1.5%;height:100%;background:linear-gradient(color-mix(in srgb,var(--sage) 85%,#fff),color-mix(in srgb,var(--sage) 42%,#162014));clip-path:polygon(50% 0,92% 100%,8% 100%);transform-origin:50% 100%;opacity:.92}
 .egrass i:nth-child(3n){height:62%}.egrass i:nth-child(3n+1){height:84%}.egrass i:nth-child(5n){height:48%}
 .stage.rev .egrass i{animation:eRustle .5s ease-in-out 2}
+/* Et vanlig møte (encQ i ui.js, v92) dukker opp fortere: avsløringen på 0,7 s og gresset rister én gang. */
+.stage.rev.q .spr,.stage.rev.q::after{animation-duration:.7s}.stage.rev.q .egrass i{animation-iteration-count:1}
 .stage.rev .egrass i:nth-child(3n){animation-delay:.08s}.stage.rev .egrass i:nth-child(3n+1){animation-delay:.16s}
 @keyframes eRustle{0%,100%{transform:rotate(0)}30%{transform:rotate(-16deg)}70%{transform:rotate(14deg)}}
 .stage.in .egrass,.stage.held .egrass,.stage.wob .egrass,.stage.fled .egrass{opacity:0}
