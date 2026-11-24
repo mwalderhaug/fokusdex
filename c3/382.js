@@ -354,7 +354,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
     /* Rettelse 3 (Jazz 24.11 kl. 17:12): ny rekkefølge. CW: klippet til bølgen mot klippen, CL–CL3: den knuser; PASS: skyggen kommer inn under båten, MID: midten under
        båten (farten i bildet som før), LY: lynet viser ham; B6: noe stort kommer; UP: finnene; HIT: båten i vannet; SLAM: slaget med finnene. */
     const QI = { LY0: 1.51, CW: 4.57, CL: 7.66, CL2: 9.08, CL3: 10.73, PASS: 13.2, MID: 16.29, LY: 16.9, W1: 17.9, W2: 19.11, OUT: 19.6, B6: 20.06, W3: 23.03, W4: 25.12,
-      UP: 28.36, LIFT: 29.03, SLIDE: 30.4, HIT: 31.91, ROLL: 32.6, GONE: 33.8, SLAM: 35.51, DK: 39.24, RO: 41.52, NM: 42.92, END: 46 };
+      UP: 28.36, LIFT: 29.03, HIT: 31.91, BH: 33.59, S5: 34.6, SLAM: 35.51, DK: 39.24, RO: 41.52, NM: 42.92, END: 46 };
     const TS = 0.48, SLOW = 0.35;   /* havets tid og tiden i sprutet (se over) */
     const KYH = 0.9;                /* hvor høyt han ligger når han er oppe (skisse 1: 0,25). Han rir på dønningene, og ingen bølge skal skjule ham (Jazz 20.11) */
     const BT = [0, 2.5];            /* båten (x, z): rett over hodet hans, mellom finnene (han kommer opp med hodet mot kameraet, +Z). Hodet løfter den høyest */
@@ -420,7 +420,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
     const slXZ = (s, t0, lx, lz) => { const yw = KYM(t0).yaw; lx = lx == null ? 8 * s : lx; lz = lz == null ? 1.5 : lz; return [lx * cos(yw) + lz * sin(yw), -lx * sin(yw) + lz * cos(yw)]; };
     /* Båten sklir av skrått framover (rettelse 2): fra hodet (BT) til foran venstre finne, der den lander (BL), kantrer og flyter med kjølen opp til den første
        ringbølgen skyller over den. */
-    const BL = [BT[0] + 5.6, BT[1] + 4.6];
+    const BL = [4.57, 7.9];   /* rettelse 4: der boatSim lander (før BT + (5,6, 4,6)) */
     /* Rettelse 3: bølgen mot klippen (0:04,57–0:13,2). Den høyeste stakken i kysten (STACKS[5]); en dønning ruller inn fra venstre i stillheten i låta og knuser mot den
        på 0:07,66 med lynet bak (og igjen 0:09,08 og 0:10,73). Dønningen er en ringbølge (uRH, plass 3) fra et punkt 50 enheter ute, så fronten er nesten rett. Den
        kommer inn fra det åpne havet (+Z) mot kysten og treffer forsiden av stakken, der kameraet står. */
@@ -437,6 +437,38 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
     const PROF = [[-9, -0.6], [-6, 0.36], [-3, 1.31], [0, 2.19], [3, 2.4], [6, 1.6], [9, -0.5]];
     const backTop = (ry, x, z, rl, pt) => { const lz = z, lx = x; if (lz <= -9 || lz >= 9) return -1e9; let i = 0; while (PROF[i + 1][0] < lz) i++; const [z0, h0] = PROF[i], [z1, h1] = PROF[i + 1];
       const w = 1 - Math.pow(abs(lx) / 3.6, 6); return w <= 0 ? -1e9 : ry + mix(h0, h1, (lz - z0) / (z1 - z0)) * Math.sqrt(w) * cos(rl || 0) * cos(pt || 0) + lx * sin(rl || 0) - lz * sin(pt || 0); };   /* rettelse 2: med rullen og snuten (små vinkler) */
+    /* Rettelse 4 (Jazz om v8): «se på hvordan båten detter av kyogre og hvor raskt og fysikken bak det. Per nå er det ikke naturlig ras fra høyde og måten den sklir
+       ut i vannet og i vannet etterpå ser ut som en lekebåt». Før fulgte båten flanken ned (3 enheter på 0,15 s) og stoppet på ett bilde i vannet. Nå er den et tungt
+       legeme: den flyter til ryggen når den, løftes med ham, sklir på våt hud (BMU) med vannet som fosser av ryggen (BPUSH), kastes av når ryggen bremser raskere enn
+       tyngden (BG, filmens tyngde for faste ting: tregere enn plaskene, PG, så den er stor), tipper over kanten og faller fritt. Regnet én gang (240 steg i sekundet)
+       fra 0:28,36 til den treffer vannet; i vannet: se båten i act. th er helningen (opp-pila vippet mot (x, z), vinkelen er lengden), yw dreiningen. */
+    const BG = 3.0, BMU = 0.08, BPUSH = [1.56, 2.08];
+    const boatSim = su => {
+      const dt = 1 / 240, sea = (x, z, t) => K.seaH(su, x, z, t * TS);
+      const top = (x, z, t) => { const m = KYM(t); return backTop(KYH + 0.8 * sea(0, 0, t) * io(seg(t, QI.UP, QI.UP + 2.57)) + m.dy, x, z, m.roll, m.pit); };
+      const fl = (x, z, t) => sea(x, z, t) - 0.08 + 0.6 * io(seg(t, QI.UP, QI.LIFT));   /* vannet hever seg over ryggen hans før han bryter flaten */
+      const gr = (f, x, z, t) => { const e = 0.12; return [(f(x + e, z, t) - f(x - e, z, t)) / (2 * e), (f(x, z + e, t) - f(x, z - e, t)) / (2 * e)]; };
+      const tilt = g => { const G = Math.hypot(g[0], g[1]); return G < 1e-6 ? [0, 0] : [-g[0] * Math.atan(G) / G, -g[1] * Math.atan(G) / G]; };
+      let t = QI.UP, x = BT[0], z = BT[1], y = fl(x, z, t), vx = 0, vy = 0, vz = 0, md = 0, ta = -1, tc = -1, yw = 0.55, ywr = 0, lg = [0, 0];
+      const th = [0, 0], om = [0, 0], A = [], spring = (tg, k) => { for (let i = 0; i < 2; i++) om[i] += (k * k * (tg[i] - th[i]) - 2 * k * om[i]) * dt; };
+      while (t < QI.SLAM) {
+        A.push(t, x, y, z, th[0], th[1], yw);
+        if (md === 0) { spring(tilt(gr(fl, x, z, t)), 4); const yf = fl(x, z, t + dt); if (top(x, z, t + dt) > yf) { md = 1; tc = t; } else { vy = (yf - y) / dt; y = yf; } }
+        if (md === 1) { let g = gr(top, x, z, t); if (!g.every(v => isFinite(v) && abs(v) < 40)) g = lg; lg = g; const G2 = g[0] * g[0] + g[1] * g[1], N = BG / Math.sqrt(1 + G2), pu = c01((t - tc) / 0.3) * (1 - seg(t - tc, 2.4, 3.0));
+          let ax = -BG * g[0] / (1 + G2) + BPUSH[0] * pu, az = -BG * g[1] / (1 + G2) + BPUSH[1] * pu; const sp = Math.hypot(vx, vz);
+          if (sp > 0.02) { ax -= BMU * N * vx / sp; az -= BMU * N * vz / sp; } else if (Math.hypot(ax, az) < BMU * N * 1.5) ax = az = 0;   /* står til kraften er større enn heftet */
+          vx += ax * dt; vz += az * dt; const nx = x + vx * dt, nz = z + vz * dt, tn = top(nx, nz, t + dt), yb = y + vy * dt - 0.5 * BG * dt * dt;
+          spring(tilt(g), 9); ywr += (0.16 * sp - ywr) * 2 * dt; x = nx; z = nz;   /* akterenden henger igjen, så den svinger litt mens den sklir */
+          if (tn > -1e8 && tn >= yb - 1e-4) { vy = (tn - y) / dt; y = tn; } else { md = 2; ta = t; y = yb; vy -= BG * dt; } }
+        else if (md === 2) { vy -= BG * dt; x += vx * dt; y += vy * dt; z += vz * dt; const sp = Math.hypot(vx, vz);
+          if (t - ta < 0.35 && sp > 0.05) { om[0] += 1.8 * vx / sp * dt; om[1] += 1.8 * vz / sp * dt; }   /* tyngdepunktet går over kanten: den tipper dit den faller */
+          const tn = top(x, z, t + dt); if (tn > y) { md = 1; y = tn; } }
+        th[0] += om[0] * dt; th[1] += om[1] * dt; yw += ywr * dt; t += dt;
+        if (md !== 0 && y <= sea(x, z, t) && top(x, z, t) < sea(x, z, t) + 0.05) break;
+      }
+      return { A, dt, tL: t, L: { x, y, z, vx, vy, vz, th: th.slice(), om: om.slice(), yw, ywr },
+        at(t) { const n = A.length / 7, f = min(n - 1.001, max(0, (t - QI.UP) / dt)), i = floor(f), u = f - i, q = k => mix(A[i * 7 + k], A[i * 7 + 7 + k], u); return [q(1), q(2), q(3), [q(4), q(5)], q(6)]; } };
+    };
 
     /* Tråleren (Jazz 20.11: «en større båt, ikke lekebåt»): skrog med baug, dekk, styrehus forut med lys i vinduene, mast med topplys, utriggere, galge og nettrommel akter. */
     const mkBoat2 = (K, T) => {
@@ -567,32 +599,44 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         const b = S.boat; let bx = BT[0], bz = BT[1], by, pitch, roll, alive = t < tSw + 0.8;
         const sea = (xx, zz) => H(xx, zz), yawB = 0.55;
         const fw = [sin(yawB), cos(yawB)], sd = [cos(yawB), -sin(yawB)];
-        if (t < QI.LIFT) { by = sea(bx, bz) - 0.08; pitch = Math.atan2(sea(bx - fw[0] * 1.2, bz - fw[1] * 1.2) - sea(bx + fw[0] * 1.2, bz + fw[1] * 1.2), 2.4) * 0.9; roll = Math.atan2(sea(bx - sd[0] * 0.5, bz - sd[1] * 0.5) - sea(bx + sd[0] * 0.5, bz + sd[1] * 0.5), 1.0) * 0.6;
+        if (t < QI.UP) { by = sea(bx, bz) - 0.08; pitch = Math.atan2(sea(bx - fw[0] * 1.2, bz - fw[1] * 1.2) - sea(bx + fw[0] * 1.2, bz + fw[1] * 1.2), 2.4) * 0.9; roll = Math.atan2(sea(bx - sd[0] * 0.5, bz - sd[1] * 0.5) - sea(bx + sd[0] * 0.5, bz + sd[1] * 0.5), 1.0) * 0.6;
           const wk = t > QI.W1 ? Math.exp(-(t - QI.W1) / 1.6) * sin((t - QI.W1) * 2.1) : 0; roll += 0.42 * wk; by += 0.25 * wk;
-          pitch -= 0.22 * (t > QI.W2 ? Math.exp(-(t - QI.W2) / 0.9) * sin((t - QI.W2) * 2.6) : 0);
-          if (t >= QI.UP) { const lift = seg(t, QI.UP, QI.LIFT); by += 0.6 * lift; roll += 0.1 * lift * sin(t * 3); } }
-        else if (t < QI.HIT) { const u = ei(seg(t, QI.SLIDE, QI.HIT)), rl = S.krl || 0; bx = BT[0] + (BL[0] - BT[0]) * u; bz = BT[1] + (BL[1] - BT[1]) * u; const top = backTop(y, bx, bz, rl, pit), s0 = sea(bx, bz), on = top > s0 - 0.1;
-          by = on ? top - 0.12 : s0 - 0.08; const e = 0.25, d = (backTop(y, bx + e, bz, rl, pit) - backTop(y, bx - e, bz, rl, pit)) / (2 * e); roll = on ? -Math.atan(isFinite(d) ? max(-3, min(3, d)) : 0) : 0.5; pitch = 0.08 * sin(t * 1.3); }
-        else { const u = seg(t, QI.HIT, QI.ROLL + 0.3), dr = seg(t, QI.HIT, tSw + 0.8); bx = BL[0] + 0.6 * dr; bz = BL[1] + 0.5 * dr; by = sea(bx, bz) - 0.1 - 0.15 * seg(t, QI.ROLL, QI.ROLL + 0.8) - 3.2 * ei(seg(t, tSw, tSw + 0.8)); roll = mix(0.9, PI * 0.96, io(u)) + 0.5 * io(seg(t, tSw - 0.2, tSw + 0.8)); pitch = 0.25 * u - 0.3 * io(seg(t, tSw - 0.2, tSw + 0.8)); }
-        b.visible = alive; b.position.set(bx, by, bz); b.rotation.set(pitch, yawB, roll); b.updateMatrixWorld(true);
-        const on = t < QI.HIT ? 1 : t < QI.HIT + 0.25 ? (sin(t * 90) > 0 ? 0.6 : 0) : 0;   /* lysene slukner når båten treffer vannet */
+          pitch -= 0.22 * (t > QI.W2 ? Math.exp(-(t - QI.W2) / 0.9) * sin((t - QI.W2) * 2.6) : 0); b.rotation.set(pitch, yawB, roll); }
+        else {   /* rettelse 4: boatSim til den treffer vannet, så tungt i vannet */
+          const bs = S.bs || (S.bs = boatSim(su)); let th, yw;
+          if (t < bs.tL) { [bx, by, bz, th, yw] = bs.at(t); }
+          else { const L = bs.L, tau = t - bs.tL, Td = 0.45, TL = Math.hypot(L.th[0], L.th[1]), ux = TL > 1e-4 ? L.th[0] / TL : 1, uz = TL > 1e-4 ? L.th[1] / TL : 0;
+            /* farten bremses av vannet på et halvt sekund, så driver den sakte bort fra ham */
+            bx = L.x + L.vx * Td * (1 - Math.exp(-tau / Td)) + 0.09 * tau; bz = L.z + L.vz * Td * (1 - Math.exp(-tau / Td)) + 0.075 * tau;
+            /* den dykker etter farten den traff med (tung: lang periode, sterk demping), kommer sakte opp og ligger lavere når den tar inn vann */
+            const w = 2.3, Av = min(2.2, max(0, -L.vy) * 0.42), pl = -(Av / w) * Math.exp(-tau / 0.9) * sin(w * tau);
+            by = sea(bx, bz) - 0.1 - 0.22 * io(seg(tau, 0.6, 3.5)) + pl - 3.2 * ei(seg(t, tSw, tSw + 0.8));
+            /* kantrer langsomt (tung overbygning) hvis den lander på siden, ellers retter den seg opp; vippes av bølgene, og ringen fra slaget legger den over */
+            const cap = TL > 0.75, k = 1.0, e = Math.exp(-k * tau), sw = 0.5 * io(seg(t, tSw - 0.2, tSw + 0.8)), g = 0.25 * c01(tau / 1.5), e2 = 0.6;
+            const sx = (sea(bx - e2, bz) - sea(bx + e2, bz)) / (2 * e2), sz = (sea(bx, bz - e2) - sea(bx, bz + e2)) / (2 * e2);
+            th = [0, 1].map(i => { const c = cap ? (i ? uz : ux) * PI * 0.94 : 0, d0 = L.th[i] - c; return c + (d0 + (L.om[i] + k * d0) * tau) * e + (i ? uz : ux) * sw + g * (i ? sz : sx); });
+            yw = L.yw + L.ywr * 0.8 * (1 - Math.exp(-tau / 0.8)); }
+          const a = Math.hypot(th[0], th[1]), v = S.v3; b.quaternion.setFromAxisAngle(a > 1e-6 ? v.set(th[1] / a, 0, -th[0] / a) : v.set(1, 0, 0), a);
+          S.qy = S.qy || new S.T.Quaternion(); b.quaternion.multiply(S.qy.setFromAxisAngle(v.set(0, 1, 0), yw)); }
+        b.visible = alive; b.position.set(bx, by, bz); b.updateMatrixWorld(true);
+        const on = t < QI.BH ? 1 : t < QI.BH + 0.25 ? (sin(t * 90) > 0 ? 0.6 : 0) : 0;   /* lysene slukner når båten treffer vannet */
         S.lamps.forEach((m, i) => { const q = LAMPS[i]; m.visible = alive && on > 0; m.position.copy(S.v3.set(q[0], q[1], q[2]).applyMatrix4(b.matrixWorld)); K.face(m); m.scale.setScalar(q[3] * (S.ovf ? 2.2 : 1) * (0.8 + 0.1 * sin(t * 11 + i)));
           m.material.uniforms.uA.value = on * (i === 3 ? 0.8 + 0.2 * sin(t * 13.3) * sin(t * 7.1) : 0.9); });
-        S.fx(S.bow, QI.W2 - 0.05, bx, by, bz); S.bow.rotation.y = yawB; S.fx(S.cap, QI.HIT, BL[0], 0, BL[1]); S.cap.visible = t < QI.HIT + 1.9;
+        S.fx(S.bow, QI.W2 - 0.05, bx, by, bz); S.bow.rotation.y = yawB; S.fx(S.cap, QI.BH, BL[0], 0, BL[1]); S.cap.visible = t < QI.BH + 1.9;
 
         /* Ringbølgene (0:28,36 · 0:31,91 · 0:35,51, og brølet): havet løfter seg (uRH, motor.py) med skum på toppen, og de knuser mot stakkene i tungt, langsomt sprut. */
         for (let i = 0; i < 4; i++) { const r = i < RINGS.length ? ringAt(i, t) : null; su.uRH.value[i].set(0, 0, r ? r.R : 0, r ? r.a : 0); }
         { const cw = cwAt(t); if (cw) su.uRH.value[3].set(CWC[0], CWC[1], cw.R, cw.a); }   /* rettelse 3: dønningen mot klippen */
         const ring = (i, xx, zz, R, a) => su.uRing.value[i].set(xx, zz, R, a);
         if (t < QI.SLAM) { ring(0, -9.5, 2, 1.5 + (t - QI.UP) * 2.2, t >= QI.UP ? hit(t, QI.UP, 3.5) : 0); ring(1, 9.5, 2, 1.5 + (t - QI.UP) * 2.2, t >= QI.UP ? hit(t, QI.UP, 3.5) : 0);
-          ring(2, BL[0], BL[1], 1 + (t - QI.HIT) * 3.5, t >= QI.HIT ? hit(t, QI.HIT, 2.5) : 0); const cw = cwAt(t); ring(3, CWC[0], CWC[1], cw ? cw.R - 0.6 : 0, cw ? 0.8 * c01(cw.a / 1.2) : 0); }
+          ring(2, BL[0], BL[1], 1 + (t - QI.BH) * 3.5, t >= QI.BH ? hit(t, QI.BH, 2.5) : 0); const cw = cwAt(t); ring(3, CWC[0], CWC[1], cw ? cw.R - 0.6 : 0, cw ? 0.8 * c01(cw.a / 1.2) : 0); }
         else for (let i = 0; i < 4; i++) { const r = i < RINGS.length ? ringAt(i, t) : null; ring(i, 0, 0, r ? r.R - 0.6 : 0, r ? 0.75 * c01(r.a / 0.5) : 0); }
         const HITS = [[QI.W3, 0], [QI.W4, 1], [38.53, 1]];
         S.rk.forEach((m, i) => { const hs = HITS.filter(q => q[1] === i && t >= q[0]), t0 = hs.length ? hs[hs.length - 1][0] : -1e5; S.fx(S.rsp[i], t0); S.rcp[i].at(t, t0); });
         S.cwp.forEach((p, i) => p.at(t, CWT[i] - 0.05, CWF[0], 0, CWF[1]));   /* rettelse 3: bølgen knuser mot klippen */
         S.casc.position.set(0, y - KYH, 0); S.casc.visible = t >= QI.LIFT && t < QI.HIT + 3.5; S.casc.material.uniforms.uA.value = 0.85 * seg(t, QI.LIFT, QI.LIFT + 0.6) * (1 - seg(t, QI.HIT + 1.5, QI.HIT + 3.5));
         S.fsp.forEach((p, i) => { S.fx(p, QI.UP + 0.2, (i ? 9.5 : -9.5), 0, 2); S.fcp[i].at(t, QI.UP + 0.1, (i ? 9.5 : -9.5), 0, 2); });
-        S.ccp.at(t, QI.HIT - 0.05, BL[0], 0, BL[1]); S.fx(S.cmist, t >= QI.RO - 0.2 ? QI.RO : QI.HIT, t >= QI.RO - 0.2 ? 0 : BL[0], 0, t >= QI.RO - 0.2 ? 0 : BL[1]); S.roc.at(t, QI.RO + 0.02, 0, 0, 0);
+        S.ccp.at(t, QI.BH - 0.03, BL[0], 0, BL[1]); S.fx(S.cmist, t >= QI.RO - 0.2 ? QI.RO : QI.BH, t >= QI.RO - 0.2 ? 0 : BL[0], 0, t >= QI.RO - 0.2 ? 0 : BL[1]); S.roc.at(t, QI.RO + 0.02, 0, 0, 0);
         /* Rettelse 2: slagene (kronen der finnen treffer, sprut langs finnen, dis), vannet som fosser av finnene mens de er løftet, og halefinnene etter det siste slaget. */
         SL.forEach(([t0, s], i) => { const [cx, cz] = slXZ(s, t0); S.slp[i].at(t, t0 - 0.02, cx, 0, cz); S.fx(S.sls[i], t0 - 0.02, 0, 0, 0); S.sls[i].rotation.y = KYM(t0).yaw; S.sls[i].visible = t > t0 - 0.1 && t < t0 + 4;
           S.fx(S.slm[i], t0 + 0.15, cx, 0, cz); S.slm[i].visible = t > t0 && t < t0 + 7; });
@@ -619,9 +663,9 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         /* 3 Noe stort kommer: lavt ved båten mot stakkene; det røde skjæret vokser under den. */
         [QI.B6, (S, u, a, t) => { const e = io(u), x = mix(6.4, 5.2, e), z = mix(10.8, 9.2, e), h = K.seaH(S.sea.material.uniforms, x, z, t * TS); K.cam(x, h + 2.5, z, -2.5, 1.4, -10, 48, -0.02);   /* 2b.3: nærmere og lavere (før 14 enheter unna), så tråleren er stor og tung i bildet */ S.post.sh = 0.7 * hit(t, QI.W3, 0.6) + 0.8 * hit(t, QI.W4, 0.6) + 0.25 * seg(t, QI.B6, QI.UP); }],
         /* 4 Finnene først: lavt og rett forfra; båten midt i bildet mellom finnene. Ryggen løfter den, den glir av og velter. */
-        [QI.UP - 0.05, (S, u, a, t) => { const e = io(seg(t, QI.UP, QI.HIT)), e2 = io(seg(t, QI.HIT, 33.9)), x = mix(5, 6, e), z = 54, h = K.seaH(S.sea.material.uniforms, x, z, t * TS); K.cam(x, h * 0.2 + mix(11.2, 11.8, e), z, mix(0, 2.2, e) + 1.2 * e2, mix(1.4, 2.6, e), BT[1], mix(23, 26, e), 0.01); S.post.sh = 1.6 * hit(t, QI.UP, 1.6) + 1.2 * hit(t, QI.HIT, 1.2); }],
+        [QI.UP - 0.05, (S, u, a, t) => { const e = io(seg(t, QI.UP, QI.HIT)), e2 = io(seg(t, QI.HIT, QI.S5)), x = mix(5, 6, e), z = 54, h = K.seaH(S.sea.material.uniforms, x, z, t * TS); K.cam(x, h * 0.2 + mix(11.2, 11.8, e), z, mix(0, 2.2, e) + 1.6 * e2, mix(1.4, 2.6, e), BT[1], mix(23, 26, e), 0.01); S.post.sh = 1.6 * hit(t, QI.UP, 1.6) + 0.5 * hit(t, QI.HIT, 1.0) + 1.3 * hit(t, QI.BH, 1.2); }],
         /* 5 Ringbølgene, litt ovenfra: han ligger høyt i vannet, og ringene ruller ut mot stakkene. */
-        [33.9, (S, u, a, t) => { const e = io(u); K.cam(mix(26, 24, e), mix(12, 11, e), mix(25, 23, e), -2, 1, -4, 46, -0.01); S.post.sh = 1.1 * hit(t, QI.SLAM, 1.0); }],   /* rettelse 3: slaget (før ringbølgene 0:27,9) */
+        [QI.S5, (S, u, a, t) => { const e = io(u); K.cam(mix(26, 24, e), mix(12, 11, e), mix(25, 23, e), -2, 1, -4, 46, -0.01); S.post.sh = 1.1 * hit(t, QI.SLAM, 1.0); }],   /* rettelse 3: slaget (før ringbølgene 0:27,9) */
         /* 6 Lavt ved stakken: ringen ruller mot kameraet og knuser mot stakken (0:35,51). */
         /* 7 Vidt og lavt for forvarselet og brølet (som i skisse 1, uten båten); kameraet høyt nok til at ingen bølge skjuler ham. */
         [38.45, (S, u, a, t) => { const k2 = io(seg(t, 38.45, QI.RO)), w = 0.05 * sin(max(0, t - QI.RO) * 0.25), x = mix(8.5, 5.5, k2) + w * 4, z = mix(31, 24.5, k2), h = K.seaH(S.sea.material.uniforms, x, z, t * TS);
