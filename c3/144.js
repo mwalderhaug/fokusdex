@@ -53,10 +53,12 @@
   const PH = s => s <= 27.2 ? (s - B0) / HP + 0.56 : s < F0E ? (27.2 - B0) / HP + 0.56 : (s - F0E) / (2 * HP);   /* slagets fase: 0 = toppen, 0,56 = bunnen */
   /* Ice Beam («Lang feiing», tidene i låta): takta 22,23 treffer strålen isen under plassen, takta 23,62 begynner den å feie mot kameraet, takta 25,00 er den ved siden
      av kameraet (UC av veien) og ute av bildet, og den slukker like etter. Sporet går fra BA til BB på isen (x, z). */
-  const BM = { on: L.back, sw: L.sw, cam: L.cam, end: L.cam + 0.06, off: L.cam + 0.18, ch: L.back - 0.4 }, BA = [H[0], H[2]], BB = [-7, 22], UC = 0.904,   /* BB foran kameraet (Jazz 24.11: ikke fra side til side); UC: der den går ut av bildet */ BLEN = hyp(BB[0] - BA[0], BB[1] - BA[1]);
-  const BV = 1.6 * UC / (BM.cam - BM.sw);   /* farten (andel per sekund) der den går ut av bildet: den holder den til enden */
-  const bmU = s => s < BM.sw ? 0 : s < BM.cam ? UC * Math.pow((s - BM.sw) / (BM.cam - BM.sw), 1.6) : min(1, UC + (s - BM.cam) * BV);
-  const bmT = u => u <= 0 ? BM.on : u <= UC ? BM.sw + Math.pow(u / UC, 1 / 1.6) * (BM.cam - BM.sw) : BM.cam + (u - UC) / BV;   /* når strålen passerer u */
+  /* Jazz 24.11 om v3: «Den kan starte rett forran skjermen der man står først og gli med en gang forbi»: første treff rett foran kameraet (BA, 23 m foran, nede på midten),
+     det står et kvart sekund mens isen spruter (til sw), og glir så ut nede til høyre og forbi kameraet (cam: der det passerer kameraets plan, 3,9 m ved siden av), og slukker. */
+  const BM = { on: L.back, sw: L.back + 0.24, cam: L.back + 0.66, end: L.back + 0.7, off: L.back + 0.84, ch: L.back - 0.4 }, BA = [-8, 8], BB = [-3, 34], UC = 0.885, BLEN = hyp(BB[0] - BA[0], BB[1] - BA[1]);
+  const BP = 1.7, BV = BP * UC / (BM.cam - BM.sw);   /* glir stadig fortere; holder farten fra kameraets plan til enden */
+  const bmU = s => s < BM.sw ? 0 : s < BM.cam ? UC * Math.pow((s - BM.sw) / (BM.cam - BM.sw), BP) : min(1, UC + (s - BM.cam) * BV);
+  const bmT = u => u <= 0 ? BM.on : u <= UC ? BM.sw + Math.pow(u / UC, 1 / BP) * (BM.cam - BM.sw) : BM.cam + (u - UC) / BV;   /* når strålen passerer u */
   const bmP = u => [mix(BA[0], BB[0], u), mix(BA[1], BB[1], u)];
   const EF = s => s < L.riff ? 0 : s < L.top ? 1 : s < L.acc ? 0.4 : 0.4 * (1 - c01((s - L.acc) / 0.6));   /* farten som effekt: full ved siden av, under halvparten ovenfra */
 
@@ -221,7 +223,8 @@ void main(){ vec2 w = vW.xz; float t = uTime, fw = max(length(dFdx(w)), length(d
   }
   /* Ice Beam-sporet: en hvit stripe av bregnefrost der strålen har gått, og et blått lys i det ferskeste. */
   if (uBK.y > 0.) { vec2 a = uBA.xy, b = mix(uBA.xy, uBA.zw, uBK.x), ab = b - a; float h = clamp(dot(w - a, ab) / max(dot(ab, ab), 1e-4), 0., 1.), bd = length(w - a - ab * h) + (fbm(w * .45) - .5) * 1.6 - fn.g * 1.8;
-    float bd0 = length(w - a - ab * h); col = mix(col, uFoamC * .96, max((1. - smoothstep(.15, 1.5, bd)) * .6, fn.r * (1. - smoothstep(1.2, 6.5, bd0)) * .5) * uBK.y); col += vec3(.35, .7, 1.) * exp(-bd0 * bd0 * .9) * uBK.z * (1. - smoothstep(0., 9., length(w - b))) * .6; }
+    float bd0 = length(w - a - ab * h), kc = .35 + .65 * smoothstep(6., 26., length(cameraPosition.xz - w));   /* nær kameraet svakere: ikke en hvit kile når den går forbi */
+    col = mix(col, uFoamC * .96, max((1. - smoothstep(.15, 1.5, bd)) * .5, fn.r * (1. - smoothstep(1.2, 6.5, bd0)) * .5) * uBK.y * kc); col += vec3(.35, .7, 1.) * exp(-bd0 * bd0 * .9) * uBK.z * (1. - smoothstep(0., 5., length(w - b))) * .35 * kc; }
   /* Snøkrystallen under plassen: seks armer med grener, som vokser ut fra midten. */
   if (uMark.w > 0.) { vec2 dv = w - uMark.xy; float Lm = length(dv), an = atan(dv.y, dv.x), sa = abs(fract(an * .95493 + .5) - .5) * 1.0472, u = Lm * cos(sa), la = Lm * sin(sa);
     float arm = (1. - smoothstep(.1, .34, la)), br = (1. - smoothstep(.06, .22, abs(la - fract(u * .55) * 1.25))) * step(la, u * .34) * step(1.2, u);
@@ -267,7 +270,7 @@ void main(){ if (vW.y > -.02 || length(vW.xz) > uRL - 3.) discard; float a = uA 
   const BEAM_V = `varying vec3 vW, vN; varying float vY; void main(){ vY = position.y; vN = normalize(mat3(modelMatrix) * normal); vec4 w = modelMatrix * vec4(position, 1.); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
   const BEAM_F = `varying vec3 vW, vN; varying float vY; uniform vec3 uC; uniform float uA, uL, uP, uE, uTime;
 void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float k = pow(abs(dot(N, V)), uE);
-  float pu = .82 + .18 * sin(vY * uL * .9 - uTime * 30.), ends = smoothstep(0., .015, vY) * (1. - smoothstep(.985, 1., vY)), nr = .06 + .94 * smoothstep(9., 40., length(vW - cameraPosition));
+  float pu = .82 + .18 * sin(vY * uL * .9 - uTime * 30.), ends = smoothstep(0., .015, vY) * (1. - smoothstep(.985, 1., vY)), nr = .05 + .95 * smoothstep(12., 55., length(vW - cameraPosition));
   gl_FragColor = vec4(uC * k * uA * mix(1., pu, uP) * ends * nr, 0.); }`;
 
   /* ---------- Bregnefrosten som bilde (lages én gang): skarpe bregner i rødt, et mykt felt rundt dem i grønt. Går i ett med seg selv i kantene. ---------- */
@@ -373,6 +376,16 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float k
       for (let k = 0; k < 34; k++) { const u = ((k / 34 + t * 0.8) % 1), ph = u * 6.5 * TAU - t * 13, fr = 0.5 + 0.5 * cos(ph), w = pm * 1.05 * (0.45 + 0.55 * u), x = o.x + dx * L2 * u + nx * w * sin(ph), y = o.y + dy * L2 * u + ny * w * sin(ph);
         if (x < -20 || x > 532 || y < -20 || y > 404) continue; const al = (0.12 + 0.5 * fr) * b.a * c01(u * 8) * (1 - c01((u - 0.85) / 0.15)), hl = (1.5 + 2.5 * fr) * min(2, pm / 6), tx = dx * 0.35 + nx * cos(ph) * 0.94, ty = dy * 0.35 + ny * cos(ph) * 0.94, tl = hyp(tx, ty) || 1;
         g.strokeStyle = `rgba(236,248,255,${al})`; g.lineWidth = 0.5 + 0.8 * fr; g.beginPath(); g.moveTo(x - tx / tl * hl, y - ty / tl * hl); g.lineTo(x + tx / tl * hl, y + ty / tl * hl); g.stroke(); } }   /* korte streker langs skruen, ikke perler */
+    /* Is og snø i selve strålen (Jazz 24.11: «ha gjerne mer is, snø osv i selve beam»): iskrystaller og snøfnugg som strømmer fra nebbet mot treffet i 3D-perspektiv (større nær
+       kameraet), og frostrøyk som damper av strålen. Punktene regnes i verden langs strålen og projiseres, så de står i strålen også når den peker mot oss. */
+    { const D3 = I.clone().sub(O), Ln = D3.length() || 1, dn = D3.clone().multiplyScalar(1 / Ln), n1 = Math.abs(dn.y) < 0.9 ? new S.T.Vector3(0, 1, 0).cross(dn).normalize() : new S.T.Vector3(1, 0, 0).cross(dn).normalize(), n2 = dn.clone().cross(n1), P3 = new S.T.Vector3();
+      const at3 = (u, ph, rr) => { P3.copy(O).addScaledVector(D3, u).addScaledVector(n1, cos(ph) * rr).addScaledVector(n2, sin(ph) * rr); const q = K.proj(P3.x, P3.y, P3.z); if (q.z >= 1) return null; const q1 = K.proj(P3.x, P3.y + 1, P3.z); return [q.x, q.y, max(0.5, hyp(q1.x - q.x, q1.y - q.y))]; };
+      for (let k = 0; k < 26; k++) { const u = 0.08 + 0.9 * ((rnd(k, 71) + t * 0.12) % 1), q = at3(u, rnd(k, 72) * TAU + t * 0.7, 0.9 + 1.4 * rnd(k, 73)); if (!q) continue; const r = q[2] * (1.1 + 1.6 * rnd(k, 74)); if (r < 1.5 || q[0] < -r || q[0] > 512 + r || q[1] < -r || q[1] > 384 + r) continue;
+        const gr = g.createRadialGradient(q[0], q[1], 0, q[0], q[1], r); gr.addColorStop(0, `rgba(226,236,255,${0.1 * b.a})`); gr.addColorStop(1, 'rgba(226,236,255,0)'); g.fillStyle = gr; g.fillRect(q[0] - r, q[1] - r, r * 2, r * 2); }   /* frostrøyken som damper av strålen */
+      for (let k = 0; k < 110; k++) { const sp = 1.2 + 1.3 * rnd(k, 62), u = ((rnd(k, 61) + t * sp) % 1), q = at3(u, rnd(k, 63) * TAU + t * (2 + 3 * rnd(k, 64)), (0.15 + 0.85 * Math.sqrt(rnd(k, 65))) * 0.6 * (0.55 + 0.45 * u)); if (!q) continue;
+        const r = q[2] * (0.06 + 0.16 * rnd(k, 66)), al = (0.45 + 0.5 * rnd(k, 67)) * b.a * c01(u * 10); if (r < 0.35 || q[0] < -10 || q[0] > 522 || q[1] < -10 || q[1] > 394) continue;
+        if (r > 1.6 && rnd(k, 68) > 0.4) { g.strokeStyle = `rgba(240,250,255,${al})`; g.lineWidth = max(0.6, r * 0.22); g.beginPath(); for (let j = 0; j < 3; j++) { const aa = j * PI / 3 + rnd(k, 69) * 2; g.moveTo(q[0] - cos(aa) * r, q[1] - sin(aa) * r); g.lineTo(q[0] + cos(aa) * r, q[1] + sin(aa) * r); } g.stroke(); }   /* iskrystall */
+        else { g.fillStyle = `rgba(244,250,255,${al})`; g.beginPath(); g.arc(q[0], q[1], max(0.5, r * 0.6), 0, TAU); g.fill(); } } }   /* snøfnugg */
     g.restore(); };
   /* Kameraet (med lang sikt: fjellene står 1500 m unna), og kampens kamera slik X.arena stiller det inn (siktet dreies til plassen treffer (377, 198)). */
   const cam = (px, py, pz, tx, ty, tz, fov, roll) => { K.far(3200); K.cam(px, py, pz, tx, ty, tz, fov, roll); };
@@ -391,18 +404,23 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float k
       /* Sporet der vannet fryser: banen fra den retter seg opp lavt over vannet til aksenten. */
       { const tk = [3.9, 4.5, 5.2, 6.2, 7.4, 8.6, 9.8, 11.1, 12.5, L.acc]; let ln = 0, pp = null; S.lake.material.uniforms.uTrk.value.forEach((v, i) => { const p = path(tk[i]); if (pp) ln += hyp(p[0] - pp[0], p[2] - pp[2]); pp = p; v.set(p[0], p[2], F(tk[i]) + 0.05, ln); }); }   /* w: lengden langs sporet (avsmalningen fra starten) */
       /* Strålen (kjerne, glød, dis), og lyset i nebbet og der den treffer isen. */
-      S.beam = [[0.2, '#ffffff', 1.25, 3, 0.12], [0.62, '#8ad0ff', 0.6, 1.6, 0.3], [1.35, '#4a8ee0', 0.24, 1, 0.15]].map(([r, c, a, e, p]) => { const geo = new T.CylinderGeometry(1, 0.5, 1, 18, 1, true); geo.translate(0, 0.5, 0);   /* smalest ved nebbet (y = 0), bredere ut mot isen */
+      S.beam = [[0.2, '#ffffff', 1.25, 3, 0.12], [0.62, '#8ad0ff', 0.6, 1.6, 0.3], [1.35, '#4a8ee0', 0.16, 1, 0.15]].map(([r, c, a, e, p]) => { const geo = new T.CylinderGeometry(0.72, 0.55, 1, 18, 1, true); geo.translate(0, 0.5, 0);   /* nesten like tykk hele veien: enden er nær kameraet, og perspektivet gjør den bred nok */
         const m = new T.Mesh(geo, K.shader(BEAM_V, BEAM_F, { uC: K.uv(K.u3(c)), uA: K.uv(a), uL: K.uv(30), uP: K.uv(p), uE: K.uv(e) }, Object.assign(K.blend.add(), { side: T.DoubleSide })));
         m.userData.r = r; m.userData.a0 = a; m.frustumCulled = false; m.visible = false; S.scene.add(m); return m; });
       const glo = (c, nr) => { const m = K.pts(3, i => ({ p: [0, 0, 0], v: [0, 0, 0], b: 0, l: 1e9, z: [3.4, 1.7, 0.75][i] }), { add: 1, px: 120, c: [c, c, c], fade: 0.99, a: 0, near: nr }); S.scene.add(m); return m; };
       S.gMz = glo('#cfeeff', 0); S.gIm = glo('#bfe6ff', 14);
-      /* Isrusk og frostrøyk langs sporet der strålen går, og det som spruter mot kameraet når den feier forbi (25,00). */
+      /* Der strålen faktisk treffer (Jazz 24.11: «Frostrøyk og røyk skal også skje der strålen faktisk treffer»): isrusk og snø som spruter, et stort støt i første treff,
+         frostrøyk og snømist som velter opp langs sporet etter hvert som den går, og det som spruter mot kameraet når den går forbi. Alt følger banen (bmP/bmT). */
       { const SP = [], dx = BB[0] - BA[0], dz = BB[1] - BA[1], px = -dz / BLEN, pz = dx / BLEN;
-        for (let k = 0; k < 520; k++) { const u = k < 90 ? 0 : rnd(k, 81), bp = bmP(u), sd = rnd(k, 82) > 0.5 ? 1 : -1, o = rnd(k, 83) * (k < 90 ? 3 : 1.2); SP.push({ p: [bp[0] + px * sd * o, 0.3, bp[1] + pz * sd * o], v: [px * sd * (2 + rnd(k, 84) * 6) + (rnd(k, 85) - 0.5) * 2, 2.5 + rnd(k, 86) * 7, pz * sd * (2 + rnd(k, 84) * 6) + (rnd(k, 87) - 0.5) * 2], b: bmT(u) - BM.on + rnd(k, 88) * (k < 90 ? 1.3 : 0.08), l: 0.6 + rnd(k, 89) * 0.8, z: 0.12 + rnd(k, 90) * 0.3 }); }
-        const cp = bmP(UC); for (let k = 0; k < 60; k++) SP.push({ p: [cp[0] + (rnd(k, 91) - 0.5) * 2, 0.6 + rnd(k, 92) * 2, cp[1] + (rnd(k, 93) - 0.5) * 3], v: [-5 - rnd(k, 94) * 8, 1.5 + rnd(k, 95) * 5, -2 + rnd(k, 96) * 8], b: BM.cam - BM.on + rnd(k, 97) * 0.1, l: 0.5 + rnd(k, 98) * 0.5, z: 0.06 + rnd(k, 99) * 0.14 });
-        S.spray = K.pts(SP.length, i => SP[i], { t0: F(BM.on), g: 9.8, drag: 0.4, add: 1, px: 80, c: ['#ffffff', '#dff2ff', '#a8d0f0'], fade: 0.45, a: 0.8, near: 3 }); S.spray.frustumCulled = false; S.scene.add(S.spray);
-        S.bmist = K.pts(150, k => { const u = rnd(k, 101), bp = bmP(u); return { p: [bp[0] + (rnd(k, 102) - 0.5) * 3, 0.4, bp[1] + (rnd(k, 103) - 0.5) * 3], v: [(rnd(k, 104) - 0.5) * 2.4, 0.5 + rnd(k, 105) * 1.2, (rnd(k, 106) - 0.5) * 2.4], b: bmT(u) - BM.on + rnd(k, 107) * 0.15, l: 2.2 + rnd(k, 108) * 2, z: 3 + rnd(k, 109) * 3 }; },
-          { t0: F(BM.on), px: 110, sway: 0.4, c: ['#f4f0ff', '#e2dcf4', '#cfc8ea'], fade: 0.25, a: 0.06, sz0: 0.5, sz1: 2.4, near: 14 }); S.scene.add(S.bmist); }
+        for (let k = 0; k < 760; k++) { const first = k < 220, u = first ? 0 : rnd(k, 81) * UC, bp = bmP(u), sd = rnd(k, 82) > 0.5 ? 1 : -1, o = rnd(k, 83) * (first ? 2.5 : 1.2), a = rnd(k, 80) * TAU, sp = first ? 3 + rnd(k, 84) * 9 : 2 + rnd(k, 84) * 6;
+          SP.push({ p: [bp[0] + (first ? cos(a) * o : px * sd * o), 0.3, bp[1] + (first ? sin(a) * o : pz * sd * o)], v: first ? [cos(a) * sp, 3 + rnd(k, 86) * 9, sin(a) * sp] : [px * sd * sp + (rnd(k, 85) - 0.5) * 2, 2.5 + rnd(k, 86) * 7, pz * sd * sp + (rnd(k, 87) - 0.5) * 2],
+            b: bmT(u) - BM.on + rnd(k, 88) * (first ? BM.sw - BM.on + 0.1 : 0.08), l: 0.6 + rnd(k, 89) * 0.9, z: 0.12 + rnd(k, 90) * 0.32 }); }
+        const cp = bmP(UC - 0.08); for (let k = 0; k < 90; k++) SP.push({ p: [cp[0] + (rnd(k, 91) - 0.5) * 2, 0.6 + rnd(k, 92) * 2, cp[1] + (rnd(k, 93) - 0.5) * 3], v: [2 + rnd(k, 94) * 6, 1.5 + rnd(k, 95) * 5, 3 + rnd(k, 96) * 8], b: BM.cam - BM.on - 0.06 + rnd(k, 97) * 0.1, l: 0.5 + rnd(k, 98) * 0.5, z: 0.06 + rnd(k, 99) * 0.14 });   /* mot kameraet og til høyre, der den går forbi */
+        S.spray = K.pts(SP.length, i => SP[i], { t0: F(BM.on), g: 9.8, drag: 0.4, add: 1, px: 80, c: ['#ffffff', '#dff2ff', '#a8d0f0'], fade: 0.45, a: 0.85, near: 3 }); S.spray.frustumCulled = false; S.scene.add(S.spray);
+        S.bmist = K.pts(520, k => { const first = k < 150, u = first ? 0 : rnd(k, 101) * UC, bp = bmP(u), a = rnd(k, 100) * TAU, o = first ? rnd(k, 102) * 3 : 0, sp = first ? 1.5 + rnd(k, 104) * 4.5 : 0;
+            return { p: [bp[0] + cos(a) * o + (first ? 0 : (rnd(k, 102) - 0.5) * 3), 0.4 + rnd(k, 110) * 0.8, bp[1] + sin(a) * o + (first ? 0 : (rnd(k, 103) - 0.5) * 3)], v: [cos(a) * sp + (rnd(k, 104) - 0.5) * 2, 0.6 + rnd(k, 105) * 1.6, sin(a) * sp + (rnd(k, 106) - 0.5) * 2],
+              b: bmT(u) - BM.on + rnd(k, 107) * (first ? 0.35 : 0.15), l: 2.6 + rnd(k, 108) * 2.4, z: (first ? 2.6 : 2) + rnd(k, 109) * 3.4 }; },
+          { t0: F(BM.on), drag: 0.5, px: 160, sway: 0.4, c: ['#ebe5f7', '#cbc4e4', '#a69fca'], shade: 1, fade: 0.25, a: 0.11, sz0: 0.5, sz1: 1.9, near: 12 }); S.scene.add(S.bmist); }
       /* Frostrøyken over det åpne vannet (faller sammen på aksenten), glitteret etter vingene, snøen som raser av tretoppene på 0:00, og isstøvet bremseslagene blåser utover. */
       S.smoke = K.pts(1100, i => { const a = rnd(i, 1) * TAU, r = Math.sqrt(rnd(i, 2)) * 122, sz = i % 3 ? [(rnd(i, 10) - 0.5) * 130, 20 + rnd(i, 17) * 100] : [cos(a) * r, sin(a) * r]; return { p: [sz[0], 0.15 + rnd(i, 3) * 0.7, sz[1]], v: [0.6 + rnd(i, 4) * 0.8, 0.25 + rnd(i, 5) * 0.55, -0.3 + rnd(i, 6) * 0.6], b: rnd(i, 7) * 9, l: 6 + rnd(i, 8) * 5, z: 1.6 + rnd(i, 9) * 3.2 }; },
         { loop: 1, px: 120, sway: 0.9, c: ['#f6dcea', '#e2d2ee', '#c4bae2'], fade: 0.3, a: 0.2, sz0: 0.45, sz1: 2.6, near: 6 }); S.scene.add(S.smoke);
@@ -418,8 +436,23 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float k
           { t0: F(L.acc), drag: 0.8, px: 200, sway: 0.4, c: ['#f6f2ff', '#e4def6', '#cfd6f2'], fade: 0.3, a: 0.3, sz0: 0.5, sz1: 2.0, near: 10 }); S.scene.add(S.fwall);
         S.fglint = K.pts(620, i => { const [x, z, r] = spot(i, 141); return { p: [x, 0.3, z], v: [(rnd(i, 142) - 0.5) * 2, 2 + rnd(i, 143) * 5, (rnd(i, 144) - 0.5) * 2], b: at(r) + rnd(i, 145) * 0.05, l: 0.4 + rnd(i, 146) * 0.6, z: 1.1 + rnd(i, 147) * 1.1 }; },
           { t0: F(L.acc), add: 1, px: 60, c: ['#ffffff', '#e6f6ff', '#c4e4ff'], fade: 0.5, a: 1, near: 4 }); S.scene.add(S.fglint); }
-      S.blast = K.pts(260, i => { const a = rnd(i, 111) * TAU, r = 1 + rnd(i, 112) * 4, sp = 9 + rnd(i, 113) * 15, bt = [0, 0.69, 1.39][i % 3]; return { p: [H[0] + cos(a) * r, 0.3 + rnd(i, 114) * 0.6, H[2] + sin(a) * r], v: [cos(a) * sp, 0.4 + rnd(i, 115) * 1.6, sin(a) * sp], b: bt + rnd(i, 116) * 0.12, l: 1.5 + rnd(i, 117) * 1.4, z: 2.4 + rnd(i, 118) * 3 }; },
-        { t0: F(L.cam - 0.02), drag: 1.5, px: 150, sway: 0.3, c: ['#f4f0ff', '#e2dcf6', '#c8c0e6'], fade: 0.2, a: 0.1, sz0: 0.6, sz1: 2.6, near: 10 }); S.scene.add(S.blast);
+      /* Snømist og frostrøyk når ting skjer (Jazz 24.11: «mye mer snømist flere plasser … når ting skjer så blir det mer snømist», «frostrøyk ulike plasser»):
+         · der vingespissene stryker vannet i bunnen av hvert nedslag lavt over sjøen, og frostrøyk som stiger av den ferske isen bak den
+         · et stort støt av snømist under den i det tunge vingeslaget på aksenten, og snømist rundt den når den skriker like etter
+         · ringen av snømist i brølet; lav frosttåke som driver over sjøen hele tiden (svak over det åpne vannet, tettere når isen har lagt seg) */
+      { const W = []; for (let k = 0; ; k++) { const s0 = B0 + k * HP; if (s0 > 11) break; if (s0 < 4.2 || AMP(s0) < 0.3) continue; for (const sd of [-1, 1]) { const w = tipAt(s0, sd); for (let j = 0; j < 9; j++) W.push([s0, w[0], w[2], j, sd]); } }
+        S.wmist = K.pts(W.length + 340, i => { if (i < W.length) { const [s0, x, z, j] = W[i], a = rnd(i, 151) * TAU, sp = 1 + rnd(i, 152) * 2.5; return { p: [x + (rnd(i, 153) - 0.5) * 1.5, 0.3, z + (rnd(i, 154) - 0.5) * 1.5], v: [cos(a) * sp, 0.6 + rnd(i, 155) * 1.4, sin(a) * sp], b: s0 + 0.04 * j, l: 1.8 + rnd(i, 156) * 1.6, z: 2.2 + rnd(i, 157) * 3.6 }; }
+            const s0 = 4 + rnd(i, 161) * 9.8, c = path(s0); return { p: [c[0] + (rnd(i, 162) - 0.5) * 6, 0.25, c[2] + (rnd(i, 163) - 0.5) * 6], v: [(rnd(i, 164) - 0.5) * 1.2, 0.4 + rnd(i, 165) * 1.1, (rnd(i, 166) - 0.5) * 1.2], b: s0 + 0.15 + rnd(i, 167) * 0.6, l: 2 + rnd(i, 168) * 1.8, z: 2.2 + rnd(i, 169) * 3.4 }; },   /* frostrøyk av den ferske isen */
+          { t0: CO, drag: 0.6, px: 140, sway: 0.5, c: ['#ebe5f7', '#cbc4e4', '#a69fca'], shade: 1, fade: 0.3, a: 0.2, sz0: 0.5, sz1: 2.2, near: 6 }); S.scene.add(S.wmist);
+        const c0 = path(L.acc), c1 = path(L.acc + 0.35); S.amist = K.pts(380, i => { const a = rnd(i, 171) * TAU, cry = i >= 300, sp = cry ? 1 + rnd(i, 172) * 3 : 8 + rnd(i, 172) * 16, r = cry ? rnd(i, 173) * 3 : 1 + rnd(i, 173) * 4, cc = cry ? c1 : c0;   /* c1: der den er når den skriker */
+            return { p: [cc[0] + cos(a) * r, cry ? cc[1] - 1.5 + rnd(i, 174) * 3 : 0.4 + rnd(i, 174) * 0.8, cc[2] + sin(a) * r], v: [cos(a) * sp, cry ? 0.5 + rnd(i, 175) * 1.5 : 0.8 + rnd(i, 175) * 2, sin(a) * sp], b: cry ? 0.3 + rnd(i, 176) * 0.25 : rnd(i, 176) * 0.15, l: 1.8 + rnd(i, 177) * 1.6, z: cry ? 3 + rnd(i, 178) * 4 : 4 + rnd(i, 178) * 7 }; },
+          { t0: F(L.acc), drag: 1.3, px: 220, sway: 0.4, c: ['#ebe5f7', '#cbc4e4', '#a69fca'], shade: 1, fade: 0.25, a: 0.17, sz0: 0.5, sz1: 2.3, near: 8 }); S.scene.add(S.amist);   /* vingeslaget på aksenten (ringen på isen) og skriket (rundt den) */
+        S.rmist = K.pts(320, i => { const a = rnd(i, 181) * TAU, r = 1 + rnd(i, 182) * 3, sp = 9 + rnd(i, 183) * 14; return { p: [H[0] + cos(a) * r, 0.4 + rnd(i, 184) * 0.8, H[2] + sin(a) * r], v: [cos(a) * sp, 0.6 + rnd(i, 185) * 1.8, sin(a) * sp], b: 0.04 + rnd(i, 186) * 0.18, l: 1.5 + rnd(i, 187) * 1.3, z: 4 + rnd(i, 188) * 6 }; },
+          { t0: F(L.roar), drag: 1.4, px: 220, sway: 0.3, c: ['#ebe5f7', '#cbc4e4', '#a69fca'], shade: 1, fade: 0.25, a: 0.13, sz0: 0.6, sz1: 2.2, near: 10 }); S.scene.add(S.rmist);   /* ringen i brølet */
+        S.fog = K.pts(170, i => { const a = rnd(i, 191) * TAU, r = Math.sqrt(rnd(i, 192)) * (RL + 10); return { p: [cos(a) * r, 0.4 + rnd(i, 193) * 2.2, sin(a) * r], v: [0.5 + rnd(i, 194) * 0.7, 0.03, -0.25 + rnd(i, 195) * 0.5], b: rnd(i, 196) * 18, l: 18, z: 12 + rnd(i, 197) * 16 }; },
+          { loop: 1, px: 260, sway: 0.25, c: ['#efeaff', '#e0daf4', '#cdc8e6'], fade: 0.4, a: 0.05, sz0: 0.8, sz1: 1.3, near: 16 }); S.scene.add(S.fog); }   /* lav frosttåke */
+      S.blast = K.pts(520, i => { const a = rnd(i, 111) * TAU, r = 1 + rnd(i, 112) * 4, sp = 9 + rnd(i, 113) * 15, bt = [0, 0.69, 1.39][i % 3]; return { p: [H[0] + cos(a) * r, 0.3 + rnd(i, 114) * 0.6, H[2] + sin(a) * r], v: [cos(a) * sp, 0.4 + rnd(i, 115) * 1.8, sin(a) * sp], b: bt + rnd(i, 116) * 0.12, l: 1.5 + rnd(i, 117) * 1.4, z: 3 + rnd(i, 118) * 4.5 }; },
+        { t0: F(L.cam - 0.02), drag: 1.5, px: 220, sway: 0.3, c: ['#ebe5f7', '#cbc4e4', '#a69fca'], shade: 1, fade: 0.2, a: 0.13, sz0: 0.6, sz1: 2.4, near: 10 }); S.scene.add(S.blast);   /* bremseslagene: tettere og større (Jazz 24.11: mer snømist) */
       S.rdust = K.pts(240, i => { const a = rnd(i, 121) * TAU, e = (rnd(i, 122) - 0.3) * 1.6, sp = 5 + rnd(i, 123) * 13; return { p: [H[0], H[1] + 1.5, H[2]], v: [cos(a) * cos(e) * sp, sin(e) * sp * 0.7 + 1, sin(a) * cos(e) * sp], b: rnd(i, 124) * 0.25, l: 1.4 + rnd(i, 125) * 1.6, z: 0.5 + rnd(i, 126) * 0.9 }; },
         { t0: F(L.roar), drag: 1.2, add: 1, px: 46, c: ['#ffffff', '#dff2ff', '#b8d8ff'], fade: 0.4, a: 0.95 }); S.scene.add(S.rdust);
       return S; },
@@ -431,16 +464,16 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float k
       const ice = seg(s, L.acc, L.acc + 2.2); S.rfU.uA.value = mix(0.8, 0.4, ice); S.rfU.uWob.value = 1 - ice; S.rfU.uTint.value.set(mix(0.62, 0.7, ice), mix(0.62, 0.74, ice), mix(0.8, 0.95, ice));
       /* Ringen på aksenten: frosten skyter over hele innsjøen (2,9 s). Røyken faller sammen, og diamantstøvet tennes. */
       const rA = s - L.acc, c0 = path(L.acc); lu.uFR.value.set(c0[0], c0[2], rA > 0 ? 265 * Math.pow(c01(rA / 2.9), 1.08) : 0, rA > 0 ? 1 : 0);
-      S.smoke.material.uniforms.uA.value = 0.2 * (1 - seg(s, L.acc, L.acc + 2.4)); S.dust.material.uniforms.uA.value = 0.14 + 0.16 * seg(s, -1.6, 0) + 0.6 * seg(s, L.acc, L.acc + 1.6);
+      S.smoke.material.uniforms.uA.value = 0.2 * (1 - seg(s, L.acc, L.acc + 2.4)); S.fog.material.uniforms.uA.value = 0.05 + 0.07 * seg(s, L.acc, L.acc + 3) - 0.035 * seg(s, L.roar, L.name + 1); S.dust.material.uniforms.uA.value = 0.14 + 0.16 * seg(s, -1.6, 0) + 0.6 * seg(s, L.acc, L.acc + 1.6);
       S.us.uSkyK.value.x = 0.3 + 0.4 * seg(s, L.acc, L.roar);
       /* Ice Beam: fra nebbet (forbi kjeven, i retningen fra hodet) til isen. */
       const bu = bmU(s), ba = s >= BM.on && s < BM.off ? eo(seg(s, BM.on, BM.on + 0.06)) * (1 - seg(s, BM.end, BM.off)) : 0, jw = S.gr.at('Jaw'), hd = S.gr.at('Head'), O = jw.clone().add(jw.clone().sub(hd).multiplyScalar(0.95)), I = q.aim.clone();
       S.bfx = { O, I, a: ba };   /* til frostlynene og spiralen (beamFx) */
       for (const m of S.beam) { m.visible = ba > 0.01; if (!m.visible) continue; const d = I.clone().sub(O), Ln = d.length(), r = m.userData.r * (0.96 + 0.04 * sin(t * 23 + m.userData.r * 9));
         m.position.copy(O); m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), d.normalize()); m.scale.set(r, Ln, r); m.material.uniforms.uL.value = Ln; m.material.uniforms.uA.value = m.userData.a0 * ba; }
-      S.gMz.position.copy(O); S.gMz.material.uniforms.uA.value = 1.15 * ba;   /* ingen lading i lyset: i bildet før ser den mot kameraet, og ansiktet skal være fritt */ S.gIm.position.copy(I); S.gIm.material.uniforms.uA.value = 1.1 * ba;
+      S.gMz.position.copy(O); S.gMz.material.uniforms.uA.value = 1.15 * ba;   /* ingen lading i lyset: i bildet før ser den mot kameraet, og ansiktet skal være fritt */ S.gIm.position.copy(I); S.gIm.material.uniforms.uA.value = 0.5 * ba;   /* treffet er nær kameraet: ikke en hvit kule */
       lu.uBK.value.set(max(0.001, bu), s >= BM.sw ? 1 : 0, ba); const ra = s - BM.on;
-      lu.uMark.value.set(BA[0], BA[1], ra > 0 ? 1.5 + 9.5 * eo(c01(ra / 1.3)) : 0, ra > 0 ? 1 : 0);
+      lu.uMark.value.set(BA[0], BA[1], ra > 0 ? 1.5 + 6.5 * eo(c01(ra / 1.3)) : 0, ra > 0 ? 1 : 0);
       lu.uRing.value[0].set(BA[0], BA[1], ra > 0 ? 2 + 18 * eo(c01(ra / 0.8)) : 0, ra > 0 ? 1 - c01(ra / 1.0) : 0);
       /* Bremseslagene og brølet slår ringer i isen under den. */
       [L.cam + 0.69, L.hov, L.roar].forEach((b, i) => { const a = s - b; lu.uRing.value[i + 1].set(H[0], H[2], a > 0 ? 3 + (i === 2 ? 60 : 30) * eo(c01(a / 1.1)) : 0, a > 0 ? (i === 2 ? 1 : 0.6) * (1 - c01(a / 1.1)) : 0); });
@@ -462,7 +495,7 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float k
          der den står i kampen. Kameraet glir fra lang linse til kampens bilde. */
       [F(L.back), (S, u, a, t) => { const s = t - CO, k = io(seg(s, 24.95, 27.1)), tg = camEnd(), cp = CAMB.cp, c6 = CAM6.cp, g6 = CAM6.tg;
         cam(mix(c6[0], cp[0], k), mix(c6[1], cp[1], k), mix(c6[2], cp[2], k), mix(g6[0], tg[0], k), mix(g6[1], tg[1], k), mix(g6[2], tg[2], k), mix(CAM6.fv, CAMB.fv, k));   /* i ro mens strålen går (Jazz 24.11), så til kampens bilde */
-        S.post.sh = 0.35 * hit(s, BM.on, 0.4) + 0.7 * hit(s, BM.cam, 0.5) + 0.8 * hit(s, L.cam + 0.69, 0.4) + 1.0 * hit(s, L.hov, 0.5); S.post.fl = 0.3 * hit(s, BM.cam, 0.1); S.post.flc = '#e2f4ff'; }],
+        S.post.sh = 0.9 * hit(s, BM.on, 0.45) + 0.9 * hit(s, BM.cam, 0.5) + 0.8 * hit(s, L.cam + 0.69, 0.4) + 1.0 * hit(s, L.hov, 0.5); S.post.fl = 0.3 * hit(s, BM.cam, 0.1); S.post.flc = '#e2f4ff'; }],
       /* 7 Brølet, tett på: lavt og skrått forfra, vingene ut over hele bildet, og frosten raser inn over linsa. */
       [F(L.roar), (S, u, a, t) => { const s = t - CO, e = eo(u); cam(mix(-4.6, -4.1, e), mix(6.6, 7.0, e), mix(-9, -11.5, e), H[0] - 0.2, H[1] + 2.0, H[2], 36); X.mouth(S, S.gr, F(L.roar), t); S.post.sh = 2.2 * hit(s, L.roar, 1.2); S.post.fl = 0.35 * hit(s, L.roar, 0.1); S.post.flc = '#e8f4ff'; }],
       /* 8 Navnet: kampens bilde. Den står i lufta og slår rolig med vingene mens den venter. */
@@ -480,7 +513,7 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float k
     return valIR = b; };
   const ECHO = [[0.42, 0.5, 2700, -0.6], [0.83, 0.34, 2100, 0.55], [1.31, 0.23, 1600, -0.4], [1.86, 0.15, 1200, 0.65], [2.5, 0.09, 900, -0.25]];   /* [forsinkelse s, styrke, lavpass Hz, side] */
   X.snd.dal = (v, sh) => { try { if (typeof S === 'undefined' || !S.sound || !S.cries || typeof cryBuf !== 'function' || !ac()) return [20];
-      const o = v ? { g: 0.35, rate: 0.93, lp: 4800, dry: 0.8, echo: 1, wet: 0.55 } : { g: 0.27, rate: 0.9, lp: 3600, dry: 0.62, echo: 1.1, wet: 0.7 };   /* målt mot låta (lydspor.js): langt borte i stillheten, og litt over låta ved frysingen, godt under brølet */
+      const o = v ? { g: 0.5, rate: 0.96, lp: 7500, dry: 1, echo: 0.85, wet: 0.45 } : { g: 0.27, rate: 0.9, lp: 3600, dry: 0.62, echo: 1.1, wet: 0.7 };   /* målt mot låta (lydspor.js): langt borte i stillheten, og litt over låta ved frysingen, godt under brølet */
       cryBuf(144).then(buf => { const a = ac(), out = (typeof fxBus === 'function' && fxBus()) || a.destination, Lq = typeof loudOf === 'function' ? loudOf(buf) : -18;
         const G = o.g * (Lq > -90 ? Math.max(0.12, Math.min(2, Math.pow(10, (-18 - Lq) / 20))) : 0.4) * Math.pow((S.cvol == null ? 70 : S.cvol) / 100, 1.6) * 4.27;
         const src = a.createBufferSource(), hp = a.createBiquadFilter(), lp = a.createBiquadFilter(), dry = a.createGain();
