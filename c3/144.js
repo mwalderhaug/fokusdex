@@ -55,12 +55,16 @@
      av kameraet (UC av veien) og ute av bildet, og den slukker like etter. Sporet går fra BA til BB på isen (x, z). */
   /* Jazz 24.11 om v3: «Den kan starte rett forran skjermen der man står først og gli med en gang forbi»: første treff rett foran kameraet (BA, 23 m foran, nede på midten),
      det står et kvart sekund mens isen spruter (til sw), og glir så ut nede til høyre og forbi kameraet (cam: der det passerer kameraets plan, 3,9 m ved siden av), og slukker. */
-  const BM = { on: L.back, sw: L.back + 0.24, cam: L.back + 0.66, end: L.back + 0.7, off: L.back + 0.84, ch: L.back - 0.4 }, BA = [-8, 8], BB = [-3, 34], UC = 0.885, BLEN = hyp(BB[0] - BA[0], BB[1] - BA[1]);
+  const BM = { on: L.back, sw: L.back + 0.55, cam: L.sw, end: L.sw + 0.05, off: L.sw + 0.19, ch: L.back - 0.4 },   /* Jazz 24.11 om v4: «litt for kort»: forbi kameraet på slaget 23,62 */ BA = [-8, 8], BB = [-3, 34], UC = 0.885, BLEN = hyp(BB[0] - BA[0], BB[1] - BA[1]);
   const BP = 1.7, BV = BP * UC / (BM.cam - BM.sw);   /* glir stadig fortere; holder farten fra kameraets plan til enden */
   const bmU = s => s < BM.sw ? 0 : s < BM.cam ? UC * Math.pow((s - BM.sw) / (BM.cam - BM.sw), BP) : min(1, UC + (s - BM.cam) * BV);
   const bmT = u => u <= 0 ? BM.on : u <= UC ? BM.sw + Math.pow(u / UC, 1 / BP) * (BM.cam - BM.sw) : BM.cam + (u - UC) / BV;   /* når strålen passerer u */
   const bmP = u => [mix(BA[0], BB[0], u), mix(BA[1], BB[1], u)];
-  const EF = s => s < L.riff ? 0 : s < L.top ? 1 : s < L.acc ? 0.4 : 0.4 * (1 - c01((s - L.acc) / 0.6));   /* farten som effekt: full ved siden av, under halvparten ovenfra */
+  /* Farten som effekt (Jazz 24.11 om v4: «få alt til å se ut som at det går raskere … det er en kunst å få det til å se raskt ut, uten at det faktisk er det»): i stupet, når den
+     suser over kameraet, full ved siden av, over halvparten ovenfra, og i fallet etter rullen. Banen og vingeslagene er de samme. */
+  const EF = s => kf(s, [[1.5, 0], [2.4, 0.7, io], [3.7, 0.7], [4.4, 1, io], [L.top, 1], [L.top + 0.3, 0.6, io], [L.acc, 0.6], [L.acc + 0.6, 0, io], [19.7, 0], [21.0, 0.85, io], [22.2, 0.85], [22.24, 0]]);
+  const SWP = s => kf(s, [[4.4, 0], [5.4, 0.22, io], [9.6, 0.22], [10.6, 0, io], [19.8, 0], [20.6, 0.2, io], [22.0, 0.2], [22.6, 0, io]]);   /* vingene litt bakoverstrøket i fart */
+  const POFF = 20.497;   /* «poff» i rullen, på slaget (Jazz 24.11) */   /* farten som effekt: full ved siden av, under halvparten ovenfra */
 
   /* ---------- Flyriggens tall for Articuno (målt på modellen: den står oppreist i hvile, med vingene i en V og en hale på 19 ledd) ----------
      fw, di og tw er per segment innenfra og ut (Shoulder, Arm, ForeArm1, ForeArm2, Hand1, Hand2), i grader: se X.bird i raid3c.js. */
@@ -95,7 +99,7 @@
     const E = 1.25 + 0.22 * sin(PI * c01((s - 25.5) / 0.9)) * (s < 26.4 ? 1 : 0), hf = V(sin(HYAW) * cos(E), sin(E), cos(HYAW) * cos(E)), hu = V(-sin(HYAW) * sin(E), cos(E), -cos(HYAW) * sin(E));
     if (uf > 0) { const m = new T.Matrix4(), qa = new T.Quaternion().setFromRotationMatrix(m.makeBasis(V(0, 0, 0).crossVectors(u, f), u, f)), qb = new T.Quaternion().setFromRotationMatrix(m.makeBasis(V(0, 0, 0).crossVectors(hu, hf), hu, hf));
       qa.slerp(qb, uf); f.set(0, 0, 1).applyQuaternion(qa); u.set(0, 1, 0).applyQuaternion(qa); }
-    const ph = PH(s), us = X.bird.warp(ph, 0.56), A = AMP(s), Ah = HOV(s), tk = TUCK(s) * (1 - uf), mt = MANT(s), op = OPEN(s), rest = uf * (1 - op) * (1 - mt);
+    const ph = PH(s), us = X.bird.warp(ph, 0.56), A = AMP(s), Ah = HOV(s), tk = max(TUCK(s), SWP(s)) * (1 - uf), mt = MANT(s), op = OPEN(s), rest = uf * (1 - op) * (1 - mt);
     const st = { u: us, A, Ah, fold: FOLD(s), w: { glide: (1 - uf) * (1 - tk / max(1 - uf, 1e-3)), tuck: tk, rest, mant: uf * mt * (1 - op), open: uf * op },
       ex: { di: 0.3 * sin(PI * c01((s - 3.1) / 0.9)) * (s < 4 ? 1 : 0) + 0.12 * sin(PI * c01((s - 18.0) / 1.6)) } };   /* vingene bøyes opp av lasten når den retter seg opp etter stupet */
     /* Løftet i vingeslaget, og et lite rykk fram på hvert nedslag der det går fort. */
@@ -104,7 +108,7 @@
     const rr = s < L.roar ? 0 : kf(s, [[L.roar, 0], [L.roar + 0.25, 1, eo], [L.name + 0.3, 1], [L.name + 1.3, 0.2, io]]); P.y += 0.6 * kick(s - L.roar) - 0.35 * mt;
     /* Hodet: ser dit den flyr og holdes vannrett i svingene; under Ice Beam sikter det på punktet strålen treffer; i brølet løftes det. */
     const up0 = Y.clone().addScaledVector(f, -f.y).normalize(), l0 = V(0, 0, 0).crossVectors(up0, f), bank = Math.atan2(-u.dot(l0), u.dot(up0)), inRoll = ro > 0.05 && ro < TAU - 0.05 ? 1 : 0;
-    let np = 1.3 * (1 - uf) + 0.12 * uf, nr = -bank * 0.82 * (1 - inRoll) * (1 - uf), ny = 0; const bw = kf(s, [[BM.on - 0.5, 0], [BM.on - 0.05, 1, io], [BM.end, 1], [BM.off + 0.5, 0, io]]);
+    let np = 1.25 * (1 - uf) + 0.12 * uf, nr = -bank * 0.82 * (1 - inRoll) * (1 - uf), ny = 0; const bw = kf(s, [[BM.on - 0.5, 0], [BM.on - 0.05, 1, io], [BM.end, 1], [BM.off + 0.5, 0, io]]);
     const bu = bmU(s), bp = bmP(bu), aim = V(bp[0], 0.2, bp[1]);
     if (bw > 0) { const d = aim.clone().sub(P).normalize(), lft = V(0, 0, 0).crossVectors(u, f), th = Math.atan2(d.dot(f), -d.dot(u)), psi = Math.asin(max(-1, min(1, d.dot(lft)))); np = mix(np, th, bw); ny = psi * bw * 0.9; nr *= 1 - bw; }
     np += -0.14 * rr - 0.3 * mt;   /* i brølet skytes hodet fram mot oss (ansiktet skal synes, ikke haka); i forvarselet trekkes det ned */
@@ -387,6 +391,8 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float k
         if (r > 1.6 && rnd(k, 68) > 0.4) { g.strokeStyle = `rgba(240,250,255,${al})`; g.lineWidth = max(0.6, r * 0.22); g.beginPath(); for (let j = 0; j < 3; j++) { const aa = j * PI / 3 + rnd(k, 69) * 2; g.moveTo(q[0] - cos(aa) * r, q[1] - sin(aa) * r); g.lineTo(q[0] + cos(aa) * r, q[1] + sin(aa) * r); } g.stroke(); }   /* iskrystall */
         else { g.fillStyle = `rgba(244,250,255,${al})`; g.beginPath(); g.arc(q[0], q[1], max(0.5, r * 0.6), 0, TAU); g.fill(); } } }   /* snøfnugg */
     g.restore(); };
+  /* Anime-fartsstreker (etterbehandlingens spd) som går ut fra fuglen der den er i bildet, når den kommer mot kameraet. k = styrken. */
+  const spdAt = (S, k) => { if (k <= 0.01 || !S.q) return; const P = S.q.P, q = K.proj(P.x, P.y, P.z); if (q.z >= 1) return; S.post.spd = k; S.post.spx = q.x / 2; S.post.spy = q.y / 2; S.post.spr = 0.32; };
   /* Kameraet (med lang sikt: fjellene står 1500 m unna), og kampens kamera slik X.arena stiller det inn (siktet dreies til plassen treffer (377, 198)). */
   const cam = (px, py, pz, tx, ty, tz, fov, roll) => { K.far(3200); K.cam(px, py, pz, tx, ty, tz, fov, roll); };
   let endTg = null;
@@ -451,6 +457,16 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float k
           { t0: F(L.roar), drag: 1.4, px: 220, sway: 0.3, c: ['#ebe5f7', '#cbc4e4', '#a69fca'], shade: 1, fade: 0.25, a: 0.13, sz0: 0.6, sz1: 2.2, near: 10 }); S.scene.add(S.rmist);   /* ringen i brølet */
         S.fog = K.pts(170, i => { const a = rnd(i, 191) * TAU, r = Math.sqrt(rnd(i, 192)) * (RL + 10); return { p: [cos(a) * r, 0.4 + rnd(i, 193) * 2.2, sin(a) * r], v: [0.5 + rnd(i, 194) * 0.7, 0.03, -0.25 + rnd(i, 195) * 0.5], b: rnd(i, 196) * 18, l: 18, z: 12 + rnd(i, 197) * 16 }; },
           { loop: 1, px: 260, sway: 0.25, c: ['#efeaff', '#e0daf4', '#cdc8e6'], fade: 0.4, a: 0.05, sz0: 0.8, sz1: 1.3, near: 16 }); S.scene.add(S.fog); }   /* lav frosttåke */
+      /* «Poff» i rullen (Jazz 24.11: «snø-ring-eksplosjon med mist rundt og bittebittelitt glitter i snøen»): en ring av snømist som blåses ut på tvers av flukten der den er på
+         slaget 20,50 (den flyr ut av ringen), mist rundt, og litt glitter. */
+      { const q = pva(POFF), sp0 = hyp(q.v[0], q.v[1], q.v[2]) || 1, f = [q.v[0] / sp0, q.v[1] / sp0, q.v[2] / sp0], a0 = Math.abs(f[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+        const e1 = [a0[1] * f[2] - a0[2] * f[1], a0[2] * f[0] - a0[0] * f[2], a0[0] * f[1] - a0[1] * f[0]], l1 = hyp(e1[0], e1[1], e1[2]); e1[0] /= l1; e1[1] /= l1; e1[2] /= l1;
+        const e2 = [f[1] * e1[2] - f[2] * e1[1], f[2] * e1[0] - f[0] * e1[2], f[0] * e1[1] - f[1] * e1[0]], dir = (a, k) => [e1[0] * cos(a) + e2[0] * sin(a) + f[0] * k, e1[1] * cos(a) + e2[1] * sin(a) + f[1] * k, e1[2] * cos(a) + e2[2] * sin(a) + f[2] * k];
+        S.pring = K.pts(300, i => { const ring = i < 220, a = (i / 220) * TAU + (rnd(i, 201) - 0.5) * 0.25, d = ring ? dir(a, (rnd(i, 202) - 0.5) * 0.25) : dir(rnd(i, 203) * TAU, (rnd(i, 204) - 0.5) * 1.6), sp = ring ? 11 + rnd(i, 205) * 7 : 2 + rnd(i, 205) * 4, r0 = ring ? 1.2 : rnd(i, 206) * 2.5;
+            return { p: [q.p[0] + d[0] * r0, q.p[1] + d[1] * r0, q.p[2] + d[2] * r0], v: [d[0] * sp - f[0] * 2, d[1] * sp - f[1] * 2, d[2] * sp - f[2] * 2], b: rnd(i, 207) * 0.06, l: 1.1 + rnd(i, 208) * 1.1, z: ring ? 2.4 + rnd(i, 209) * 2.6 : 2.8 + rnd(i, 209) * 3.6 }; },
+          { t0: F(POFF), drag: 2.4, px: 200, sway: 0.3, c: ['#ffffff', '#e2dcf4', '#a49cc8'], shade: 1, fade: 0.3, a: 0.42, sz0: 0.5, sz1: 2.3, near: 6 });   /* hvit med tydelig skygge: synes mot den lyse himmelen */ S.scene.add(S.pring);
+        S.pglint = K.pts(150, i => { const edge = i < 90, d = dir(edge ? (i / 90) * TAU : rnd(i, 211) * TAU, (rnd(i, 212) - 0.5) * (edge ? 0.12 : 0.5)), sp = edge ? 11 + rnd(i, 213) * 7 : 6 + rnd(i, 213) * 9;   /* edge: en tynn, glitrende kant på ringen */ return { p: [q.p[0] + d[0] * 1.5, q.p[1] + d[1] * 1.5, q.p[2] + d[2] * 1.5], v: [d[0] * sp, d[1] * sp - 0.5, d[2] * sp], b: 0.02 + rnd(i, 214) * 0.1, l: 0.5 + rnd(i, 215) * 0.7, z: 0.22 + rnd(i, 216) * 0.3 }; },
+          { t0: F(POFF), drag: 2.4, add: 1, px: 40, c: ['#ffffff', '#e8f6ff', '#c8e4ff'], fade: 0.5, a: 0.75, near: 4 }); S.scene.add(S.pglint); }
       S.blast = K.pts(520, i => { const a = rnd(i, 111) * TAU, r = 1 + rnd(i, 112) * 4, sp = 9 + rnd(i, 113) * 15, bt = [0, 0.69, 1.39][i % 3]; return { p: [H[0] + cos(a) * r, 0.3 + rnd(i, 114) * 0.6, H[2] + sin(a) * r], v: [cos(a) * sp, 0.4 + rnd(i, 115) * 1.8, sin(a) * sp], b: bt + rnd(i, 116) * 0.12, l: 1.5 + rnd(i, 117) * 1.4, z: 3 + rnd(i, 118) * 4.5 }; },
         { t0: F(L.cam - 0.02), drag: 1.5, px: 220, sway: 0.3, c: ['#ebe5f7', '#cbc4e4', '#a69fca'], shade: 1, fade: 0.2, a: 0.13, sz0: 0.6, sz1: 2.4, near: 10 }); S.scene.add(S.blast);   /* bremseslagene: tettere og større (Jazz 24.11: mer snømist) */
       S.rdust = K.pts(240, i => { const a = rnd(i, 121) * TAU, e = (rnd(i, 122) - 0.3) * 1.6, sp = 5 + rnd(i, 123) * 13; return { p: [H[0], H[1] + 1.5, H[2]], v: [cos(a) * cos(e) * sp, sin(e) * sp * 0.7 + 1, sin(a) * cos(e) * sp], b: rnd(i, 124) * 0.25, l: 1.4 + rnd(i, 125) * 1.6, z: 0.5 + rnd(i, 126) * 0.9 }; },
@@ -484,13 +500,14 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float k
       /* 2 Fanfaren: den kommer over tretoppene (lang linse, snøen raser), stuper mot vannet og retter seg opp, og stryker over kameraet mens vannet fryser under den. */
       [F(0) - 0.03, (S, u, a, t) => { const s = t - CO, p = path(s + 0.08), cz = mix(86, 63.5, io(u)), cy = mix(2.8, 3.1, u), tz = max(p[2], cz + 17), ty = min(p[1] - 2.6 * (1 - seg(s, 0.6, 2.4)), cy + (tz - cz) * mix(1.2, 0.36, seg(s, 3.3, 4.7)));   /* siktet følger den, men vipper aldri over 20°: den stryker ut over bildekanten */
         cam(mix(8, 5.5, io(u)), cy, cz, p[0], ty, tz, kf(s, [[0, 10], [1.2, 11.5], [2.2, 13, io], [3.0, 17, io], [3.8, 27, io], [4.5, 38, io], [5.5, 48]]));
-        S.post.sh = 0.5 * hit(s, 0, 0.8) + 0.7 * hit(s, 5.15, 0.5); S.post.fl = 0.22 * hit(s, 0, 0.1); S.post.flc = '#ffe6f0'; }],
+        S.post.sh = 0.5 * hit(s, 0, 0.8) + 0.7 * hit(s, 5.15, 0.5) + 0.25 * EF(s); S.post.fl = 0.22 * hit(s, 0, 0.1); S.post.flc = '#ffe6f0'; spdAt(S, seg(s, 4.3, 4.9) * (1 - seg(s, 5.3, 5.55)) * 0.7); }],
       /* 3 Riffet: kameraet flyr lavt over vannet, først skrått foran den og så ved siden av, mens vannet fryser bak vingespissene og halen. */
-      [F(L.riff), (S, u, a, t) => { const s = t - CO, p = path(s), e = EF(s), k = io(u); cam(p[0] + mix(-9, -15.5, k), mix(2.5, 3.1, k), p[2] + mix(-13.5, -3.5, k), p[0] + mix(0.5, 1, k), p[1] - mix(0.2, 0.7, k), p[2] + mix(1.5, 2.5, k), mix(40, 43, k), -0.03 * e); S.post.sh = 0.4 * e; }],
+      [F(L.riff), (S, u, a, t) => { const s = t - CO, p = path(s), e = EF(s), k = io(u); cam(p[0] + mix(-7.5, -12.5, k), mix(1.75, 2.3, k), p[2] + mix(-11, -3, k), p[0] + mix(0.5, 1, k), p[1] - mix(0.1, 0.6, k), p[2] + mix(1.5, 2.5, k), mix(48, 50, k), -0.06 * e + 0.015 * sin(t * 1.7)); S.post.sh = 0.62 * e; }],   /* lavere og nærmere med vid linse: isen raser forbi under (Jazz 24.11: «spesielt kameraet når det følger articuno») */
       /* 4 Høyt bak den: den hvite kilen over den svarte innsjøen. På aksenten skyter frosten ut til land, og kameraet løfter seg så hele innsjøen synes. */
-      [F(L.top), (S, u, a, t) => { const s = t - CO, sf = s < L.acc ? s : L.acc + 0.8 * (1 - Math.exp(-(s - L.acc) / 0.8)), p = path(sf), e = eo(seg(s, L.acc, L.acc + 2.4)); cam(p[0] + mix(16, 5, u), p[1] + 42 + 46 * e, p[2] + 88 + 44 * e, p[0] - 1, p[1] - 3, p[2] + 20 + 16 * e, mix(31, 46, e)); S.post.sh = 1.4 * hit(s, L.acc, 0.8) + 0.2 * EF(s); S.post.fl = 0.22 * hit(s, L.acc, 0.12); S.post.flc = '#dff0ff'; }],
+      [F(L.top), (S, u, a, t) => { const s = t - CO, sf = s < L.acc ? s : L.acc + 0.8 * (1 - Math.exp(-(s - L.acc) / 0.8)), p = path(sf), e = eo(seg(s, L.acc, L.acc + 2.4)); cam(p[0] + mix(16, 5, u), p[1] + 42 + 46 * e, p[2] + 88 + 44 * e, p[0] - 1, p[1] - 3, p[2] + 20 + 16 * e, mix(31, 46, e)); S.post.sh = 1.4 * hit(s, L.acc, 0.8) + 0.45 * EF(s); S.post.fl = 0.22 * hit(s, L.acc, 0.12); S.post.flc = '#dff0ff'; }],
       /* 5 Fra den nye isen: den stiger bratt mot himmelen der sola gikk ned, vender på vingespissen, faller inn i svingen med en full rull og kommer mot oss. */
-      [F(L.up), (S, u, a, t) => { const s = t - CO, p = path(s); cam(mix(-3, -1.5, u), 2.2, mix(4, 9, u), p[0], p[1] - mix(1.2, 0, seg(s, 20.6, 22.2)), p[2], kf(s, [[L.up, 13], [18.6, 8.6, io], [20.4, 9.6], [22.2, 19, io]])); }],   /* lang linse: fuglen stor mot fjellene og lyssøylen */
+      [F(L.up), (S, u, a, t) => { const s = t - CO, p = path(s); cam(mix(-3, -1.5, u), 2.2, mix(4, 9, u), p[0], p[1] - mix(1.2, 0, seg(s, 20.6, 22.2)), p[2], kf(s, [[L.up, 13], [18.6, 8.6, io], [20.4, 9.6], [22.2, 19, io]]));   /* lang linse: fuglen stor mot fjellene og lyssøylen */
+        S.post.sh = 0.8 * hit(s, POFF, 0.45) + 0.35 * EF(s); S.post.fl = 0.12 * hit(s, POFF, 0.08); S.post.flc = '#eef6ff'; spdAt(S, seg(s, 21.1, 21.5) * 0.6); }],   /* poffen i rullen, og farten ut av den */
       /* 6 Ice Beam og bremsen, i ett bilde: strålen treffer isen under plassen, feier mot oss og forbi (25,00), og den reiser seg med store slag og står i lufta
          der den står i kampen. Kameraet glir fra lang linse til kampens bilde. */
       [F(L.back), (S, u, a, t) => { const s = t - CO, k = io(seg(s, 24.95, 27.1)), tg = camEnd(), cp = CAMB.cp, c6 = CAM6.cp, g6 = CAM6.tg;
