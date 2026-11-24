@@ -1604,10 +1604,10 @@ function raidField(B, ev) {
   const N = nmOf('me', b), F = f.name;
   /* Deoxys åpner i Attack Forme, går i Defense Forme når to runder er gått, og tilbake i Attack Forme når den blir rasende. */
   if (f.id === DEOXYS && f.mega === DEOXA && !B.rage && B.turn >= DEOXT && f.hp > f.max / 2) raidForm(B, ev, DEOXD);
-  if (!B.rage && f.hp <= f.max * rageAt(B.tr.dk ? 0 : f.id)) { B.rage = 1; ev.push({ t: 'env', k: 'rage', s: `${F} is enraged!` }); if (!(f.id === DEOXYS && raidForm(B, ev, DEOXA)) && !(f.id === 648 && formTo(B, 'foe', f, PIROU, ev)) && !megaEvolve(B, 'foe', ev, 'rage')) changeStats(B, 'foe', D0.up, ev); }
+  if (!B.rage && f.hp <= f.max * rageAt(B.tr.dk ? 0 : f.id)) { B.rage = 1; ev.push({ t: 'env', k: 'rage', s: `${F} is enraged!` }); if (!(f.id === DEOXYS && raidForm(B, ev, DEOXA)) && !(f.id === 648 && formTo(B, 'foe', f, PIROU, ev)) && !megaEvolve(B, 'foe', ev, 'rage')) changeStats(B, 'foe', D0.up, ev); arcFirst(B, ev); }
   if (b.hp <= 0 || b.v.away) return;
-  /* Arceus bytter plate: første gang når første runde er over, så hver ARCEV-te runde (hver ARCEV2-te når den er rasende). */
-  if (f.id === ARCEUS && !B.tr.dk) { B.arc = (B.arc == null ? ARCEV : B.arc) + 1; if (B.arc > (B.rage ? ARCEV2 : ARCEV)) { B.arc = 1; arcPlate(B, ev); } }
+  /* Arceus bytter plate i fase 2 (3.1, låst av Jazz 21.11: byttene starter på løftet i låta): den første idet han blir rasende (arcFirst), så hver ARCEV2-te runde. */
+  if (f.id === ARCEUS && !B.tr.dk && B.rage) { B.arc = (B.arc || 0) + 1; if (B.arc > ARCEV2) { B.arc = 1; arcPlate(B, ev); } }
   B.fld = (B.fld || 0) + 1;
   if (B.fld < (B.rage ? RAIDEV2 : RAIDEV)) return;
   B.fld = 0;
@@ -1636,8 +1636,10 @@ function raidForm(B, ev, to) {
    den tilpasser seg det du kaster mot den, så samme angrep virker dårligere og dårligere, og du må veksle. */
 const ARCW = [10, 3, 2, 2];
 const ARCEV = 3, ARCEV2 = 2;
-function arcPlate(B, ev) {
-  const f = B.foe[B.b], b = B.me[B.a]; if (f.id !== ARCEUS || f.hp <= 0 || !b || b.hp <= 0) return false;
+/* Den første platen, idet fase 2 starter (løftet): velges alltid, også når din Pokémon nettopp besvimte (da mot den neste som står). */
+function arcFirst(B, ev) { const f = B.foe[B.b]; if (!f || f.id !== ARCEUS || B.tr.dk) return false; B.arc = 0; return arcPlate(B, ev, 1); }
+function arcPlate(B, ev, force) {
+  const f = B.foe[B.b], b0 = B.me[B.a], b = b0 && b0.hp > 0 ? b0 : force ? B.me.find(x => x && x.hp > 0) : null; if (f.id !== ARCEUS || f.hp <= 0 || !b) return false;
   const li = B.lastM.me, lm = li != null && li >= 0 && MOVES[li][4] > 0 ? mvEff(B, b, MOVES[li]) : null, lt = lm ? lm[1] : -1;
   let best = -1, bs = -1e9;
   for (let t = 1; t <= 17; t++) {
@@ -1669,11 +1671,12 @@ function darkShift(B, ev) {
    det: raseriet kommer som ellers (verdiene, hendelsene hver RAIDEV2-te runde) med Primal Reversion. Kampskjermen bestemmer når (kyShift i bui.js: når låta når
    cutscenens start), reglene står her. Skjer bare med låta (uten den: halv HP som før), og høyst én gang. */
 /* GENERELT FRA 2b.2: gjelder arten kampskjermen ber om (den som har et kart over låta: kyTl i bui.js). Groudon: låta («War Lord») når bruddet for andre gang. */
-const KYOGRE = 382, PEAK = { 382: 'The storm reaches its peak!', 383: 'The heat reaches its peak!' };
+const KYOGRE = 382, PEAK = { 382: 'The storm reaches its peak!', 383: 'The heat reaches its peak!', 493: 'The hall answers its maker!' };
 function stormRage(B, ev) {
   const f = B.foe[B.b], D0 = raidDom(B.tr); if (!B.tr || B.tr.dk || !B.tr.leg || B.rage || B.over || !f || f.hp <= 0 || !D0) return false;
   B.rage = 1; ev.push({ t: 'env', k: 'rage', s: `${PEAK[B.tr.leg] ? PEAK[B.tr.leg] + ' ' : ''}${f.name} is enraged!` });
   if (!megaEvolve(B, 'foe', ev, 'rage')) changeStats(B, 'foe', D0.up, ev);
+  arcFirst(B, ev);
   return true;
 }
 /* Formen en legendarisk forvandles til når den blir rasende i et raid (0 = ingen). Mewtwo har Dark Mewtwo som sin andre form og forvandles ikke. */

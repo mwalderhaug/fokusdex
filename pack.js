@@ -272,6 +272,18 @@ const PACK = (() => {
   /* at (valgfritt): hvor i lyden den starter (sekunder, eller en funksjon som spørres idet lyden er klar: lydsengen til en cutscene følger låtas klokke). */
   P.sting = async (path, loop, at) => { const my = job, d = await decode(path); if (!d || my !== job) return false; P.stingOut(0.05); sting = startBuf(d, { loop: !!loop, tg: tgain(path), path, at: Math.max(0, (typeof at === 'function' ? at() : at) || 0) }); return !!sting; };
   P.stinging = () => !!sting;
+  /* FLERE LÅTER I ÉN FILM (Arceus, 3.1): låter fra «special» lagt på filmens klokke foran kamplåta. list = [{ f: sti, at: sekunder ut i filmen, out: [fra, til] uttoning }],
+     og kamplåta (path) kommer inn o.at sekunder ut (negativ at: en kald start). Alt står på samme lydklokke (kamplåtas t0), så P.clock() er filmens tid hele veien, og
+     kamplåta er «låta som spiller» (sløyfa, P.pos og P.seek som ellers) når filmen er over. Mangler en av de andre, er det stille der den skulle vært. */
+  let seqH = [];
+  P.seqStop = sec => { for (const h of seqH) fadeOut(h, sec == null ? 0.3 : sec); seqH = []; };
+  P.seq = async (path, list, o = {}) => {
+    const ds = await Promise.all(list.map(q => q.f ? decode(q.f) : null)), ok = await P.music(path, o); P.seqStop(0.05); if (!ok || mode !== 'wa' || !node) return ok;
+    try { const a = AC, t0 = node.t0, out = (typeof master === 'function' && master()) || a.destination;
+      list.forEach((q, i) => { const d = ds[i]; if (!d) return; const s = a.createBufferSource(), g = a.createGain(), v = Math.min(1, mvol() * tgain(q.f)), w = t0 + q.at; s.buffer = d; s.connect(g); g.connect(out);
+        g.gain.setValueAtTime(v, a.currentTime); if (q.out) { g.gain.setValueAtTime(v, t0 + q.out[0]); g.gain.linearRampToValueAtTime(0.0001, t0 + q.out[1]); }
+        s.start(Math.max(w, 0), Math.max(0, a.currentTime - w)); if (q.out) s.stop(t0 + q.out[1] + 0.05); seqH.push({ s, g }); }); } catch (_) {}
+    return ok; };
   P.stingOut = sec => { if (sting) { fadeOut(sting, sec == null ? 1.2 : sec); sting = null; } };
   P.playing = () => !!cur;
   /* Hvilken låt som spiller nå (stien), eller ''. */

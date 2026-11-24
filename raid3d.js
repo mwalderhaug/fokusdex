@@ -54,7 +54,7 @@ void main(){ vUv = uv + uUvOff; vO = uOm * position + uOo;
   vec4 w = modelMatrix * vec4(transformed, 1.); vW = w.xyz; vN = normalize(mat3(modelMatrix) * objectNormal); gl_Position = projectionMatrix * viewMatrix * w; }`;
   const FS_FIG = `varying vec3 vW, vN, vO; varying vec2 vUv; uniform sampler2D map;
 uniform float uId, uStone, uCrack, uCrackR, uSeam, uSeamOn, uEmis, uFlK, uB1, uB2, uMask, uVor, uGl, uCw, uHalo, uSpill, uWk, uWh; uniform vec3 uCrackC, uCrackO, uFlC, uStoneC, uMul, uHead, uKf; uniform vec2 uTx;
-uniform vec4 uK3, uK3g, uK3e, uK3o; uniform float uK3h, uAsh;
+uniform vec4 uK3, uK3g, uK3e, uK3o; uniform float uK3h, uAsh; uniform vec4 uCoat; uniform vec3 uCoatA, uCoatB, uCoatC;
 ${COMMON}
 /* Sprekker i 3D (uK3.x = 1; av som standard): avstanden til nærmeste cellegrense i en Voronoi i figurens egne mål (vO), og cellekantens frø. */
 vec3 h33(vec3 p){ p = vec3(dot(p, vec3(127.1, 311.7, 74.7)), dot(p, vec3(269.5, 183.3, 246.1)), dot(p, vec3(113.5, 271.9, 124.6))); return fract(sin(p) * 43758.5453); }
@@ -104,6 +104,12 @@ void main(){
     col = mix(col, lc * (.95 + .4 * G), l3); }
   /* Der han går ned i lavaen, gløder han: tre harde trinn fra hvitgult ved overflaten til ingenting (uWh over den). */
   float wb = floor(clamp(1. - (vW.y - uLavaY) / uWh, 0., 1.) * 2. + .8) / 2.; col += mix(vec3(.9, .3, .04), vec3(1., .62, .16), wb) * wb * uWk * (.75 - .3 * st);   /* lagt oppå som varme, ikke blandet inn (det ble et blekt bånd) */
+  /* Belegget (uCoat.x > 0; av som standard): figuren er dekket av et annet stoff over høyden uCoat.y i verden (Arceus i gull), med en ujevn kant (uCoat.z) som lyser
+     idet belegget slipper, og et blankt skjær som vandrer (uCoat.w = høyden i verden). Tre harde toner (uCoatA mørk, uCoatB, uCoatC lys), som resten av figuren. */
+  if (uCoat.x > 0.) { float ce = vW.y - uCoat.y + (vn3(vO * 1.7) - .5) * uCoat.z, con = step(0., ce);
+    vec3 cg = mix(uCoatA, uCoatB, step(uB1, d)); cg = mix(cg, uCoatC, step(uB2, d)); cg = mix(cg, uCoatC * 1.1 + .05, rim * .7);
+    cg = mix(cg, vec3(1., .98, .86), step(abs(vW.y - uCoat.w + (vn3(vO * 1.1 + 3.) - .5) * .9), .22) * .9);
+    col = mix(col, cg, con * uCoat.x); col = mix(col, vec3(1., .97, .82), con * step(ce, .16) * uCoat.x * step(-900., uCoat.y)); }
   col = mix(col, uFlC, uFlK);
   float fg = floor(fogK(vW) * 6. + .5) / 6.;
   gl_FragColor = vec4(mix(col, uFogC, fg), uId / 255.);
@@ -575,7 +581,7 @@ void main(){
   K.cryMat = o => sm(VS, FS_CRY, { uA: uv(u3(o.a || '#7a1030')), uB: uv(u3(o.b || '#ff5a78')), uPulse: uv(0.5) });
   K.figMat = (map, o) => { o = o || {}; if (map) { map.colorSpace = T.NoColorSpace; map.magFilter = T.NearestFilter; map.minFilter = o.mip ? T.LinearMipmapLinearFilter : T.NearestFilter; map.generateMipmaps = !!o.mip; map.needsUpdate = true; }
     return sm(VS_FIG, FS_FIG, { map: uv(map), uUvOff: uv(new T.Vector2()), uId: uv(o.id || 255), uStone: uv(0), uStoneC: uv(u3('#8a7892')), uCrack: uv(0), uCrackR: uv(0), uCrackO: uv(new T.Vector3()), uCrackC: uv(u3('#ffe24a')), uSeam: uv(o.seam == null ? 0.2 : o.seam), uSeamOn: uv(o.seamOn == null ? 1 : o.seamOn), uHead: uv(new T.Vector3(1e4, 1e4, 0)),
-      uEmis: uv(o.emis || 0), uTx: uv(new T.Vector2(1.6 / ((map && map.image && map.image.width) || 512), 1.6 / ((map && map.image && map.image.height) || 512))), uVor: uv(0), uGl: uv(1), uCw: uv(1), uHalo: uv(0), uSpill: uv(0), uWk: uv(0), uWh: uv(1.15), uOm: uv(new T.Matrix3().set(OS3, 0, 0, 0, 0, OS3, 0, -OS3, 0)), uOo: uv(new T.Vector3()), uFlK: uv(0), uFlC: uv(u3('#ffffff')), uB1: uv(-0.1), uB2: uv(0.45), uMask: uv(o.mask || 0), uMul: uv(u3(o.mul || '#ffffff')), uKf: uv(new T.Vector3()), uK3: uv(new T.Vector4(0, 0.6, 0, 0.5)), uK3g: uv(new T.Vector4(0, 1.6, 2.8, 0.55)), uK3e: uv(new T.Vector4()), uK3o: uv(new T.Vector4(0, 0, 0, 1e4)), uK3h: uv(0), uAsh: uv(0) }, o.mask ? Object.assign(addBlend(), { side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 }) : { side: T.DoubleSide }); };
+      uEmis: uv(o.emis || 0), uTx: uv(new T.Vector2(1.6 / ((map && map.image && map.image.width) || 512), 1.6 / ((map && map.image && map.image.height) || 512))), uVor: uv(0), uGl: uv(1), uCw: uv(1), uHalo: uv(0), uSpill: uv(0), uWk: uv(0), uWh: uv(1.15), uOm: uv(new T.Matrix3().set(OS3, 0, 0, 0, 0, OS3, 0, -OS3, 0)), uOo: uv(new T.Vector3()), uFlK: uv(0), uFlC: uv(u3('#ffffff')), uB1: uv(-0.1), uB2: uv(0.45), uMask: uv(o.mask || 0), uMul: uv(u3(o.mul || '#ffffff')), uKf: uv(new T.Vector3()), uK3: uv(new T.Vector4(0, 0.6, 0, 0.5)), uK3g: uv(new T.Vector4(0, 1.6, 2.8, 0.55)), uK3e: uv(new T.Vector4()), uK3o: uv(new T.Vector4(0, 0, 0, 1e4)), uK3h: uv(0), uAsh: uv(0), uCoat: uv(new T.Vector4(0, -1e4, 0.5, -1e4)), uCoatA: uv(u3('#6e3d0c')), uCoatB: uv(u3('#d99a22')), uCoatC: uv(u3('#ffe69a')) }, o.mask ? Object.assign(addBlend(), { side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 }) : { side: T.DoubleSide }); };
   /* Kampestein: en kule dyttet ut og inn etter frø. Normalen peker ut fra midten, så den skygges som en rund stein. */
   const jitter = (geo, amt, seed, fn) => { const p = geo.attributes.position, nn = geo.attributes.normal; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), h = Math.round(x * 31.7) * 3 + Math.round(y * 17.3) * 7 + Math.round(z * 23.9) * 13, k = 1 + (rnd(h, seed) - 0.5) * 2 * amt; let v = [x * k, y * k, z * k]; if (fn) v = fn(v[0], v[1], v[2]); p.setXYZ(i, v[0], v[1], v[2]); if (nn) { const l = Math.hypot(x, y, z) || 1; nn.setXYZ(i, x / l, y / l, z / l); } } p.needsUpdate = true; geo.computeBoundingSphere(); return geo; };
   K.boulder = (r, seed, o) => { o = o || {}; const g = jitter(new T.IcosahedronGeometry(r, o.d == null ? 2 : o.d), o.j == null ? 0.2 : o.j, seed, (x, y, z) => [x * (o.sx || 1), min((y < 0 && o.flat ? y * 0.25 : y) * (o.sy || 1), o.cap == null ? 1e9 : o.cap), z * (o.sz || 1)]); return new T.Mesh(g, o.mat); };
