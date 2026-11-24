@@ -301,7 +301,9 @@ void main(){
      til sidene, og lys fra dypet (uGlo = x, z, radius, styrke; uGloC = fargen). Bare i vannets egen farge: speilingen og skummet ligger oppå. */
   float gl = 0.;
   if (uBody.w > 0.) { vec2 dd = normalize(uBodyD.xy + vec2(1e-4, 0.)), q = w - uBody.xy; float a = dot(q, dd) / uBody.z, b = dot(q, vec2(-dd.y, dd.x)) / uBodyD.z, nz = (fbm(w * .09 + t * .05) - .5) * .25;
-    float e = a * a + b * b * (1. + .6 * max(0., -a)), f = pow((a - .15) / .42, 2.) + pow((abs(b) - 1.9) / 1.15, 2.), k = max(1. - smoothstep(.45, 1.1, e + nz), (1. - smoothstep(.4, 1.1, f + nz)) * uBodyD.w);
+    /* 2b.3: finnene er feid bakover og halen har to fliker, så skyggen har hans omriss sett ovenfra (før: to runde lapper rett ut til sidene) */
+    float ab = abs(b), e = a * a + b * b * (1. + .6 * max(0., -a)), f = pow((a - .34 + .3 * (ab - .8)) / .34, 2.) + pow((ab - 1.85) / 1.3, 2.), g2 = pow((a + 1.08 + .5 * ab) / .16, 2.) + pow((ab - .5) / .52, 2.);
+    float k = max(max(1. - smoothstep(.45, 1.1, e + nz), (1. - smoothstep(.4, 1.1, f + nz)) * uBodyD.w), (1. - smoothstep(.4, 1.1, g2 + nz)) * uBodyD.w);
     body *= 1. - .82 * k * uBody.w; }
   if (uGlo.w > 0.) { float d = length(w - uGlo.xy) / max(uGlo.z, .01); gl = exp(-d * d * 2.2) * uGlo.w; body += uGloC * gl; }
   vec3 col = mix(body * (1. - .45 * sz), sky * (1. - .5 * sz), fr);   /* stormsonen (uStm): mørkere på stormsiden */
@@ -309,15 +311,23 @@ void main(){
   col += uGloC * gl * .3;
   col += uKeyC * pow(max(dot(R, normalize(uKey + vec3(0., .25, 0.))), 0.), 60.) * .5 * lod;
   /* Skum: på toppene (der dønningen er høyest og bryter), i striper etter vinden, og rundt det som står i vannet (uWade). */
-  float fn = fbm(w * .55 + vec2(t * .22, -t * .16)), top = smoothstep(.92, 1.35, h0 / max(uSea.x, .01) + (fn - .5) * 1.1 + c0 * .12 * uSea.y);
-  vec2 wd = normalize(uWind.xy + vec2(1e-4, 0.)); float st = fbm(vec2(dot(w, wd) * .12 - t * .2, dot(w, vec2(-wd.y, wd.x)) * 1.4)), streak = smoothstep(.62, .82, st) * smoothstep(.35, .7, fn) * .55;
+  /* 2b.3: skummet er aldri en jevn flate. Blonder (lace: hull i skummet, strukket etter vinden) bryter det opp; bruddet er en smal, lys linje på selve toppen (brk),
+     og bak den ligger et slep som tynnes ut. */
+  vec2 wd = normalize(uWind.xy + vec2(1e-4, 0.)), wp = vec2(dot(w, wd), dot(w, vec2(-wd.y, wd.x)));
+  float fn = fbm(w * .55 + vec2(t * .22, -t * .16)), hN = h0 / max(uSea.x, .01), cd = length(cameraPosition - vW), nf = smoothstep(5., 30., cd);
+  float lace = smoothstep(.4, .6, fbm(wp * vec2(1.3, 2.9) + vec2(-t * .3, t * .1) + 2.2 * fn)) * (.3 + .7 * smoothstep(.42, .6, fbm(wp * vec2(3.4, 7.1) + vec2(-t * .45, -t * .12) + 1.4 * fn)));
+  float brk = smoothstep(1.3, 1.62, hN + (fn - .5) * .9 + c0 * .12 * uSea.y), top = max(brk * (.35 + .65 * lace) * (.55 + .45 * nf), smoothstep(.9, 1.4, hN + (fn - .5) * 1.2) * lace * .6 * (.3 + .7 * nf)) * min(1., uSea.z * 2.5) / max(uSea.z, .01);
+  float st = fbm(vec2(wp.x * .12 - t * .2, wp.y * 2.1)), streak = smoothstep(.64, .8, st) * smoothstep(.35, .7, fn) * .5 * (.4 + .6 * lace);
   float dw = length(w - uWade.xy), wr = uWade.w * (1. - smoothstep(uWade.z * .55, uWade.z, dw)) * smoothstep(.38, .62, fbm(w * 1.3 + vec2(t * .4, 0.)) + .16 * sin(dw * 1.5 - t * 2.2 + 5. * fbm(w * .35)));
   float rg = 0.; for (int i = 0; i < 4; i++) { vec4 g = uRing[i]; if (g.w > 0.) rg = max(rg, g.w * (1. - smoothstep(0., .45 + g.z * .06, abs(length(w - g.xy) - g.z)))); }
-  float wc = sz * uStm.w * .85 * (.15 + .85 * smoothstep(8., 34., length(cameraPosition - vW))) * smoothstep(.6, .8, fbm(w * .9 + vec2(t * .4, t * .25)) + .3 * c0), gf = uStm.z * uStm.w * exp(-pow((vW.z - uStm.x + 2.) / 3., 2.)) * smoothstep(.3, .65, fn);
+  float wc = sz * uStm.w * .8 * (.15 + .85 * smoothstep(8., 34., cd)) * smoothstep(.6, .78, fbm(vec2(wp.x * 1.7, wp.y * .55) + vec2(-t * .5, t * .12)) + .3 * c0) * (.3 + .7 * lace), gf = uStm.z * uStm.w * exp(-pow((vW.z - uStm.x + 2.) / 3., 2.)) * smoothstep(.3, .65, fn);
   float foam = clamp(max(max(top, streak) * uSea.z * (1. + .35 * sz), max(max(wr, rg * .8), max(wc, gf * .85))), 0., 1.) * (.55 + .45 * lod);
   col = mix(col, uFoamC * (.72 + .28 * smoothstep(-.2, .8, dot(N, uKey))), foam);
-  /* Regnet: små ringer i et rutenett, hver i sin takt (tones ut på avstand). */
-  if (uSea.w > 0.) { vec2 gp = w / 1.9, ci = floor(gp), o = h22(ci); float ph = fract(t * (.8 + o.x * .6) + o.y), rr = length(fract(gp) - .5 - (o - .5) * .5), ring = exp(-pow((rr - ph * .42) / .05, 2.)) * (1. - ph) * step(o.x, min(1., uSea.w + .7 * sz)); col += uSkyA * ring * .5 * lod; }
+  /* Regnet (2b.3): små ringer som bare synes tett på (fw er bildepunktets størrelse i verden), og lenger unna et svakt slør i himmelens farge. Før: ringer i ruter
+     på 1,9 enheter, som ble prikker på 13 meter i filmenes målestokk. */
+  if (uSea.w > 0.) { float rk = min(1., uSea.w + .7 * sz), l2 = 1. - smoothstep(.02, .07, fw);
+    if (l2 > 0.) { vec2 gp = w / .6, ci = floor(gp), o = h22(ci); float ph = fract(t * (1.6 + o.x * 1.2) + o.y), rr = length(fract(gp) - .5 - (o - .5) * .5); col += uSkyA * exp(-pow((rr - ph * .4) / .06, 2.)) * (1. - ph) * step(o.x, rk) * .4 * l2; }
+    col += uSkyA * rk * .05 * (1. - l2) * (.6 + .8 * vn(w * 3. + vec2(t * 2., -t * 1.3)) * lod); }
   col *= uBri;
   gl_FragColor = vec4(mix(col, uFogC, fogK(vW)), 1.);
 }`;
