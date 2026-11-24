@@ -571,7 +571,8 @@ async function legendIntro(B) {
   }
   const started = own ? await PACK.music(own, { at: info.at, loop: false, out: 0.3 }) : tk ? await (seq ? PACK.seq(tk, seq, { at: info.at }) : PACK.music(tk, V ? { at: 0, loop: false, out: 0.3 } : { at: info.at })) : false; if (gone()) { PACK.seqStop(0.1); return; }
   const seqOn = !!seq && started, noskip = started && mus && mus.noskip ? mus.noskip : 0;
-  const ownOn = !!own && started, bedOn = !!(started && mus && mus.bed && (ownOn || !mus.song)); if (bedOn) PACK.sting(mus.bed, false, () => PACK.clock());   /* sengen følger låta: filmens egen introlåt, eller kamplåta når filmen går på den (Kyogre) */
+  const ownOn = !!own && started, bedOn = !!(started && mus && mus.bed && (ownOn || !mus.song)); if (bedOn) PACK.sting(mus.bed, false, () => PACK.clock());
+  const hs = bedOn && mus.hold ? mus.hold : null; if (hs) PACK.loopWarm(hs[0]);   /* Hold-sløyfa (def.mus.hold: [fil, styrke, fra]): hører til sengen */   /* sengen følger låta: filmens egen introlåt, eller kamplåta når filmen går på den (Kyogre) */
   let stop = () => {};
   if (started) music(''); else { PACK.music(''); stop = epicIntro('ultra', info.R); }
   root.classList.add('on'); sfx.appear(); buzz([40, 60, 40]);
@@ -592,9 +593,10 @@ async function legendIntro(B) {
   setTimeout(() => { if (!gone() && sk && !skipped && (!go || go.hidden)) sk.hidden = false; }, Math.max(1200, noskip * 1000)); if (sk) sk.addEventListener('click', skip); if (go) go.addEventListener('click', skip);
   const key = e => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') skip(); }; document.addEventListener('keydown', key);
   /* HOLD (Arceus): fingeren mot skjermen mens lyset regner. Filmen leser G3D.hold og gjør resten selv (valgfritt, bare for følelsen: filmen er den samme uten). */
+  let hh = null; const holdT = hs ? setInterval(() => { const on = !gone() && !skipped && !leaving && !!G3D.hold && now() >= hs[2]; if (on && !hh) hh = PACK.loop(hs[0], hs[1]); else if (!on && hh) { hh.stop(0.5); hh = null; } }, 50) : 0;   /* sløyfa spilles mens fingeren holdes fra droppet, og tones ut når den slipper */
   const hold = v => { if (c3) { if (v && !G3D.hold) buzz(14); G3D.hold = v; } }; root.addEventListener('pointerdown', e => { if (!(e.target && e.target.closest && e.target.closest('button'))) hold(1); }); for (const n of ['pointerup', 'pointercancel', 'pointerleave']) root.addEventListener(n, () => hold(0));
   const watch = setInterval(() => { if (gone()) return pl.stop(); if (ownOn && mus.auto && !leaving && !skipped && now() >= mus.auto - 0.5) leave(mus.auto); }, 200);
-  await pl.done; clearInterval(watch); document.removeEventListener('keydown', key); hold(0);
+  await pl.done; clearInterval(watch); document.removeEventListener('keydown', key); hold(0); if (holdT) clearInterval(holdT); if (hh) { hh.stop(0.3); hh = null; }
   if (gone()) { tms.forEach(clearTimeout); if (ownOn || bedOn) PACK.stingOut(0.2); PACK.seqStop(0.2); return stop(); }
   if (ownOn || bedOn) PACK.stingOut(0.3);
   if (!started && !PACK.playing() && !MUSIC.playing()) battleMusic(B);

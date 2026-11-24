@@ -319,7 +319,8 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
 
   G3D.def('c3:493', {
     len: LEN, hold: 1, R: DROP, at: -K0,   /* kamplåta kommer inn 49,3 s ut i filmen (en kald start), og filmens klokke er dens */
-    mus: { seq: [['Azure Flute', 0], ['Hall of Origin', H0, [HFADE, HEND]]], noskip: 19.36 },   /* fløyta og Hall of Origin foran kamplåta (PACK.seq); hele fløyta spilles før Skip vises */
+    mus: { seq: [['Azure Flute', 0], ['Hall of Origin', H0, [HFADE, HEND]]], noskip: 19.36,   /* fløyta og Hall of Origin foran kamplåta (PACK.seq); hele fløyta spilles før Skip vises */
+      bed: 'sfx/natur/arceus_intro.mp3', hold: ['sfx/natur/arceus_hold.mp3', 0.2, DROP] },   /* lydsengen på filmens klokke (work/raids3d/arceus/lyd/bed.py), og sløyfa mens fingeren holdes fra droppet */
     fig: 2, models: ['arceus'], edge: null, env: { rim: '#ffe2a0', glow: '#bfe9ff', fog: '#04050b', glowH: 6, ink: '#191430' },
     make(K, T) { const S = { scene: new T.Scene(), figs: [] };
       place(K, T, S, { grow: (q, i) => [LIFT[2] + 0.45 + min(hyp(q[0], q[1]), 72) / 62 * 2.5 + rnd(i, 3) * 0.1, 2.2] });   /* ringen går 24,8 m/s utover gulvet, og søylene stiger der den går forbi */
@@ -452,16 +453,17 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
       gr.addColorStop(0, `rgba(255,244,210,${0.85 * (1 - k) * (1 - k) * hd})`); gr.addColorStop(1, 'rgba(255,214,130,0)'); g.fillStyle = gr; g.fillRect(x - 46, y - 46, 92, 92);
       for (let j = 0; j < 3; j++) { const r = (16 + 150 * eo(k)) * (1 - j * 0.22); g.strokeStyle = `rgba(255,232,170,${0.6 * (1 - k) * hd})`; g.lineWidth = 2 - j * 0.5; g.beginPath(); g.arc(x, y, r, 0, TAU); g.stroke(); } });
     g.restore(); };
-  /* Lydene: FORELØPIGE (Fable hører ikke; Opus bytter dem og måler nivåene). Lyder fra pakken der de finnes, ellers appens innebygde. Stille der musikken er stille
-     (fløytas pause, mellom låtene, pusten). Brølet er hans eget (signalet 'cry'), og Judgment er spillets egen lyd. */
-  const pks = (n, v, o) => typeof c3p === 'function' && c3p(n, v, o), hasT = () => typeof tone === 'function';
+  /* Lydene i INTROEN ligger i lydsengen (def.mus.bed: klippene Jazz fant på Epidemic Sound og godkjente 24.11, på filmens tider; brølet er hans eget, signalet 'cry').
+     Signalene under gir ristingen i telefonen, og lyd bare når sengen ikke spiller: i løftet i kampen (c3:493p, FORELØPIGE til lydene derfra er skaffet), eller
+     hvis sengen ikke lot seg hente. Stille der musikken er stille (fløytas pause, mellom låtene, pusten). */
+  const bedOn = () => typeof PACK !== 'undefined' && !!PACK.stinging && PACK.stinging(), pks = (n, v, o) => !bedOn() && typeof c3p === 'function' && c3p(n, v, o), hasT = () => !bedOn() && typeof tone === 'function';
   X.snd.aegg = () => { pks('Wish', 0.2, { len: 2.6, fade: 1.4 }); return [20]; };
-  X.snd.aring = k => { if (typeof swellN === 'function') swellN(0, 1.1, 0.035 + 0.01 * (k || 0), 500, 3200); if (hasT()) tone(220 * Math.pow(1.122, [0, 2, 4, 7, 9][k || 0]), 0.02, 1.4, 0.022, 'sine'); return [15, 30, 15]; };
+  X.snd.aring = k => { if (!bedOn() && typeof swellN === 'function') swellN(0, 1.1, 0.035 + 0.01 * (k || 0), 500, 3200); if (hasT()) tone(220 * Math.pow(1.122, [0, 2, 4, 7, 9][k || 0]), 0.02, 1.4, 0.022, 'sine'); return [15, 30, 15]; };
   X.snd.aplate = () => { pks('Light Screen', 0.2, { len: 1.1, fade: 0.6 }); return [15, 20, 15, 20, 15]; };
   X.snd.aopen = () => { pks('Cosmic Power', 0.3, { len: 2.2, fade: 1.2 }); if (hasT()) tone(98, 0, 1.0, 0.07, 'sine', 49); return [60, 40, 120]; };
   X.snd.agold = k => { pks('Power Gem', 0.13, { off: 0.2, len: 0.9, fade: 0.5, rate: 0.9 + 0.08 * (k || 0) }); return [25]; };
   X.snd.ajdg = () => { pks('Judgment', 0.55, { len: 3.4, fade: 1.6 }); if (hasT()) tone(55, 0, 0.9, 0.12, 'sine', 30); return [90, 40, 260]; };
-  X.snd.ahit = i => { if (typeof noise === 'function') noise(0, 0.28, G3D.hold ? 0.03 : 0.05, 900, 120); if (hasT()) tone(G3D.hold ? 392 : 70, 0, G3D.hold ? 0.5 : 0.3, G3D.hold ? 0.03 : 0.06, 'sine', G3D.hold ? 784 : 40); return G3D.hold ? [50, 30, 70] : [25]; };
+  X.snd.ahit = i => { if (typeof noise === 'function') noise(0, 0.28, G3D.hold ? 0.03 : 0.05, 900, 120); if (typeof tone === 'function') tone(G3D.hold ? 392 : 70, 0, G3D.hold ? 0.5 : 0.3, G3D.hold ? 0.03 : 0.06, 'sine', G3D.hold ? 784 : 40); return G3D.hold ? [50, 30, 70] : [25]; };
   X.sfx.push('Wish', 'Light Screen', 'Cosmic Power', 'Power Gem', 'Judgment');
   X.reg('c3:493', { spid: 493, skin: SKIN, roar: () => DROP,
     cues: [[20.5, 'aegg']].concat(LIFT.map((L, i) => [L, 'aring', i]), [[HIT[0], 'aopen'], [HIT[1], 'aplate'], [HIT[2], 'aplate']], [3, 4, 5, 6].map((k, i) => [HIT[k], 'agold', i]), [[DROP, 'ajdg'], [DROP, 'cry']], NEAR.map((h, i) => [h[2], 'ahit', i])),

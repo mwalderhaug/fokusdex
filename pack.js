@@ -285,6 +285,15 @@ const PACK = (() => {
         s.start(Math.max(w, 0), Math.max(0, a.currentTime - w)); if (q.out) s.stop(t0 + q.out[1] + 0.05); seqH.push({ s, g }); }); } catch (_) {}
     return ok; };
   P.stingOut = sec => { if (sting) { fadeOut(sting, sec == null ? 1.2 : sec); sting = null; } };
+  /* EN SLØYFE VED SIDEN AV SENGEN (Arceus, 3.1: Hold, mens fingeren holdes mot lyset): spilles på musikkens nivå, som sengen, til den stoppes. P.loopWarm henter den på
+     forhånd; P.loop gir { stop(sek) }, eller null når lyden ikke er klar ennå (den hentes da, så neste forsøk går). */
+  const loopB = new Map();
+  P.loopWarm = path => { if (!path || loopB.has(path)) return; loopB.set(path, null); decode(path).then(d => { if (d) loopB.set(path, d); else loopB.delete(path); }, () => loopB.delete(path)); };
+  P.loop = (path, vol, fade) => { const d = loopB.get(path); if (!d) { P.loopWarm(path); return null; }
+    try { const a = ac(); if (!a) return null; const s = a.createBufferSource(), g = a.createGain(), v = Math.min(1, mvol() * (vol == null ? 1 : vol)), t = a.currentTime;
+      s.buffer = d; s.loop = true; s.connect(g); g.connect((typeof master === 'function' && master()) || a.destination); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + (fade == null ? 0.25 : fade)); s.start(t);
+      return { stop: sec => { try { const n = a.currentTime, e = sec == null ? 0.5 : sec; g.gain.cancelScheduledValues(n); g.gain.setValueAtTime(Math.max(0.0001, g.gain.value), n); g.gain.linearRampToValueAtTime(0.0001, n + e); s.stop(n + e + 0.05); } catch (_) {} } };
+    } catch (_) { return null; } };
   P.playing = () => !!cur;
   /* Hvilken låt som spiller nå (stien), eller ''. */
   P.track = () => cur;
