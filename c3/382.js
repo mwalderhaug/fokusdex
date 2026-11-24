@@ -239,7 +239,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
     /* 2b.3: lynene i det fjerne (S.fb): fra skybasen ned mot horisonten, bak klipper og stakker, og skyen lyser der det slår ned. Aldri en hvit ball ved foten. */
     if (S.fb) for (const q of S.L || []) { const a = flick(q.d) * q.k, B = q.big ? 1 : 0; if (a < 0.05 || q.near) continue; const X0 = q.sx != null ? 256 + q.sx : v.x + wrap(q.a - v.yaw) * v.ppr; if (X0 < -60 || X0 > 572) continue;
       /* big: det store lynet bak ham i brølet. Det tegnes i bakteppet, så kroppen hans og stakkene står foran det (aldri oppå ham), og himmelen lyser opp bak ham. */
-      const top = B ? -14 : v.y - 0.34 * v.ppr, bot = v.y + 1; C.blob(X0, B ? v.y - 110 : top + 26, B ? 250 : 130, '#7f9fd8', (B ? 0.26 : 0.22) * a, 1, B ? 0.7 : 0.5);
+      const top = B ? -14 : v.y - (q.lo ? 0.075 : 0.34) * v.ppr, bot = v.y + 1; C.blob(X0, B ? v.y - 110 : q.lo ? top - 8 : top + 26, B ? 250 : q.lo ? 80 : 130, '#7f9fd8', (B ? 0.26 : 0.22) * a, 1, B ? 0.7 : 0.5);   /* lo: stormen står langt borte, og lynet går bare fra skybasen ned i havet, inne i regnet */
       C.bolt(X0 + (rnd(q.s, 41) - 0.5) * (B ? 80 : 44), top, X0, bot, { seed: q.s * 3 + (q.d > 0.12 ? 1 : 0), col: '#9fc0ff', core: '#ffffff', w: B ? 3 : 1.5, a, br: B ? 4 : 3, depth: B ? 6 : 5 }); C.blob(X0, bot, B ? 120 : 70, '#c4d8f4', (B ? 0.42 : 0.3) * a, 1, 0.12); }
     return { hz: v.y }; };
 
@@ -410,9 +410,9 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
            forbedres både på intro og til primal»). Bilde 1: langt ute over det åpne havet. Ovenfra: ingen himmel. Fra 0:13,2: stadig lenger inne i den (inn 0–1):
            grått, regnsøyler rundt oss, stormhav med småskum overalt, og lyn i det fjerne (S.fb). Kysten er skjult i bilde 1 (stormen kommer fra det åpne havet). */
         { const far = t < QI.PASS - 0.02, top = !far && t < QI.B6 - 0.02, inn = far ? 0 : top ? 0.3 : 0.4 + 0.6 * io(seg(t, QI.B6, QI.UP + 2)), pu = S.puff.m.material.uniforms, ru = S.rain.m.material.uniforms, sf = S.fl || 0, bl = C.blend;
-          S.inn = inn; S.sky3 = true; S.st = 0; S.sta = PI; S.fb = !top; S.stormOn = !top; S.ov = far ? 0.3 : inn; S.sd = far ? 0.35 : 0; S.sa = PI; S.ss = 1; S.sy = far ? 0.8 : 1; S.zf = far ? mix(212, 186, t / QI.PASS) : -1000; S.grey = 0.5 * S.ov;
+          S.inn = inn; S.far = far; S.sky3 = true; S.st = 0; S.sta = PI; S.fb = !top; S.stormOn = !top; S.ov = far ? 0.1 : inn; S.sd = far ? 0.15 : 0; S.sa = PI; S.ss = 1; S.sy = far ? 0.58 : 1; S.zf = far ? mix(212, 186, t / QI.PASS) : -1000;   /* lav nok til at himmelen over stormen synes: den står som en egen, mørk masse i horisonten */ S.grey = 0.5 * S.ov;
           su.uStm.value.set(far ? S.zf + 4 : -1000, 5, far ? 1 : inn, far ? 1 : 0.55 * inn);
-          lerpC(pu.uCL, far ? '#66727e' : '#4e5963', '#c8dcf4', sf * 0.3); lerpC(pu.uCD, far ? '#20282f' : '#1b2229', '#5a6f88', sf * 0.3); lerpC(pu.uCB, far ? '#0f1418' : '#0f1418', '#3e5068', sf * 0.3);
+          lerpC(pu.uCL, far ? '#6f7d8a' : '#4e5963', '#c8dcf4', sf * 0.3); lerpC(pu.uCD, far ? '#232c35' : '#1b2229', '#5a6f88', sf * 0.3); lerpC(pu.uCB, '#0f1418', '#3e5068', sf * 0.3);
           lerpC(ru.uCR, far ? '#44505c' : bl('#3a4652', '#4e5b66', inn), '#c8dcf4', sf * 0.25); ru.uFk.value = far ? 0.3 : 0.75; pu.uFk.value = far ? 0.5 : 0.75; ru.uAl.value = far ? 1 : 0.35 + 0.65 * inn; for (const q of [pu, ru]) q.uLit.value.set(0, 20, 0, 0);
           S.cliff = S.cliff || S.scene.children[1]; S.cliff.visible = !far;
         }
@@ -421,7 +421,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         for (const [tb, kk2, a, near] of [[QI.LY0, 0.7, 0.05, 0], [QI.PASS, 0.6, -0.9, 0], [QI.LY, 1, 0.6, 0], [QI.W2, 0.75, -0.8, 0], [QI.W3, 0.8, 1.1, 0], [QI.W4, 0.9, -1.2, 0]])
           L.push({ d: t - tb, k: kk2, a, s: floor(tb * 31), near: !!near });
         for (const [tb, kb, sx, big] of [[QI.RO, 1, 62, 1], [QI.RO + 0.38, 0.85, -196, 0], [QI.RO + 0.74, 0.8, 214, 0]]) L.push({ d: t - tb, k: kb, a: 0, sx, big, s: floor(tb * 31) });   /* 2b.3: brølet. Det store lynet står bak ham (bak ryggen), i bakteppet */
-        if (t < QI.PASS - 0.02) for (const [tb, kb, a] of [[QI.LY0, 0.9, PI - 0.1], [2.62, 0.55, PI + 0.16], [3.45, 0.8, PI + 0.05]]) L.push({ d: t - tb, k: kb, a, s: floor(tb * 29) });   /* 2b.3: lyn inne i regnet under stormen langt ute */
+        if (t < QI.PASS - 0.02) for (const [tb, kb, a] of [[QI.LY0, 0.9, PI - 0.1], [2.62, 0.55, PI + 0.16], [3.45, 0.8, PI + 0.05]]) L.push({ d: t - tb, k: kb, a, s: floor(tb * 29), lo: 1 });   /* 2b.3: lyn inne i regnet under stormen langt ute */
         S.L = L; const fl = flashOf(L); S.fl = fl;
         lerpC(su.uSkyA, '#2c3c4a', '#8fa6c6', fl); lerpC(su.uSkyB, '#0a121e', '#34486a', fl); lerpC(su.uDeep, '#020f18', '#0a2a3a', fl * 0.6); su.uBri.value = 1 + 0.16 * fl;   /* 2b.3: lynet viser bølgene, det bleker dem ikke (før '#b8cce8' og 1,3) */
         /* 2b.3 (Fable): ovenfra (0:04,57–0:13,2) var havet nesten svart, så skyggen ikke syntes. Sett ovenfra er havet mørkt blågrønt, og skyggen står mørkere mot det. */
@@ -449,7 +449,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         lines(g, 0.85 + 0.5 * (y < -1 ? 1 : 0) * (0.6 + 0.4 * sin(t * 2.2)) + 0.9 * pul + 0.5 * dk + 0.5 * r2, 0);
         /* Skyggen og det røde skjæret i havet; lynet 0:07,66 gjør hele kroppen tydelig. */
         su.uBody.value.set(x, z, 12, y < -1 ? min(1, sh * (0.85 + 1.2 * fl)) : 0); su.uBodyD.value.set(sin(yaw), cos(yaw), 6, 1);
-        su.uGlo.value.set(x, z, 5.5 + 3 * seg(t, QI.B6, QI.UP), y < -1 ? gl + 0.22 * fl : 0); su.uGloC.value.set(0.9, 0.12, 0.14);
+        su.uGlo.value.set(x, z, 5.5 + 3 * seg(t, QI.B6, QI.UP), y < -1 && y > -32 ? gl + 0.22 * fl : 0); su.uGloC.value.set(0.9, 0.12, 0.14);   /* bare når han er der (før lyste et rødt skjær opp ved båten i lynene i bilde 1, før han kom) */
 
         /* Båten: flyter tungt på dønningene, krenger i kjølvannet (0:09,08) og stamper i en topp (0:10,73); løftes av ryggen, glir av og velter (0:26,02), og er borte. */
         const b = S.boat; let bx = BT[0], bz = BT[1], by, pitch, roll, alive = t < QI.GONE;
@@ -482,7 +482,9 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         su.uWade.value.set(t >= QI.UP ? 0 : bx, t >= QI.UP ? 0 : bz, t >= QI.UP ? 9 : 1.7, t >= QI.UP ? 0.7 * seg(t, QI.UP + 0.6, 26.0) : 0.6);
         /* Lyset: kaldt og mørkt, gråere og tettere dis jo nærmere stormen er; lynet lyser opp alt. */
         lerpC(U.uKeyC, '#5a6c80', '#e8f2ff', fl); lerpC(U.uShC, '#0a141e', '#3a4c66', fl); U.uRimK.value = 0.85; U.uGlow.value = 0.25;
-        U.uFog.value.set(mix(40, 24, S.inn), mix(320, 200, S.inn), 0.88); lerpC(U.uFogC, C.blend('#121c26', '#222c36', S.inn), '#4a5f7e', fl); S.k = k; S.glo = 0;
+        /* 2b.3: i bilde 1 er det skumring, ikke natt: disen er lysere enn skyen, så stormen står mørk og tydelig mot himmelen («man skal se hva som er storm og hva som ikke er det») */
+        if (S.far) { U.uFog.value.set(40, 500, 0.8); lerpC(U.uFogC, '#46535f', '#5d7290', fl); } else { U.uFog.value.set(mix(40, 24, S.inn), mix(320, 200, S.inn), 0.88); lerpC(U.uFogC, C.blend('#121c26', '#222c36', S.inn), '#4a5f7e', fl); }
+        S.k = k; S.glo = 0;
       },
       shots: [
         /* 1 Stormen filmes: lavt over havet mot veggskyen; tråleren klatrer sakte over dønningene. */
