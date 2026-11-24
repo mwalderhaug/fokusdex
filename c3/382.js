@@ -691,6 +691,14 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
        9 svart · 10 smellet 3:46,15: han er alt oppe foran oss og brøler. Havet og sprutet går i stor målestokk (TS, SLOW). */
     const QP = { DR: 5.44, ARR: 11.84, DV: 13.43, CL: 16.6, DEEP: 19.2, SH: 24.1, UP: 26.75, C: 27.26, B1: 28.2, S: 28.85, B2: 29.82, L: 30.45, N: 31.15, F: 32.5, E: 32.82 };
     const GL = [HOME[0], HOME[2] + 4];   /* der lyset og Primal kommer opp */
+    /* Finpuss (Jazz 24.11 kveld: «siste finpuss på bevegelsen når kyogre dukker ned i havet i primal overgangen og finpuss i vannet»): dykket som en hval.
+       DVK: nøklene etter QP.DV (s): TH snuten ned (+), V farten langs snuten, SH finnene opp (+) og ned, AY finnene bakover langs kroppen (+), HP hofta (+ senker halen,
+       målt), NK nakken (+ løfter hodet). Banen er integralet av farten langs snuten, så kroppen følger snuten gjennom det samme hullet i flaten. */
+    const DVK = { TH: [[0, -0.03], [0.45, -0.1], [1.3, 0.6], [2.2, 1.2], [3.0, 1.45], [3.4, 1.5]], V: [[0, 0.5], [0.4, 0.8], [1.2, 3.0], [2.2, 4.5], [3.4, 5.0]],
+      SH: [[0, 0], [0.35, 0.38], [0.85, -0.42], [1.4, -0.25], [2.2, -0.3], [3.4, -0.3]], AY: [[0, 0], [0.7, 0.05], [1.5, 0.55], [2.4, 0.75], [3.4, 0.75]],
+      HP: [[0, 0], [0.5, -0.06], [1.2, 0.1], [1.7, -0.2], [2.3, -0.7], [2.9, -0.45], [3.4, -0.2]], NK: [[0, 0], [0.45, 0.1], [1.3, -0.18], [2.4, -0.1], [3.4, -0.05]] };
+    const DVT = 2.2, DVZ = 3.5;   /* når og hvor halen går under (målt med dvPath og benene) */
+    const dvPath = s => { let y = 0, z = 0; const n = Math.ceil(max(0, s) * 90), h = n ? s / n : 0; for (let i = 0; i < n; i++) { const q = (i + 0.5) * h, th = hs(q, DVK.TH), v = hs(q, DVK.V); y -= v * sin(th) * h; z += v * cos(th) * h; } return [y, z]; };
 
     /* ---------- Stormen i 3D (bare i skissen; Fable lager den ordentlig) ----------
        Som bildene Jazz sendte (fanart/kyogre/IMG_6597 og IMG_6596): en hyllesky med lys, bulende overside og mørk underside, regnsøyler som fosser ned i havet under den (lysere
@@ -729,7 +737,9 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         S.sheet = pts(220, i => { const a = rnd(i, 31) * TAU; return { p: [(rnd(i, 32) - 0.5) * 8, 4 + rnd(i, 33) * 14, (rnd(i, 34) - 0.5) * 6], v: [cos(a) * 2, -2 - rnd(i, 35) * 3, sin(a) * 2], b: rnd(i, 36) * 1.2, l: 1.1 + rnd(i, 37) * 0.6, z: 0.5 + rnd(i, 38) * 0.9 }; }, { t0: -1e5, shade: 1, g: 22, px: 26, c: ['#f0f8ff', '#a8c4d8', '#5a7486'], a: 0.85, fade: 0.8, floor: -1 });
         S.wallp = pts(380, i => { const a = rnd(i, 41) * TAU, q = rnd(i, 42), r = 5 + q * 12; return { p: [cos(a) * r, 0.5, sin(a) * r * 0.5], v: [cos(a) * (6 + 14 * q), 22 + rnd(i, 43) * 34 * (1 - 0.6 * q), sin(a) * (6 + 14 * q) * 0.35], b: rnd(i, 44) * 0.4, l: 2.8 + rnd(i, 45) * 1.2, z: 0.8 + rnd(i, 46) * 2.4 }; }, { t0: -1e5, shade: 1, g: 15, drag: 0.7, px: 26, near: 8, sz0: 0.6, sz1: 2.4, c: ['#eef8ff', '#b8d0e0', '#5a7486'], a: 0.12, fade: 0.6, floor: -1 });
         /* 2b.3: plaskene som former (crown, øverst i fila): der han stuper, der han bryter flaten, der han stuper ned igjen langt borte, og veggen av vann bak ham i brølet. */
-        S.dcr = crown(S, T, { r: 3.6, out: 5, h: 12, up: 1.25, sd: 21 }); S.bcr = crown(S, T, { r: 7, out: 5, h: 15, up: 0.85, sd: 23 }); S.ecr = crown(S, T, { r: 6.5, out: 7, h: 24, up: 1.0, sd: 25, a: 1, c0: '#e2edf3', c1: '#a9bfcc' });
+        /* Finpuss 24.11 kveld: plaskene er hvitt vann (plume, som i introen), ikke kroner: finnene og snuten der han dykker, halen der den går under, breachen og pangen. */
+        S.dcr = plume(S, T, { r: 3, h: 9, out: 3, n: 300, sd: 401 }); S.dfp = [-1, 1].map(sd => plume(S, T, { r: 1.8, h: 5, out: 2.2, n: 150, sd: 411 + sd * 3 })); S.dnp = plume(S, T, { r: 2.4, h: 6, out: 2.6, n: 200, sd: 421 });
+        S.bcr = plume(S, T, { r: 6, h: 14, out: 5, n: 420, sd: 431, px: 160, a: 0.4 }); S.ecr = plume(S, T, { r: 5.5, h: 16, out: 6, n: 420, sd: 441, px: 175, a: 0.44 });
         S.wcr = crown(S, T, { r: 9, out: 9, h: 22, up: 1.3, dir: [-0.47, -0.88], arc: -0.25, lean: 3, sd: 27, a: 0.78, c0: '#b9c9d4', c1: '#73899a' });   /* mørkere enn de andre: den står rett bak ham i lynet og skal ikke bli en hvit vegg */ S.pmist = mistP(46, 9, 16, 321); S.scene.add(S.pmist);
         return S; },
       act(S, t, o) {
@@ -763,10 +773,14 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         lerpC(su.uShal, bl('#1a3a44', '#0d4a58', ov), '#2a6a7a', fl * 0.4); su.uBri.value = 1 + 0.3 * fl;
         S.stacks.forEach((m, i) => { const t0 = crestAt(su, m.position.x, m.position.z, ts) / TS; S.fx(S.sprays[i], t0); S.scr[i].at(t, t0); });
         /* Vanlig form: ligger høyt i havet og stuper fram og ned på 3:29,1. Han er ikke med før han stuper (Jazz: «fortsatt er han synlig hele tiden hvor han bare venter»). */
-        const dv = io(seg(t, QP.DV, QP.DV + 1.5)), sink = ei(seg(t, QP.DV + 0.7, QP.DV + 3.2)), sea0 = K.seaH(su, HOME[0], HOME[2], ts);
+        const dv = io(seg(t, QP.DV, QP.DV + 1.5)), sea0 = K.seaH(su, HOME[0], HOME[2], ts);
         g.root.visible = !black && t >= QP.DV - 0.05 && t < QP.DV + 3.3;
-        if (g.root.visible) { g.root.position.set(HOME[0], mix(KYH * 0.7 + 0.8 * sea0, -20, sink), HOME[2] + 7 * sink); g.root.rotation.set(-0.05 + 1.35 * dv, 0, 0); g.add({ Neck: [0, -0.08 * (1 - dv), 0] }, 1); g.add(DIVE, dv);
-          SWIM(g, t, 0.7, 2.6); lines(g, 0.8 + 0.3 * dv, 0); g.eye(0, 0, 0.3); }
+        if (g.root.visible) { const s = max(0, t - QP.DV), [py, pz] = dvPath(s), dl = 0.14;   /* finpuss: dykket som en hval (DVK) */
+          g.root.position.set(HOME[0], (KYH * 0.7 + 0.8 * sea0) * (1 - io(seg(s, 0, 1.2))) + py, HOME[2] + pz); g.root.rotation.set(hs(s, DVK.TH), 0, 0);
+          const a0 = hs(s, DVK.SH), a1 = hs(s - dl, DVK.SH), a2 = hs(s - 2 * dl, DVK.SH), ay = hs(s, DVK.AY);   /* finnen bøyer seg: hvert ledd henger etter det forrige */
+          g.add({ '*Shoulder': [0, 0, a0], '*Arm': [0, ay, 0.9 * (a1 - a0)], '*ForeArm': [0, 0.3 * ay, 0.9 * (a2 - a1)], Neck: [0, hs(s, DVK.NK), 0], Head: [0, 0.5 * hs(s - 0.12, DVK.NK), 0],
+            Hips: [0, hs(s, DVK.HP), 0], Tail1: [0, 0.6 * hs(s - 0.15, DVK.HP) + 0.1 * sin(t * 1.5), 0], Tail2: [0, 0.5 * hs(s - 0.3, DVK.HP) + 0.12 * sin(t * 1.5 - 0.7), 0] }, 1);
+          lines(g, 0.8 + 0.3 * dv, 0); g.eye(0, 0, 0.3); }
         /* Lyset langt nede fra 3:34,9: dybden 62 → 44 til suget (3:39,8), 44 → 24 til riseren (3:42,45), så dritfort opp til flaten på slaget (3:42,96). */
         const dep = t < QP.SH ? mix(62, 44, seg(t, QP.DEEP, QP.SH)) : t < QP.UP ? mix(44, 24, io(seg(t, QP.SH, QP.UP))) : mix(24, 0, ei(seg(t, QP.UP, QP.C)));
         const dlk = t >= QP.DEEP && t < QP.C ? (0.95 + 0.2 * seg(t, QP.DEEP, QP.SH) + 0.4 * seg(t, QP.SH, QP.UP) + 1.1 * ei(seg(t, QP.UP, QP.C))) * seg(t, QP.DEEP, QP.DEEP + 0.6) : 0;
@@ -777,16 +791,18 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         p.root.visible = !black && t >= QP.C - 0.02; let glo = 0; S.rw = 0; S.glo = 0;
         if (t >= QP.C - 0.02 && t < QP.B1) { const u = seg(t, QP.C - 0.02, QP.B1 + 0.6); p.root.position.set(GL[0], mix(2.5, 15.5, eo(u)), GL[1]);   /* godt oppe allerede på slaget */ p.root.rotation.set(mix(-1.38, -1.12, io(u)), -0.3, 0.1);
           p.add(BREACH, 1); glo = 1.22; lines(p, glo, 1); S.glo = 0.4; }   /* 2b.3: over rundt 1,25 brenner linjene ut til hvitt (figurens maske ganger fargen med 1,2 × styrken); før 2,6 */
-        else if (t >= QP.S && t < QP.B2) { const u = seg(t, QP.S, QP.B2); p.root.position.set(HOME[0], mix(15, 0.5, ei(u)), HOME[2] + mix(2, 9, u)); p.root.rotation.set(mix(0.15, 1.35, io(u)), -0.3, 0.1 * sin(u * 3));
-          p.add(BREACH, 1 - u); SWIM(p, t, 0.6, 3); glo = 1.18; lines(p, glo, 1); S.glo = 0.35; }
+        else if (t >= QP.S && t < QP.B2) { const u = seg(t, QP.S, QP.B2), s = t - QP.S;   /* finpuss: faller med tyngde og jevn rotasjon (før en ease-in fra 15 enheter) */
+          p.root.position.set(HOME[0], 10 - 8 * s - 0.5 * PG * s * s, HOME[2] + 2 + 4.2 * s); p.root.rotation.set(0.45 + 0.85 * s, -0.3, 0.06 * sin(s * 3));   /* han har falt siden toppen i det svarte: 8 enheter i sekundet ned, og tyngden videre */
+          p.add(BREACH, 1 - io(u)); p.add({ '*Arm': [0, 0.6 * io(u), 0], '*Shoulder': [0, 0, -0.2 * io(u)] }, 1); SWIM(p, t, 0.3, 1.4); glo = 1.18; lines(p, glo, 1); S.glo = 0.35; }
         else if (t >= QP.L) { const tq = t - QP.L, ry = KYH + 0.8 * sea0 + 1.8 * (1 - eo(seg(tq, 0, 1.1)));
           p.root.position.set(HOME[0], ry, HOME[2] + 2); p.root.rotation.set(mix(-0.32, 0, eo(seg(tq, 0, 1.0))), mix(0.1, -0.4, io(seg(tq, 0, QP.E - QP.L))), 0);
           const rw = back(seg(tq, 0, 0.35), 2.2) * (1 - 0.5 * io(seg(tq, 1.6, QP.E - QP.L))); p.add(ROAR, rw); p.rot('Jaw', 0, 0.04 * sin(t * 55) * rw, 0); S.rw = rw; S.mouth = null; p.eye(0, rw > 0.2 ? 0.75 : 0, 0.7);
           glo = 1.1 + 0.08 * rw + 0.22 * hit(tq, 0, 1); lines(p, glo, 1); S.glo = 0.3 + 0.5 * c01(glo - 1); }   /* 2b.3: linjene lyser, men brenner ikke ut til hvite flater (før 2,2–3,4) */
         S.fx(S.brk, QP.C - 0.12, GL[0], 0, GL[1]); S.fx(S.sheet, QP.C + 0.05, GL[0], 4, GL[1]); S.fx(S.col, QP.S + 0.5, HOME[0], 0, HOME[2] + 8); S.fx(S.wallp, QP.L - 0.32, HOME[0], 0, HOME[2] + 3); S.col.visible = t < QP.B2; S.brk.visible = t < QP.B1;   /* dråpene fra forrige bilde skal ikke henge som snø foran ham i brølet */ S.fx(S.dsp, QP.DV + 1.0, HOME[0], 0, HOME[2] - 7);
-        S.dcr.at(t, QP.DV + 0.95, HOME[0], 0, HOME[2] - 4.5); S.bcr.at(t, QP.C - 0.3, GL[0], 0, GL[1]); S.ecr.at(t, QP.S + 0.45, HOME[0], 0, HOME[2] + 8); S.wcr.at(t, QP.L - 0.9, HOME[0], 0, HOME[2] + 1);
+        S.dcr.at(t, QP.DV + DVT, HOME[0], 0, HOME[2] + DVZ); S.dfp.forEach((q, i) => q.at(t, QP.DV + 0.75, HOME[0] + (i ? 10 : -10), 0, HOME[2] + 4)); S.dnp.at(t, QP.DV + 0.8, HOME[0], 0, HOME[2] + 7);
+        S.bcr.at(t, QP.C - 0.3, GL[0], 0, GL[1]); S.ecr.at(t, QP.S + 0.4, HOME[0], 0, HOME[2] + 7.5); S.wcr.at(t, QP.L - 0.9, HOME[0], 0, HOME[2] + 1);
         S.fx(S.pmist, t >= QP.L - 0.5 ? QP.L - 0.5 : QP.C - 0.2, t >= QP.L - 0.5 ? HOME[0] : GL[0], 0, t >= QP.L - 0.5 ? HOME[2] + 1 : GL[1]);
-        if (black) S.dcr.visible = S.bcr.visible = S.ecr.visible = S.wcr.visible = false; if (t < QP.C - 0.02) S.bcr.visible = false;   /* kronen i breachen hører til bildet fra siden (den er alt oppe når bildet kommer) */
+        if (black) S.dcr.visible = S.bcr.visible = S.ecr.visible = S.wcr.visible = S.dnp.visible = S.dfp[0].visible = S.dfp[1].visible = false; if (t < QP.C - 0.02) S.bcr.visible = false;   /* kronen i breachen hører til bildet fra siden (den er alt oppe når bildet kommer) */
         /* Havet: lyset fra dypet, og flaten buler opp over ham like før han bryter ut (uRH, motor.py). */
         su.uGlo.value.set(GL[0], GL[1], 9, t >= QP.UP && t < QP.B1 ? 0.12 * ei(seg(t, QP.UP, QP.C)) + (t >= QP.C ? 0.2 * (1 - seg(t, QP.C, QP.B1)) : 0) : t >= QP.L ? 0.1 + 0.1 * S.rw : 0); su.uBody.value.set(0, 0, 1, 0);
         su.uRH.value[0].set(GL[0], GL[1], 0, t >= QP.UP && t < QP.C + 0.3 ? 2.4 * ei(seg(t, QP.UP + 0.15, QP.C)) * (1 - seg(t, QP.C, QP.C + 0.3)) : 0);
