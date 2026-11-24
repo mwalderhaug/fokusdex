@@ -27,6 +27,64 @@ const G3C = (() => {
   X.col3 = (u, k, a, b, c) => { if (k < 0.5) X.lerpC(u, a, b, k * 2); else X.lerpC(u, b, c, k * 2 - 2 + 1); };
   X.sq = (t, t0, f, d) => { const a = t - t0; return a < 0 ? 0 : Math.exp(-(d || 6) * a) * cos((f || 13) * a); };   /* fjæringen etter et nedslag */
 
+  /* ---------- Fjærene: det som henger etter, og tyngden (Bevegelse, 24.11) ----------
+     Haler, tentakler, finner, vingefjær og kapper følger roten eller hodet med fjærfysikk (en dempet fjær per ledd), ikke med fast forsinkelse per ledd.
+     Alt er en ren funksjon av tiden, som resten av motoren: fjærene regnes fra t0 i faste steg (1/240 s) med en lagret tilstand hvert kvarte sekund, så bildet
+     på tiden t er det samme om filmen spilles, spoles eller hoppes i (og regnes på høyst et kvart sekund når den spoles bakover). Målene (src, drive, pose)
+     må også være rene funksjoner av tiden (de samme formlene som i act), aldri lest av figuren. Ingen bibliotek. Reglene: work/RAIDS3D.md, «Bevegelse».
+     X.follow(src, o) → f(t): følger målet src(t) (et tall eller en liste: en vekt, vinkler, kameraets plass) som en dempet fjær. Et sprang i målet blir en myk
+       start (farten starter i null), en bevegelse dit og et lite overskudd før den faller på plass. o = { f: egenfrekvensen i Hz (1,2; lavere = tyngre og tregere),
+       z: dempingen (0,45 = et tydelig overskudd, 0,7 = et lite, 1 = ingen), t0: fra når (før t0 står den i målet), dt }.
+       Eksempel: const v = X.follow(t => t < Q.ROAR ? 0 : 1, { f: 1.1, z: 0.5, t0: Q.ROAR - 1 }); g.add(ROAR, v(t)).
+       Hodet leder: samme mål med høyere f for hodet (1,6) enn for kroppen (0,9), så hodet er framme først og kroppen kommer etter.
+     X.chain(o) → kjeden: o = { bones: ledd fra roten og ut (roller som i posene), drive: t → [rx, ry, rz] (ankeret: roten eller hodet, i posenes rom),
+       pose: (t, i) → [rx, ry, rz] (leddets egen stive pose; valgfri), f: Hz i leddet innerst (1,6), fo: frekvensen ganges med dette per ledd utover (0,8: tuppen er
+       tregest og pisker mest), z (0,35), lim: høyeste avvik per ledd i radianer (mykt tak; valgfri), t0, dt }. Hvert ledd følger leddet innenfor seg (det innerste
+       følger ankeret), så tuppen henger mest etter og slår forbi når ankeret stanser. at(t) → avviket fra den stive posen per ledd ([[rx, ry, rz], …], legges oppå
+       posen); add(f, t, w) legger det på figuren f. Flytting av roten tas med som en vinkel i drive (halen henger etter når kroppen løftes: [0, −k · høyden(t), 0]).
+     X.freeze(t, list, n, cu) → figurens tid: de n bildene (1/30 s; standard 3) fra hvert nedslag i list står stille, og så tar figuren igjen tiden i løpet av cu
+       sekunder (0,3) uten sprang. Bare for figurens skuespill; låta, kameraet og effektene går som før. Store arter: 2–4 bilder ved nedslag.
+     X.noise(t, seed, hz) → jevn støy i −1..1 (verdistøy i to lag, femtegradskurve mellom punktene).
+     X.handheld(src, o) → f(t): kameraet som holdes av en hånd: src(t) = [px, py, pz, tx, ty, tz] (banen) følges med en fjær (etterslep), og svak støy legges oppå.
+       o = { f (1,6), z (0,8), amp: [plassen, siktet] i enheter ([0,04, 0,025]; etter målestokken), hz (0,6), seed, t0 }. Ett per klipp med t0 = klippets start,
+       så kameraet ikke fjærer fra forrige klipp. Gir [px, py, pz, tx, ty, tz] til K.cam. */
+  const SPR = { dt: 1 / 240, mark: 60 };   /* steget, og hvor mange steg mellom hver lagrede tilstand (60 · 1/240 = et kvart sekund) */
+  /* Kjernen: n frihetsgrader (plass og fart i én liste), init(s) gir starttilstanden i t0, step(s, t, dt) ett steg. Gir st(t): tilstanden på steget nærmest t
+     (st.tk = stegets tid). Går filmen framover, regnes det videre derfra; spoles den bakover, startes det fra den lagrede tilstanden før t. */
+  const springSim = (n, init, step, o) => {
+    const dt = o.dt || SPR.dt, t0 = o.t0 || 0, M = SPR.mark, marks = [], s = new Float64Array(2 * n); let at = -1;
+    const st = t => { const k = max(0, Math.round((t - t0) / dt));
+      if (at < 0 || at > k) { if (!marks.length) { const s0 = new Float64Array(2 * n); init(s0); marks.push(s0); } const m = min(floor(k / M), marks.length - 1); s.set(marks[m]); at = m * M; }
+      while (at < k) { step(s, t0 + at * dt, dt); at++; if (at % M === 0 && at / M === marks.length) marks.push(Float64Array.from(s)); }
+      st.tk = t0 + at * dt; return s; };
+    return st; };
+  const vec = (v, n) => typeof v === 'number' ? [v] : v || new Array(n).fill(0);
+  X.follow = (src, o) => { o = o || {}; const t0 = o.t0 || 0, w = TAU * (o.f || 1.2), z = o.z == null ? 0.45 : o.z, one = typeof src(t0) === 'number', n = vec(src(t0)).length;
+    const st = springSim(n, s => { const v = vec(src(t0), n); for (let j = 0; j < n; j++) { s[j] = v[j]; s[n + j] = 0; } },
+      (s, t, dt) => { const v = vec(src(t), n); for (let j = 0; j < n; j++) { s[n + j] += (w * w * (v[j] - s[j]) - 2 * z * w * s[n + j]) * dt; s[j] += s[n + j] * dt; } }, o);
+    return t => { if (t <= t0) { const v = src(t); return one ? v : Array.from(v); } const s = st(t); return one ? s[0] : Array.from(s.subarray(0, n)); }; };
+  X.chain = o => {
+    const B = o.bones || [], n = o.n || B.length, t0 = o.t0 || 0, f0 = o.f || 1.6, fo = o.fo == null ? 0.8 : o.fo, z = o.z == null ? 0.35 : o.z, lim = o.lim || 0;
+    const W = Array.from({ length: n }, (_, i) => TAU * f0 * Math.pow(fo, i)), Z3 = [0, 0, 0], drv = t => o.drive ? o.drive(t) : Z3, pz = (t, i) => o.pose ? o.pose(t, i) || Z3 : Z3, N = 3 * n;
+    /* s[3i + c] = leddets vinkel i kjedens rom (ankeret pluss alle leddene innenfor), s[N + 3i + c] = farten. Målet for et ledd er leddet innenfor pluss leddets egen pose. */
+    const st = springSim(N, s => { const a = drv(t0); for (let c = 0; c < 3; c++) { let p = a[c] || 0; for (let i = 0; i < n; i++) { p += pz(t0, i)[c] || 0; s[3 * i + c] = p; s[N + 3 * i + c] = 0; } } },
+      (s, t, dt) => { const a = drv(t); for (let i = 0; i < n; i++) { const p = pz(t, i), w = W[i];
+        for (let c = 0; c < 3; c++) { const q = 3 * i + c, tg = (i ? s[q - 3] : a[c] || 0) + (p[c] || 0); s[N + q] += (w * w * (tg - s[q]) - 2 * z * w * s[N + q]) * dt; s[q] += s[N + q] * dt; } } }, o);
+    const C = { bones: B, n,
+      at(t) { const out = []; if (t <= t0) { for (let i = 0; i < n; i++) out.push([0, 0, 0]); return out; } const s = st(t), tk = st.tk, a = drv(tk);
+        for (let i = 0; i < n; i++) { const p = pz(tk, i), r = [0, 0, 0];
+          for (let c = 0; c < 3; c++) { const q = 3 * i + c; let d = s[q] - (i ? s[q - 3] : a[c] || 0) - (p[c] || 0); if (lim) d = lim * Math.tanh(d / lim); r[c] = d; } out.push(r); }
+        return out; },
+      add(f, t, w) { const r = C.at(t); w = w == null ? 1 : w; for (let i = 0; i < n && i < B.length; i++) f.add({ [B[i]]: r[i] }, w); return r; } };
+    return C; };
+  X.freeze = (t, list, n, cu) => { const d = (n == null ? 3 : n) / 30; cu = cu || 0.3;
+    for (const h of list || []) { if (t < h) continue; if (t < h + d) return h; if (t < h + d + cu) return t - d * (1 - io((t - h - d) / cu)); }
+    return t; };
+  const nz1 = (x, s) => { const i = floor(x), f = x - i, u = f * f * f * (f * (f * 6 - 15) + 10); return mix(rnd(i, s), rnd(i + 1, s), u) * 2 - 1; };
+  X.noise = (t, seed, hz) => { const x = t * (hz || 0.6), s = seed || 0; return 0.72 * nz1(x, s) + 0.28 * nz1(x * 2.17 + 3.1, s + 11); };
+  X.handheld = (src, o) => { o = o || {}; const lag = X.follow(src, { f: o.f || 1.6, z: o.z == null ? 0.8 : o.z, t0: o.t0, dt: o.dt }), A = o.amp || [0.04, 0.025], hz = o.hz || 0.6, sd = o.seed || 1;
+    return t => { const c = lag(t); for (let i = 0; i < 6; i++) c[i] += X.noise(t, sd + i * 17, hz) * A[i < 3 ? 0 : 1]; return c; }; };
+
   /* ---------- Brølet ---------- (Jazz 18.11: «ikke tykke streker»): tynne gnister ut fra kjeften, lydbølger som brer seg fra den (forvrengningsringer i fxgl.js) og
      et rykk i bildet. mouth(S, f, t0, t) i kameraet som filmer brølet: f = figuren, t0 = når brølet startet, S.rw = hvor åpent (0–1). Kjeften er rollen 'Jaw'. */
   X.mouth = (S, f, t0, t, len) => { const j = f.at('Jaw'), m = K.proj(j.x, j.y, j.z); S.post.spx = m.x / 2; S.post.spy = m.y / 2; S.post.spr = 0.1; S.post.spd = 0.9 * S.rw * hit(t, t0, len || 2.4); S.mouth = m; if (S.spc) S.post.spc = S.spc; };   /* S.spc: stedets farge på gnistene (standard oransje) */
