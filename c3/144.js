@@ -100,15 +100,29 @@
     if (bw > 0) { const d = aim.clone().sub(P).normalize(), lft = V(0, 0, 0).crossVectors(u, f), th = Math.atan2(d.dot(f), -d.dot(u)), psi = Math.asin(max(-1, min(1, d.dot(lft)))); np = mix(np, th, bw); ny = psi * bw * 0.9; nr *= 1 - bw; }
     np += -0.14 * rr - 0.3 * mt;   /* i brølet skytes hodet fram mot oss (ansiktet skal synes, ikke haka); i forvarselet trekkes det ned */
     return { s, P, f, u, sp, uf, st, np, nr, ny, lg: 1 - uf - 0.35 * sin(PI * c01((s - 25.2) / 1.1)), jaw: max(0.42 * (bw > 0.6 ? 1 : 0) * (s < BM.off ? 1 : 0), 0.52 * rr), rr, aim, bw, A, Ah, us, mt }; };
-  /* Halen: et bånd som følger banen den nettopp fløy (hvert ledd peker dit kroppen var litt før), med en bølge fra vingeslagene som går utover; når den står, henger
-     den som i hvilestillingen og svaier. Retningene er i verden. */
-  const tailDirs = (q, T, bd, t) => { const D = [], s = q.s, sp = max(q.sp, 7), hang = max(q.uf, 1 - c01(q.sp / 6)), R = bd.rig, Qr = bd.q0, left = new T.Vector3().crossVectors(q.u, q.f);
-    for (let k = 0; k < 19; k++) { const w = k / 18, t0 = 0.07 + k * 0.94 / sp, t1 = 0.07 + (k + 1) * 0.94 / sp, a = path(s - t0), b = path(s - t1), d = new T.Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
-      if (d.length() < 1e-3) d.copy(q.f).negate(); d.normalize(); d.y -= 0.16 * w * w; d.addScaledVector(q.u, (0.5 * q.A + 0.06) * w * sin(TAU * (q.us - 0.3 - k * 0.055))).addScaledVector(left, 0.17 * w * sin(2.3 * t - k * 0.42));
-      if (hang > 0) { const r = (k < 18 ? R.seg(TAIL[k], TAIL[k + 1]) : R.seg(TAIL[17], TAIL[18])).applyQuaternion(Qr); r.addScaledVector(left, 0.2 * w * sin(1.25 * t - k * 0.42)).addScaledVector(q.f, (0.1 + 0.5 * q.Ah) * w * sin(TAU * (q.us - 0.2) - k * 0.33) - 0.9 * w * q.rr * kick(q.s - L.roar)); d.lerp(r.normalize(), hang); }
-      D.push(d.normalize()); }
-    return D; };
-  const pose = (g, bd, q, T, t) => { bd.begin().place(q.P, q.f, q.u, SC); bd.q0 = g.root.quaternion.clone(); bd.flap(q.st).neck(q.np, q.nr, q.ny).legs(q.lg).tail(tailDirs(q, T, bd, t).map(v => bd.local(v)));
+  /* Halen (Jazz 24.11: «Halen må være bevegelig slik som den er ment å være»): i modellen er den en rett, flat kniv med 19 ledd, og den er ment som et langt bånd
+     («streamer») som blafrer og bølger bak den. Hvert ledd får en retning i verden og en vridning:
+     · grunnlinja er banen den nettopp fløy (leddet peker dit kroppen var litt før), så halen legger seg i svingene, i stupet og i rullen
+     · en loddrett bølge (båndet bøyes over flaten sin, som et flagg) går fra roten og ut i takt med vingeslagene, og en roligere bølge går hele tiden; utslaget vokser utover
+     · en langsom sidelengs slyng, og båndet vrir seg langs lengden, så flaten synes også fra siden
+     · tyngden drar den ned når det går sakte
+     Når den står i lufta, henger halen i en S som i Gen 5-bildet (ned bak den, ut til siden og opp i spissen) og vaier; i bremsen svinger den fram under kroppen, og i brølet pisker den. */
+  const tailDirs = (q, T, bd, t) => { const D = [], TW = [], s = q.s, sp = max(q.sp, 7), hang = max(q.uf, 1 - c01(q.sp / 6)), left = new T.Vector3().crossVectors(q.u, q.f), Y = new T.Vector3(0, 1, 0);
+    const beat = c01(q.A / 0.5), calm = 1 - 0.55 * TUCK(s), phb = TAU * (PH(s) - 0.3), fh = new T.Vector3(sin(HYAW), 0, cos(HYAW)), lf = new T.Vector3(fh.z, 0, -fh.x);   /* fh: dit den vender når den står, lf: til siden (dens venstre, til høyre i bildet) */
+    const swing = 0.9 * sin(PI * c01((s - 25.3) / 1.5)) * (s < 26.8 ? 1 : 0), kk = kick(s - L.roar), b = new T.Vector3(), n = new T.Vector3(), sd = new T.Vector3(), h = new T.Vector3();
+    for (let k = 0; k < 19; k++) { const w = k / 18, env = Math.pow(w, 0.75) * calm, t0 = 0.07 + k * 0.94 / sp, t1 = 0.07 + (k + 1) * 0.94 / sp, pa = path(s - t0), pb = path(s - t1);
+      b.set(pb[0] - pa[0], pb[1] - pa[1], pb[2] - pa[2]); if (b.length() < 1e-3) b.copy(q.f).negate(); b.normalize();
+      n.copy(q.u).addScaledVector(b, -q.u.dot(b)); if (n.length() < 0.2) n.copy(Y).addScaledVector(b, -b.y); n.normalize(); sd.crossVectors(b, n);
+      const th = env * (0.66 * beat * sin(phb - 0.5 * k) + (0.34 + 0.1 * beat) * sin(4.6 * t - 0.42 * k + 1)), ps = env * (0.3 * sin(2.9 * t - 0.33 * k) + 0.13 * sin(6.1 * t - 0.7 * k + 2));
+      const d = b.clone().multiplyScalar(cos(th) * cos(ps)).addScaledVector(n, sin(th)).addScaledVector(sd, sin(ps) * cos(th)); d.y -= (0.14 + 0.5 * (1 - c01(q.sp / 20))) * w * w;
+      let tw = w * (0.5 + 0.95 * sin(1.25 * t - 2.4 * w)) * (1 - hang);
+      if (hang > 0) { const a = 0.44 + 2.25 * Math.pow(w, 1.15) + 0.22 * sin(1.5 * t - 3 * w) + 0.3 * q.Ah * sin(TAU * (q.us - 0.25) - 2.2 * w) * w, sg = 1.0 * cos(PI * w * 1.15) + 0.18 * sin(1.15 * t - 2.6 * w);
+        /* Når den står: ned bak den, ut til siden og tilbake igjen, og opp i spissen (en S, som i Gen 5-bildet), med flaten mot oss. */
+        h.copy(Y).multiplyScalar(-cos(a)).addScaledVector(fh, -0.75 * sin(a)).addScaledVector(lf, sg * sin(a)).addScaledVector(fh, swing * (1 - w * 0.5) * sin(PI * min(1, w * 1.6)) - 1.1 * kk * w);
+        d.lerp(h.normalize(), hang); tw += hang * w * 0.4 * sin(0.9 * t - 2 * w); }
+      D.push(d.normalize()); TW.push(tw); }
+    return [D, TW]; };
+  const pose = (g, bd, q, T, t) => { bd.begin().place(q.P, q.f, q.u, SC); bd.q0 = g.root.quaternion.clone(); bd.flap(q.st).neck(q.np, q.nr, q.ny).legs(q.lg); { const td = tailDirs(q, T, bd, t); bd.tail(td[0].map(v => bd.local(v)), td[1]); }
     g.add({ Jaw: [0, -q.jaw, 0] }, 1); g.eye(0, q.rr > 0.4 ? 0.75 : (t % 3.7 < 0.1 ? 0.5 : 0)); };
   /* Vingespissene på tiden s uten å stille figuren (til glitteret og strekene): kroppen pluss vingens vinkel i slaget. */
   const tipAt = (s, sd) => { const q = pva(s), sp = hyp(q.v[0], q.v[1], q.v[2]) || 1, fx = q.v[0] / sp, fz = q.v[2] / sp, an = AMP(s) * (1.3 * cos(TAU * (X.bird.warp(PH(s), 0.56) - 0.19))), r = 5.9;

@@ -177,7 +177,8 @@ const G3C = (() => {
      conv.js), uansett hvordan benet selv ligger. En dreining bæres videre av det som er dreid lenger inne i kjeden, så «løft vingen, fei den bakover, vri den»
      skrives i den rekkefølgen og betyr det samme i alle modeller. Benene riggen har rørt, skrives som kvaternioner etter posene (F.late i raid3d.js); resten står.
        rot(ben, akse, vinkel)   dreier benet (og alt utenfor det) om aksen; flere kall på samme ben: det første er ytterst, de neste følger med det
-       chain(navn, retninger)   en kjede (halen) pekes ledd for ledd dit retningene sier (i figurens ramme): den korteste dreiningen for hvert ledd
+       chain(navn, retninger, vridning)   en kjede (halen) pekes ledd for ledd dit retningene sier (i figurens ramme): den korteste dreiningen for hvert ledd,
+                                og så vris leddet om sin egen akse til vridningen (radianer fra roten, per ledd), så et flatt bånd kan vri seg langs lengden
        seg(a, b), pos(n)        retningen fra ben a til ben b, og plassen til et ben, i hvile
        reset()                  nullstiller dreiningene (først i hvert bilde: X.bird.begin gjør det) */
   const bn0 = s => String(s || '').replace(/_\d+$/, '');
@@ -187,9 +188,11 @@ const G3C = (() => {
     for (const n in f.bones) { const b = f.bones[n], w = wq(b), pw = wq(b.parent); B[n] = { b, p: w[0], PR: pw[1], PRi: pw[1].clone().invert(), L: b.quaternion.clone(), d: null }; }
     const G = { B, pos: n => B[n].p.clone(), seg: (a, b) => B[b].p.clone().sub(B[a].p).normalize(),
       rot(n, ax, ang) { const q = B[n]; if (!q || !ang) return G; tq.setFromAxisAngle(ax, ang); if (q.d) q.d.multiply(tq); else q.d = tq.clone(); return G; },
-      chain(names, dirs) { const Dc = new T.Quaternion(), e = new T.Quaternion(), c = new T.Vector3(), N = names.length; let v = null;
+      chain(names, dirs, tw) { const Dc = new T.Quaternion(), e = new T.Quaternion(), c = new T.Vector3(), N = names.length; let v = null, pt = 0;
         for (let k = 0; k < N; k++) { if (!B[names[k]]) continue; if (k < N - 1 && B[names[k + 1]]) v = G.seg(names[k], names[k + 1]); if (!v || !dirs[k]) continue;
-          c.copy(v).applyQuaternion(Dc); e.setFromUnitVectors(c, dirs[k]); B[names[k]].d = Dc.clone().invert().multiply(e).multiply(Dc); Dc.premultiply(e); } return G; },
+          c.copy(v).applyQuaternion(Dc); e.setFromUnitVectors(c, dirs[k]); const Dk = e.clone().multiply(Dc);
+          if (tw) { const dt = (tw[k] || 0) - pt; pt = tw[k] || 0; if (dt) Dk.premultiply(tq.setFromAxisAngle(dirs[k], dt)); }   /* vridningen om leddets egen akse (et bånd som vrir seg) */
+          B[names[k]].d = Dc.clone().invert().multiply(Dk); Dc.copy(Dk); } return G; },
       write() { for (const n in B) { const q = B[n]; if (!q.d) continue; q.b.quaternion.copy(q.PRi).multiply(q.d).multiply(q.PR).multiply(q.L); } },
       reset() { for (const n in B) B[n].d = null; return G; } };   /* dreiningene står til reset(), så apply() kan kalles flere ganger i samme bilde */
     f.late = () => G.write(); return G; };
@@ -208,7 +211,8 @@ const G3C = (() => {
        · nedslaget går ned og fram, oppslaget opp og bakover (fs), og forkanten vris ned i nedslaget (ft)
        · u er slaget (0 = toppen, 0,5 = bunnen, 1 = toppen igjen); X.bird.warp gjør nedslaget lengre enn oppslaget
      KROPPEN (place) settes med hodet langs fw og ryggen langs up om midtpunktet; heave gir løftet (kroppen løftes gjennom nedslaget og synker i oppslaget),
-     neck holder hodet (stigning, rull og gir, fordelt på nakkeleddene), legs trekker beina inn, og tail peker halekjeden. */
+     neck holder hodet (stigning, rull og gir, fordelt på nakkeleddene), legs trekker beina inn, og tail peker halekjeden (og vrir den).
+     HALEN er artens egen (c3/<art>.js): Articunos er et langt, flatt bånd som bølger, vrir seg og henger etter (Jazz 24.11: «Halen må være bevegelig slik som den er ment å være»). */
   X.bird = (f, o) => { const T = G3D.T(), R = X.rig(f), V3 = a => new T.Vector3(a[0], a[1], a[2]), DG = PI / 180, W = o.wing, n = W.length;
     const F0 = V3(o.fwd || [0, 1, 0]).normalize(), U0 = V3(o.up || [0, 0, -1]).normalize(), L0 = new T.Vector3().crossVectors(U0, F0).normalize(), Z0 = U0.clone().negate(), MID = V3(o.mid || [0, 2.3, 0]);
     const side = s => { const pre = s > 0 ? 'L' : 'R', J = [];
@@ -249,7 +253,7 @@ const G3C = (() => {
       neck(pitch, roll, yaw) { for (const [bn, w] of o.neck || []) { R.rot(bn, L0, -pitch * w); if (yaw) R.rot(bn, F0, yaw * w); } const h = o.neck && o.neck[o.neck.length - 1][0]; if (h && roll) R.rot(h, Z0, roll);
         for (const [bn, w] of o.keep || []) R.rot(bn, L0, pitch * w); return B; },   /* o.keep: det som henger på nakken, men skal ligge inntil kroppen (brystfjærene): dreies tilbake med andelen w av nakkens stigning */
       legs(k) { for (const [bn, a] of o.leg || []) { R.rot('L' + bn, L0, a * DG * k); R.rot('R' + bn, L0, a * DG * k); } return B; },
-      tail(dirs) { R.chain(o.tail, dirs); return B; } };
+      tail(dirs, tw) { R.chain(o.tail, dirs, tw); return B; } };
     return B; };
   /* Nedslaget tar lengre tid enn oppslaget: ph (0–1, jevnt i tid, 0 = toppen) → u (0,5 = bunnen etter andelen ds av slaget). */
   X.bird.warp = (ph, ds) => { ph = ((ph % 1) + 1) % 1; ds = ds || 0.56; return ph < ds ? 0.5 * ph / ds : 0.5 + 0.5 * (ph - ds) / (1 - ds); };
