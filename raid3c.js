@@ -199,7 +199,8 @@ const G3C = (() => {
 
   /* ---------- Flyriggen: én felles for alle som flyr (2b.4, Fable; Jazz 23.11: «se mye på animasjon på flyvinger og bevegelighet») ----------
      X.bird(f, o) bygger på X.rig. o = { fwd, up: kroppens akser i hvile (mot hodet, og ut av ryggen; standard [0, 1, 0] og [0, 0, −1]: en modell som står oppreist),
-       mid: kroppens midtpunkt i hvile (roten dreies om det), wing: leddene i en vinge innenfra og ut uten L/R, tail: halekjeden, neck: [[ben, andel]],
+       mid: kroppens midtpunkt i hvile (roten dreies om det), wing: leddene i en vinge innenfra og ut uten L/R, tail: halekjeden, neck: [[ben, andel, andel av giret]]
+       (uten det tredje tallet er giret fordelt som stigningen),
        keep: [[ben, andel]] det som henger på nakkens ben, men skal bli liggende inntil kroppen når nakken bøyes (Articunos brystfjær, Jazz 24.11: «magen stikker ut»),
        leg: [[ben, vinkel når beina er trukket inn]], poses: { navn: { fw, di, tw } }, og vingeslagets tall per ledd (grader) }.
      En VINGE beskrives per segment (fra et ledd til det neste) med tre vinkler, i kroppens egne mål: fw = hvor langt fram segmentet peker i vingeplanet (0 = rett ut,
@@ -250,7 +251,7 @@ const G3C = (() => {
       heave(u) { return -cos(TAU * (u - 0.12)); },
       /* Nakken: pitch = hodet løftes mot kroppens framretning (radianer; rundt 1,4 når kroppen ligger vannrett og hodet skal se fram), roll = hodet rulles om nebbets
          akse (holder hodet vannrett i en sving), yaw = til siden. Fordelt på leddene i o.neck. */
-      neck(pitch, roll, yaw) { for (const [bn, w] of o.neck || []) { R.rot(bn, L0, -pitch * w); if (yaw) R.rot(bn, F0, yaw * w); } const h = o.neck && o.neck[o.neck.length - 1][0]; if (h && roll) R.rot(h, Z0, roll);
+      neck(pitch, roll, yaw) { for (const [bn, w, wy] of o.neck || []) { R.rot(bn, L0, -pitch * w); if (yaw) R.rot(bn, F0, yaw * (wy == null ? w : wy)); } const h = o.neck && o.neck[o.neck.length - 1][0]; if (h && roll) R.rot(h, Z0, roll);
         for (const [bn, w] of o.keep || []) R.rot(bn, L0, pitch * w); return B; },   /* o.keep: det som henger på nakken, men skal ligge inntil kroppen (brystfjærene): dreies tilbake med andelen w av nakkens stigning */
       legs(k) { for (const [bn, a] of o.leg || []) { R.rot('L' + bn, L0, a * DG * k); R.rot('R' + bn, L0, a * DG * k); } return B; },
       tail(dirs, tw) { R.chain(o.tail, dirs, tw); return B; } };
