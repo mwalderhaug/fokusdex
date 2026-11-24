@@ -32,7 +32,7 @@ function raidArrive() {
 /* ---------- Raidet er vunnet ---------- */
 function raidCaught(B, res) {
   const m = monBy(res.cau.u); if (!m) return overview();
-  ov(`<div class="row" style="justify-content:space-between"><span></span><span class="pill tn">Legendary raid</span></div>
+  ov(`<div class="row" style="justify-content:space-between"><span></span><span class="pill tn">${res.pkr ? 'Pack raid' : 'Legendary raid'}</span></div>
     <div class="mid r4${m.sh ? ' shy' : ''}"><div class="stage" id="rc-stage">${spr(m.id, { ani: 1, sh: m.sh, mega: m.mega })}<span class="tball">${ballEl('ultra', '54px')}</span><span class="stars" id="rc-stars"></span></div>
       <div><div class="ename">${m.sh === 2 ? 'Dark ' : m.sh ? 'Shiny ' : ''}${esc(D(m.id)[0])}</div><div id="rc-info"><p class="sm" style="margin-top:8px">${res.cau.took ? 'It has no fight left in it. The shadow sinks into the ball where your Mewtwo rests.' : 'It has no fight left in it. The ball closes around it.'}</p></div></div></div>
     <div class="acts" id="rc-act" style="visibility:hidden"><button type="button" class="btn gold" data-a="rcdone">Continue</button></div>`, 'tint', 'var(--gold)');
@@ -382,7 +382,8 @@ const SNDUSE = { tap: 'A plain button', tab: 'Tabs and the next card', chip: 'A 
   start: 'A session or a battle starts', done: 'A session is complete', coin: 'Coins and purchases', sell: 'Selling', found: 'An encounter', appear: 'A wild Pokémon appears', thr: 'A ball is thrown', wob: 'The ball wobbles',
   got: 'Caught', caught: 'Caught: shiny or legendary', fail: 'It broke free', flee: 'It fled', lvl: 'Level up', evo: 'A rare find, a Mega Stone', evolved: 'Evolution', hatch: 'An egg hatches', egg: 'An egg bought',
   rank: 'A new rank', event: 'A special event', item: 'An item to hold', keyitem: 'A plate or another lasting item', berry: 'A berry', learn: 'A new move learned', heal: 'A berry fed to a wild Pokémon', saved: 'Your save copied or synced',
-  rustle: 'The grass moves (the radar)', frise: 'A rare ball is about to open', fpop: 'A ball opens in the Frontier', shiny: 'A shiny appears' };
+  rustle: 'The grass moves (the radar)', frise: 'A rare ball is about to open', fpop: 'A ball opens in the Frontier', shiny: 'A shiny appears',
+  pkrip: 'A pack is torn open (bigger the dearer the pack)', pkflip: 'A card in the fan turns', pkstep: 'The last card in a pack climbs a rarity', pkhit: 'The last card in a pack turns', pkgold: 'A golden pack shines' };
 /* Verktøyene i grupper, med korte navn på knappene (det lange navnet i SBXT står i bekreftelsen). */
 const SBXG = [['Resources', [['coins', '+100 000 coins'], ['level', 'Trainer level +10'], ['items', '5 of every item'], ['held', 'One of every held item'], ['team', 'My team to Lv 100']]],
   ['In the grass', [['enc', 'A legendary'], ['shenc', 'A shiny']]],

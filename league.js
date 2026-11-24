@@ -243,6 +243,7 @@ const liveMine = () => !!S.live && S.live.dev === devId();
 function liveBegin(B) {
   if (!B || B.mode === 'lab' || SBX) return;
   S.live = { m: B.mode, d: B.mode === 'raid' ? dayKey() : (S.lad.day || dayKey()), dev: devId(), at: Date.now(), u: B.tr && B.tr.ultra ? 1 : 0, n: B.tr ? B.tr.n : '' };
+  if (B.pkr) S.live.pkr = B.pkr;   /* et pakke-raid (pa1): forsøket er alt brukt (praidUse), og et tap rører ikke det vanlige raidet */
   lockMark(B.mode);
   stamp(); liveSave(B); save();
 }
@@ -306,7 +307,7 @@ function liveLoss() {
   } else if (L.m === 'pwt') { pwt().run = null; what = 'cup';
   } else if (L.m === 'wk') { if (typeof wkEnd === 'function') wkEnd('lost'); what = 'expedition battle';
   } else if (L.m === 'raid') {
-    const R = S.raid; what = 'raid';
+    const R = L.pkr ? null : S.raid; what = 'raid';
     if (R) { R.day = dayKey(); R.tries = (R.tries || 0) + 1; R.told = 1; if (R.tries >= raidTries(R)) raidGone(); }
   }
   stamp(); save();
@@ -1859,16 +1860,18 @@ function legLevelMoves(id, lv) {
 }
 /* Angrepene i et raid: settet til arten (LEGSET). Mew velger dekningen etter laget ditt (party). */
 function raidMoves(id, lv, dk, party) { return (id === 151 && !dk && party && party.length ? mewSet(party) : null) || legSet(id, dk) || legLevelMoves(id, lv); }
-/* demo = arten som skal prøves i demoen (gir ingenting), eller 'dk' for Dark Mewtwo. Ellers den som har vist seg. */
-function raidBattle(lead, demo) {
-  const R = demo === 'dk' ? { id: 150, dk: 1, lv: raidLvFor(5), hx: raidHx(5) } : demo ? { id: demo, lv: raidLvFor(LEG[demo].t), hx: raidHx(LEG[demo].t) } : S.raid, L = raidInfo(R), party = S.party.map(monBy).filter(Boolean);
+/* demo = arten som skal prøves i demoen (gir ingenting), eller 'dk' for Dark Mewtwo. Ellers den som har vist seg. R0 = et pakke-raid (pa1, S.praid):
+   kampen er den samme som i et raid, men B.pkr sier hvilket, og finishPraid gjør den ferdig. */
+function raidBattle(lead, demo, R0) {
+  const R = R0 ? R0 : demo === 'dk' ? { id: 150, dk: 1, lv: raidLvFor(5), hx: raidHx(5) } : demo ? { id: demo, lv: raidLvFor(LEG[demo].t), hx: raidHx(LEG[demo].t) } : S.raid, L = raidInfo(R), party = S.party.map(monBy).filter(Boolean);
   party.sort((a, b) => (b.u === lead) - (a.u === lead));
   /* Hvem som venter, er hemmelig til filmen har gått: fra første forsøk er den kjent (R.seen), og kortet viser den. */
-  if (!demo && S.raid && !S.raid.seen) { S.raid.seen = 1; save(); }
+  if (!demo && !R0 && S.raid && !S.raid.seen) { S.raid.seen = 1; save(); }
   /* Vanskelighetsgraden senker nivået og HP-en til den legendariske (Hard = som før), men nivået står aldri under laget (raidFoeLv, gulvet fra v90). */
   const dd = diff(), lv = raidFoeLv(R), e = Math.round((R.dk ? 85 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : R.sh ? 1 : 0, g: rollG(R.id), mega: R.id === DEOXYS ? DEOXA : defForm(R.id), ms: raidMega(R), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: demo === 150 ? legLevelMoves(150, lv) : raidMoves(R.id, lv, R.dk, party), drive: R.id === 649 ? driveFor(party) : null };
   const B = mkBattle(demo ? party : party.map(evSrc), [foe], legTr(R.id, R.dk), { mode: demo ? 'lab' : 'raid', raid: 1, st: TCL.supreme, k: 'legend', rd: 0, n: 0, lap: 0, ti: 0, bag: bagN(), xm: 3 * dd.xp, sm: 1, dc: dd.coin, boost: { mode: '', m: 1, xp: 1 } });
   B.tr.skill = dd.sk; if (demo) labMega(B); else evApply(B);
+  if (R0) B.pkr = R0.k;
   /* I demoen har Mewtwo vanlig HP (ikke raid-HP), så en kommer fram til forvandlingen: det er den demoen er til for. */
   const f = B.foe[0], big = demo === 150 ? 1 : RAIDHP[L.t - 1] * (R.ev ? 1 : dd.rhp) * (R.dk ? 1 : (R.hx || 1) * raidX(R.id)[0]); f.max = f.hp = Math.round(f.max * big); f.big = big; if (R.dk) f.short = 'D.Mewtwo';
   return B;
@@ -1916,6 +1919,23 @@ function finishRaid(B) {
       else res.note = `${nm} has moved on. Another legendary Pokémon will show itself in time.`;
     } else res.note = `${pre}${nm} stays where it is. You have one more attempt, tomorrow${R.dk ? '' : ', and now you know who is waiting'}.`;
   }
+  save(); return res;
+}
+/* PAKKE-RAIDET (pa1): forsøket brukes i det kampen starter (startBattle kaller dette før liveBegin, etter at klokka og en kamp på en annen enhet er
+   sjekket). Raidet tas ut av lista og følger med kampen (B.pkd), så en kamp som fortsetter etter at appen ble lukket, kan gjøres ferdig, og en som
+   ikke kan hentes tilbake, teller som tapt uten å røre noe annet (liveLoss). */
+function praidUse(B) {
+  if (!B || !B.pkr) return;
+  const i = (S.praid || []).findIndex(r => r.k === B.pkr); if (i >= 0) B.pkd = S.praid.splice(i, 1)[0];
+  save();
+}
+/* Pakke-raidet er over. Seier: den legendariske er din (raidCatch, med mynter for en ny art som i et raid), og laget får XP. Tap: den er borte (ett
+   forsøk). Ingen mynter eller gjenstander som i et vanlig raid, ingen skygge etter Mewtwo, og det vanlige raidet (S.raid) røres ikke. */
+function finishPraid(B) {
+  const win = B.over === 'win', id = B.tr.leg, P = B.pkd || praidBy(B.pkr) || {}, nm = B.tr.n, res = { mode: 'raid', pkr: 1, win, ups: [], items: [], encs: [], coins: 0, trade: null, perks: [], note: '', kind: 'legend', leg: id };
+  const i = (S.praid || []).findIndex(r => r.k === B.pkr); if (i >= 0) S.praid.splice(i, 1);
+  if (win) { grantXp(B, res); raidCatch(id, 0, res, P.sh != null ? P.sh : B.foe[0] && B.foe[0].sh === 1 ? 1 : 0); res.note = `${nm} is yours.`; }
+  else res.note = `${nm} is gone. A legendary from a pack gives you one chance.`;
   save(); return res;
 }
 /* I demoen er Mewtwo hele historien: slår du den, reiser den seg som Dark Mewtwo (dark), akkurat som i et ekte raid. */
