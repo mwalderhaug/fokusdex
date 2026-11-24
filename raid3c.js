@@ -11,7 +11,7 @@
    Tyngden i bevegelsene: forvarsel (trekker seg sammen før den slår ut), overskudd (back: forbi målet og tilbake), en dempet fjær etter hvert nedslag (sq). */
 const G3C = (() => {
   /* ARTS: artene som har en fil i c3/. Legg til nummeret når fila finnes (og fila i FILES i sw.js). */
-  const X = { ARTS: [383, 382], snd: {}, sfx: [], base: 'c3/' }, jobs = {};
+  const X = { ARTS: [383, 382, 144], snd: {}, sfx: [], base: 'c3/' }, jobs = {};
   const ok = typeof G3D !== 'undefined' && typeof CINE !== 'undefined';
   X.has = id => ok && X.ARTS.indexOf(+id) >= 0;
   /* Henter artens fil (én gang). Feiler den (ikke nett, ikke mellomlagret), kan den prøves igjen senere, og sprite-introen spilles i mellomtiden. */
@@ -170,5 +170,88 @@ const G3C = (() => {
     d.ev = d.ev || {}; d.ev.primal = { len: 0.1, cues: [] };
     d.mid = S => !on3 || S.film ? (mid0 ? mid0(S) : null) : aid(S) === AIDF ? null : A.mid ? A.mid(S, mid0) : mid0 ? mid0(S) : null; d.front = S => fr0 ? fr0(S) : null;
   };
+
+  /* ---------- Riggen i dyrets egne akser (2b.4, Fable) ----------
+     Posene i K.figure legges på benenes Euler-vinkler, og hva x, y og z gjør, er ulikt i hvert ben og hver modell (på Articunos skulder gjør x og z nesten det samme).
+     X.rig(f) måler hvilestillingen én gang og lar skuespillet dreie et ben om en akse gitt i FIGURENS ramme i hvile (X venstre, Y opp, Z fram for modellene fra
+     conv.js), uansett hvordan benet selv ligger. En dreining bæres videre av det som er dreid lenger inne i kjeden, så «løft vingen, fei den bakover, vri den»
+     skrives i den rekkefølgen og betyr det samme i alle modeller. Benene riggen har rørt, skrives som kvaternioner etter posene (F.late i raid3d.js); resten står.
+       rot(ben, akse, vinkel)   dreier benet (og alt utenfor det) om aksen; flere kall på samme ben: det første er ytterst, de neste følger med det
+       chain(navn, retninger)   en kjede (halen) pekes ledd for ledd dit retningene sier (i figurens ramme): den korteste dreiningen for hvert ledd
+       seg(a, b), pos(n)        retningen fra ben a til ben b, og plassen til et ben, i hvile
+       reset()                  nullstiller dreiningene (først i hvert bilde: X.bird.begin gjør det) */
+  const bn0 = s => String(s || '').replace(/_\d+$/, '');
+  X.rig = f => { const T = G3D.T(), B = {}, tq = new T.Quaternion(), M = new T.Matrix4(), sc = new T.Vector3();
+    f.late = null; f.clear(); f.apply(); f.root.updateMatrixWorld(true);
+    const inv = new T.Matrix4().copy(f.root.matrixWorld).invert(), wq = o => { const p = new T.Vector3(), q = new T.Quaternion(); M.multiplyMatrices(inv, o.matrixWorld).decompose(p, q, sc); return [p, q]; };
+    for (const n in f.bones) { const b = f.bones[n], w = wq(b), pw = wq(b.parent); B[n] = { b, p: w[0], PR: pw[1], PRi: pw[1].clone().invert(), L: b.quaternion.clone(), d: null }; }
+    const G = { B, pos: n => B[n].p.clone(), seg: (a, b) => B[b].p.clone().sub(B[a].p).normalize(),
+      rot(n, ax, ang) { const q = B[n]; if (!q || !ang) return G; tq.setFromAxisAngle(ax, ang); if (q.d) q.d.multiply(tq); else q.d = tq.clone(); return G; },
+      chain(names, dirs) { const Dc = new T.Quaternion(), e = new T.Quaternion(), c = new T.Vector3(), N = names.length; let v = null;
+        for (let k = 0; k < N; k++) { if (!B[names[k]]) continue; if (k < N - 1 && B[names[k + 1]]) v = G.seg(names[k], names[k + 1]); if (!v || !dirs[k]) continue;
+          c.copy(v).applyQuaternion(Dc); e.setFromUnitVectors(c, dirs[k]); B[names[k]].d = Dc.clone().invert().multiply(e).multiply(Dc); Dc.premultiply(e); } return G; },
+      write() { for (const n in B) { const q = B[n]; if (!q.d) continue; q.b.quaternion.copy(q.PRi).multiply(q.d).multiply(q.PR).multiply(q.L); } },
+      reset() { for (const n in B) B[n].d = null; return G; } };   /* dreiningene står til reset(), så apply() kan kalles flere ganger i samme bilde */
+    f.late = () => G.write(); return G; };
+
+  /* ---------- Flyriggen: én felles for alle som flyr (2b.4, Fable; Jazz 23.11: «se mye på animasjon på flyvinger og bevegelighet») ----------
+     X.bird(f, o) bygger på X.rig. o = { fwd, up: kroppens akser i hvile (mot hodet, og ut av ryggen; standard [0, 1, 0] og [0, 0, −1]: en modell som står oppreist),
+       mid: kroppens midtpunkt i hvile (roten dreies om det), wing: leddene i en vinge innenfra og ut uten L/R, tail: halekjeden, neck: [[ben, andel]],
+       keep: [[ben, andel]] det som henger på nakkens ben, men skal bli liggende inntil kroppen når nakken bøyes (Articunos brystfjær, Jazz 24.11: «magen stikker ut»),
+       leg: [[ben, vinkel når beina er trukket inn]], poses: { navn: { fw, di, tw } }, og vingeslagets tall per ledd (grader) }.
+     En VINGE beskrives per segment (fra et ledd til det neste) med tre vinkler, i kroppens egne mål: fw = hvor langt fram segmentet peker i vingeplanet (0 = rett ut,
+     minus = feid bakover), di = hvor høyt over vingeplanet (opp av ryggen), tw = vridningen (pluss = forkanten ned). Stillingene (glid, sammenlagt, oppreist) er slike
+     tabeller, og 'rest' er modellens egen hvilestilling. Riggen regner om til dreininger i leddene, likt for begge sider.
+     VINGESLAGET (pose) legges oppå stillingene, og er det som gjør at den flyr som en fugl:
+       · bølgen går utover: hvert ledd følger skulderen litt forsinket (lag), og utslaget vokser utover (fa), så spissen henger igjen og pisker etter
+       · oppslaget: vingen bøyes i albuen og håndleddet (fold: ff feier, fd senker hånda, fq vrir forkanten opp), og er strukket ut igjen før nedslaget starter
+       · nedslaget går ned og fram, oppslaget opp og bakover (fs), og forkanten vris ned i nedslaget (ft)
+       · u er slaget (0 = toppen, 0,5 = bunnen, 1 = toppen igjen); X.bird.warp gjør nedslaget lengre enn oppslaget
+     KROPPEN (place) settes med hodet langs fw og ryggen langs up om midtpunktet; heave gir løftet (kroppen løftes gjennom nedslaget og synker i oppslaget),
+     neck holder hodet (stigning, rull og gir, fordelt på nakkeleddene), legs trekker beina inn, og tail peker halekjeden. */
+  X.bird = (f, o) => { const T = G3D.T(), R = X.rig(f), V3 = a => new T.Vector3(a[0], a[1], a[2]), DG = PI / 180, W = o.wing, n = W.length;
+    const F0 = V3(o.fwd || [0, 1, 0]).normalize(), U0 = V3(o.up || [0, 0, -1]).normalize(), L0 = new T.Vector3().crossVectors(U0, F0).normalize(), Z0 = U0.clone().negate(), MID = V3(o.mid || [0, 2.3, 0]);
+    const side = s => { const pre = s > 0 ? 'L' : 'R', J = [];
+      for (let i = 0; i < n; i++) { const a = i < n - 1 ? R.seg(pre + W[i], pre + W[i + 1]) : J[i - 1].a.clone();
+        J.push({ n: pre + W[i], a, c: new T.Vector3().crossVectors(a, U0).normalize(), al: Math.atan2(a.dot(F0), a.dot(L0) * s), be: Math.asin(max(-1, min(1, a.dot(U0)))) }); }
+      return { s, J, us: U0.clone().multiplyScalar(s) }; };
+    const SD = [side(1), side(-1)], deg = (a, d) => (a || d || new Array(n).fill(0)).map(v => v * DG), zero = new Array(n).fill(0);
+    const PO = { rest: { fw: SD[0].J.map(j => j.al), di: SD[0].J.map(j => j.be), tw: zero } };
+    for (const k in o.poses || {}) PO[k] = { fw: deg(o.poses[k].fw), di: deg(o.poses[k].di), tw: deg(o.poses[k].tw) };
+    const lag = o.lag || zero, FA = o.fa || zero, FM = o.fm || zero, FS = o.fs || zero, FT = o.ft || zero, FF = deg(o.ff), FD = deg(o.fd), FQ = deg(o.fq), HA = o.ha || zero, HD = o.hd || zero, HT = o.ht || zero;
+    const bump = x => x <= 0 || x >= 1 ? 0 : Math.pow(sin(PI * Math.pow(x, 0.8)), 1.5);   /* foldingen i oppslaget: mest tidlig, og strukket ut igjen før toppen */
+    const m0 = new T.Matrix4().makeBasis(L0, U0, F0).transpose(), m1 = new T.Matrix4(), vx = new T.Vector3(), vy = new T.Vector3(), vz = new T.Vector3(), qi = new T.Quaternion();
+    const B = { rig: R, F0, U0, L0, n, poses: PO, begin() { R.reset(); return B; },   /* kalles først i hvert bilde */
+      /* Stillingen til én vinge (k: 0 venstre, 1 høyre). st = { u, A: utslaget i radianer (opp og ned), Ah: slaget i den oppreiste stillingen (langs kroppen),
+         fold: hvor mye den bøyes i oppslaget (0–1), w: { stilling: vekt }, asym: det ytre vingeslaget dypere i en sving (−1…1), ex: { fw, di, tw } lagt til alle ledd } */
+      pose(st, k) { const P = { fw: [], di: [], tw: [] }, w = st.w || { rest: 1 }, A = st.A || 0, Ah = st.Ah || 0, fo = st.fold || 0, as = 1 + (k ? 1 : -1) * (st.asym || 0), ex = st.ex || {}, u0 = st.u || 0;
+        for (let i = 0; i < n; i++) { let fw = ex.fw || 0, di = ex.di || 0, tw = ex.tw || 0;
+          for (const key in w) { const q = PO[key], x = w[key]; if (!q || !x) continue; fw += q.fw[i] * x; di += q.di[i] * x; tw += q.tw[i] * x; }
+          const u = u0 - lag[i], c = cos(TAU * u), s1 = sin(TAU * u), fb = bump((((u % 1) + 1) % 1 - 0.5) / 0.47);
+          di += A * as * (FA[i] * c + FM[i]) + fo * fb * FD[i] + Ah * HD[i] * c;
+          fw += -A * FS[i] * cos(TAU * (u0 - lag[0])) + fo * fb * FF[i] + Ah * HA[i] * c;
+          tw += A * FT[i] * s1 + fo * fb * FQ[i] + Ah * HT[i] * s1;
+          P.fw.push(fw); P.di.push(di); P.tw.push(tw); }
+        return P; },
+      /* Setter begge vingene fra en stilling per side (eller samme på begge). */
+      wings(Pl, Pr) { for (let k = 0; k < 2; k++) { const S = SD[k], Q = k ? Pr || Pl : Pl; let pc = 0, pd = 0, pt = 0;
+          for (let i = 0; i < n; i++) { const j = S.J[i], cs = j.al - Q.fw[i], cd = Q.di[i] - j.be, ct = Q.tw[i] * S.s; R.rot(j.n, j.c, cd - pd); R.rot(j.n, S.us, cs - pc); R.rot(j.n, j.a, ct - pt); pc = cs; pd = cd; pt = ct; } } return B; },
+      flap(st) { return B.wings(B.pose(st, 0), B.pose(st, 1)); },
+      /* Kroppens midtpunkt i p (verden), hodet mot fw, ryggen mot up (rettes vinkelrett på fw). sc = figurens skala. */
+      place(p, fw, up, sc) { vz.copy(fw).normalize(); vx.crossVectors(up, vz).normalize(); vy.crossVectors(vz, vx); m1.makeBasis(vx, vy, vz).multiply(m0); f.root.quaternion.setFromRotationMatrix(m1);
+        f.root.position.copy(MID).multiplyScalar(sc || f.root.scale.x).applyQuaternion(f.root.quaternion).negate().add(p); return B; },
+      /* En retning i verden → figurens ramme (til tail og look). */
+      local(v) { return v.clone().applyQuaternion(qi.copy(f.root.quaternion).invert()); },
+      /* Løftet i vingeslaget (−1…1): lavest like etter toppen, stiger gjennom nedslaget, høyest like etter bunnen. */
+      heave(u) { return -cos(TAU * (u - 0.12)); },
+      /* Nakken: pitch = hodet løftes mot kroppens framretning (radianer; rundt 1,4 når kroppen ligger vannrett og hodet skal se fram), roll = hodet rulles om nebbets
+         akse (holder hodet vannrett i en sving), yaw = til siden. Fordelt på leddene i o.neck. */
+      neck(pitch, roll, yaw) { for (const [bn, w] of o.neck || []) { R.rot(bn, L0, -pitch * w); if (yaw) R.rot(bn, F0, yaw * w); } const h = o.neck && o.neck[o.neck.length - 1][0]; if (h && roll) R.rot(h, Z0, roll);
+        for (const [bn, w] of o.keep || []) R.rot(bn, L0, pitch * w); return B; },   /* o.keep: det som henger på nakken, men skal ligge inntil kroppen (brystfjærene): dreies tilbake med andelen w av nakkens stigning */
+      legs(k) { for (const [bn, a] of o.leg || []) { R.rot('L' + bn, L0, a * DG * k); R.rot('R' + bn, L0, a * DG * k); } return B; },
+      tail(dirs) { R.chain(o.tail, dirs); return B; } };
+    return B; };
+  /* Nedslaget tar lengre tid enn oppslaget: ph (0–1, jevnt i tid, 0 = toppen) → u (0,5 = bunnen etter andelen ds av slaget). */
+  X.bird.warp = (ph, ds) => { ph = ((ph % 1) + 1) % 1; ds = ds || 0.56; return ph < ds ? 0.5 * ph / ds : 0.5 + 0.5 * (ph - ds) / (1 - ds); };
   return X;
 })();

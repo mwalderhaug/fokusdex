@@ -723,7 +723,7 @@ void main(){ float x = 1. - abs(vQ.x * 2. - 1.), a = x * x * (1. - vQ.y) * (1. -
       clear() { for (const n of names) acc[n] = null; },
       add(pose, w) { if (!w) return F; for (const k in pose) { const v = pose[k], st = k[0] === '*'; for (const n of list(k)) { const a = acc[n] || (acc[n] = [0, 0, 0, 0, 0, 0]), m = st && n[0] === 'R'; for (let i = 0; i < v.length; i++) a[i] += v[i] * w * (m && mir[i] ? -1 : 1); } } return F; },
       rot(k, x, y, z) { return F.add({ [k]: [x, y, z] }, 1); },
-      apply() { for (const n of names) { const b = bones[n], r = rest[n], a = acc[n]; if (a) { b.rotation.set(r[0] + a[0], r[1] + a[1], r[2] + a[2]); b.position.set(r[3] + a[3], r[4] + a[4], r[5] + a[5]); } else { b.rotation.set(r[0], r[1], r[2]); b.position.set(r[3], r[4], r[5]); } } holder.updateMatrixWorld(true); },
+      apply() { for (const n of names) { const b = bones[n], r = rest[n], a = acc[n]; if (a) { b.rotation.set(r[0] + a[0], r[1] + a[1], r[2] + a[2]); b.position.set(r[3] + a[3], r[4] + a[4], r[5] + a[5]); } else { b.rotation.set(r[0], r[1], r[2]); b.position.set(r[3], r[4], r[5]); } } if (F.late) F.late(F);   /* flyriggen (G3C.rig) skriver sine ben til slutt */ holder.updateMatrixWorld(true); },
       at(n, v) { return bones[list(n)[0] || n].getWorldPosition(v || new T.Vector3()); }, has(n) { return list(n).length > 0; },
       /* Øynene (3DS-atlaset: (0, 0) åpent, (0, 0,5) lukket, (0, 0,75) smalt): flytter UV, og setter eventuelt eget lys og steinhud. Øyne uten atlaset får bare lyset. */
       eye(u, v, emis, stone) { for (const m of eyes) { if (m.userData.atlas) m.uniforms.uUvOff.value.set(u, v); if (emis != null) m.uniforms.uEmis.value = emis; if (stone != null) m.uniforms.uStone.value = stone; } return F; }, eyes,
@@ -777,7 +777,7 @@ void main(){ float x = 1. - abs(vQ.x * 2. - 1.), a = x * x * (1. - vQ.y) * (1. -
   /* Stillingen på tidspunktet t: skuespillet (act), benene, og kameraet i bildet (shots) som gjelder. Gir P (det kameraet ber om). */
   const poseAt = (D, S, t, o) => {
     const P = S.post = P0(); U.uTime.value = t; envSet(D.env); K.far();
-    for (const f of S.figs || []) f.clear(); U.uFog.value.set(60, 300, 0.8);
+    for (const f of S.figs || []) f.clear(); U.uFog.value.set(60, 300, 0.8); U.uKey.value.set(0.4, 0.8, 0.45).normalize(); U.uRim.value.set(0, 0.3, -1).normalize();   /* lysets retning settes tilbake for hvert bilde: en art som flytter det (Articuno), gjør det i act */
     D.act(S, t, o); for (const f of S.figs || []) f.apply();
     let si = 0; for (let i = 0; i < D.shots.length; i++) if (t >= D.shots[i][0] - 1e-6) si = i;
     const s0 = D.shots[si][0], s1 = si + 1 < D.shots.length ? D.shots[si + 1][0] : D.len; S.shot = si;

@@ -229,8 +229,9 @@ const PACK = (() => {
       else s.buffer = d;
       s.connect(g2); g2.connect((typeof master === 'function' && master()) || a.destination);
       if (o.fade) { g2.gain.setValueAtTime(Math.max(0.0001, v * (o.from || 0)), t); g2.gain.linearRampToValueAtTime(v, t + o.fade); } else g2.gain.setValueAtTime(v, t);
-      const at = Math.max(0, Math.min(d.duration - 0.2, o.at || 0)); s.start(0, at);
-      return { s, g: g2, t0: t, at, d, v };
+      /* Negativ at = en kald start: så mange sekunder stillhet før lyden starter fra 0 (Articunos intro). Klokka går fra nå, og pos er negativ til lyden er i gang. */
+      const lead = o.at < 0 ? -o.at : 0, at = Math.max(0, Math.min(d.duration - 0.2, o.at || 0)); s.start(lead ? t + lead : 0, at);
+      return { s, g: g2, t0: t, at: lead ? -lead : at, d, v };
     } catch (_) { return null; }
   }
   /* En lang uttoning (etter en kamp) dukker først raskt, så seierslyden slipper til, og klinger så ut. */
