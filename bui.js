@@ -225,6 +225,26 @@ function raidCard() {
   if (!R.seen) return `<div class="card k-ultra raidc myst"><div class="pre-foe"><span class="raid-sp qm" aria-hidden="true"><i>?</i></span><div class="sp"><div class="sm">Legendary raid · attempt 1 of ${raidTries(R)}</div><b class="bossn">A legendary Pokémon</b><div class="sm tn">Who it is stays secret until you face it</div></div></div>${btn}</div>`;
   return `<div class="card k-ultra raidc" style="--cc:${L.cc}"><div class="pre-foe"><span class="raid-sp">${spr(R.id, { ani: 1, sh: V.sh, mega: defForm(R.id) })}</span><div class="sp"><div class="sm">Legendary raid · attempt ${n} of ${raidTries(R)}</div><b class="bossn">${esc(V.n)}</b><div class="sm tn">${TYN[D(R.id)[1]]}${D(R.id)[2] >= 0 ? ' / ' + TYN[D(R.id)[2]] : ''} · your own team of six</div></div></div>${btn}</div>`;
 }
+/* PAKKE-RAIDENE (pa2): en legendarisk fra en pakke venter her til du tar den. Ett forsøk, og hvem det er, er hemmelig til introen. Nivået ble satt da
+   pakken ble åpnet, så trening før kampen hjelper. Artens filer i 3D hentes i bakgrunnen alt nå (som for raidkortet), så introen er klar. */
+function praidCards() {
+  const L = Array.isArray(S.praid) ? S.praid.filter(R => LEG[R.id]) : []; if (!L.length || !S.party.length) return '';
+  try { if (typeof G3C !== 'undefined' && !calm() && G3D.can()) L.forEach(R => { if (G3C.has(R.id)) G3C.warm(R.id).catch(() => {}); }); } catch (_) {}
+  return L.map(R => `<div class="card k-ultra raidc myst prc"><div class="pre-foe"><span class="raid-sp qm" aria-hidden="true"><i>?</i></span><div class="sp"><div class="sm">Pack raid · ${PACKS[R.pk] ? PACKS[R.pk].n : 'a pack'} · one attempt</div><b class="bossn">A legendary Pokémon</b><div class="sm tn">Who it is, you see when you face it</div></div></div><button type="button" class="btn gold wide" data-a="praid" data-k="${R.k}" style="margin-top:10px">Face it</button></div>`).join('');
+}
+function praidScreen(k) {
+  const R = praidBy(k); if (!R || !LEG[R.id]) { closeOv(); return render(); }
+  const P = PACKS[R.pk], party = S.party.map(monBy).filter(Boolean), lead = BT.lead && party.some(m => m.u === BT.lead) ? BT.lead : party[0] && party[0].u;
+  /* Som et åpent raid: artens cutscene i 3D bygges nå, så den er klar når kampen starter. */
+  try { if (typeof G3C !== 'undefined' && !calm() && G3D.can() && G3C.has(R.id)) G3C.load(R.id).then(() => G3D.ready('c3:' + R.id)).then(() => { const a = () => G3D.has('c3:' + R.id + 'a') && G3D.ready('c3:' + R.id + 'a'); return G3D.has('c3:' + R.id + 'b') ? G3D.ready('c3:' + R.id + 'b').catch(a) : a(); }).catch(() => {}); } catch (_) {}
+  ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Pack raid</span></div>
+    <div class="card k-ultra raidc myst"><div class="pre-foe"><span class="raid-sp qm" aria-hidden="true"><i>?</i></span><div class="sp"><div class="sm">From ${P ? 'a ' + P.n : 'a pack'} · you find out who when you face it</div><b class="bossn" style="font-size:21px">A legendary Pokémon</b><div class="sm tn" style="margin-top:4px">${RAIDHP[0]} to ${RAIDHP[3]}× the HP of a normal Pokémon</div></div></div>
+      <p class="sm" style="margin-top:10px">A raid of its own, apart from the legendary raids that show up after your battles. One Pokémon against your whole team, with the Bag. Its level was set by your team when you opened the pack, so training first helps.</p>
+      <p class="sm" style="margin-top:6px">Its place fights with it: every third turn something happens on the field, and when it is hurt badly enough, it becomes enraged and grows stronger.</p>
+      <p class="sm" style="margin-top:6px"><b>One attempt.</b> Win: it is yours, and your team gets XP. Lose: it is gone.</p></div>
+    <div><div class="lab">Your team · tap the one that leads</div><div class="lineup">${party.map(m => `<button type="button" data-a="prlead" data-k="${k}" data-u="${m.u}" class="${m.u === lead ? 'lead' : ''}">${spr(m.id, { it: m.item, sh: m.sh, mega: m.mega })}<span class="sp"><b>${esc(mName(m))}</b><br><span class="sm tn">Lv ${m.lv}</span> ${evTag(m)}</span>${m.u === lead ? '<span class="pill">Leads</span>' : ''}</button>`).join('')}</div></div>
+    <div class="acts"><button type="button" class="btn gold" data-a="prgo" data-k="${k}"${party.length ? '' : ' disabled'}>Start · one attempt</button><button type="button" class="btn nf" data-a="home">Later</button></div>`, 'tint', 'var(--gold)');
+}
 function raidScreen() {
   const R = S.raid; if (!R) return render();
   const V = raidShow(R), L = V.L, t = L.t, dom = raidDom({ dk: V.sh === 2, lbg: L.bg }), left = raidTries(R) - (R.tries || 0), party = S.party.map(monBy).filter(Boolean), lead = BT.lead && party.some(m => m.u === BT.lead) ? BT.lead : party[0] && party[0].u;
@@ -1159,7 +1179,7 @@ function fxPos(side) {
 /* Spritene forstørres etter bredden på arenaen (spillskjermen er 256 piksler bred). */
 function fitArena() { const a = $('#arena'), m = $('#bmenu'); if (a) { const u = (a.clientWidth / 256).toFixed(3) + 'px'; a.style.setProperty('--z', (a.clientWidth / 256 * 0.8).toFixed(2)); a.style.setProperty('--u', u); a.parentNode.style.setProperty('--u', u); if (m) m.style.setProperty('--u', u); } }
 window.addEventListener('resize', fitArena);
-function battleTag(B) { return B.tag ? B.tag : B.raid && raidDom(B.tr) ? `${B.mode === 'raid' ? 'Raid' : 'Sandbox'} · ${raidDom(B.tr).n}` : B.mode === 'raid' ? 'Legendary raid' : B.mode === 'pwt' ? `${B.cup} · ${ROUNDN[B.r]}` : B.mode === 'fac' ? `Frontier · Round ${B.round} · ${B.w + 1}/${FACN}` : B.mode === 'lab' ? `${B.exh ? 'Showcase' : 'Sandbox'} · ${B.tr.cn}` : `${B.lap ? 'Lap ' + (B.lap + 1) + ' · ' : ''}${B.n + 1}/${LAPN} · ${B.tr.cn}`; }
+function battleTag(B) { return B.tag ? B.tag : B.raid && raidDom(B.tr) ? `${B.mode === 'raid' ? (B.pkr ? 'Pack raid' : 'Raid') : 'Sandbox'} · ${raidDom(B.tr).n}` : B.mode === 'raid' ? (B.pkr ? 'Pack raid' : 'Legendary raid') : B.mode === 'pwt' ? `${B.cup} · ${ROUNDN[B.r]}` : B.mode === 'fac' ? `Frontier · Round ${B.round} · ${B.w + 1}/${FACN}` : B.mode === 'lab' ? `${B.exh ? 'Showcase' : 'Sandbox'} · ${B.tr.cn}` : `${B.lap ? 'Lap ' + (B.lap + 1) + ' · ' : ''}${B.n + 1}/${LAPN} · ${B.tr.cn}`; }
 const calm = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; } };
 function drawBattle() {
   const B = BT.B, tr = B.tr, tier = TIER(tr.kind);
@@ -1712,6 +1732,7 @@ async function startBattle(B) {
     /* Klokka må være i orden, og en kamp som er i gang på en annen enhet, må gjøres ferdig der (eller gis opp her) før en ny kan starte. */
     if (typeof fairGate === 'function' && fairGate()) return;
     if (S.live && !liveMine()) return liveOther();
+    if (B.pkr) praidUse(B);   /* pakke-raidet (pa1): ett forsøk, brukt her */
     liveBegin(B);
   }
   BT.B = B; BT.menu = 'main'; BT.res = null; BT.ty = 0; BT.busy = true;
@@ -1762,7 +1783,7 @@ function endBattle() {
   const B = BT.B; BT.busy = false; clearTimeout(BT.dkTm); BT.dkB = null; clearTimeout(BT.kyTm);
   if (B.mode !== 'lab') liveEnd();
   clearInterval(BT.goldT); FX.show(null); if (BT.air) { BT.air(); BT.air = null; }
-  const res = BT.res = B.mode === 'wk' ? finishWeek(B) : B.mode === 'fac' ? finishFactory(B) : B.mode === 'lab' ? finishLab(B) : B.mode === 'raid' ? finishRaid(B) : B.mode === 'pwt' ? finishPwt(B) : finishLeague(B);
+  const res = BT.res = B.mode === 'wk' ? finishWeek(B) : B.mode === 'fac' ? finishFactory(B) : B.mode === 'lab' ? finishLab(B) : B.mode === 'raid' ? (B.pkr ? finishPraid(B) : finishRaid(B)) : B.mode === 'pwt' ? finishPwt(B) : finishLeague(B);
   if (jOn() && B.mode !== 'raid' && B.mode !== 'lab' && !(S.jx || {}).b) { (S.jx = S.jx || {}).b = 1; jRaid(); }
   /* En hel modus er vunnet: kamplåta toner kort ut, og seierslåta tar over etter fanfaren (fameSong). Ellers klinger den ut som før. */
   res.fame = fameWin(res) ? 1 : 0; stopMusic(res.fame ? 0.9 : 2.6); if (res.fame) fameSong(res);
@@ -2230,6 +2251,10 @@ const BA = {
   lab: () => { if (!isAdmin()) { closeOv(); return render(); } BT.B = null; BT.busy = false; stopMusic(); labScreen(); },
   raid: () => { BT.B = null; BT.busy = false; stopMusic(); sfx.open(); raidScreen(); },
   rlead: el => { BT.lead = +el.dataset.u; raidScreen(); },
+  /* Pakke-raidet (pa2): skjermen, hvem som leder, og kampen (raidBattle med raidet; forsøket brukes når den starter, praidUse). */
+  praid: el => praidScreen(+el.dataset.k),
+  prlead: el => { BT.lead = +el.dataset.u; praidScreen(+el.dataset.k); },
+  prgo: el => { const R = praidBy(+el.dataset.k); if (!R || !LEG[R.id] || !S.party.map(monBy).filter(Boolean).length) return; PACK.unlock(); sfx.start(); BT.busy = false; startBattle(raidBattle(BT.lead, undefined, R)); },
   raidgo: () => { if (!raidOpen() || !S.party.map(monBy).filter(Boolean).length) return; PACK.unlock(); sfx.start(); BT.busy = false; startBattle(raidBattle(BT.lead)); },
   labraid: el => { if (!isAdmin()) return; if (!S.party.map(monBy).filter(Boolean).length) { snd('warn'); return toast('You need a Pokémon in your team.'); } const q = el.dataset.k === 'dkq', id = q || el.dataset.k === 'dk' ? 'dk' : +el.dataset.k; if (id !== 'dk' && !LEG[id]) return; PACK.unlock(); sfx.start(); BT.busy = false; const B = raidBattle(BT.lead, id); if (q) B.dkq = 1; startBattle(B); },
   bbag: () => { if (BT.busy || !BT.B || BT.B.over) return; BT.menu = 'bag'; drawMenu(); },

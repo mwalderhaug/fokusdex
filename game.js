@@ -129,15 +129,26 @@ const BALLM = { poke: 1, great: 1.5, ultra: 2.2, dusk: 2.2, master: 1 }, LEGBALL
 const LUREN = 3;
 const shopOwn = k => k === 'egg' ? S.eggs.length : k === 'incense' ? (S.incOn ? 1 : 0) : k === 'lure' ? S.lure || 0 : k === 'slure' ? S.slure || 0 : k === 'prism' ? (S.prism ? 1 : 0) : SHOP[k].sb ? (S.shb && S.shb.k === k && shinyBoost() > 1 ? 1 : 0) : S.items[k] || 0;
 const shopFull = k => k === 'egg' ? S.eggs.length >= 3 : k === 'incense' ? !!S.incOn : k === 'lure' ? S.lure > 0 : k === 'slure' ? S.slure > 0 : k === 'prism' ? !!S.prism : SHOP[k].sb ? shinyBoost() > 1 : SHOP[k].max ? (S.items[k] || 0) >= SHOP[k].max : false;
-/* Encounter-pakker: kjøpes for mynter og åpnes med en gang, som å åpne en kortpakke. Tre møter i hver, og den siste plassen er den gode:
-   jo dyrere pakke, jo bedre sjanser (min = laveste sjeldenhet, ep/leg = sjansen for en epic eller en legendarisk i den plassen,
-   shm = så mye likere er en shiny, evo = sjansen for at et kort er utviklet så langt nivået ditt tillater).
+/* Encounter-pakker: kjøpes for mynter og åpnes med en gang, som å åpne en kortpakke. Den siste plassen er den gode: jo dyrere pakke, jo bedre
+   sjanser (min = laveste sjeldenhet, ep/leg = sjansen for en epic eller en legendarisk i den plassen, shm = så mye likere er en shiny, evo = sjansen
+   for at et kort er utviklet så langt nivået ditt tillater).
+   FLERE KORT JO DYRERE (pa1, Jazz 24.11: «flere pokemons per pakke, men flere dårligere? slik at gode faktisk føles bedre ut … vanlig pakke … er 3,
+   så blir det flere og flere pokemons per pakke og den dyreste er mer enn alle andre»): Poké 3 · Great 4 · Ultra 5 · Master 6. De ekstra er vanlige
+   FYLLKORT (f = 1: flaks 0, som den første plassen i en Poké Pack), lagt foran plassene fra før, og de kan bli shiny som alle andre kort (Jazz 24.11).
+   Prisene og plassene fra før er de samme, så sjansen for de gode er nesten som før (et fyllkort kan en sjelden gang bli rare eller epic selv), og shiny
+   per pakke stiger med antallet kort: Great 1,1 → 1,6 %, Ultra 1,5 → 2,5 %, Master 2,0 → 4,0 % (lag på 60, ingen rekke). Salgsverdien er 7–30 % av
+   prisen (sim/t_pa.js), så en pakke lønner seg aldri å selge.
+   god = sjansen for en GULLPAKKE (pa1, «wow»): alle kortene er rare eller bedre (pkGoldSlots: hver plass får minst rare og den gode plassens flaks,
+   og den gode beholder sjansene sine for epic og legendarisk). Åpningen ser det på innholdet (pkGold i ui.js), så en pakke som blir slik av seg selv,
+   skinner like mye.
    Steg 1.7: plassene er satt etter den nye sjeldenheten, så pakkene gir det samme som før: like mange pseudo-legendariske (de er nå en del av
-   epic), like mange legendariske, og like ofte en utviklet Pokémon. Kortene har det den er født med (stjerner, natur, størrelse), og det
-   følger med når den fanges. Nye regler per plass (vern mot duplikater, flere stjerner) kan legges i slots uten å endre resten. lv = trenernivået pakken krever. Alle pakker har en liten sjanse for en legendarisk, som et lodd: hvem som helst
-   av dem i områdene dine, også en du har fra før. Vekten per art (PKLEGW, etter sjeldenhet): vanlige 1, mytiske 1,3, de største 0,25 (også Mewtwo og Deoxys), Arceus 0,1 –
-   så de mytiske kommer litt oftere, og de aller største er sjeldne her og kommer heller i raid. Oddsene er faste: hvor mange du eier, endrer dem ikke
-   (legEnc). Kortet viser ikke hvem det er (myst = 1): det får du vite i gresset, i introen. */
+   epic) og like ofte en utviklet Pokémon. Kortene har det den er født med (stjerner, natur, størrelse), og det følger med inn i samlingen.
+   lv = trenernivået pakken krever. Alle pakker har en liten sjanse for en legendarisk, som et lodd: hvem som helst av dem i områdene dine, også en du
+   har fra før. Vekten per art (PKLEGW, etter sjeldenhet): vanlige 1, mytiske 1,3, de største 0,25 (også Mewtwo og Deoxys), Arceus 0,1 – så de
+   mytiske kommer litt oftere, og de aller største er sjeldne her og kommer heller i raid. Oddsene er faste: hvor mange du eier, endrer dem ikke
+   (legEnc). Rundt 40 % sjeldnere fra pa1 (Jazz 24.11: «Legendaries kan være litt mer sjelden her?»): Poké 0,2 → 0,1 %, Great 0,5 → 0,3 %,
+   Ultra 1,2 → 0,7 %, Master 5 → 3 % per pakke. Kortet viser ikke hvem det er (myst = 1): en legendarisk fra en pakke er et PAKKE-RAID (praidAdd),
+   og hvem det er, ser du i introen. */
 const PKLEGW = [0, 1, 0.25, 1.3, 0.1];
 /* Et legendarisk møte utenom raid (pakker, økter, merker, bosser og ekspedisjonen): samme trekning overalt, et lodd med faste odds. Hver legendarisk i
    områdene dine har sin vekt (PKLEGW) uansett hvor mange du eier, så det kan bli en du har fra før. Bare raidene følger samlingen (raidPick).
@@ -152,30 +163,32 @@ function legEnc(shm) {
   return Object.assign(genEnc({ ids: [id], shm }), { myst: 1 });
 }
 const PACKS = {
-  poke: { n: 'Poké Pack', p: 250, c: '#d98f7e', d: 'One of the three is uncommon or better.', slots: [{ luck: 0 }, { luck: 0.5 }, { min: 1, luck: 0.1, leg: 0.002 }], shm: 1, evo: 0.1 },
-  great: { n: 'Great Pack', p: 700, c: '#7fa8e6', d: 'One is rare or better, and one uncommon or better.', slots: [{ luck: 0.5 }, { min: 1, luck: 0.5 }, { min: 2, luck: 0.6, ep: 0.015, leg: 0.005 }], shm: 1.2, lv: 3, evo: 0.25 },
-  ultra: { n: 'Ultra Pack', p: 1800, c: '#e3c577', d: 'Two are rare or better, and the last one is sometimes epic. Shiny odds ×1.5.', slots: [{ min: 1, luck: 1.5 }, { min: 2, luck: 1.5 }, { min: 2, luck: 2, ep: 0.18, leg: 0.012 }], shm: 1.5, lv: 5, evo: 0.5 },
-  master: { n: 'Master Pack', p: 6000, c: '#b295e6', d: 'All three are rare or better. The last one is often epic, and now and then legendary. Shiny odds ×2.', slots: [{ min: 2, luck: 2 }, { min: 2, luck: 2 }, { min: 2, luck: 2, ep: 0.47, leg: 0.05 }], shm: 2, lv: 8, evo: 0.55 }
+  poke: { n: 'Poké Pack', p: 250, c: '#d98f7e', d: 'Three Pokémon. One is uncommon or better.', slots: [{ luck: 0 }, { luck: 0.5 }, { min: 1, luck: 0.1, leg: 0.001 }], shm: 1, evo: 0.1, god: 0.005 },
+  great: { n: 'Great Pack', p: 700, c: '#7fa8e6', d: 'Four Pokémon. One is rare or better, and one uncommon or better.', slots: [{ luck: 0, f: 1 }, { luck: 0.5 }, { min: 1, luck: 0.5 }, { min: 2, luck: 0.6, ep: 0.015, leg: 0.003 }], shm: 1.2, lv: 3, evo: 0.25, god: 0.01 },
+  ultra: { n: 'Ultra Pack', p: 1800, c: '#e3c577', d: 'Five Pokémon. Two are rare or better, and the last one is sometimes epic. Shiny odds ×1.5.', slots: [{ luck: 0, f: 1 }, { luck: 0, f: 1 }, { min: 1, luck: 1.5 }, { min: 2, luck: 1.5 }, { min: 2, luck: 2, ep: 0.18, leg: 0.007 }], shm: 1.5, lv: 5, evo: 0.5, god: 0.015 },
+  master: { n: 'Master Pack', p: 6000, c: '#b295e6', d: 'Six Pokémon. Three are rare or better, the last one is often epic, and now and then legendary. Shiny odds ×2.', slots: [{ luck: 0, f: 1 }, { luck: 0, f: 1 }, { luck: 0, f: 1 }, { min: 2, luck: 2 }, { min: 2, luck: 2 }, { min: 2, luck: 2, ep: 0.47, leg: 0.03 }], shm: 2, lv: 8, evo: 0.55, god: 0.02 }
 };
 /* Pakker åpnes ikke når så mange møter venter (et vern mot en uendelig kø; gresset selv har ingen grense fra 16.11). */
 const PACKMAX = 99;
-/* Innholdet i en pakke (tre møter), uten å røre lagringen: brukes av butikken og av demoen. lg = plassen ga en legendarisk, ps = en av de
+/* Innholdet i en pakke (tre til seks kort), uten å røre lagringen: brukes av butikken og av demoen. lg = plassen ga en legendarisk, ps = en av de
    pseudo-legendariske linjene. demo = den legendariske vises med en gang (det finnes ikke noe gress å møte den i).
    packCard gir kortet det Pokémonen er født med: IV-ene (stjernene), naturen og størrelsen. Det følger med når den fanges (throwBall). */
 const PKPS = [147, 246, 371, 374, 443, 633];
 function packCard(e) { e.pk = 1; e.iv = e.sh ? [31, 31, 31, 31, 31, 31] : rollIv(); e.nat = rnd(25); const z = rollSz(e.id); if (z !== 1) e.sz = z; return e; }
+/* Plassene i en gullpakke: alle minst rare, med den gode plassens flaks; den gode beholder sjansene sine for epic og legendarisk. */
+function pkGoldSlots(P) { const top = P.slots[P.slots.length - 1]; return P.slots.map(sl => sl === top ? Object.assign({}, sl, { min: Math.max(2, sl.min || 0) }) : { min: Math.max(2, sl.min || 0), luck: Math.max(sl.luck || 0, top.luck || 0) }); }
 function packDraw(k, demo) {
-  const P = PACKS[k];
-  return P.slots.map(sl => { const r = Math.random(), lg = r < (sl.leg || 0) ? legEnc(P.shm) : null, ep = !lg && r < (sl.leg || 0) + (sl.ep || 0), e = packCard(lg || genEnc({ min: ep ? 3 : sl.min || 0, luck: sl.luck || 0, shm: P.shm, evo: P.evo || 0 })); if (demo) { delete e.myst; if (lg) e.lg = 1; if (PKPS.includes(lineRoot(e.id))) e.ps = 1; } return e; });
+  const P = PACKS[k], sls = Math.random() < (P.god || 0) ? pkGoldSlots(P) : P.slots;
+  return sls.map(sl => { const r = Math.random(), lg = r < (sl.leg || 0) ? legEnc(P.shm) : null, ep = !lg && r < (sl.leg || 0) + (sl.ep || 0), e = packCard(lg || genEnc({ min: ep ? 3 : sl.min || 0, luck: sl.luck || 0, shm: P.shm, evo: P.evo || 0 })); if (demo) { delete e.myst; if (lg) e.lg = 1; if (PKPS.includes(lineRoot(e.id))) e.ps = 1; } return e; });
 }
 /* PAKKEKORTENE ER DINE (v92, Jazz 24.11: «Valg B»): de vanlige kortene går rett i samlingen når pakken åpnes, uten kast og uten baller. Bare de
-   store må fanges (pkCatch: en legendarisk, epic eller shiny; de samme gjør pakken urolig i åpningen), og de venter i gresset som før. Et kort som går
-   rett inn, gir det en fangst ville gitt av arten: mynter for en ny art (NEWCOIN, én gang per art), men det teller ikke i rekka (S.cst) og starter
-   ingen kjede. */
-const pkCatch = e => !!(e.myst || e.t >= 3 || e.sh);
+   store må fanges (pkCatch: epic eller shiny), og de venter i gresset som før. Et kort som går rett inn, gir det en fangst ville gitt av arten:
+   mynter for en ny art (NEWCOIN, én gang per art), men det teller ikke i rekka (S.cst) og starter ingen kjede. En LEGENDARISK fra en pakke er fra pa1
+   et pakke-raid (praidAdd), ikke et møte i gresset. Pakken er urolig i åpningen for alle tre (pkHot i ui.js). */
+const pkCatch = e => !e.myst && (e.t >= 3 || !!e.sh);
 /* Kjøp og åpne n pakker på én gang (ønske 13). Gratispakker brukes først. Ti eller flere har alltid minst én rare eller bedre. Alt avgjøres og lagres
    med en gang, så ingenting går tapt om appen lukkes midt i åpningen: de vanlige kortene går rett i samlingen (e.u = Pokémonen kortet ble), de store
-   (pkCatch) i gresset. Svaret er pakkene (en liste med tre kort per pakke), eller null. På lista: cw = artene du hadde fanget før pakkene ble åpnet
+   (pkCatch) i gresset, og en legendarisk blir et pakke-raid (praidAdd). Svaret er pakkene (en liste med tre til seks kort per pakke), eller null. På lista: cw = artene du hadde fanget før pakkene ble åpnet
    («NEW» på kortene), nc = myntene for nye arter. */
 function openPacks(k, n) {
   const P = PACKS[k]; n = Math.max(1, Math.floor(n || 1)); if (!P) return null;
@@ -185,23 +198,42 @@ function openPacks(k, n) {
   if (n >= 10 && !out.some(p => p.some(e => e.t >= 2))) { const p = out[n - 1], sl = P.slots[P.slots.length - 1]; p[p.length - 1] = packCard(genEnc({ min: 2, luck: sl.luck || 0, shm: P.shm, evo: P.evo || 0 })); }
   if (free) { S.fpk[k] -= free; if (S.fpk[k] <= 0) delete S.fpk[k]; }
   S.coins -= P.p * pay; out.cw = Object.assign({}, S.caught); out.nc = 0;
-  for (const p of out) for (const e of p) { if (pkCatch(e)) { S.pend.push(e); continue; } const nw = !S.caught[e.id]; e.u = encMon(e).u; if (nw) out.nc += NEWCOIN[e.t] || 0; }
+  for (const p of out) for (const e of p) { if (e.myst && praidAdd(e, k)) continue; if (e.myst || pkCatch(e)) { S.pend.push(e); continue; } const nw = !S.caught[e.id]; e.u = encMon(e).u; if (nw) out.nc += NEWCOIN[e.t] || 0; }
   S.coins += out.nc; S.packs = (S.packs || 0) + n; save();
   return out;
 }
 function openPack(k) { const o = openPacks(k, 1); if (!o) return null; o[0].cw = o.cw; o[0].nc = o.nc; return o[0]; }
+/* PAKKE-RAIDET (pa1, Jazz 24.11: «Legendaries … at man får de i raid heller istedet for å fange de? da får man intro på pokemons også. Det blir da et
+   pakke-raid, ikke et vanlig raid»). En legendarisk fra en pakke venter som et eget raid i S.praid (en liste med { k, id, sh, lv, fl, hx, at, pk }),
+   utenom det vanlige raidet (S.raid) og uten å røre det: ikke forsøkene, ikke dagen og ikke trekningen. Introen, arenaen og kampen er som i et vanlig
+   raid (raidBattle med R0), og nivået settes etter laget når pakken åpnes, som når et raid viser seg (raidLvFor, gulvet raidFloor, raidHx; Jazz: «Som
+   et vanlig raid»), så trening før kampen hjelper. ETT FORSØK (Jazz 24.11): det brukes i det kampen starter (praidUse), og taper laget, er den borte.
+   Vinner det, er den din (finishPraid), med XP til laget, men uten myntene og gjenstandene fra et vanlig raid: pakken var prisen. Hvem det er, er
+   hemmelig til introen. e.pr = nøkkelen, så åpningen vet hvilket raid kortet ble. false = arten har ikke noe raid (da venter den i gresset som før). */
+function praidAdd(e, pk) {
+  if (typeof LEG === 'undefined' || !LEG[e.id] || typeof raidLvFor !== 'function') return false;
+  const t = LEG[e.id].t, k = S.uid++;
+  if (!Array.isArray(S.praid)) S.praid = [];
+  S.praid.push({ k, id: e.id, sh: e.sh ? 1 : 0, lv: raidLvFor(t), fl: raidFloor(), hx: +raidHx(t).toFixed(2), at: dayKey(), pk: pk || '' });
+  e.pr = k; return true;
+}
+const praidBy = k => (Array.isArray(S.praid) ? S.praid : []).find(r => r.k === k) || null;
 /* Sjansene i en pakke slik de er for deg akkurat nå (rutene og nivået ditt teller), regnet nøyaktig: hver plass har sin fordeling
    (tierDist, pluss plassens egne sjanser for epic og legendarisk), og plassene er uavhengige. rare og epic = minst én i pakken,
-   t = andelen av kortene i hver klasse. */
+   t = andelen av kortene i hver klasse. Gullpakken (god) er blandet inn med sin sjanse (pa1), så tallene stemmer med trekningen. */
 function packOdds(k) {
-  const P = PACKS[k], n = P.slots.length, t = [0, 0, 0, 0, 0]; let noRare = 1, noEpic = 1, noLeg = 1;
-  for (const sl of P.slots) {
+  const P = PACKS[k], g = P.god || 0, a = slotOdds(P.slots), b = g ? slotOdds(pkGoldSlots(P)) : a, mix = (x, y) => (1 - g) * x + g * y;
+  const sh1 = Math.min(SHINYCAP, shinyOdds() * P.shm * (typeof evShiny === 'function' ? evShiny() : 1));
+  return { rare: mix(a.rare, b.rare), epic: mix(a.epic, b.epic), leg: mix(a.leg, b.leg), shiny: 1 - Math.pow(1 - sh1, P.slots.length), t: a.t.map((x, i) => mix(x, b.t[i])), gold: g };
+}
+function slotOdds(slots) {
+  const n = slots.length, t = [0, 0, 0, 0, 0]; let noRare = 1, noEpic = 1, noLeg = 1;
+  for (const sl of slots) {
     const lg = sl.leg || 0, ep = sl.ep || 0, d = tierDist({ min: sl.min || 0, luck: sl.luck || 0 }), d3 = ep ? tierDist({ min: 3, luck: sl.luck || 0 }) : null;
     const p = d.map((x, i) => (i === 4 ? lg : 0) + (d3 ? ep * d3[i] : 0) + (1 - lg - ep) * x);
     p.forEach((x, i) => { t[i] += x / n; }); noRare *= p[0] + p[1]; noEpic *= 1 - p[3]; noLeg *= 1 - lg;
   }
-  const sh1 = Math.min(SHINYCAP, shinyOdds() * P.shm * (typeof evShiny === 'function' ? evShiny() : 1));
-  return { rare: 1 - noRare, epic: 1 - noEpic, leg: 1 - noLeg, shiny: 1 - Math.pow(1 - sh1, n), t };
+  return { rare: 1 - noRare, epic: 1 - noEpic, leg: 1 - noLeg, t };
 }
 /* Salgsverdi: sjeldenheten teller mest. Steg 1.7: epic er sjeldnere og verdt mer (før 450), og det den er født med teller (salgsbonus):
    STARSELL etter fødte stjerner (1–5), SZSELL etter størrelsen. En shiny har alltid fem stjerner, og det ligger alt i de fem gangene. */
@@ -222,12 +254,12 @@ function releaseEncs(list) {
   return { v, n };
 }
 /* Vanlige pakkekort hører ikke hjemme i gresset (v92). Ventet noen der fra en eldre versjon av appen, går de inn i samlingen (ved lasting, adopt),
-   med myntene for en ny art som en fangst ville gitt. De store blir der.
+   med myntene for en ny art som en fangst ville gitt. De store blir der, også en legendarisk som kom i gresset før pakke-raidene (pa1): den møtes der som før.
    Kort for kort, og et kort som feiler, blir liggende: lasting av lagringen (load) skal aldri stoppe her. */
 function pkSweep() {
   let n = 0;
   for (const e of Array.isArray(S.pend) ? S.pend.slice() : []) {
-    if (!(e && e.pk && e.id && !pkCatch(e))) continue;
+    if (!(e && e.pk && e.id && !e.myst && !pkCatch(e))) continue;
     try { const nw = !S.caught[e.id]; encMon(e); S.pend.splice(S.pend.indexOf(e), 1); if (nw) S.coins += NEWCOIN[e.t] || 0; n++; } catch (_) {}
   }
   return n;
@@ -568,7 +600,7 @@ function fresh() {
     v: 1, mig: 18, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
     items: { poke: 20, great: 0, ultra: 0, dusk: 0, master: 0, gberry: 0, candy: 0, stone: 0, mstone: 0, incense: 0, potion: 0, super: 0, hyper: 0, maxp: 0, heal: 0, revive: 0, maxrev: 0, ash: 0 }, charm: 0, ring: 0, lst: {},
     lure: 0, slure: 0, prism: 0, shb: null,
-    mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, routes: [1], eggs: [], pend: [], incOn: 0,
+    mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, routes: [1], eggs: [], pend: [], praid: [], incOn: 0,
     log: {}, fm: {},
     fag: {}, extra: ['annet'],
     last: { fag: 'annet', min: 60 }, cap: 360, sound: 0, cries: 1, vol: 70, cvol: 70, mvol: 70, timer: null,
@@ -754,6 +786,8 @@ const LNO = {
   'Battles point out where to tap to see what the foe is weak to.': 'Kampene viser hvor du trykker for å se hva motstanderen er svak mot.',
   'Size and training are easier to read on a Pokémon\'s card.': 'Størrelse og trening er lettere å lese på kortet til en Pokémon.',
   'Bug fixes.': 'Feilrettinger.',
+  'Opening packs is more exciting, and the dearer packs hold more Pokémon.': 'Å åpne pakker er mer spennende, og de dyreste pakkene har flere Pokémon.',
+  'A legendary Pokémon from a pack is now met in a raid of its own.': 'En legendarisk Pokémon fra en pakke møter du nå i et eget raid.',
   'Pokémon from packs go straight into your collection. Only the special ones wait in the grass.': 'Pokémon fra pakker går rett i samlingen. Bare de spesielle venter i gresset.',
   'Encounters in the grass are quicker.': 'Møtene i gresset går raskere.',
   'Some legendary Pokémon have new intros.': 'Noen legendariske Pokémon har fått nye introer.',
@@ -792,9 +826,9 @@ const LNO = {
   'Nothing is marked to be sold.': 'Ingenting er merket for salg.',
   'The team, shinies, favourites and trained ones are never sold from here. The ones that stay sell for more if you ever sell them from their own card.': 'Laget, shinies, favoritter og trente selges aldri herfra. De som blir, gir mer hvis du en gang selger dem fra sitt eget kort.',
   // Steg 1.7: pakkene
-  'Three Pokémon in every pack. Tap a pack to see your odds, and open one or ten.': 'Tre Pokémon i hver pakke. Trykk på en pakke for å se sjansene dine, og åpne én eller ti.',
+  'Three to six Pokémon in every pack, more in the dearer ones. Tap a pack to see your odds, and open one or ten.': 'Tre til seks Pokémon i hver pakke, flere i de dyreste. Trykk på en pakke for å se sjansene dine, og åpne én eller ti.',
   'Your odds in one pack right now': 'Sjansene dine i én pakke akkurat nå',
-  'What is inside follows your routes and the level of your team. Ten at once always hold at least one rare or better. Pokémon from packs sell for less than wild ones, and the greatest legendaries are rare in packs: they are mostly met in raids.': 'Innholdet følger rutene dine og nivået på laget. Ti om gangen har alltid minst én rare eller bedre. Pokémon fra pakker selges for mindre enn ville, og de største legendariske er sjeldne i pakker: de møtes mest i raid.',
+  'What is inside follows your routes and the level of your team. Ten at once always hold at least one rare or better, and now and then a pack shines gold: every card in it is rare or better. Pokémon from packs sell for less than wild ones. A legendary from a pack is a raid of its own, with one attempt, and the greatest legendaries are rare in packs: they are mostly met in raids.': 'Innholdet følger rutene dine og nivået på laget. Ti om gangen har alltid minst én rare eller bedre, og av og til skinner en pakke i gull: alle kortene i den er rare eller bedre. Pokémon fra pakker selges for mindre enn ville. En legendarisk fra en pakke er et eget raid med ett forsøk, og de største legendariske er sjeldne i pakker: de møtes mest i raid.',
   'The dimmed ones are duplicates no better than what you have. Tap a card to change it.': 'De dempede er duplikater som ikke er bedre enn det du har. Trykk på et kort for å endre det.',
   'Tap a card to let it go for coins instead of keeping it.': 'Trykk på et kort for å slippe det for mynter i stedet for å beholde det.',
   // Steg 1 (Dusk): flere
@@ -948,7 +982,7 @@ function jFriend() {
 const has = k => !!(S.ulk && S.ulk[k]);
 /* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
    Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
-const WNV = 84, WN = ['Pokémon from packs go straight into your collection. Only the special ones wait in the grass.', 'Encounters in the grass are quicker.', 'Bug fixes.'];
+const WNV = 85, WN = ['Opening packs is more exciting, and the dearer packs hold more Pokémon.', 'A legendary Pokémon from a pack is now met in a raid of its own.', 'Bug fixes.'];
 /* Første linje for dem som går reisen (whatsNew i ui.js). */
 const WNJ = 'Your journey: new things now open one study day at a time. See the card on the Focus page.';
 function featCheck() { S.ulk = S.ulk || {}; if (!jOn()) return 0; let ch = 0; for (const [k, d] of JOURNEY) if (!S.ulk[k] && (S.jd || 0) >= d) { S.ulk[k] = 1; ch = 1; } return ch; }
@@ -1031,6 +1065,7 @@ function adopt(o) {
   /* Raid som ble stilt på nytt av den første utgaven av migrate10 (ingen hx), fikk ikke nytt nivå: det får de her. */
   if (S.raid && S.raid.at && S.raid.hx == null) raidRelevel(S.raid);
   S.routes = (S.routes || []).filter(r => S.regions.includes(r)); if (!S.routes.length) S.routes = [S.regions.includes(S.region) ? S.region : S.regions[0]];
+  if (!Array.isArray(S.praid)) S.praid = [];
   try { pkSweep(); } catch (_) {}
   S.mons.forEach(ensure);
   unlockRegions();

@@ -1751,6 +1751,64 @@ button.pkm{cursor:pointer}
 @keyframes pkRays{0%{opacity:0;transform:rotate(0) scale(.4)}20%{opacity:1}100%{opacity:0;transform:rotate(40deg) scale(1.1)}}
 @keyframes pkHero{0%{transform:scale(1)}22%{transform:scale(1.28) translateY(-8px)}75%{transform:scale(1.2) translateY(-6px)}100%{transform:scale(1)}}
 @keyframes pkmIn{from{transform:translateY(26px) scale(.4);opacity:0}}
+/* PAKKEÅPNINGEN (pa3): pakken etter trinn (t0–t3), gullpakken, riften, vifta, det siste kortet som bygger seg opp (charge, pop, ready), gnistene og
+   ristingen. Vifta stilles med rotate og translate (egne egenskaper), så de vanlige animasjonene (transform) legger seg oppå. */
+.pk-pack{position:relative}
+.pk-pack .pk-ic{position:relative;overflow:hidden}
+.pk-foil{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;text-decoration:none}
+.pk-pack.t1 .pk-foil{opacity:1;background:linear-gradient(110deg,transparent 38%,rgba(255,255,255,.42) 50%,transparent 62%);background-size:260% 100%;animation:pkSheen 3.2s ease-in-out infinite}
+.pk-pack.t2 .pk-foil{opacity:1;background:linear-gradient(110deg,transparent 18%,rgba(255,255,255,.5) 34%,transparent 44%,rgba(255,236,190,.45) 58%,transparent 70%);background-size:240% 100%;mix-blend-mode:screen;animation:pkSheen 2.3s linear infinite}
+.pk-pack.t3 .pk-foil{opacity:.9;background:linear-gradient(120deg,#ff7ac8,#7ad0ff,#9dffb0,#ffe27a,#ff7ac8,#7ad0ff);background-size:400% 400%;mix-blend-mode:soft-light;animation:pkFoil 4.5s linear infinite}
+.pk-pack.t3::before,.pk-pack.gold::before{content:"";position:absolute;left:50%;top:44%;width:340px;height:340px;margin:-170px 0 0 -170px;z-index:-1;pointer-events:none;border-radius:50%;background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--pc) 36%,transparent) 0 6deg,transparent 6deg 18deg);-webkit-mask:radial-gradient(circle,#000 0,transparent 62%);mask:radial-gradient(circle,#000 0,transparent 62%);animation:pkTurnR 14s linear infinite}
+.pk-pack.gold{--pc:var(--gold)}
+.pk-pack.gold .pk-ic{background:linear-gradient(165deg,#fff3c4,#e3c577 40%,#a8822a);box-shadow:inset 0 0 0 2px rgba(255,255,255,.6),0 0 40px 6px color-mix(in srgb,var(--gold) 70%,transparent)}
+.pk-pack.gold .pk-foil{opacity:1;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.75) 46%,transparent 58%);background-size:240% 100%;mix-blend-mode:normal;animation:pkSheen 1.6s linear infinite}
+.pk-pack.gold::before{background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--gold) 52%,transparent) 0 6deg,transparent 6deg 16deg);animation-duration:8s}
+.pk-gt{font-size:11px;font-weight:800;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);text-shadow:0 0 14px var(--gold);margin-top:-4px}
+.pk-pack.t2.rip{animation-duration:.48s}.pk-pack.t3.rip{animation-duration:.6s}.pk-pack.gold.rip{animation-duration:.72s}
+.pko>.pk-flash{position:absolute;left:50%;top:40%;width:0;height:0;z-index:4;pointer-events:none}
+.pk-flash::before{content:"";position:absolute;left:-60vmax;top:-60vmax;width:120vmax;height:120vmax;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,#fff 70%,var(--fc)) 0,color-mix(in srgb,var(--fc) 60%,transparent) 12%,transparent 40%);animation:pkFlash .8s ease-out forwards}
+.pk-flash::after{content:"";position:absolute;left:-75vmax;top:-75vmax;width:150vmax;height:150vmax;background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--fc) 42%,transparent) 0 5deg,transparent 5deg 15deg);-webkit-mask:radial-gradient(circle,#000 0,transparent 40%);mask:radial-gradient(circle,#000 0,transparent 40%);animation:pkRays .9s ease-out forwards}
+.pk-deal{display:flex;flex-direction:column;align-items:center;gap:18px;width:100%}
+.pk-fan{display:flex;justify-content:center;align-items:flex-start;width:100%;padding:0 10px}
+.pk-fan .pk-card{flex:0 1 82px;max-width:82px;min-width:0;margin:0 -3px;rotate:var(--r,0deg);translate:0 var(--y,0px);transform-origin:50% 140%;animation-delay:calc(.1s + var(--i)*.07s)}
+.pk-fan .pk-card.a3:not(.on),.pk-fan .pk-card.a4:not(.on){animation-delay:calc(.1s + var(--i)*.07s),.9s}
+.pk-fan .pk-front{gap:1px;padding:4px 2px}
+.pk-fan .pk-front .sprb{--s:46px}
+.pk-fan .pk-front b{font-size:10.5px}
+.pk-fan .pk-front .tier{font-size:9px}
+.pk-fan .pk-m{font-size:9px}
+.pk-fan .pk-m .strs i{width:6px;height:6px}
+.pk-fan .pk-front .szt{height:13px;font-size:8px;padding:0 4px}
+.pk-fan .pk-back i{width:22px;height:22px;box-shadow:0 0 0 2px #1b1b1f}
+.pk-fan .pk-new{font-size:7.5px;left:3px;top:3px;padding:1px 3px}
+.pk-fan .pk-front.pkq .sm{display:none}
+.pk-hitw{position:relative;display:flex;justify-content:center;width:100%}
+.pk-hitw::before{content:"";position:absolute;left:50%;top:50%;width:360px;height:360px;margin:-180px 0 0 -180px;z-index:-1;pointer-events:none;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--hc,var(--pc)) 50%,transparent) 0,transparent 62%);opacity:0;transform:scale(.6);transition:opacity .35s ease,transform .35s ease}
+.pko.chg .pk-hitw::before{opacity:calc(.35 + var(--lv,0)*.65);transform:scale(calc(.75 + var(--lv,0)*.45))}
+.pk-hitw .pk-card{flex:0 0 auto;width:min(40vw,148px);max-width:148px;animation:pkInHit .6s cubic-bezier(.2,.9,.3,1.15) backwards;animation-delay:calc(.15s + var(--i)*.07s)}
+.pk-hitw .pk-card.hit.charge:not(.on){animation:pkTrem .11s linear infinite}
+.pk-hitw .pk-card.hit.charge:not(.on) .pk-back{filter:brightness(calc(1 + var(--amp,1)*.07))}
+.pk-hitw .pk-card.hit.ready:not(.on){animation:pkReady .9s ease-in-out infinite}
+.pk-hitw .pk-card.on{animation:none}
+.pk-hitw .pk-card.on.hero{animation:pkHero 1.7s cubic-bezier(.2,.8,.3,1)}
+.pk-fan{transition:opacity .5s ease}.pko.hitr .pk-fan{opacity:.28;transition-duration:.2s}
+.pk-hw{position:absolute;left:0;right:0;top:-44px;z-index:7;text-align:center;font-size:15px;font-weight:800;letter-spacing:.3em;text-transform:uppercase;white-space:nowrap;color:var(--hc,var(--gold));text-shadow:0 0 18px var(--hc,var(--gold));opacity:0;pointer-events:none;animation:pkWord 1.7s ease-out forwards}
+.pk-deal.gold .pk-back{background:repeating-linear-gradient(45deg,#c9a03c 0 8px,#94721f 8px 16px)}
+.pk-hitw .pk-card.pop .pk-back::before{content:"";position:absolute;inset:-6px;border-radius:16px;pointer-events:none;box-shadow:0 0 0 2px #fff,0 0 30px 10px var(--hc,#fff);opacity:0;animation:pkPop .55s ease-out}
+.pko>.pk-spk{position:absolute;width:0;height:0;z-index:6;pointer-events:none}
+.pk-spk i{position:absolute;left:-4px;top:-4px;width:8px;height:8px;border-radius:50%;background:radial-gradient(circle,#fff 0 30%,var(--sc) 60%,transparent 72%);animation:pkSpark 1.1s cubic-bezier(.15,.7,.3,1) forwards}
+.pko.quake{animation:pkQuake .45s linear}.pko.quake2{animation:pkQuake .75s linear}
+@keyframes pkFoil{0%{background-position:0% 50%}100%{background-position:100% 50%}}
+@keyframes pkTurnR{to{transform:rotate(360deg)}}
+@keyframes pkFlash{0%{opacity:1;transform:scale(.3)}100%{opacity:0;transform:scale(1.25)}}
+@keyframes pkInHit{from{transform:translateY(-36px) scale(.5);opacity:0;filter:brightness(2)}}
+@keyframes pkTrem{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(calc(var(--amp,1)*-1px),calc(var(--amp,1)*.5px)) rotate(calc(var(--amp,1)*-.6deg))}50%{transform:translate(calc(var(--amp,1)*1px),calc(var(--amp,1)*-.5px)) rotate(calc(var(--amp,1)*.6deg))}75%{transform:translate(calc(var(--amp,1)*-.6px),0) rotate(calc(var(--amp,1)*-.3deg))}}
+@keyframes pkReady{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes pkPop{0%{opacity:1;transform:scale(.96)}100%{opacity:0;transform:scale(1.16)}}
+@keyframes pkSpark{0%{opacity:1;transform:translate(0,0) scale(var(--z,1))}70%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.2)}}
+@keyframes pkQuake{0%,100%{transform:translate(0,0)}10%{transform:translate(-6px,3px)}20%{transform:translate(5px,-4px)}30%{transform:translate(-4px,-2px)}40%{transform:translate(4px,3px)}55%{transform:translate(-3px,1px)}70%{transform:translate(2px,-2px)}85%{transform:translate(-1px,1px)}}
+@media (prefers-reduced-motion:reduce){.pk-pack .pk-foil,.pk-pack.t3::before,.pk-pack.gold::before,.pk-hitw .pk-card.hit.charge:not(.on),.pk-hitw .pk-card.hit.ready:not(.on),.pk-hitw .pk-card.pop .pk-back::before,.pko.quake,.pko.quake2{animation:none}.pko>.pk-flash,.pko>.pk-spk{display:none}}
 @media (prefers-reduced-motion:reduce){.pk-pack,.pk-pack.hot,.pk-pack.hot .pk-ic,.pk-card.a3 .pk-back,.pk-card.a4 .pk-back,.pk-card.a3:not(.on),.pk-card.a4:not(.on),.pk-card.shy:not(.on) .pk-back::after,.pk-card.on.shy .pk-front::after,.pk-card.on.hero{animation:none}.pko.bigr::before{display:none}}
 
 /* ---------- Dagens modus: valget, og eventet som symbol over modusen ---------- */
