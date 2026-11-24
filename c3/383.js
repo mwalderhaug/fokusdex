@@ -62,10 +62,10 @@
      og lavabomber som regner ned over sjøen (rain). Røyksøylen tegnes i 2D bak (backdrop). volcAct(S, t, er, tb): er = hvor aktiv den er (0,3 ryker · 0,6 urolig ·
      1 og over er utbrudd), tb = tidspunktet den eksploderer (eller −1). Jazz 18.11 (runde 4): i introen ryker den og ser aktiv ut; utbruddet hører til Primal-forvandlingen. */
   const VOL = { x: -40, z: -330, r: 250, h: 138 }, HOME = [0, -1, 2.8];
-  /* PRØVE (Fable 24.11): arenaen og Primal-filmen med FILMENS fjell (introens: 192 × 72 med raviner, innervegg og elver med skorpe) i stedet for K.volcano, så
-     kampen står foran det samme fjellet som introen sluttet ved. AV som standard til Jazz har valgt mellom dem (side om side i notatene). På: window.FJELL383 = 1
-     før raidet starter. filmVol settes av introblokka nederst i fila og bytter masken og materialet på S.vol. Når valget er tatt, fjernes den som tapte. */
-  let filmVol = null; const NYFJ = () => { try { return !!filmVol && typeof window !== 'undefined' && !!window.FJELL383; } catch (_) { return false; } };
+  /* Arenaen med 3D-figuren og Primal-filmen står foran FILMENS fjell (introens: 192 × 72 med raviner, innervegg og elver med skorpe), så kampen står foran det
+     samme fjellet som introen sluttet ved (Jazz 24.11, valgt mot K.volcano alene; arenaen uten figur har fjellet i en annen størrelse og bruker fortsatt K.volcano).
+     filmVol settes av introblokka nederst i fila og bytter masken og materialet på S.vol fra volcano(). */
+  let filmVol = null;
   function volcano(S, T, big, V) {
     V = S.V = V || VOL; const at = m => { m.position.set(V.x, V.h, V.z); S.scene.add(m); return m; }, hot = ['#fff2a8', '#ffa020', '#c83008'];
     S.vol = K.volcano({ r: V.r, h: V.h, seed: 5 }); S.vol.position.set(V.x, -2, V.z); S.scene.add(S.vol); S.vgn = VGN; S.vgm = VGM; S.vgi = 0;
@@ -253,7 +253,7 @@ void main(){ float y = vUv.y, x = vUv.x * 6.2832; vec2 c = vec2(cos(x), sin(x));
         return { p: [GEM[0] + d[0] * GEMR * 0.85, GEM[1] + d[1] * GEMR * 0.85, GEM[2] + d[2] * GEMR * 0.85], v: [d[0] * v, d[1] * v + 5, d[2] * v], r: [(rnd(i, sd + 3) - 0.5) * 12, (rnd(i, sd + 4) - 0.5) * 12, (rnd(i, sd + 5) - 0.5) * 12], s: rnd(i, sd + 6), b: rnd(i, sd + 7) * 0.06, l: 2.8, z: big ? 0.8 + rnd(i, sd + 8) * 0.6 : 0.25 + rnd(i, sd + 9) * 0.45 }; }, { c, em, grey: 0, sy: 0.5, id: 202 });
       S.sh1 = sh(54, '#3c1a40', 0.25, 71); S.sh2 = sh(34, '#ff7ad0', 0.75, 91); S.scene.add(S.sh1); S.scene.add(S.sh2);
       S.puff = K.pts(48, i => { const a = rnd(i, 21) * TAU, el = (rnd(i, 22) - 0.3) * 2, v = 3 + rnd(i, 23) * 7; return { p: [GEM[0] + cos(a) * cos(el) * 5, GEM[1] + sin(el) * 5, GEM[2] + sin(a) * cos(el) * 5], v: [cos(a) * cos(el) * v, sin(el) * v + 1, sin(a) * cos(el) * v], b: rnd(i, 24) * 0.2, l: 1.4 + rnd(i, 25) * 1, z: 4 + rnd(i, 26) * 5 }; }, { t0: -1e5, shade: 1, drag: 1.5, sz0: 0.4, sz1: 2, px: 60, c: ['#ffd0f0', '#b05a9c', '#3a1c3c'], a: 0.5, fade: 0.25 }); S.scene.add(S.puff);
-      volcano(S, T, 1); if (NYFJ()) filmVol(S, T, 1); burn(S, T); S.boom2 = PT.B2 - PT.R;
+      volcano(S, T, 1); filmVol(S, T, 1); burn(S, T); S.boom2 = PT.B2 - PT.R;
       S.bomb = bombs(S, PBOMB, 1800);
       /* Smellet i fjellet (filmens eget; volcano sine gnister er lys oppå lys og blir en hvit ball): en smal stråle av lava fra flenga (pjet), blokker som
          kastes ut (pblk), og en sky av aske som velter opp og ut, glødende innenfra og mørk utenpå (pcau). */
@@ -441,7 +441,7 @@ void main(){ float y = vUv.y, x = vUv.x * 6.2832; vec2 c = vec2(cos(x), sin(x));
     /* Uten 3D-figuren: kameraet lavt (2 over lavaen) og 23 enheter fra Groudon, så Gen 5-bildet får plass under toppen av bildet og himmelen og vulkanen over.
        MED FIGUREN I 3D (runde 6, etter kampbildet fra Omega Ruby): tett på, lavt og vannrett, så han fyller høyre halvdel og føles stor, med himmelen og vulkanen bak. */
     cam: fig => fig ? { fv: 52, cp: [-6.2, 1.65, 19.9], kq: 18.2 / 394, tg: [HOME[0] - 5, 3, HOME[2]] } : { fv: 50, cp: [-8.2, 2.05, 24.7], kq: 23.4 / 412, tg: [HOME[0] - 5, 3, HOME[2]] },
-    place(K, T, fig) { const S = crater(T); volcano(S, T, 1, fig ? null : { x: -52, z: -410, r: 205, h: 92 }); if (fig && NYFJ()) filmVol(S, T, 1); burn(S, T, { roofH: 150, fog: 0.3 }); S.ab = [bombs(S, ABOMB[0], 2300), bombs(S, ABOMB[1], 2400)]; return S; },   /* taket lavere enn i filmen: kameraet står lavt og vannrett og ser det langt borte */   /* uten figuren står vulkanen litt lenger unna, så hele fjellet og røyken synes */
+    place(K, T, fig) { const S = crater(T); volcano(S, T, 1, fig ? null : { x: -52, z: -410, r: 205, h: 92 }); if (fig) filmVol(S, T, 1); burn(S, T, { roofH: 150, fog: 0.3 }); S.ab = [bombs(S, ABOMB[0], 2300), bombs(S, ABOMB[1], 2400)]; return S; },   /* taket lavere enn i filmen: kameraet står lavt og vannrett og ser det langt borte */   /* uten figuren står vulkanen litt lenger unna, så hele fjellet og røyken synes */
     dress(S, K, T, fig, m) {
       /* Runde 18 (Jazz 18.11: lavaen «mer levende», uten mer skorpe; enig i «C som grunnlag, med driften fra B i lavere styrke»): i kampen bobler lavaen. 16 store bobler
          (7 av dem foran kameraet, mellom deg og ham; takt 4–9 s) vokser opp, sprekker med en ring i lavaen og 12 små dråper som spretter opp og faller tilbake, og 22 småbobler
@@ -839,8 +839,8 @@ void main(){
     const PAL = [[0, P_ASH], [Q.S3, P_ASH], [Q.OV, mixP(P_ASH, P_FIRE, 0.55)], [39.2, P_FIRE], [43.5, P_FIRE], [Q.SIL, P_SIL], [Q.S5 - 0.02, P_SIL], [Q.S5, P_FIRE], [Q.HIT, P_FIRE], [79.5, P_DARK], [Q.CLX - 0.04, P_DARK], [Q.CLX, P_RED], [1e4, P_RED]];
     const palAt = t => { let i = 0; while (i < PAL.length - 2 && t >= PAL[i + 1][0]) i++; return mixP(PAL[i][1], PAL[i + 1][1], io(seg(t, PAL[i][0], PAL[i + 1][0]))); };
     /* FILMENS FJELL som byggekloss (Fable 24.11): fjellet i høyere oppløsning (192 × 72), med en indre vegg ned til lavasjøen i krateret (skissen var åpen innvendig), og
-       lava som renner NEDOVER og lever (FS_VOLC_T). Bytter masken og materialet på S.vol fra volcano(). Introen bruker den alltid; arenaen og Primal-filmen bruker den når
-       prøvebryteren står på (NYFJ øverst i fila), og da med full = 1: elvene har rent helt ned, som da introen sluttet. */
+       lava som renner NEDOVER og lever (FS_VOLC_T). Bytter masken og materialet på S.vol fra volcano(). Introen, arenaen med 3D-figuren og Primal-filmen bruker den; de to
+       siste med full = 1: elvene har rent helt ned, som da introen sluttet, og lavaen er i arenamodus (uAr). */
     filmVol = (S, T, full) => { const pos = [], uvs = [], idx = [], N = VN, M = VM, IW = 8, rimY = a => VOL.h - VOL.h * 0.035 * max(0, sin(a * 2 + 1.1)) + (fbm2(cos(a) * 3 + 4, sin(a) * 3 + 1) - 0.5) * VOL.h * 0.035;
       for (let j = 0; j <= M + IW; j++) for (let i = 0; i <= N; i++) { const a = (i % N) / N * TAU; let rr, y, vv;
         if (j <= M) { const v = j / M; rr = VRR[j][i]; y = j === M ? rimY(a) : v * VOL.h; vv = v; }
