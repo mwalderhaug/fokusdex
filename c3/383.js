@@ -62,9 +62,13 @@
      og lavabomber som regner ned over sjøen (rain). Røyksøylen tegnes i 2D bak (backdrop). volcAct(S, t, er, tb): er = hvor aktiv den er (0,3 ryker · 0,6 urolig ·
      1 og over er utbrudd), tb = tidspunktet den eksploderer (eller −1). Jazz 18.11 (runde 4): i introen ryker den og ser aktiv ut; utbruddet hører til Primal-forvandlingen. */
   const VOL = { x: -40, z: -330, r: 250, h: 138 }, HOME = [0, -1, 2.8];
+  /* PRØVE (Fable 24.11): arenaen og Primal-filmen med FILMENS fjell (introens: 192 × 72 med raviner, innervegg og elver med skorpe) i stedet for K.volcano, så
+     kampen står foran det samme fjellet som introen sluttet ved. AV som standard til Jazz har valgt mellom dem (side om side i notatene). På: window.FJELL383 = 1
+     før raidet starter. filmVol settes av introblokka nederst i fila og bytter masken og materialet på S.vol. Når valget er tatt, fjernes den som tapte. */
+  let filmVol = null; const NYFJ = () => { try { return !!filmVol && typeof window !== 'undefined' && !!window.FJELL383; } catch (_) { return false; } };
   function volcano(S, T, big, V) {
     V = S.V = V || VOL; const at = m => { m.position.set(V.x, V.h, V.z); S.scene.add(m); return m; }, hot = ['#fff2a8', '#ffa020', '#c83008'];
-    S.vol = K.volcano({ r: V.r, h: V.h, seed: 5 }); S.vol.position.set(V.x, -2, V.z); S.scene.add(S.vol);
+    S.vol = K.volcano({ r: V.r, h: V.h, seed: 5 }); S.vol.position.set(V.x, -2, V.z); S.scene.add(S.vol); S.vgn = VGN; S.vgm = VGM; S.vgi = 0;
     S.vspat = at(K.pts(54, i => { const a = rnd(i, 41) * TAU, q = rnd(i, 42); return { p: [cos(a) * 7 * q, -5, sin(a) * 7 * q], v: [cos(a) * (3 + 15 * q), 24 + rnd(i, 43) * 30, sin(a) * (3 + 15 * q)], b: (i % 2) * 2.6 + rnd(i, 44) * 0.35, l: 5.2, z: 4 + rnd(i, 45) * 5 }; }, { loop: 1, add: 1, g: 28, px: 150, floor: -7, c: hot, fade: 0.45 }));
     S.vflash = at(K.light(1, '#ffd890', { depth: false })); S.vflash.renderOrder = 6;
     if (!big) return;
@@ -96,10 +100,12 @@
      burn(S, T) bygger dem etter volcano(S, T, 1); burnAct(S, t, B) setter dem for hvert bilde (B = { top, roofR, roofA, hot, col, flow: [starttider], L: lyn }). */
   const VGN = 96, VGM = 30, BRA = 1.43, wrapA = a => { a = (a + PI) % TAU; if (a < 0) a += TAU; return a - PI; };   /* BRA: retningen fra fjellet mot krateret hans (radianer rundt fjellet) */
   /* Et punkt på fjellets flate (verden), lest fra masken (P = punktene, hel eller sprengt): au = rundt fjellet (0–1), v = høyden (0–1), out = så langt ut fra flaten. */
-  const volP = (S, P, au, v, out) => { const V = S.V; au = ((au % 1) + 1) % 1; v = c01(v); const fi = au * VGN, i0 = floor(fi), f = fi - i0, fj = v * VGM, j0 = min(VGM - 1, floor(fj)), g = fj - j0,
-      at = (j, i, k) => P[(j * (VGN + 1) + i) * 3 + k], q = k => mix(mix(at(j0, i0, k), at(j0, i0 + 1, k), f), mix(at(j0 + 1, i0, k), at(j0 + 1, i0 + 1, k), f), g), x = q(0), z = q(2), r = Math.hypot(x, z) || 1, o = out || 0;
+  const volP = (S, P, au, v, out) => { const V = S.V, GN = S.vgn, GM = S.vgm; au = ((au % 1) + 1) % 1; v = c01(v); const fi = au * GN, i0 = floor(fi), f = fi - i0, fj = v * GM, j0 = min(GM - 1, floor(fj)), g = fj - j0,
+      at = (j, i, k) => P[(j * (GN + 1) + i) * 3 + k], q = k => mix(mix(at(j0, i0, k), at(j0, i0 + 1, k), f), mix(at(j0 + 1, i0, k), at(j0 + 1, i0 + 1, k), f), g), x = q(0), z = q(2), r = Math.hypot(x, z) || 1, o = out || 0;
     return [V.x + x * (1 + o / r), q(1) - 2, V.z + z * (1 + o / r)]; };
-  const cutV = ia => { const a = ia / VGN * TAU, d = wrapA(a - BRA); return 0.86 - 0.1 * Math.exp(-Math.pow(d / 0.55, 2)) + (rnd(ia, 71) - 0.5) * 0.036 + 0.018 * sin(a * 9 + 1); };   /* der toppen er kuttet: lavest mot krateret hans */
+  /* Der toppen er kuttet: lavest mot krateret hans. ia = kolonnen i scenens rutenett; taggene i kanten er de samme uansett oppløsning (lest i 96-deler og jevnet mellom). */
+  const cutV = (S, ia) => { const GN = S.vgn, a = ia / GN * TAU, d = wrapA(a - BRA), x = ia * VGN / GN, i0 = floor(x), f = x - i0, jag = f > 0 ? mix(rnd(i0 % VGN, 71), rnd((i0 + 1) % VGN, 71), f) : rnd(i0 % VGN, 71);
+    return 0.86 - 0.1 * Math.exp(-Math.pow(d / 0.55, 2)) + (jag - 0.5) * 0.036 + 0.018 * sin(a * 9 + 1); };
   const FS_ROOF = `varying vec3 vW; uniform vec3 uV, uLc; uniform float uR, uA, uHot, uFk; uniform vec4 uL[4];
 ${K.GLSL.COMMON}
 /* En valk per celle: rund og høyest i midten, med mørke søkk mellom cellene. */
@@ -151,10 +157,12 @@ void main(){ float y = vUv.y, x = vUv.x * 6.2832; vec2 c = vec2(cos(x), sin(x));
     return { L, at: t0 => { for (const m of [head, trail, spl]) m.material.uniforms.uT0.value = t0; }, show: on => { for (const m of [head, trail, spl]) m.visible = on; } };
   }
   function burn(S, T, o) {
-    o = o || {}; const ROOFH = S.roofH = o.roofH || 190, V = S.V, g = S.vol.geometry, PA = g.attributes.position, NA = g.attributes.normal, P0 = PA.array.slice(), N0 = NA.array.slice(), P1 = P0.slice(), rAt = (P, j, i) => Math.hypot(P[(j * (VGN + 1) + i) * 3], P[(j * (VGN + 1) + i) * 3 + 2]);
+    o = o || {}; const ROOFH = S.roofH = o.roofH || 190, V = S.V, g = S.vol.geometry, PA = g.attributes.position, NA = g.attributes.normal, P0 = PA.array.slice(), N0 = NA.array.slice(), P1 = P0.slice(), GN = S.vgn, GM = S.vgm, GI = S.vgi || 0, rAt = (P, j, i) => Math.hypot(P[(j * (GN + 1) + i) * 3], P[(j * (GN + 1) + i) * 3 + 2]);
     /* Toppen sprengt bort: radene over kuttet legges som en smal, hakket leppe i kuttets høyde (de øverste radene gløder i fjellets materiale, så leppa gløder). */
-    for (let i = 0; i <= VGN; i++) { const ia = i % VGN, a = ia / VGN * TAU, vb = cutV(ia), fj = vb * VGM, j0 = min(VGM - 1, floor(fj)), rb = mix(rAt(P0, j0, i), rAt(P0, j0 + 1, i), fj - j0);
-      for (let j = 0; j <= VGM; j++) { const v = j / VGM; if (v <= vb) continue; const e = (v - vb) / (1 - vb), k = (j * (VGN + 1) + i) * 3, rr = rb * (1 - 0.16 * e); P1[k] = cos(a) * rr; P1[k + 1] = V.h * (vb + 0.012 * e - 0.03 * e * e); P1[k + 2] = sin(a) * rr; } }
+    for (let i = 0; i <= GN; i++) { const ia = i % GN, a = ia / GN * TAU, vb = cutV(S, ia), fj = vb * GM, j0 = min(GM - 1, floor(fj)), rb = mix(rAt(P0, j0, i), rAt(P0, j0 + 1, i), fj - j0);
+      for (let j = 0; j <= GM; j++) { const v = j / GM; if (v <= vb) continue; const e = (v - vb) / (1 - vb), k = (j * (GN + 1) + i) * 3, rr = rb * (1 - 0.16 * e); P1[k] = cos(a) * rr; P1[k + 1] = V.h * (vb + 0.012 * e - 0.03 * e * e); P1[k + 2] = sin(a) * rr; }
+      /* Filmens fjell har en innervegg øverst (GI rader): etter smellet er den en grunn gryte innenfor leppa, med lavaen i bunnen. */
+      for (let j = GM + 1; j <= GM + GI; j++) { const e = (j - GM) / GI, k = (j * (GN + 1) + i) * 3, rr = rb * 0.84 * (1 - 0.7 * e); P1[k] = cos(a) * rr; P1[k + 1] = V.h * (vb - 0.018 - 0.07 * e * (2 - e)); P1[k + 2] = sin(a) * rr; } }
     PA.array.set(P1); g.computeVertexNormals(); const N1 = NA.array.slice(); PA.array.set(P0); NA.array.set(N0); PA.needsUpdate = NA.needsUpdate = true; S.top = { P0, N0, P1, N1 }; S.topOn = 0;
     /* Askeskyen: taket. */
     S.roof = new T.Mesh(new T.CircleGeometry(1500, 40).rotateX(PI / 2), K.shader(K.GLSL.VS, FS_ROOF, { uV: K.uv(new T.Vector3(V.x, ROOFH, V.z)), uR: K.uv(0), uA: K.uv(0), uHot: K.uv(1), uFk: K.uv(o.fog == null ? 0.42 : o.fog), uLc: K.uv(K.u3('#c8a0ff')), uL: K.uv([0, 1, 2, 3].map(() => new T.Vector4())) }, Object.assign(K.blend.soft(), { side: T.DoubleSide })));
@@ -166,7 +174,7 @@ void main(){ float y = vUv.y, x = vUv.x * 6.2832; vec2 c = vec2(cos(x), sin(x));
     /* Glødende skred ned fjellsidene, fra flenga og på hver side av den: [hvor rundt fjellet (fra flenga), forsinkelse, fart]. Punktene følger fjellets flate; hver valk
        fødes idet fronten når stedet sitt, så de unge (glødende) ligger i fronten og de gamle (mørk aske) henger igjen bak og over. */
     const FLOW = [[-0.03, 0, 62], [-0.085, 0.3, 56], [0.055, 0.55, 52], [-0.14, 0.8, 48]], NP = 40;
-    S.flow = FLOW.map(([da, dl, sp], k) => { const au0 = BRA / TAU + da, v0 = cutV(Math.round(au0 * VGN) % VGN) - 0.01, pts = [], len = [0];
+    S.flow = FLOW.map(([da, dl, sp], k) => { const au0 = BRA / TAU + da, v0 = cutV(S, Math.round(au0 * S.vgn) % S.vgn) - 0.01, pts = [], len = [0];
       for (let m = 0; m <= NP; m++) { const v = mix(v0, 0.015, m / NP); pts.push(volP(S, P1, au0 + 0.011 * sin(v * 8 + k * 2.1) * (1 - v), v, 2.5)); if (m) len.push(len[m - 1] + Math.hypot(pts[m][0] - pts[m - 1][0], pts[m][1] - pts[m - 1][1], pts[m][2] - pts[m - 1][2])); }
       const Lt = len[NP], at = s => { let m = 0; while (m < NP - 1 && len[m + 1] < s) m++; const u = c01((s - len[m]) / (len[m + 1] - len[m])), a = pts[m], b = pts[m + 1], d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], dl2 = Math.hypot(d[0], d[1], d[2]) || 1; return { p: a.map((x, q) => mix(x, b[q], u)), d: d.map(x => x / dl2) }; };
       const side = (q, w) => { const hl = Math.hypot(q.d[0], q.d[2]) || 1; return [-q.d[2] / hl * w, q.d[0] / hl * w]; };
@@ -182,7 +190,7 @@ void main(){ float y = vUv.y, x = vUv.x * 6.2832; vec2 c = vec2(cos(x), sin(x));
       const ROOFH = S.roofH, col = !q[4], an = rnd(j, 811) * TAU, ln = col ? 0 : q[4] * 0.8, A = col ? K.proj(V.x + q[2], ROOFH - 10, V.z + q[3]) : K.proj(V.x + q[2] - cos(an) * ln, ROOFH - 3, V.z + q[3] - sin(an) * ln), B = col ? K.proj(V.x - 6 + (rnd(j, 812) - 0.5) * 20, V.h * 0.8 + 12, V.z) : K.proj(V.x + q[2] + cos(an) * ln, ROOFH - 3, V.z + q[3] + sin(an) * ln);
       if (A.z > 1 || B.z > 1) continue; const mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2, sz = max(40, Math.hypot(A.x - B.x, A.y - B.y));
       C.blob(mx, my, sz * (col ? 1.1 : 0.8), '#8a4ce8', 0.3 * k, 1); C.bolt(A.x, A.y, B.x, B.y, { seed: 31 + j * 7 + (a > 0.12 ? 1 : 0), w: col ? 2.4 : 1.7, col: '#b060ff', core: '#ffeaff', a: k, br: col ? 3 : 2, jag: 0.32, depth: col ? 5 : 4 }); P.bloom += 0.12 * k; } };
-  const topSet = (S, on) => { on = on ? 1 : 0; if (S.topOn === on) return; S.topOn = on; const g = S.vol.geometry, Q = S.top; g.attributes.position.array.set(on ? Q.P1 : Q.P0); g.attributes.normal.array.set(on ? Q.N1 : Q.N0); g.attributes.position.needsUpdate = g.attributes.normal.needsUpdate = true; };
+  const topSet = (S, on) => { on = on ? 1 : 0; if (S.topOn === on) return; S.topOn = on; const g = S.vol.geometry, Q = S.top; g.attributes.position.array.set(on ? Q.P1 : Q.P0); g.attributes.normal.array.set(on ? Q.N1 : Q.N0); g.attributes.position.needsUpdate = g.attributes.normal.needsUpdate = true; const tu = S.vol.material.uniforms.uTop; if (tu) tu.value = on; };
   /* Lynet inne i skyen: L = [[alder (s), styrke, x, z (fra fjellets akse), radius], …]. Det blinker to–tre ganger som ekte lyn. */
   const lflick = d => d < 0 ? 0 : d < 0.05 ? 1 : d < 0.1 ? 0.3 : d < 0.17 ? 0.85 : d < 0.24 ? 0.25 : max(0, 1 - (d - 0.24) / 0.3) * 0.5;
   function burnAct(S, t, B) {
@@ -245,7 +253,7 @@ void main(){ float y = vUv.y, x = vUv.x * 6.2832; vec2 c = vec2(cos(x), sin(x));
         return { p: [GEM[0] + d[0] * GEMR * 0.85, GEM[1] + d[1] * GEMR * 0.85, GEM[2] + d[2] * GEMR * 0.85], v: [d[0] * v, d[1] * v + 5, d[2] * v], r: [(rnd(i, sd + 3) - 0.5) * 12, (rnd(i, sd + 4) - 0.5) * 12, (rnd(i, sd + 5) - 0.5) * 12], s: rnd(i, sd + 6), b: rnd(i, sd + 7) * 0.06, l: 2.8, z: big ? 0.8 + rnd(i, sd + 8) * 0.6 : 0.25 + rnd(i, sd + 9) * 0.45 }; }, { c, em, grey: 0, sy: 0.5, id: 202 });
       S.sh1 = sh(54, '#3c1a40', 0.25, 71); S.sh2 = sh(34, '#ff7ad0', 0.75, 91); S.scene.add(S.sh1); S.scene.add(S.sh2);
       S.puff = K.pts(48, i => { const a = rnd(i, 21) * TAU, el = (rnd(i, 22) - 0.3) * 2, v = 3 + rnd(i, 23) * 7; return { p: [GEM[0] + cos(a) * cos(el) * 5, GEM[1] + sin(el) * 5, GEM[2] + sin(a) * cos(el) * 5], v: [cos(a) * cos(el) * v, sin(el) * v + 1, sin(a) * cos(el) * v], b: rnd(i, 24) * 0.2, l: 1.4 + rnd(i, 25) * 1, z: 4 + rnd(i, 26) * 5 }; }, { t0: -1e5, shade: 1, drag: 1.5, sz0: 0.4, sz1: 2, px: 60, c: ['#ffd0f0', '#b05a9c', '#3a1c3c'], a: 0.5, fade: 0.25 }); S.scene.add(S.puff);
-      volcano(S, T, 1); burn(S, T); S.boom2 = PT.B2 - PT.R;
+      volcano(S, T, 1); if (NYFJ()) filmVol(S, T, 1); burn(S, T); S.boom2 = PT.B2 - PT.R;
       S.bomb = bombs(S, PBOMB, 1800);
       /* Smellet i fjellet (filmens eget; volcano sine gnister er lys oppå lys og blir en hvit ball): en smal stråle av lava fra flenga (pjet), blokker som
          kastes ut (pblk), og en sky av aske som velter opp og ut, glødende innenfra og mørk utenpå (pcau). */
@@ -433,7 +441,7 @@ void main(){ float y = vUv.y, x = vUv.x * 6.2832; vec2 c = vec2(cos(x), sin(x));
     /* Uten 3D-figuren: kameraet lavt (2 over lavaen) og 23 enheter fra Groudon, så Gen 5-bildet får plass under toppen av bildet og himmelen og vulkanen over.
        MED FIGUREN I 3D (runde 6, etter kampbildet fra Omega Ruby): tett på, lavt og vannrett, så han fyller høyre halvdel og føles stor, med himmelen og vulkanen bak. */
     cam: fig => fig ? { fv: 52, cp: [-6.2, 1.65, 19.9], kq: 18.2 / 394, tg: [HOME[0] - 5, 3, HOME[2]] } : { fv: 50, cp: [-8.2, 2.05, 24.7], kq: 23.4 / 412, tg: [HOME[0] - 5, 3, HOME[2]] },
-    place(K, T, fig) { const S = crater(T); volcano(S, T, 1, fig ? null : { x: -52, z: -410, r: 205, h: 92 }); burn(S, T, { roofH: 150, fog: 0.3 }); S.ab = [bombs(S, ABOMB[0], 2300), bombs(S, ABOMB[1], 2400)]; return S; },   /* taket lavere enn i filmen: kameraet står lavt og vannrett og ser det langt borte */   /* uten figuren står vulkanen litt lenger unna, så hele fjellet og røyken synes */
+    place(K, T, fig) { const S = crater(T); volcano(S, T, 1, fig ? null : { x: -52, z: -410, r: 205, h: 92 }); if (fig && NYFJ()) filmVol(S, T, 1); burn(S, T, { roofH: 150, fog: 0.3 }); S.ab = [bombs(S, ABOMB[0], 2300), bombs(S, ABOMB[1], 2400)]; return S; },   /* taket lavere enn i filmen: kameraet står lavt og vannrett og ser det langt borte */   /* uten figuren står vulkanen litt lenger unna, så hele fjellet og røyken synes */
     dress(S, K, T, fig, m) {
       /* Runde 18 (Jazz 18.11: lavaen «mer levende», uten mer skorpe; enig i «C som grunnlag, med driften fra B i lavere styrke»): i kampen bobler lavaen. 16 store bobler
          (7 av dem foran kameraet, mellom deg og ham; takt 4–9 s) vokser opp, sprekker med en ring i lavaen og 12 små dråper som spretter opp og faller tilbake, og 22 småbobler
@@ -671,7 +679,7 @@ float flowT(float x, float d, float an, float rr, float sp, float ph, float hot,
   float ct = .07 + .07 * cv.z + (.45 + .4 * hot) * crack;
   return mix(temp, ct, crustK * (1. - .6 * max(surge * .7, surge2)));
 }`;
-    const FS_VOLC_T = `varying vec3 vW, vN; varying vec2 vUv; uniform vec3 uA, uB; uniform float uEr, uFlow, uFlowA, uLvB; uniform vec4 uRiv[11];
+    const FS_VOLC_T = `varying vec3 vW, vN, vO; varying vec2 vUv; uniform vec3 uA, uB; uniform float uEr, uFlow, uFlowA, uLvB, uAr, uTop; uniform vec4 uRiv[11];
 ${K.GLSL.COMMON}
 float fbm3(vec3 p){ float a = .5, s = 0.; for (int i = 0; i < 4; i++) { s += a * vn3(p); p = p * 2.03 + vec3(17.3, 9.1, 4.7); a *= .5; } return s; }
 ${RAMP}
@@ -715,13 +723,20 @@ void main(){
   /* Elvene fra krateret (samme leie som før), med lava som renner nedover: d = enheter nedover fra kanten, rr = radien i denne høyden. */
   float d = (1. - v) * 138. + 250. * pow(1. - v, 1.65), rr = 250. * (pow(1. - v, 1.65) + .07), px = length(fwidth(vW)) * .3, lod = 1. - smoothstep(.25, .7, px);
   float ch = abs(fbm(c * 3.1 + vec2(v * 1.5 + 2., v * 1.1)) - .5), w = .011 + .016 * v + .006 * fbm(c * 7. + v * 3.);
-  float river = (1. - smoothstep(w, w * 2.8, ch)) * smoothstep(.1 + .42 * (1. - min(uEr, 1.)), 1., v + (fbm(c * 2.3 + 5.) - .5) * .9 + .2) * (1. - ik);
+  float river = (1. - smoothstep(w, w * 2.8, ch)) * smoothstep(.1 + .42 * (1. - min(uEr, 1. - .35 * uAr)), 1., v + (fbm(c * 2.3 + 5.) - .5) * .9 + .2) * (1. - ik);
   if (river > .002) { float x = ch / (w * 2.8), hot = clamp(.05 + .8 * v + .18 * er, 0., 1.);
     float tp = mix(.5 + .3 * hot, flowT(x, d, a, rr, 4.6 + 3.2 * fbm(c * 2.), a * 11., hot, px), lod);
-    col = mix(col, ramp(tp) * (.62 + .5 * er) * uLvB * (1. - fg * .45), river); }
+    col = mix(col, ramp(tp - .34 * fg * uAr * smoothstep(.55, 1., tp)) * (.62 + .5 * min(er, 1.6 - .7 * uAr)) * uLvB * (1. - fg * .45), river); }
   /* Kanten rundt krateret gløder ujevnt (lyset fra sjøen), og blafrer litt. */
   float rimG = smoothstep(.86, 1., v) * (1. - ik) * (.5 + .5 * fbm(c * 16. + vec2(v * 9., uTime * .35))) * (.88 + .12 * sin(uTime * 2.1 + a * 3.));
   col += vec3(1., .42, .08) * rimG * (.3 + .6 * er) * uLvB;
+  /* I KAMPEN OG PRIMAL (uAr, uTop; begge 0 i introen, som da er urørt): lava sett gjennom arenaens tette dis blir rødere i stedet for mørk gul (som ser grønnlig ut),
+     elvene fra krateret flommer ikke over hele flanken når fjellet raser, og når toppen er sprengt bort (uTop), gløder den hakkede leppa: radene over kuttet
+     ligger lavere enn høyden sin (v · 138 − vO.y er hvor mye de har sunket), flanken like under kuttet (vb, som cutV uten taggene) gløder med, med en tynn, varm
+     strek helt i kanten, og elvene som renner fra flenga er litt varmere. */
+  if (uTop > 0.) { float dA = mod(a - 1.43 + 3.14159265, 6.2831853) - 3.14159265, vb = .86 - .1 * exp(-(dA / .55) * (dA / .55)) + .018 * sin(a * 9. + 1.);
+    float lip = smoothstep(.3, 2.2, v * 138. - vO.y), edge = max(lip, smoothstep(vb - .13, vb - .002, v)), line = max(lip, smoothstep(vb - .024, vb - .003, v)), nz = fbm(c * 30. + vec2(v * 26., uTime * .45));
+    col = mix(col, ramp(.5 + .42 * edge * edge + .22 * line + .2 * (nz - .5)) * (.94 + .06 * sin(uTime * 3. + a * 7.)), max(pow(edge, 1.6) * (.7 + .3 * nz), line * .95) * (1. - ik) * uTop); }
   /* Overløpet (skissens elver, uRiv): samme lava, med en lys front. */
   if (uFlow > 0.) { float rr2 = (pow(max(1. - v, 0.), 1.65) + .07) * 250.;
     for (int i = 0; i < 11; i++) { vec4 qq = uRiv[i]; float fi = float(i);
@@ -732,7 +747,7 @@ void main(){
       if (on <= 0.) continue;
       float head = 1. - smoothstep(0., .05, v - ed), x = du / wd, hot = clamp(.25 + .6 * v + .3 * head, 0., 1.);
       float tp = mix(.6, flowT(x, d, a, rr2, 6. + 3. * qq.y, fi * 1.7, hot, px), lod) + .16 * head;
-      col = mix(col, ramp(min(tp, 1.02)) * (.95 + .15 * head) * (1. - fg * .3) * uLvB, on * (1. - smoothstep(.55, 1., x) * .5)); } }
+      col = mix(col, ramp(min(tp, 1.02) + .04 * uTop - .34 * fg * uAr * smoothstep(.55, 1., tp)) * (.95 + .15 * head + .3 * uTop) * (1. - fg * .3) * uLvB, on * (1. - smoothstep(.55, 1., x) * .5)); } }
   gl_FragColor = vec4(col, 1.);
 }`;
     /* Sjøen i krateret: lavaen velter opp i midten og driver utover (to faser som blandes, så mønsteret kan flytte seg uten å rive), flak av skorpe som blir eldre og
@@ -823,6 +838,20 @@ void main(){
     const P_RED = { key: '#fff0dc', sh: '#3c1a22', fog: '#6a1c08', rim: '#ffb040', sky: P_FIRE.sky, cl: '#241517', hot: 1, lit: 1 };
     const PAL = [[0, P_ASH], [Q.S3, P_ASH], [Q.OV, mixP(P_ASH, P_FIRE, 0.55)], [39.2, P_FIRE], [43.5, P_FIRE], [Q.SIL, P_SIL], [Q.S5 - 0.02, P_SIL], [Q.S5, P_FIRE], [Q.HIT, P_FIRE], [79.5, P_DARK], [Q.CLX - 0.04, P_DARK], [Q.CLX, P_RED], [1e4, P_RED]];
     const palAt = t => { let i = 0; while (i < PAL.length - 2 && t >= PAL[i + 1][0]) i++; return mixP(PAL[i][1], PAL[i + 1][1], io(seg(t, PAL[i][0], PAL[i + 1][0]))); };
+    /* FILMENS FJELL som byggekloss (Fable 24.11): fjellet i høyere oppløsning (192 × 72), med en indre vegg ned til lavasjøen i krateret (skissen var åpen innvendig), og
+       lava som renner NEDOVER og lever (FS_VOLC_T). Bytter masken og materialet på S.vol fra volcano(). Introen bruker den alltid; arenaen og Primal-filmen bruker den når
+       prøvebryteren står på (NYFJ øverst i fila), og da med full = 1: elvene har rent helt ned, som da introen sluttet. */
+    filmVol = (S, T, full) => { const pos = [], uvs = [], idx = [], N = VN, M = VM, IW = 8, rimY = a => VOL.h - VOL.h * 0.035 * max(0, sin(a * 2 + 1.1)) + (fbm2(cos(a) * 3 + 4, sin(a) * 3 + 1) - 0.5) * VOL.h * 0.035;
+      for (let j = 0; j <= M + IW; j++) for (let i = 0; i <= N; i++) { const a = (i % N) / N * TAU; let rr, y, vv;
+        if (j <= M) { const v = j / M; rr = VRR[j][i]; y = j === M ? rimY(a) : v * VOL.h; vv = v; }
+        else { const k = (j - M) / IW, y0 = rimY(a); rr = mix(VRR[M][i], 15.4, Math.pow(k, 0.6)); y = mix(y0, VOL.h - 7.6, io(k)); vv = 1 + 0.1 * k; }
+        pos.push(cos(a) * rr, y, sin(a) * rr); uvs.push(i / N, vv); }
+      for (let j = 0; j < M + IW; j++) for (let i = 0; i < N; i++) { const p = j * (N + 1) + i, q = p + N + 1; idx.push(p, q, p + 1, q, q + 1, p + 1); }
+      const gg = new T.BufferGeometry(); gg.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); gg.setAttribute('uv', new T.Float32BufferAttribute(uvs, 2)); gg.setIndex(idx); gg.computeVertexNormals(); gg.computeBoundingSphere();
+      const u0 = S.vol.material.uniforms; S.vol.geometry.dispose(); S.vol.geometry = gg;
+      S.vol.material = K.shader(K.GLSL.VS, FS_VOLC_T, { uA: K.uv(u0.uA.value), uB: K.uv(u0.uB.value), uEr: K.uv(0.3), uFlow: K.uv(0), uFlowA: K.uv(0.2308), uRiv: K.uv(Array.from({ length: 11 }, () => new T.Vector4())), uLvB: K.uv(1), uAr: K.uv(0), uTop: K.uv(0) }, { side: T.DoubleSide });
+      S.vgn = N; S.vgm = M; S.vgi = IW;   /* rutenettet, til dem som leser fjellets flate (burn, volP og skredene i «Himmelen brenner») */
+      if (full) { RIV.forEach((r, i) => S.vol.material.uniforms.uRiv.value[i].set(r[0], r[1], r[2], r[3])); S.vol.material.uniforms.uFlow.value = 6; S.vol.material.uniforms.uAr.value = 1; } };
     G3D.def('c3:383', {
       /* Filmen går på introlåta (Epikus) fra 0:00. Continue kommer når navnet står (len), og scenen lever videre til spilleren trykker eller låta er ute (1:48). */
       len: Q.NAME + 0.7, hold: 1, R: Q.ROAR, at: 0, models: ['groudon'],
@@ -852,16 +881,7 @@ void main(){
         /* Lavaen koker rundt ham i oppladningen (bobler og sprut rundt føttene). */
         S.boil = K.pts(60, i => { const a = rnd(i, 51) * TAU, r = 2.6 + rnd(i, 52) * 3.6; return { p: [cos(a) * r, 0.05, sin(a) * r * 0.8], v: [cos(a) * (0.5 + rnd(i, 53)), 2.5 + rnd(i, 54) * 4.5, sin(a) * (0.5 + rnd(i, 53))], b: rnd(i, 55) * 0.6, l: 0.6 + rnd(i, 56) * 0.3, z: 0.35 + rnd(i, 57) * 0.5 }; }, { loop: 1, add: 1, g: 24, px: 60, floor: 0, c: ['#ffe070', '#ff8a18', '#d83a0a'], fade: 0.9 }); S.scene.add(S.boil);
         volcano(S, T, 0);
-        /* Skisse 4: fjellet i høyere oppløsning, med en indre vegg ned til lavasjøen i krateret (skissen var åpen innvendig), og lava som renner NEDOVER og lever (FS_VOLC_T). */
-        { const pos = [], uvs = [], idx = [], N = VN, M = VM, IW = 8, rimY = a => VOL.h - VOL.h * 0.035 * max(0, sin(a * 2 + 1.1)) + (fbm2(cos(a) * 3 + 4, sin(a) * 3 + 1) - 0.5) * VOL.h * 0.035;
-          for (let j = 0; j <= M + IW; j++) for (let i = 0; i <= N; i++) { const a = (i % N) / N * TAU; let rr, y, vv;
-            if (j <= M) { const v = j / M; rr = VRR[j][i]; y = j === M ? rimY(a) : v * VOL.h; vv = v; }
-            else { const k = (j - M) / IW, y0 = rimY(a); rr = mix(VRR[M][i], 15.4, Math.pow(k, 0.6)); y = mix(y0, VOL.h - 7.6, io(k)); vv = 1 + 0.1 * k; }
-            pos.push(cos(a) * rr, y, sin(a) * rr); uvs.push(i / N, vv); }
-          for (let j = 0; j < M + IW; j++) for (let i = 0; i < N; i++) { const p = j * (N + 1) + i, q = p + N + 1; idx.push(p, q, p + 1, q, q + 1, p + 1); }
-          const gg = new T.BufferGeometry(); gg.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); gg.setAttribute('uv', new T.Float32BufferAttribute(uvs, 2)); gg.setIndex(idx); gg.computeVertexNormals(); gg.computeBoundingSphere();
-          const u0 = S.vol.material.uniforms; S.vol.geometry.dispose(); S.vol.geometry = gg;
-          S.vol.material = K.shader(K.GLSL.VS, FS_VOLC_T, { uA: K.uv(u0.uA.value), uB: K.uv(u0.uB.value), uEr: K.uv(0.3), uFlow: K.uv(0), uFlowA: K.uv(0.2308), uRiv: K.uv(Array.from({ length: 11 }, () => new T.Vector4())), uLvB: K.uv(1) }, { side: T.DoubleSide }); }
+        filmVol(S, T);   /* filmens fjell (over) */
         /* Lavaen under alt: stor nok til hele landskapet (elvene i nettet er den som synes mellom bakken). */
         /* Skisse 4: lavasjøen i krateret er en skive (den rant mot +Z over hele landskapet, altså opp mot vulkanen sett fra flyturen); lavaen i landskapet er en egen flate
            som renner bort fra vulkanen, med skorpe og glødende sprekker (FS_LLAVA). */
