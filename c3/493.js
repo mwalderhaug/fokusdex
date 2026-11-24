@@ -463,8 +463,10 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
   X.snd.aopen = () => { pks('Cosmic Power', 0.3, { len: 2.2, fade: 1.2 }); if (hasT()) tone(98, 0, 1.0, 0.07, 'sine', 49); return [60, 40, 120]; };
   X.snd.agold = k => { pks('Power Gem', 0.13, { off: 0.2, len: 0.9, fade: 0.5, rate: 0.9 + 0.08 * (k || 0) }); return [25]; };
   X.snd.ajdg = () => { pks('Judgment', 0.55, { len: 3.4, fade: 1.6 }); if (hasT()) tone(55, 0, 0.9, 0.12, 'sine', 30); return [90, 40, 260]; };
-  X.snd.ahit = i => { if (typeof noise === 'function') noise(0, 0.28, G3D.hold ? 0.03 : 0.05, 900, 120); if (typeof tone === 'function') tone(G3D.hold ? 392 : 70, 0, G3D.hold ? 0.5 : 0.3, G3D.hold ? 0.03 : 0.06, 'sine', G3D.hold ? 784 : 40); return G3D.hold ? [50, 30, 70] : [25]; };
-  X.sfx.push('Wish', 'Light Screen', 'Cosmic Power', 'Power Gem', 'Judgment');
+  /* Lyset som slår ned ved oss følger fingeren og ligger derfor ikke i sengen. Med Hold: skjoldlyden (tre varianter i fila, 2 s fra hverandre). Uten: et lite dunk. */
+  X.snd.ahit = i => { const hd = !!G3D.hold; if (hd && typeof c3p === 'function' && c3p('Arceus Shield', 0.5, { off: (i % 3) * 2, len: 1.4, fade: 0.3 })) return [50, 30, 70];
+    if (typeof noise === 'function') noise(0, 0.28, hd ? 0.03 : 0.05, 900, 120); if (typeof tone === 'function') tone(hd ? 392 : 70, 0, hd ? 0.5 : 0.3, hd ? 0.03 : 0.06, 'sine', hd ? 784 : 40); return hd ? [50, 30, 70] : [25]; };
+  X.sfx.push('Wish', 'Light Screen', 'Cosmic Power', 'Power Gem', 'Judgment', 'Arceus Shield');
   X.reg('c3:493', { spid: 493, skin: SKIN, roar: () => DROP,
     cues: [[20.5, 'aegg']].concat(LIFT.map((L, i) => [L, 'aring', i]), [[HIT[0], 'aopen'], [HIT[1], 'aplate'], [HIT[2], 'aplate']], [3, 4, 5, 6].map((k, i) => [HIT[k], 'agold', i]), [[DROP, 'ajdg'], [DROP, 'cry']], NEAR.map((h, i) => [h[2], 'ahit', i])),
     look(S, t, P) { P.bloom = 0.3; P.bloomT = 0.76; P.vig = 0.36; P.vigc = '#04030c'; P.grain = 0.03; },
@@ -491,7 +493,7 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
   const tySkin = ty => { const c = tyC(ty), d = mixHex(c, '#000000', 0.55), l = mixHex(c, '#ffffff', 0.6), h = v => '#' + v.map(q => Math.round(c01(q) * 255).toString(16).padStart(2, '0')).join('');
     return { bg: h(mixHex(c, '#000000', 0.9)), top: c, bot: h(d), cap: h(l), grad: ['#ffffff', h(mixHex(c, '#ffffff', 0.25)), h(mixHex(c, '#000000', 0.25))], lv: h(l), ink: mixHex(c, '#000000', 0.88).map(q => Math.round(q * 255)) }; };
   G3D.def('c3:493p', {
-    len: PEND, R: PL, at: 78.5, fig: 2, models: ['arceus'], edge: null, env: { rim: '#ffe2a0', glow: '#bfe9ff', fog: '#04050b', glowH: 6, ink: '#191430' },
+    len: PEND, R: PL, at: 78.5, mus: { bed: 'sfx/natur/arceus_loft.mp3' },   /* lydsengen følger låtas klokke (work/raids3d/arceus/lyd/loft.py) */ fig: 2, models: ['arceus'], edge: null, env: { rim: '#ffe2a0', glow: '#bfe9ff', fog: '#04050b', glowH: 6, ink: '#191430' },
     make(K, T) { const S = { scene: new T.Scene(), figs: [], tex: {} }; place(K, T, S, { all: 1 }); const add = (m, ro) => { m.frustumCulled = false; if (ro != null) m.renderOrder = ro; S.scene.add(m); return m; };
       S.pl = []; for (let i = 0; i < NP; i++) { const m = mir(S, add(new T.Mesh(new T.BoxGeometry(0.88, 1.24, 0.1), K.shader(PLATE_V, PLATE_F, { uC: K.uv(S.pal[i + 1].clone()), uA: K.uv(1), uGo: K.uv(0) })))); m.visible = false; S.pl.push(m); }
       S.glow = mir(S, add(K.pts(3, i => ({ p: [0, 0, 0], v: [0, 0, 0], b: 0, l: 1e9, z: [7, 3, 1.2][i] }), { add: 1, px: 150, c: ['#ffffff', '#ffffff', '#ffffff'], fade: 0.99, a: 0 }), 5));

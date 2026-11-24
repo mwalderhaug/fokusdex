@@ -571,8 +571,8 @@ async function legendIntro(B) {
   }
   const started = own ? await PACK.music(own, { at: info.at, loop: false, out: 0.3 }) : tk ? await (seq ? PACK.seq(tk, seq, { at: info.at }) : PACK.music(tk, V ? { at: 0, loop: false, out: 0.3 } : { at: info.at })) : false; if (gone()) { PACK.seqStop(0.1); return; }
   const seqOn = !!seq && started, noskip = started && mus && mus.noskip ? mus.noskip : 0;
-  const ownOn = !!own && started, bedOn = !!(started && mus && mus.bed && (ownOn || !mus.song)); if (bedOn) PACK.sting(mus.bed, false, () => PACK.clock());
-  const hs = bedOn && mus.hold ? mus.hold : null; if (hs) PACK.loopWarm(hs[0]);   /* Hold-sløyfa (def.mus.hold: [fil, styrke, fra]): hører til sengen */   /* sengen følger låta: filmens egen introlåt, eller kamplåta når filmen går på den (Kyogre) */
+  const ownOn = !!own && started, bedOn = !!(started && mus && mus.bed && (ownOn || !mus.song)); if (bedOn) PACK.sting(mus.bed, false, () => PACK.clock());   /* sengen følger låta: filmens egen introlåt, eller kamplåta når filmen går på den (Kyogre) */
+  const hs = bedOn && mus.hold ? mus.hold : null; if (hs) PACK.loopWarm(hs[0]);   /* Hold-sløyfa (def.mus.hold: [fil, styrke, fra]): hører til sengen */
   let stop = () => {};
   if (started) music(''); else { PACK.music(''); stop = epicIntro('ultra', info.R); }
   root.classList.add('on'); sfx.appear(); buzz([40, 60, 40]);
