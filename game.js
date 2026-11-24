@@ -723,6 +723,8 @@ const LNO = {
   'Battles point out where to tap to see what the foe is weak to.': 'Kampene viser hvor du trykker for å se hva motstanderen er svak mot.',
   'Size and training are easier to read on a Pokémon\'s card.': 'Størrelse og trening er lettere å lese på kortet til en Pokémon.',
   'Bug fixes.': 'Feilrettinger.',
+  'Some legendary Pokémon have new intros.': 'Noen legendariske Pokémon har fått nye introer.',
+  'Some adjustments to raids, sound and music.': 'Noen justeringer av raid, lyd og musikk.',
   'Some adjustments to rarity and encounter packs.': 'Noen justeringer av sjeldenhet og pakkene.',
   'Every other type: normal damage': 'Alle andre typer: vanlig skade',
   '{b} is immune to {a} moves.': '{b} er immun mot {a}-angrep.',
@@ -913,7 +915,7 @@ function jFriend() {
 const has = k => !!(S.ulk && S.ulk[k]);
 /* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
    Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
-const WNV = 82, WN = ['Bug fixes.'];
+const WNV = 83, WN = ['Some legendary Pokémon have new intros.', 'Some adjustments to raids, sound and music.', 'Bug fixes.'];
 /* Første linje for dem som går reisen (whatsNew i ui.js). */
 const WNJ = 'Your journey: new things now open one study day at a time. See the card on the Focus page.';
 function featCheck() { S.ulk = S.ulk || {}; if (!jOn()) return 0; let ch = 0; for (const [k, d] of JOURNEY) if (!S.ulk[k] && (S.jd || 0) >= d) { S.ulk[k] = 1; ch = 1; } return ch; }
