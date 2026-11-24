@@ -758,7 +758,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         if (!black && outside) for (const [tb, kb, x, zz] of BOLTS) { const d = t - tb; if (d < 0 || d > 0.7) continue; const a = flick(d) * kb; BL.push({ d, k: kb, x, z: S.zf + zz, s: floor(tb * 41) });
           if (!lit || a > lit.a) lit = { a, x, z: S.zf + zz }; L.push({ d, k: kb * 0.3, a: PI, s: floor(tb * 41) }); }
         if (!black && !outside) { for (const q of strikes(t, t < QP.DEEP ? 0.9 : t < QP.L ? 0.3 : 2.6, 81)) L.push({ d: t - q[0], k: q[1] * 0.8, a: q[2], s: q[3], near: false });
-          for (const [tb, kk2, a, nr] of [[QP.DV, 1, -0.85, 1], [QP.DEEP, 0.9, -0.2, 0], [QP.SH, 1, 0.25, 0], [QP.UP + 0.2, 0.8, -0.6, 0],
+          for (const [tb, kk2, a, nr] of [[QP.DV, 1, -1.35, 0], [QP.DEEP, 0.9, -0.2, 0], [QP.SH, 1, 0.25, 0], [QP.UP + 0.2, 0.8, -0.6, 0],
               [QP.C - 0.01, 1, -0.42, 1], [QP.C + 0.02, 0.95, 0.45, 1], [QP.C + 0.45, 0.9, -0.5, 1], [QP.C + 0.5, 0.85, 0.55, 1], [QP.S, 0.9, 0.7, 0],
               [QP.L, 1, -0.8, 1], [QP.L + 0.15, 0.95, 0.85, 1], [QP.L + 0.4, 0.85, -0.65, 1], [QP.L + 0.7, 0.85, 0.95, 1], [QP.L + 1.0, 0.85, -0.95, 1], [QP.L + 1.35, 0.8, 0.7, 1], [QP.L + 1.7, 0.8, -0.75, 1]])
             L.push({ d: t - tb, k: kk2, a, s: floor(tb * 37 + 3), near: !!nr }); }
@@ -794,7 +794,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         else if (t >= QP.S && t < QP.B2) { const u = seg(t, QP.S, QP.B2), s = t - QP.S;   /* finpuss: faller med tyngde og jevn rotasjon (før en ease-in fra 15 enheter) */
           p.root.position.set(HOME[0], 10 - 8 * s - 0.5 * PG * s * s, HOME[2] + 2 + 4.2 * s); p.root.rotation.set(0.45 + 0.85 * s, -0.3, 0.06 * sin(s * 3));   /* han har falt siden toppen i det svarte: 8 enheter i sekundet ned, og tyngden videre */
           p.add(BREACH, 1 - io(u)); p.add({ '*Arm': [0, 0.6 * io(u), 0], '*Shoulder': [0, 0, -0.2 * io(u)] }, 1); SWIM(p, t, 0.3, 1.4); glo = 1.18; lines(p, glo, 1); S.glo = 0.35; }
-        else if (t >= QP.L) { const tq = t - QP.L, ry = KYH + 0.8 * sea0 + 1.8 * (1 - eo(seg(tq, 0, 1.1)));
+        else if (t >= QP.L) { const tq = t - QP.L, ry = KYH + 2.2 + 0.8 * sea0 + 1.8 * (1 - eo(seg(tq, 0, 1.1)));   /* finpuss 2: 2,2 høyere, så hodet og kjeven er over vannet i brølet */
           p.root.position.set(HOME[0], ry, HOME[2] + 2); p.root.rotation.set(mix(-0.32, 0, eo(seg(tq, 0, 1.0))), mix(0.1, -0.4, io(seg(tq, 0, QP.E - QP.L))), 0);
           const rw = back(seg(tq, 0, 0.35), 2.2) * (1 - 0.5 * io(seg(tq, 1.6, QP.E - QP.L))); p.add(ROAR, rw); p.rot('Jaw', 0, 0.04 * sin(t * 55) * rw, 0); S.rw = rw; S.mouth = null; p.eye(0, rw > 0.2 ? 0.75 : 0, 0.7);
           glo = 1.1 + 0.08 * rw + 0.22 * hit(tq, 0, 1); lines(p, glo, 1); S.glo = 0.3 + 0.5 * c01(glo - 1); }   /* 2b.3: linjene lyser, men brenner ikke ut til hvite flater (før 2,2–3,4) */
@@ -824,7 +824,8 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
            havet under den er mørkt og grovt, utenfor grått og roligere. Fronten er forbi arenaen på 3:27,54. */
         [QP.DR - 0.02, (S, u, a, t) => { const e = io(u), cx = mix(66, 44, e), cy = mix(19, 15.5, e), cz = S.zf - 30; K.cam(cx, cy, cz, cx - 80, 9, cz + 9, 52, 0.02); }],
         /* 3 Han stuper (3:29,1): lavt bak ham, halefinnen slår en bue over kameraet, og sprut skyller over. */
-        [QP.DV - 0.05, (S, u, a, t) => { K.cam(-1.6, 1.0, -13, 0, mix(2.6, 7, io(seg(t, QP.DV, QP.DV + 1.5))), mix(-2, -6, io(seg(t, QP.DV, QP.DV + 1.5))), 70, 0.03); S.post.sh = 2.2 * hit(t, QP.DV + 1.1, 0.8); S.post.fl = 0.35 * hit(t, QP.DV + 1.2, 0.35); S.post.flc = '#dde8ee'; }],
+        [QP.DV - 0.05, (S, u, a, t) => { const e = io(seg(t, QP.DV, QP.DV + 2.2)), ch = K.seaH(S.sea.material.uniforms, -1.6, -13, t * TS);   /* finpuss 2: over dønningene (Jazz: «man kommer under vannet der. kamera må litt opp») */
+          K.cam(-1.6, 2.6 + ch, -13, 0, mix(2.4, 3.6, e), mix(-2, 2, e), 70, 0.03); S.post.sh = 2.2 * hit(t, QP.DV + 1.1, 0.8); S.post.fl = 0.35 * hit(t, QP.DV + 1.2, 0.35); S.post.flc = '#dde8ee'; }],
         /* 4 Vannet lukker seg over ham. */
         [QP.CL, (S, u, a, t) => { const e = io(u); K.cam(7, mix(7, 9, e), -14, 0, 0, 3, 50, 0); }],
         /* 5 Lyset langt nede (3:34,9): skrått over havet i stormen, som Godzilla 1:56–2:03; et lite, svakt lys dypt nede som stiger hele tiden. */
@@ -841,7 +842,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         /* Svart og stille (3:45,52–3:46,14). */
         [QP.B2, (S, u, a, t) => { K.cam(0, 200, 0, 0, 0, 1, 40); S.post.fade = 1; }],
         /* 9 Smellet (3:46,15): han er alt oppe foran oss (vannet fosser av ham, en vegg av sprut faller), brøler, lyn rundt ham, kort Primal-tekst; kampen tar til igjen. */
-        [QP.L - 0.01, (S, u, a, t) => { const e = io(seg(t, QP.L, QP.E)); K.cam(mix(15, 12.5, e), mix(4.2, 3.6, e), mix(30, 26, e), -0.5, mix(3.6, 3.2, e), 2, 50, -0.03);
+        [QP.L - 0.01, (S, u, a, t) => { const e = io(seg(t, QP.L, QP.E)); K.cam(mix(15, 12.5, e), mix(5.1, 4.5, e), mix(30, 26, e), -0.5, mix(4.5, 4.1, e), 2, 50, -0.03);
           S.post.fl = max(0.3 * hit(t, QP.L, 0.1), 0.2 * hit(t, QP.L + 0.4, 0.08), seg(t, QP.F, QP.E - 0.04)); S.post.flc = '#f2f8ff'; S.post.sh = 6 * hit(t, QP.L, 1.4) + 0.8 * S.rw; S.spc = '#bfe4ff'; X.mouth(S, S.pg, QP.L, t, 2.2); }],
       ].map(([t0, f]) => [t0, (S, u, a, t) => { f(S, u, a, t); stormSort(S, t); }]),
     });
