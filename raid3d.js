@@ -319,14 +319,15 @@ void main(){
   float brk = smoothstep(1.3, 1.62, hN + (fn - .5) * .9 + c0 * .12 * uSea.y), top = max(brk * (.35 + .65 * lace) * (.55 + .45 * nf), smoothstep(.9, 1.4, hN + (fn - .5) * 1.2) * lace * .6 * (.3 + .7 * nf)) * min(1., uSea.z * 2.5) / max(uSea.z, .01);
   float st = fbm(vec2(wp.x * .12 - t * .2, wp.y * 2.1)), streak = smoothstep(.64, .8, st) * smoothstep(.35, .7, fn) * .5 * (.4 + .6 * lace);
   float dw = length(w - uWade.xy), wr = uWade.w * (1. - smoothstep(uWade.z * .55, uWade.z, dw)) * smoothstep(.38, .62, fbm(w * 1.3 + vec2(t * .4, 0.)) + .16 * sin(dw * 1.5 - t * 2.2 + 5. * fbm(w * .35)));
-  float rg = 0.; for (int i = 0; i < 4; i++) { vec4 g = uRing[i]; if (g.w > 0.) rg = max(rg, g.w * (1. - smoothstep(0., .45 + g.z * .06, abs(length(w - g.xy) - g.z)))); }
+  float rg = 0.; for (int i = 0; i < 4; i++) { vec4 g = uRing[i]; if (g.w > 0.) rg = max(rg, g.w * (1. - smoothstep(0., .45 + g.z * .06, abs(length(w - g.xy) - g.z + (fn - .5) * (.6 + g.z * .07))))); }
+  rg *= .4 + .6 * lace;   /* 2b.3: ringene vingler og har hull, så de ikke står som tegnede sirkler */
   float wc = sz * uStm.w * .8 * (.15 + .85 * smoothstep(8., 34., cd)) * smoothstep(.6, .78, fbm(vec2(wp.x * 1.7, wp.y * .55) + vec2(-t * .5, t * .12)) + .3 * c0) * (.3 + .7 * lace), gf = uStm.z * uStm.w * exp(-pow((vW.z - uStm.x + 2.) / 3., 2.)) * smoothstep(.3, .65, fn);
   float foam = clamp(max(max(top, streak) * uSea.z * (1. + .35 * sz), max(max(wr, rg * .8), max(wc, gf * .85))), 0., 1.) * (.55 + .45 * lod);
   col = mix(col, uFoamC * (.72 + .28 * smoothstep(-.2, .8, dot(N, uKey))), foam);
   /* Regnet (2b.3): små ringer som bare synes tett på (fw er bildepunktets størrelse i verden), og lenger unna et svakt slør i himmelens farge. Før: ringer i ruter
      på 1,9 enheter, som ble prikker på 13 meter i filmenes målestokk. */
-  if (uSea.w > 0.) { float rk = min(1., uSea.w + .7 * sz), l2 = 1. - smoothstep(.02, .07, fw);
-    if (l2 > 0.) { vec2 gp = w / .6, ci = floor(gp), o = h22(ci); float ph = fract(t * (1.6 + o.x * 1.2) + o.y), rr = length(fract(gp) - .5 - (o - .5) * .5); col += uSkyA * exp(-pow((rr - ph * .4) / .06, 2.)) * (1. - ph) * step(o.x, rk) * .4 * l2; }
+  if (uSea.w > 0.) { float rk = min(1., uSea.w + .7 * sz), l2 = 1. - smoothstep(.008, .03, fw);
+    if (l2 > 0.) { vec2 gp = w / .24, ci = floor(gp), o = h22(ci); float ph = fract(t * (2.2 + o.x * 1.6) + o.y), rr = length(fract(gp) - .5 - (o - .5) * .5); col += uSkyA * exp(-pow((rr - ph * .4) / .07, 2.)) * (1. - ph) * step(o.x, rk) * .26 * l2; }
     col += uSkyA * rk * .05 * (1. - l2) * (.6 + .8 * vn(w * 3. + vec2(t * 2., -t * 1.3)) * lod); }
   col *= uBri;
   gl_FragColor = vec4(mix(col, uFogC, fogK(vW)), 1.);

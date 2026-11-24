@@ -41,7 +41,7 @@
 
   /* ---------- Stedet: stormhavet ----------
      Havet er arenaens materiale (K.ground('sea')): dønninger med skum på toppene, vindstriper og regnringer. En kystlinje av mørke klipper bak, sjøstakker ute i havet der
-     bølgene slår inn og spruter opp (hver gang en topp når steinen), og himmelen er 2D bak (backdrop). k = stormen (1 = storm, 2 = Primordial Sea). */
+     bølgene slår inn og spruter opp (hver gang en topp når steinen), og himmelen bak er stormhimmelen (skyQ). k = stormen (1 = storm, 2 = Primordial Sea). */
   const STACKS = [[-46, -38, 5.5, 15, 3], [-70, -8, 4.2, 11, 7], [58, -52, 6.5, 19, 11], [84, -14, 3.6, 9, 13], [-24, -96, 8, 24, 17], [30, -118, 9, 26, 19]];
   const seaPar = { swell: 1.15, chop: 1.3, foam: 0.95, rain: 0.8, wind: [0.35, 1, 1.05], deep: '#020f18', shal: '#0d4a58', skyA: '#4a6274', skyB: '#0a121e', foamC: '#e2eef4', seg: 200 };
   /* Når toppen av den store dønningen sist var ved (x, z): samme regning som SEA_H (raid3d.js), bare det største leddet. */
@@ -72,7 +72,7 @@ void main(){ float th = vUv.x, v = vUv.y, tn = vK; vec2 c = vec2(cos(th), sin(th
   a *= smoothstep(1., .78, rim) * smoothstep(-.3, 1.3, vY) * vM   /* tones inn fra havflaten, så foten ikke står som en kant */ * (1. - smoothstep(2.1, 3., tn)) * uA; if (a < .012) discard;
   float li = .6 * smoothstep(.25, .8, s1) + .4 * smoothstep(.3, .7, s2), side = .5 + .5 * dot(c, normalize(uKey.xz + vec2(1e-4, 0.)));
   vec3 col = mix(uC2, mix(uC1, uC0, li), smoothstep(0., .55, v + .3 * li)); col = mix(col, uC0, .55 * smoothstep(.22, 0., v) * smoothstep(.3, .6, s2));   /* hvitt vann ved foten */
-  col *= (.68 + .32 * side) * (gl_FrontFacing ? .62 : 1.) * (.5 + .62 * uKeyC);   /* innsiden (den bakre halvdelen) ligger i skygge */
+  col *= (.68 + .32 * side) * (gl_FrontFacing ? .62 : 1.) * (.5 + .62 * min(uKeyC, vec3(.66)));   /* innsiden (den bakre halvdelen) ligger i skygge */
   float fk = fogK(vW); a *= 1. - .6 * fk; gl_FragColor = vec4(mix(col, uFogC * 1.6 + vec3(.04, .05, .06), fk) * a, a); }`;   /* sprut langt borte blir lys dis, ikke mørke flekker mot himmelen */
   const crown = (S, T, o) => { o = o || {}; const g = crown.g || (crown.g = new T.CylinderGeometry(1, 1, 1, 56, 10, true)), up = o.up || 1;
     const u = { uAge: K.uv(-1), uShape: K.uv(new T.Vector4(o.r || 3, o.out == null ? 2 : o.out, o.h || 8, up)), uDir: K.uv(new T.Vector4(o.dir ? o.dir[0] : 1, o.dir ? o.dir[1] : 0, o.dir ? (o.arc == null ? 0 : o.arc) : -2, o.lean || 0)), uSd: K.uv(o.sd || 1), uA: K.uv(o.a == null ? 0.92 : o.a),
@@ -96,7 +96,7 @@ void main(){ float th = vUv.x, v = vUv.y, tn = vK; vec2 c = vec2(cos(th), sin(th
       { t0: -1e5, shade: 1, g: 16, drag: 0.6, px: 28, sz0: 0.5, sz1: 1.6, c: ['#f4fbff', '#c4d8e4', '#6e8a9c'], a: 0.7, fade: 0.55, floor: -1 });
     S.sprays = S.stacks.map((m, i) => add(spray(90, STACKS[i][2], 9 + STACKS[i][3] * 0.9, 40 + i * 7), m.position.x, 0, m.position.z));
     /* 2b.3: selve plasket er en krone av vann på den siden bølgen kommer fra (bølgene går med vinden, mot +Z); prikkene over er bare dråpene rundt */
-    S.scr = STACKS.map(([x, z, r, h], i) => { const c = crown(S, T, { r: r * 0.9, out: r * 0.7, h: 7 + h * 0.55, up: 1.5, dir: [0.33, 0.94], arc: -0.3, lean: 2, sd: 3 + i * 1.7 }); c.position.set(x - 0.33 * r * 0.6, 0, z - 0.94 * r * 0.6); return c; });
+    S.scr = STACKS.map(([x, z, r, h], i) => { const c = crown(S, T, { r: r * 0.9, out: r * 0.7, h: 7 + h * 0.55, up: 1.5, dir: [0.33, 0.94], arc: -0.3, lean: 2, sd: 3 + i * 1.7, a: 0.72, c2: '#6c8595' });   /* lyst også nederst: disse står langt borte mot himmelen (mørkt vann nederst ble mørke klør) */ c.position.set(x - 0.33 * r * 0.6, 0, z - 0.94 * r * 0.6); return c; });
     /* Lyset fra lynet i 3D: et blink over havet der det slår ned (lys som legges oppå). */
     S.flash = add(K.light(1, '#cfe2ff', { depth: false })); S.flash.renderOrder = 6; S.flash.visible = false;
     S.fx = (pts, t0, x, y, z) => { if (x != null) pts.position.set(x, y, z); pts.material.uniforms.uT0.value = t0; };
@@ -113,29 +113,10 @@ void main(){ float th = vUv.x, v = vUv.y, tn = vK; vec2 c = vec2(cos(th), sin(th
   const flick = d => d < 0 ? 0 : d < 0.05 ? 1 : d < 0.1 ? 0.3 : d < 0.17 ? 0.9 : d < 0.24 ? 0.25 : max(0, 1 - (d - 0.24) / 0.4) * 0.55;
   const flashOf = L => L.reduce((s, q) => max(s, flick(q.d) * q.k), 0);
 
-  /* ---------- Himmelen (2D bak 3D-bildet) ----------
-     Mørk stormhimmel som er lysest ved horisonten, tunge skyer som driver, en hyllesky lavt over havet (referansen), og lynet: grener fra skybasen ned i havet i det fjerne,
-     og skyene som lyser innenfra der det slår ned. Tegnes i vinkelmål rundt horisonten (UR enheter per radian) og festes til 3D-kameraet (G3D.view). Under vann: dypet. */
+  /* ---------- Himmelen ----------
+     Himmelen bak 3D-bildet er skyQ (under «Stormen i 3D»): den tegnes i vinkelmål rundt horisonten (UR enheter per radian) og festes til 3D-kameraet (G3D.view).
+     Den gamle himmelen i 2D (backdrop: mørke klumper, en flat hyllesky og regnslør) ble tatt ut i 2b.3; den ligger i historikken (01de9d3). */
   const UR = 560, wrap = a => { a = (a + PI) % TAU; if (a < 0) a += TAU; return a - PI; };
-  const backdrop = (S, t) => {
-    const g = C.g, v = G3D.view(), k = v.ppr / UR, bl = C.blend, L = S.L || [], fl = S.fl || 0, dark = S.dark || 0;
-    if (S.under) { const gr = g.createLinearGradient(0, 0, 0, 384), u = S.under; gr.addColorStop(0, bl('#02101c', '#0c4a66', u)); gr.addColorStop(0.5, '#020a12'); gr.addColorStop(1, '#000306'); g.fillStyle = gr; g.fillRect(0, 0, 512, 384); return { hz: -999, under: 1 }; }
-    g.save(); g.translate(v.x, v.y); g.rotate(v.ang); g.scale(k, k);
-    const gr = g.createLinearGradient(0, -UR * 1.1, 0, 12); gr.addColorStop(0, '#020407'); gr.addColorStop(0.55, bl('#070c13', '#1a2840', fl)); gr.addColorStop(0.86, bl('#141e2a', '#4a6488', fl)); gr.addColorStop(1, bl('#26343f', '#8aa6c8', fl * (1 - 0.4 * dark)));
-    g.fillStyle = gr; g.fillRect(-4000, -4000, 8000, 4014); g.fillStyle = bl('#141c24', '#506884', fl); g.fillRect(-4000, 12, 8000, 4000);
-    /* Skyene: mørke klumper i flere lag som driver med vinden; de lyser opp nedenfra der lynet slår ned. */
-    for (let i = 0; i < 30; i++) { const x = wrap(rnd(i, 3) * TAU + t * (0.006 + rnd(i, 4) * 0.008) - v.yaw) * UR, y = -(24 + Math.pow(rnd(i, 5), 1.4) * 300), r = 80 + rnd(i, 6) * 120; if (abs(x) > 820) continue;
-      C.blob(x, y, r, bl('#0a0f16', '#1c2a3c', fl * 0.8), 0.88, 0, 0.4); let lit = 0; for (const q of L) { const dx = abs(wrap(q.a - v.yaw) * UR - x); lit = max(lit, flick(q.d) * q.k * Math.exp(-dx * dx / 90000)); } if (lit > 0.02) C.blob(x, y + r * 0.2, r * 0.9, '#a8c4ff', 0.55 * lit, 1, 0.42); }
-    /* Hyllesyken: et bredt, mørkt bånd lavt over havet med en lysere underkant. */
-    for (let i = 0; i < 16; i++) { const x = wrap(rnd(i, 23) * TAU + t * 0.004 - v.yaw) * UR, r = 150 + rnd(i, 24) * 120; if (abs(x) > 900) continue; C.blob(x, -46 - rnd(i, 25) * 26, r, '#05090e', 0.82, 0, 0.22); C.blob(x, -30, r * 0.8, bl('#2a3846', '#7f9cc4', fl), 0.22 + 0.3 * fl, 1, 0.08); }
-    /* Regnet som henger som slør under skyene i det fjerne. */
-    for (let i = 0; i < 10; i++) { const x = wrap(rnd(i, 33) * TAU + t * 0.01 - v.yaw) * UR; if (abs(x) > 820) continue; const gr2 = g.createLinearGradient(0, -60, 0, 4); gr2.addColorStop(0, 'rgba(70,90,110,0)'); gr2.addColorStop(1, 'rgba(70,90,110,.35)'); g.fillStyle = gr2; g.fillRect(x - 40 - rnd(i, 34) * 60, -60, 60 + rnd(i, 35) * 90, 64); }
-    g.restore();
-    /* Lynet i det fjerne: fra skybasen ned i havet (i skjermens mål, så strekene er like tynne uansett kamera). */
-    for (const q of L) { const a = flick(q.d) * q.k; if (a < 0.05 || q.near) continue; const X0 = v.x + wrap(q.a - v.yaw) * v.ppr; if (X0 < -60 || X0 > 572) continue;
-      const top = v.y - 0.32 * v.ppr, bot = v.y + 1; C.bolt(X0 + (rnd(q.s, 41) - 0.5) * 40, top, X0, bot, { seed: q.s * 3 + (q.d > 0.12 ? 1 : 0), col: '#9fc0ff', core: '#ffffff', w: 1.6, a, br: 3, depth: 5 }); C.blob(X0, bot, 60, '#cfe0ff', 0.45 * a, 1, 0.3); }
-    return { hz: v.y };
-  };
   /* Stedets etterbehandling: kjølig, mørkt og vått, med glød i skum og lyn. */
   const look = (S, t, P, q, sn) => {
     const fl = S.fl || 0, u = S.under || 0; P.bloom = 0.32 + 0.3 * fl + 0.25 * (S.glo || 0); P.bloomT = 0.7; P.grain = 0.04; P.vig = 0.42 + 0.3 * q.vig + 0.2 * u; P.vigc = u ? '#000710' : '#01050a';
@@ -149,16 +130,8 @@ void main(){ float th = vUv.x, v = vUv.y, tn = vK; vec2 c = vec2(cos(th), sin(th
   const HOME = [0, 0, 0];   /* der Kyogre ligger i havet (roten) */
   const DEEP = [0, -140, -10];   /* lyset langt nede */
 
-  /* Lydene til Kyogre (signalene i cutscenene). Pakken først, og en innebygd reserve (tone, noise og swellN fra ui.js). */
-  const has = n => typeof window[n] === 'function';
-  const pk = (n, v, o) => typeof c3p === 'function' && c3p(n, v, o);
-  X.snd.kydive = () => { if (!pk('Dive', 0.9, { rate: 0.75, trim: 1 }) && has('noise')) { noise(0, 1.1, 0.2, 900, 140); tone(70, 0, 1, 0.14, 'sine', 40); } return [60, 40, 160]; };
-  X.snd.kydeep = () => { if (has('tone')) { tone(55, 0, 3.2, 0.16, 'sine', 52); tone(110, 0.02, 2.6, 0.06, 'sine', 108); tone(1318, 0.05, 1.8, 0.02, 'triangle'); } pk('Water Pulse', 0.5, { rate: 0.6, trim: 1 }); return [40, 80, 40]; };
-  X.snd.kyrise = d => { d = d || 1.3; if (!pk('Waterfall', 0.85, { rate: 0.8, len: d + 0.2, trim: 1 }) && has('swellN')) swellN(0, d, 0.18, 200, 2400); return [20, 40, 20, 40, 20, 60]; };
-  X.snd.kybreach = () => { if (!pk('Surf', 1, { rate: 0.9, len: 1.6, trim: 1 }) && has('noise')) noise(0, 1.4, 0.3, 2400, 300); pk('Thunder', 0.75, { len: 1.4, trim: 1 }); return [120, 40, 200]; };
-  X.snd.kyslam = () => { if (!pk('Water Spout', 1, { rate: 0.8, len: 2.4, trim: 1 }) && has('noise')) { noise(0, 2, 0.32, 1200, 80); tone(48, 0, 1.8, 0.26, 'sine', 30); } pk('Thunder', 1, { trim: 1 }); pk('Thunder', 0.8, { at: 0.3, rate: 0.85, trim: 1 }); return [140, 40, 300]; };
-  X.snd.kythunder = k => { if (!pk('Thunder', 0.55 + 0.35 * (k || 0.6), { rate: 0.9 + 0.2 * (k || 0.6), trim: 1 }) && has('noise')) noise(0, 1.2, 0.18, 600, 60); return [40, 30, 80]; };
-  X.sfx.push('Dive', 'Water Pulse', 'Waterfall', 'Surf', 'Thunder', 'Water Spout');
+  /* Lydene: naturlydene ligger i lydsengene (def.mus.bed, raids3d/kyogre/lyd/bed.py), og brølet er artens eget (signalet 'cry'). Signallydene til de gamle
+     filmene (kydive, kybreach …) og oppvarmingen av pakkelydene deres ble tatt ut i 2b.3. */
 
   /* ---------- Stormen i 3D (2b.3): den samme i introen, i Primal og i arenaen ----------
      Som bildene Jazz sendte (fanart/kyogre/IMG_6597 og IMG_6596): en hyllesky med lys, bulende overside og mørk underside, regnsøyler som fosser ned i havet under den
@@ -342,48 +315,16 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
       glow(S, f, t, st, pr) { if (pr) lines(f, 1.3 + 0.3 * sin(t * 3.1) + 0.6 * (S.drop && S.drop.hk || 0), 1); else lines(f, 0.75 + 0.5 * st.p2 * (0.6 + 0.4 * sin(t * 4)), 0); },
       ink2: () => 0.85, turn: 0.4 },
   });
-  /* ===================== SKISSE 4 av Primal, skisse 2 av introen (sparringen 20.11, Opus) – Kyogre =====================
-     Bare i en midlertidig kopi av appen: utsnitt og timing, ikke stil. Dreieboka: work/raids3d/kyogre/ideer.md («Dreieboka, utkast 2»). Skisse 1 ligger i git-historikken.
+  /* ===================== Filmene: introen 'c3:382' og Primal 'c3:382p' =====================
+     Fra sparringen 20.11 (skisse 2 av introen og skisse 4 av Primal: rekkefølgen, tidene i låta og hva som skjer er låst av Jazz, work/raids3d/kyogre/ideer.md og
+     RAIDS.md nr. 41), bygget ut av Fable i 2b.3 (stormen, havet, sprutet, lyset, tråleren og brølet: work/RAIDS3D.md, «Bygget av Fable natt til 24.11»).
      'c3:382' er introen: filmens tid = tiden i låta (fra 0:00), brølet på 0:41,52 og navnet 1,4 s etter.
-     'c3:382p' er Primal: filmens tid = låta − 195,7 (fra narhval-tonen 3:15,7); kameraet står over vannet hele tiden (Jazz 20.11). Skisse 2 (Primal-dreieboka, utkast 2).
-     motor.py legger ringbølger (uRH) inn i havet i kopiens raid3d.js. */
+     'c3:382p' er Primal: filmens tid = låta − 195,7 (fra narhval-tonen 3:15,7); kameraet står over vannet hele tiden (Jazz 20.11).
+     Ringbølgene (uRH), stormsonen (uStm) og lyset i dypet (uDL) er havets egne valg i raid3d.js. */
   {
-    const HY2 = 0.25;   /* Primal (skisse 1): hvor høyt han ligger før han stuper */
-    /* Stormen i horisonten (2D bak 3D-bildet, i vinkelmål som backdrop): en svart veggsky med lysere underkant, regnslør ned til havet og lyn inne i skyen.
-       st = hvor nær den er (0,3 langt borte … 1 over oss: hele himmelen grå). a0 = retningen (radianer fra −Z). */
-    const wall = (S, t, st, a0) => {
-      const g = C.g, v = G3D.view(), k = v.ppr / UR, bl = C.blend, L = S.L || [];
-      g.save(); g.translate(v.x, v.y); g.rotate(v.ang); g.scale(k, k);
-      const cx = wrap(a0 - v.yaw) * UR, w = UR * (0.35 + 1.6 * st * st), h = UR * (0.06 + 0.5 * st * st), base = -UR * (0.025 + 0.05 * st);
-      let lit = 0; for (const q of L) if (!q.near) lit = max(lit, flick(q.d) * q.k * Math.exp(-3 * wrap(q.a - a0) * wrap(q.a - a0)));
-      /* Lys ved horisonten bak stormen (himmelen langt borte), så veggskyen står som en silhuett mot den. */
-      const hg = g.createLinearGradient(0, -UR * 0.24, 0, 4), la = 0.6 * (1 - 0.55 * st); hg.addColorStop(0, 'rgba(90,108,124,0)'); hg.addColorStop(0.65, `rgba(98,116,132,${la})`); hg.addColorStop(1, `rgba(128,144,158,${la})`);
-      g.fillStyle = hg; g.fillRect(-4000, -UR * 0.24, 8000, UR * 0.24 + 4);
-      const top = -UR * (0.13 + 0.3 * st);
-      for (let i = 0; i < 16; i++) { const x = cx + (rnd(i, 501) - 0.5) * w * 1.6, ww = 30 + rnd(i, 502) * 90 * (0.5 + st), gr = g.createLinearGradient(0, base, 0, 8);
-        gr.addColorStop(0, 'rgba(40,50,60,0)'); gr.addColorStop(0.3, `rgba(58,70,82,${0.22 + 0.35 * st})`); gr.addColorStop(1, `rgba(70,84,96,${0.3 + 0.4 * st})`); g.fillStyle = gr; g.fillRect(x - ww / 2, base, ww, 8 - base); }
-      for (let i = 0; i < 36; i++) { const x = cx + (rnd(i, 511) - 0.5) * w * 1.6, y = mix(base - 12, top, Math.pow(rnd(i, 512), 0.8)), r = 50 + rnd(i, 513) * 110 * (0.6 + st);
-        C.blob(x, y, r, bl('#05080c', '#2a3a50', lit * 0.8), 0.96, 0, 0.6); if (lit > 0.05) C.blob(x, y + r * 0.2, r * 0.8, '#9ab8e8', 0.6 * lit * Math.exp(-((x - cx) * (x - cx)) / (0.49 * w * w)), 1, 0.5); }
-      for (let i = 0; i < 16; i++) { const x = cx + (rnd(i, 521) - 0.5) * w * 1.3, r = 40 + rnd(i, 522) * 80 * (0.6 + st); C.blob(x, top + rnd(i, 523) * 26, r, '#3e5064', 0.45, 0, 0.5); }
-      C.blob(cx, base - 6, w * 0.95, bl('#1e2a36', '#6a86a8', lit), 0.55, 1, 0.1);
-      g.restore();
-      if (st > 0.7) { g.fillStyle = `rgba(52,60,68,${(st - 0.7) / 0.3 * 0.55})`; g.fillRect(0, 0, 512, v.y + 4); }
-    };
-    const backS = (S, t) => { if (S.sky3) return skyQ(S, t); const r = backdrop(S, t); if ((S.st || 0) > 0 && !S.under) wall(S, t, S.st, S.sta || 0); if (S.shelf) shelf(S, t, S.sta || 0, S.shelf); return r; };
-    /* Skisse (Primal-dronen, Jazz 20.11 bilde 4): en tydelig hyllesky over havet til venstre i bildet, med lagdelt underside, regnsøyler og lyn inni. Grov: formen og plassen, ikke stilen. */
-    const shelf = (S, t, a0, k0) => {
-      const g = C.g, v = G3D.view(), k = v.ppr / UR, L = S.L || []; g.save(); g.translate(v.x, v.y); g.rotate(v.ang); g.scale(k, k);
-      const cx = wrap(a0 - v.yaw) * UR, w = UR * 0.95, base = -UR * 0.035, top = -UR * 0.5;
-      let lit = 0; for (const q of L) if (!q.near) lit = max(lit, flick(q.d) * q.k * Math.exp(-4 * wrap(q.a - a0) * wrap(q.a - a0)));
-      for (let i = 0; i < 7; i++) { const x = cx - w * 0.55 + i * w * 0.14 + (rnd(i, 601) - 0.5) * 20, ww = 40 + rnd(i, 602) * 50, gr = g.createLinearGradient(0, base, 0, 6);
-        gr.addColorStop(0, `rgba(150,166,182,${0.55 * k0})`); gr.addColorStop(1, `rgba(190,204,218,${(0.75 + 0.25 * lit) * k0})`); g.fillStyle = gr; g.fillRect(x - ww / 2, base, ww, 6 - base); }
-      for (let i = 0; i < 46; i++) { const u = rnd(i, 611), x = cx - w * 0.6 + u * w * 1.15, y = mix(base - 8, top, Math.pow(rnd(i, 612), 1.4) * (1 - 0.55 * u)), r = 40 + rnd(i, 613) * 120;
-        const lo = y > base - UR * 0.12; C.blob(x, y, r, lo ? '#6a7a8a' : '#0e141a', 0.95 * k0, 0, 0.6); if (lit > 0.05) C.blob(x, y + r * 0.25, r * 0.7, '#a8c4ec', 0.55 * lit * k0, 1, 0.5); }
-      for (let i = 0; i < 14; i++) { const x = cx + w * 0.42 - i * w * 0.075, y = base - 6 - i * 3; C.blob(x, y, 70 + rnd(i, 621) * 40, '#9aaab8', 0.85 * k0, 0, 0.5); }   /* den lysere forkanten */
-      g.restore(); };
     const lookS = (S, t, P, q, sn) => { look(S, t, P, q, sn); const gr = S.grey || 0; P.grade.sat *= 1 - 0.4 * gr; P.grade.con *= 1 - 0.06 * gr; };
 
-    /* ---------- Introen, skisse 2 (Jazz 20.11, rettelsene på skisse 1) ----------
+    /* ---------- Introen (skisse 2 fra sparringen; Jazz 20.11, rettelsene på skisse 1) ----------
        «store ting beveger seg mer langsomt og voldsomt med stor kraft»: havet har sin egen, langsommere tid (TS), så dønningene er riktige for en enhet på rundt 8 m
        (en tråler på 21 m er 2,6 enheter, Kyogre rundt 150 m), og sprutet stiger like høyt, men bruker nesten tre ganger så lang tid (SLOW).
        1 Stormen filmes · 2 skyggen kommer inn, glir under båten og er helt ute før klippet · 3 noe stort kommer nedenfra · 4 finnene bryter flaten på hver side av båten,
@@ -411,22 +352,31 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
     /* Tråleren (Jazz 20.11: «en større båt, ikke lekebåt»): skrog med baug, dekk, styrehus forut med lys i vinduene, mast med topplys, utriggere, galge og nettrommel akter. */
     const mkBoat2 = (K, T) => {
       const M = (a, b, o) => K.rockMat(Object.assign({ a, b, str: 0.2, sm: 0.6, hot: 0, lv: 0, tint: [0.08, 0.07, 0.06] }, o || {})), g = new T.Group(),
-        hullM = M('#2a0e0c', '#6e2419'), blk = M('#0b0c0e', '#26282c'), wh = M('#77776f', '#d2d2c8', { tint: [0.12, 0.12, 0.12] }), deck = M('#3a3026', '#7a6a52'), grn = M('#14281c', '#355a40');
+        hullM = M('#2a0e0c', '#6e2419'), blk = M('#0b0c0e', '#26282c'), wh = M('#77776f', '#d2d2c8', { tint: [0.12, 0.12, 0.12] }), deck = M('#3a3026', '#7a6a52'), grn = M('#14281c', '#355a40'), org = M('#7a2c08', '#e06a1c', { tint: [0.16, 0.08, 0.03] });
       const BX = (w, h, d, m, x, y, z, ry) => { const o = new T.Mesh(new T.BoxGeometry(w, h, d), m); o.position.set(x, y, z); if (ry) o.rotation.y = ry; g.add(o); return o; };
       const CY = (r0, r1, h, m, x, y, z, rx, rz) => { const o = new T.Mesh(new T.CylinderGeometry(r0, r1, h, 6), m); o.position.set(x, y, z); if (rx) o.rotation.x = rx; if (rz) o.rotation.z = rz; g.add(o); return o; };
+      /* skroget: rødbrunt med svart vannlinje og en lys rekke, spiss baug med bakk, og skansekledning akter */
       BX(0.86, 0.44, 2.0, hullM, 0, 0, -0.14); BX(0.87, 0.07, 2.0, blk, 0, -0.2, -0.14); BX(0.61, 0.44, 0.61, hullM, 0, 0, 0.86, PI / 4); BX(0.84, 0.18, 0.5, hullM, 0, 0.3, 0.8);
-      BX(0.8, 0.05, 1.9, deck, 0, 0.24, -0.12); BX(0.62, 0.5, 0.62, wh, 0, 0.5, 0.18); BX(0.7, 0.05, 0.7, blk, 0, 0.77, 0.18);
-      CY(0.03, 0.04, 1.3, blk, 0, 1.4, 0.18); CY(0.018, 0.018, 1.5, blk, 0.42, 1.05, -0.25, 0, -0.75); CY(0.018, 0.018, 1.5, blk, -0.42, 1.05, -0.25, 0, 0.75);
+      BX(0.88, 0.045, 2.02, wh, 0, 0.165, -0.14); BX(0.63, 0.045, 0.63, wh, 0, 0.165, 0.86, PI / 4); BX(0.86, 0.14, 0.05, hullM, 0, 0.3, -1.13); BX(0.05, 0.12, 0.9, hullM, 0.415, 0.3, -0.68); BX(0.05, 0.12, 0.9, hullM, -0.415, 0.3, -0.68);
+      BX(0.8, 0.05, 1.9, deck, 0, 0.24, -0.12);
+      /* styrehuset i to høyder (2b.3): nedre hus med et mørkt vindusbånd, brua oppå med vinduer hele veien rundt, tak, skorstein med rød stripe, radarbøyle og mast */
+      BX(0.62, 0.5, 0.62, wh, 0, 0.5, 0.18); BX(0.64, 0.11, 0.64, blk, 0, 0.6, 0.18); BX(0.7, 0.05, 0.7, blk, 0, 0.77, 0.18);
+      BX(0.48, 0.26, 0.42, wh, 0, 0.92, 0.22); BX(0.5, 0.1, 0.44, blk, 0, 0.95, 0.22); BX(0.56, 0.04, 0.5, blk, 0, 1.07, 0.22);
+      CY(0.085, 0.1, 0.34, blk, 0, 0.96, -0.1); CY(0.09, 0.09, 0.07, org, 0, 1.02, -0.1); BX(0.34, 0.03, 0.05, blk, 0, 1.3, 0.22);
+      CY(0.03, 0.04, 1.05, blk, 0, 1.6, 0.22); CY(0.018, 0.018, 1.5, blk, 0.42, 1.05, -0.25, 0, -0.75); CY(0.018, 0.018, 1.5, blk, -0.42, 1.05, -0.25, 0, 0.75);
+      /* arbeidsdekket: galge, nettrommel, vinsj, tråldører akter og to oransje blåser ved rekka */
       CY(0.025, 0.025, 0.9, blk, 0.32, 0.68, -1.0); CY(0.025, 0.025, 0.9, blk, -0.32, 0.68, -1.0); BX(0.7, 0.05, 0.05, blk, 0, 1.12, -1.0); CY(0.16, 0.16, 0.6, grn, 0, 0.42, -0.66, 0, PI / 2);
+      BX(0.3, 0.16, 0.2, blk, 0, 0.35, -0.3); BX(0.04, 0.34, 0.26, blk, 0.46, 0.46, -0.98); BX(0.04, 0.34, 0.26, blk, -0.46, 0.46, -0.98);
+      BX(0.1, 0.1, 0.1, org, 0.4, 0.34, -0.42, 0.6); BX(0.1, 0.1, 0.1, org, -0.4, 0.34, 0.5, 0.3);
       g.scale.setScalar(1.2); g.rotation.order = 'YXZ'; return g; };
     /* Lysene på båten (vender mot kameraet): to vinduer, topplyset og lykta akter. Lokale punkter i båten. */
-    const LAMPS = [[-0.14, 0.55, 0.5, 0.38, '#ffd27a'], [0.14, 0.55, 0.5, 0.38, '#ffd27a'], [0, 2.08, 0.18, 0.5, '#fff0c8'], [0, 1.15, -1.05, 0.6, '#ffcf70']];
+    const LAMPS = [[-0.14, 0.6, 0.5, 0.36, '#ffd27a'], [0.14, 0.6, 0.5, 0.36, '#ffd27a'], [0, 2.16, 0.22, 0.5, '#fff0c8'], [0, 1.15, -1.05, 0.6, '#ffcf70'], [0, 0.95, 0.44, 0.3, '#ffe2a0']];   /* to vinduer, topplyset, lykta akter, og lyset i brua (2b.3) */
 
     G3D.def('c3:382', {
       len: QI.END, hold: 1, R: QI.RO, at: 0, mus: { bed: 'sfx/natur/kyogre_intro.mp3' },   /* lydsengen følger kamplåta (raids3d/kyogre/lyd/bed.py) */ models: ['kyogre'], edge: 'sea', env: { rim: '#a8c8ff', glow: '#2a6c9a', fog: '#16222e', glowH: 3 },
       make(K, T) { const S = storm(T), g = S.gr = kyFig(); S.T = T; S.scene.add(g.root); S.figs.push(g); S.v3 = new T.Vector3();
         const su = S.sea.material.uniforms; su.uTime = { value: 0 };            /* havets egen tid (TS), se over */
-        S.sprays.forEach(p => slowIn(p, SLOW));
+        S.sprays.forEach(p => { slowIn(p, SLOW); p.material.uniforms.uA.value = 0.3; });   /* langsomt sprut som henger, ser ut som snø: dråpene er svake, kronen bærer plasket */
         S.boat = mkBoat2(K, T); S.scene.add(S.boat);
         S.lamps = LAMPS.map(q => { const m = K.light(1, q[4], { depth: true }); m.renderOrder = 7; S.scene.add(m); return m; });
         const wet = K.rockMat({ a: '#0b1218', b: '#222e37', str: 0.32, sm: 0.6, hot: 0, lv: 0, tint: [0.07, 0.09, 0.11], top: 0.25, rough: 0.9 });
@@ -447,7 +397,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
           Object.assign({}, SP, { a: 0.8 }), SLOW); S.scene.add(p); return p; });
         /* Sprut fra baugen (0:10,73) og når båten treffer vannet (0:26,02). */
         S.bow = slowP(140, i => { const a = (rnd(i, 91) - 0.5) * 2.2, q = rnd(i, 92); return { p: [(rnd(i, 93) - 0.5) * 0.8, 0.2, 0.9], v: [sin(a) * (2 + 2.5 * q), 3 + 4 * q, 2 + 2.5 * cos(a) * q], b: rnd(i, 94) * 0.2, l: 1.4 + rnd(i, 95) * 0.6, z: 0.3 + rnd(i, 96) * 0.6 }; }, SP, SLOW); S.scene.add(S.bow);
-        S.cap = slowP(420, i => { const a = rnd(i, 101) * TAU, q = rnd(i, 102); return { p: [cos(a) * 1.6, 0.3, sin(a) * 1.6], v: [cos(a) * (2 + 6 * q), 8 + 13 * (1 - q), sin(a) * (2 + 6 * q)], b: rnd(i, 103) * 0.3, l: 1.8 + rnd(i, 104), z: 1.6 + rnd(i, 105) * 3 }; }, Object.assign({}, SP, { px: 34, a: 0.75 }), SLOW); S.scene.add(S.cap);
+        S.cap = slowP(420, i => { const a = rnd(i, 101) * TAU, q = rnd(i, 102); return { p: [cos(a) * 1.6, 0.3, sin(a) * 1.6], v: [cos(a) * (2 + 6 * q), 8 + 13 * (1 - q), sin(a) * (2 + 6 * q)], b: rnd(i, 103) * 0.3, l: 1.8 + rnd(i, 104), z: 1.6 + rnd(i, 105) * 3 }; }, Object.assign({}, SP, { px: 26, a: 0.4, fade: 0.3 }), SLOW); S.scene.add(S.cap);
         mkStorm(S, K, T);   /* 2b.3 (Fable): stormen i det første bildet er den samme i 3D som i Primal, ikke den flate veggen (Jazz 20.11: «Noter at stormen må forbedres både på intro og til primal») */
         return S; },
       act(S, t, o) {
@@ -540,7 +490,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         /* 2 Ovenfra: båten alene; skyggen kommer inn nedenfra på 0:04,57, glir under båten i stillheten, lynet viser hele kroppen, og den er ute før klippet. */
         [QI.PASS - 0.04, (S, u, a, t) => { K.cam(BT[0] + 0.6, 26, BT[1] + 3.6, BT[0] + 0.6, 0, BT[1] + 0.4, 52, 0); S.post.fl = 0.35 * hit(t, QI.LY, 0.12); S.post.flc = '#e8f2ff'; S.post.sh = 0.6 * hit(t, QI.W1, 0.8); }],
         /* 3 Noe stort kommer: lavt ved båten mot stakkene; det røde skjæret vokser under den. */
-        [QI.B6, (S, u, a, t) => { const e = io(u), x = mix(10, 8.5, e), z = mix(13, 11, e), h = K.seaH(S.sea.material.uniforms, x, z, t * TS); K.cam(x, h + 3.2, z, -3, 1.2, -12, 48, -0.02); S.post.sh = 0.7 * hit(t, QI.W3, 0.6) + 0.8 * hit(t, QI.W4, 0.6) + 0.25 * seg(t, QI.B6, QI.UP); }],
+        [QI.B6, (S, u, a, t) => { const e = io(u), x = mix(6.4, 5.2, e), z = mix(10.8, 9.2, e), h = K.seaH(S.sea.material.uniforms, x, z, t * TS); K.cam(x, h + 2.5, z, -2.5, 1.4, -10, 48, -0.02);   /* 2b.3: nærmere og lavere (før 14 enheter unna), så tråleren er stor og tung i bildet */ S.post.sh = 0.7 * hit(t, QI.W3, 0.6) + 0.8 * hit(t, QI.W4, 0.6) + 0.25 * seg(t, QI.B6, QI.UP); }],
         /* 4 Finnene først: lavt og rett forfra; båten midt i bildet mellom finnene. Ryggen løfter den, den glir av og velter. */
         [QI.UP - 0.05, (S, u, a, t) => { const e = io(seg(t, QI.UP, QI.HIT)), e2 = io(seg(t, QI.HIT, 27.9)), x = mix(5, 6, e), z = 54, h = K.seaH(S.sea.material.uniforms, x, z, t * TS); K.cam(x, h * 0.2 + mix(11.2, 11.8, e), z, mix(0, 2.2, e) + 1.2 * e2, mix(1.4, 2.6, e), BT[1], mix(23, 26, e), 0.01); S.post.sh = 1.6 * hit(t, QI.UP, 1.6) + 1.2 * hit(t, QI.HIT, 1.2); }],
         /* 5 Ringbølgene, litt ovenfra: han ligger høyt i vannet, og ringene ruller ut mot stakkene. */
@@ -556,12 +506,12 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
           S.post.fl = max(0.3 * hit(t, QI.RO, 0.1), 0.2 * hit(t, QI.RO + 0.35, 0.08)); S.post.flc = '#eef6ff'; S.post.sh = 1.0 * hit(t, 38.53, 0.8) + 4 * hit(t, QI.RO, 1.2) + 0.6 * S.rw; if (t >= QI.RO) X.mouth(S, S.gr, QI.RO, t); }],
       ].map(([t0, f]) => [t0, (S, u, a, t) => { f(S, u, a, t); stormSort(S, t); }]),
     });
-    X.reg('c3:382', { spid: 382, skin: 'sea', back: backS, look: lookS, roar: () => QI.RO, cues: [[QI.RO, 'cry']],   /* naturlydene ligger i lydsengen; brølet er artens eget */
+    X.reg('c3:382', { spid: 382, skin: 'sea', back: skyQ, look: lookS, roar: () => QI.RO, cues: [[QI.RO, 'cry']],   /* naturlydene ligger i lydsengen; brølet er artens eget */
       over: (x, t, o) => X.plate(x, t - QI.NM, Object.assign({ skin: 'sea' }, o)),
       fx(S, t, P) { rainFx(S, t, S.k || 1, 0.4 + 0.6 * seg(t, 0, QI.UP));
         if (S.shot === 6) { const hz = G3D.view().y; for (const q of S.L || []) if (q.near) { const a = flick(q.d) * q.k; if (a > 0.05) { const x = 256 + q.a * 220; nearBolt(x + (rnd(q.s, 3) - 0.5) * 60, -10, x, hz + 6, a, q.s * 5 + (q.d > 0.12 ? 2 : 0), 3.2); } } } } });   /* lynet i brølet ender i horisonten ved siden av ham, bak ham (Jazz 20.11: aldri på ham) */
 
-    /* ---------- Primal, skisse 4 (på låtas klokke fra 3:15,7; Jazz 20.11, chat 3) ----------
+    /* ---------- Primal (skisse 4 fra sparringen, på låtas klokke fra 3:15,7; Jazz 20.11, chat 3) ----------
        Endret fra skisse 3 (Jazz: «Han skal være opp på 3:43 akkurat, da er det første slaget», «Forstatt ingen lys ned i vannet», «fortsatt er han synlig hele tiden hvor han
        bare venter», og «stormen er aaalt for dårlig … Det skal forsse nedover med vann som også gjør det lettere å skille. Du har masse bilder å gå etter»):
        1 stormen langt borte (i 3D: hyllesky, regnsøyler som fosser ned, lyn inne i regnet; himmelen over oss er lysere) · 2 dronen langs fronten (vinkelen fra skisse 3, som
@@ -601,16 +551,16 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
     G3D.def('c3:382p', {
       len: QP.E, R: QP.L, at: 195.7, mus: { bed: 'sfx/natur/kyogre_primal.mp3' }, models: ['kyogre', 'kyogre_primal'], edge: 'sea', env: { rim: '#a8c8ff', glow: '#2a8acc', fog: '#16222e', glowH: 3 },
       make(K, T) { const S = storm(T), g = S.gr = kyFig(), p = S.pg = kypFig(); S.scene.add(g.root); S.scene.add(p.root); S.figs.push(g, p); S.T = T;
-        S.sea.material.uniforms.uTime = { value: 0 }; S.sprays.forEach(q => slowIn(q, SLOW)); mkStorm(S, K, T); S.cliff = S.scene.children[1];
+        S.sea.material.uniforms.uTime = { value: 0 }; S.sprays.forEach(q => { slowIn(q, SLOW); q.material.uniforms.uA.value = 0.3; }); mkStorm(S, K, T); S.cliff = S.scene.children[1];
         const pts = (n, f, o) => { const q = slowP(n, f, o, SLOW); S.scene.add(q); return q; };
         S.dsp = slowP(460, i => { const a = rnd(i, 11) * TAU, q = rnd(i, 12); return { p: [cos(a) * 5, 0.3, sin(a) * 4], v: [cos(a) * (3 + 9 * q), 8 + rnd(i, 13) * 16, sin(a) * (3 + 9 * q) - 5], b: rnd(i, 14) * 0.6, l: 1.4 + rnd(i, 15) * 0.6, z: 0.5 + rnd(i, 16) * 1.4 }; }, { t0: -1e5, shade: 1, g: 14, drag: 0.6, px: 30, near: 7, sz0: 0.6, sz1: 2.2, c: ['#f4fbff', '#c4d8e4', '#6e8a9c'], a: 0.7, fade: 0.6, floor: -1 }, 0.6); S.scene.add(S.dsp);
         S.col = pts(620, i => { const a = rnd(i, 21) * TAU, q = rnd(i, 22), r = 3 + q * 6; return { p: [cos(a) * r, 0.5 + rnd(i, 23) * 3, sin(a) * r * 0.8], v: [cos(a) * (2 + 6 * q), 18 + rnd(i, 24) * 22 * (1 - 0.5 * q), sin(a) * (2 + 6 * q)], b: rnd(i, 25) * 0.55, l: 2.4 + rnd(i, 26), z: 1.2 + rnd(i, 27) * 2.6 }; }, { t0: -1e5, shade: 1, g: 16, drag: 0.5, px: 36, sz0: 0.6, sz1: 2.2, c: ['#f6fcff', '#c8dcea', '#708ea2'], a: 0.75, fade: 0.5, floor: -1 });
         S.brk = pts(520, i => { const a = rnd(i, 51) * TAU, q = rnd(i, 52); return { p: [cos(a) * 3 * q, 0.3, sin(a) * 3 * q], v: [cos(a) * (3 + 9 * q), 16 + 20 * rnd(i, 53), sin(a) * (3 + 9 * q)], b: rnd(i, 54) * 0.1, l: 1.8 + rnd(i, 55), z: 0.9 + rnd(i, 56) * 2.2 }; }, { t0: -1e5, shade: 1, g: 16, drag: 0.5, px: 32, c: ['#f6fcff', '#c8dcea', '#708ea2'], a: 0.85, fade: 0.5, floor: -1 });
         S.sheet = pts(220, i => { const a = rnd(i, 31) * TAU; return { p: [(rnd(i, 32) - 0.5) * 8, 4 + rnd(i, 33) * 14, (rnd(i, 34) - 0.5) * 6], v: [cos(a) * 2, -2 - rnd(i, 35) * 3, sin(a) * 2], b: rnd(i, 36) * 1.2, l: 1.1 + rnd(i, 37) * 0.6, z: 0.5 + rnd(i, 38) * 0.9 }; }, { t0: -1e5, shade: 1, g: 22, px: 26, c: ['#f0f8ff', '#a8c4d8', '#5a7486'], a: 0.85, fade: 0.8, floor: -1 });
-        S.wallp = pts(380, i => { const a = rnd(i, 41) * TAU, q = rnd(i, 42), r = 5 + q * 12; return { p: [cos(a) * r, 0.5, sin(a) * r * 0.5], v: [cos(a) * (6 + 14 * q), 22 + rnd(i, 43) * 34 * (1 - 0.6 * q), sin(a) * (6 + 14 * q) * 0.35], b: rnd(i, 44) * 0.4, l: 2.8 + rnd(i, 45) * 1.2, z: 0.8 + rnd(i, 46) * 2.4 }; }, { t0: -1e5, shade: 1, g: 15, drag: 0.7, px: 26, near: 8, sz0: 0.6, sz1: 2.4, c: ['#eef8ff', '#b8d0e0', '#5a7486'], a: 0.18, fade: 0.6, floor: -1 });
+        S.wallp = pts(380, i => { const a = rnd(i, 41) * TAU, q = rnd(i, 42), r = 5 + q * 12; return { p: [cos(a) * r, 0.5, sin(a) * r * 0.5], v: [cos(a) * (6 + 14 * q), 22 + rnd(i, 43) * 34 * (1 - 0.6 * q), sin(a) * (6 + 14 * q) * 0.35], b: rnd(i, 44) * 0.4, l: 2.8 + rnd(i, 45) * 1.2, z: 0.8 + rnd(i, 46) * 2.4 }; }, { t0: -1e5, shade: 1, g: 15, drag: 0.7, px: 26, near: 8, sz0: 0.6, sz1: 2.4, c: ['#eef8ff', '#b8d0e0', '#5a7486'], a: 0.12, fade: 0.6, floor: -1 });
         /* 2b.3: plaskene som former (crown, øverst i fila): der han stuper, der han bryter flaten, der han stuper ned igjen langt borte, og veggen av vann bak ham i brølet. */
-        S.dcr = crown(S, T, { r: 4.5, out: 4.5, h: 11, up: 1.2, sd: 21 }); S.bcr = crown(S, T, { r: 7, out: 5, h: 15, up: 0.85, sd: 23 }); S.ecr = crown(S, T, { r: 5, out: 6, h: 18, up: 1.1, sd: 25 });
-        S.wcr = crown(S, T, { r: 9, out: 9, h: 22, up: 1.3, dir: [-0.47, -0.88], arc: -0.25, lean: 3, sd: 27 }); S.pmist = mistP(46, 9, 16, 321); S.scene.add(S.pmist);
+        S.dcr = crown(S, T, { r: 3.6, out: 5, h: 12, up: 1.25, sd: 21 }); S.bcr = crown(S, T, { r: 7, out: 5, h: 15, up: 0.85, sd: 23 }); S.ecr = crown(S, T, { r: 6.5, out: 7, h: 24, up: 1.0, sd: 25, a: 1, c0: '#e2edf3', c1: '#a9bfcc' });
+        S.wcr = crown(S, T, { r: 9, out: 9, h: 22, up: 1.3, dir: [-0.47, -0.88], arc: -0.25, lean: 3, sd: 27, a: 0.78, c0: '#b9c9d4', c1: '#73899a' });   /* mørkere enn de andre: den står rett bak ham i lynet og skal ikke bli en hvit vegg */ S.pmist = mistP(46, 9, 16, 321); S.scene.add(S.pmist);
         return S; },
       act(S, t, o) {
         const g = S.gr, p = S.pg, U = K.U(), su = S.sea.material.uniforms, ts = t * TS; su.uTime.value = ts; S.under = 0;
@@ -663,14 +613,14 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
           p.root.position.set(HOME[0], ry, HOME[2] + 2); p.root.rotation.set(mix(-0.32, 0, eo(seg(tq, 0, 1.0))), mix(0.1, -0.4, io(seg(tq, 0, QP.E - QP.L))), 0);
           const rw = back(seg(tq, 0, 0.35), 2.2) * (1 - 0.5 * io(seg(tq, 1.6, QP.E - QP.L))); p.add(ROAR, rw); p.rot('Jaw', 0, 0.04 * sin(t * 55) * rw, 0); S.rw = rw; S.mouth = null; p.eye(0, rw > 0.2 ? 0.75 : 0, 0.7);
           glo = 1.1 + 0.08 * rw + 0.22 * hit(tq, 0, 1); lines(p, glo, 1); S.glo = 0.3 + 0.5 * c01(glo - 1); }   /* 2b.3: linjene lyser, men brenner ikke ut til hvite flater (før 2,2–3,4) */
-        S.fx(S.brk, QP.C - 0.12, GL[0], 0, GL[1]); S.fx(S.sheet, QP.C + 0.05, GL[0], 4, GL[1]); S.fx(S.col, QP.S + 0.5, HOME[0], 0, HOME[2] + 8); S.fx(S.wallp, QP.L - 0.32, HOME[0], 0, HOME[2] + 3); S.fx(S.dsp, QP.DV + 1.0, HOME[0], 0, HOME[2] - 7);
-        S.dcr.at(t, QP.DV + 0.95, HOME[0], 0, HOME[2] - 7); S.bcr.at(t, QP.C - 0.3, GL[0], 0, GL[1]); S.ecr.at(t, QP.S + 0.45, HOME[0], 0, HOME[2] + 8); S.wcr.at(t, QP.L - 0.9, HOME[0], 0, HOME[2] + 1);
+        S.fx(S.brk, QP.C - 0.12, GL[0], 0, GL[1]); S.fx(S.sheet, QP.C + 0.05, GL[0], 4, GL[1]); S.fx(S.col, QP.S + 0.5, HOME[0], 0, HOME[2] + 8); S.fx(S.wallp, QP.L - 0.32, HOME[0], 0, HOME[2] + 3); S.col.visible = t < QP.B2; S.brk.visible = t < QP.B1;   /* dråpene fra forrige bilde skal ikke henge som snø foran ham i brølet */ S.fx(S.dsp, QP.DV + 1.0, HOME[0], 0, HOME[2] - 7);
+        S.dcr.at(t, QP.DV + 0.95, HOME[0], 0, HOME[2] - 4.5); S.bcr.at(t, QP.C - 0.3, GL[0], 0, GL[1]); S.ecr.at(t, QP.S + 0.45, HOME[0], 0, HOME[2] + 8); S.wcr.at(t, QP.L - 0.9, HOME[0], 0, HOME[2] + 1);
         S.fx(S.pmist, t >= QP.L - 0.5 ? QP.L - 0.5 : QP.C - 0.2, t >= QP.L - 0.5 ? HOME[0] : GL[0], 0, t >= QP.L - 0.5 ? HOME[2] + 1 : GL[1]);
         if (black) S.dcr.visible = S.bcr.visible = S.ecr.visible = S.wcr.visible = false; if (t < QP.C - 0.02) S.bcr.visible = false;   /* kronen i breachen hører til bildet fra siden (den er alt oppe når bildet kommer) */
         /* Havet: lyset fra dypet, og flaten buler opp over ham like før han bryter ut (uRH, motor.py). */
         su.uGlo.value.set(GL[0], GL[1], 9, t >= QP.UP && t < QP.B1 ? 0.12 * ei(seg(t, QP.UP, QP.C)) + (t >= QP.C ? 0.2 * (1 - seg(t, QP.C, QP.B1)) : 0) : t >= QP.L ? 0.1 + 0.1 * S.rw : 0); su.uBody.value.set(0, 0, 1, 0);
         su.uRH.value[0].set(GL[0], GL[1], 0, t >= QP.UP && t < QP.C + 0.3 ? 2.4 * ei(seg(t, QP.UP + 0.15, QP.C)) * (1 - seg(t, QP.C, QP.C + 0.3)) : 0);
-        su.uWade.value.set(t >= QP.UP && t < QP.B1 ? GL[0] : HOME[0], t >= QP.UP && t < QP.B1 ? GL[1] : HOME[2] + (t >= QP.L ? 2 : 0), t >= QP.UP && t < QP.B1 ? 9 : 11, t >= QP.DV - 0.05 && t < QP.DV + 1.5 ? 0.6 : t >= QP.UP && t < QP.B1 ? (t < QP.C - 0.02 ? 0.45 : 0.9) * seg(t, QP.UP + 0.2, QP.C) : t >= QP.L ? 0.9 : 0);   /* før breachen koker vannet bare halvt, så lyset synes gjennom skummet */
+        su.uWade.value.set(t >= QP.UP && t < QP.B1 ? GL[0] : HOME[0], t >= QP.UP && t < QP.B1 ? GL[1] : HOME[2] + (t >= QP.L ? 2 : 0), t >= QP.UP && t < QP.B1 ? 9 : 11, t >= QP.DV - 0.05 && t < QP.DV + 1.5 ? 0.6 : t >= QP.UP && t < QP.B1 ? (t < QP.C - 0.02 ? 0.3 : 0.9) * seg(t, QP.UP + 0.2, QP.C) : t >= QP.L ? 0.9 : 0);   /* før breachen koker vannet bare halvt, så lyset synes gjennom skummet */
         const ring = (i, x, z, t0, v, d, a) => su.uRing.value[i].set(x, z, 3 + (t - t0) * v, t >= t0 ? a * hit(t, t0, d) : 0);
         if (t < QP.B1) { ring(0, HOME[0], HOME[2] + 2, QP.DV + 1.2, 6, 4, 1); ring(1, HOME[0], HOME[2] + 4, QP.DV + 2.2, 4, 4, 0.8); ring(2, GL[0], GL[1], QP.C - 0.05, 9, 2, 1); ring(3, GL[0], GL[1], QP.UP + 0.3, 3, 1.5, 0.5); }
         else { ring(0, HOME[0], HOME[2] + 8, QP.S + 0.5, 8, 2, 1); ring(1, HOME[0], HOME[2] + 2, QP.L - 0.3, 12, 2.5, 1); ring(2, HOME[0], HOME[2] + 2, QP.L + 0.2, 8, 2.5, 0.8); ring(3, 0, 0, 0, 0, 1, 0); }
@@ -701,7 +651,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         /* Svart i stillheten (3:43,90–3:44,54). */
         [QP.B1, (S, u, a, t) => { K.cam(0, 200, 0, 0, 0, 1, 40); S.post.fade = 1; }],
         /* 8 Pangen (3:44,55): lenger borte; han er i lufta og stuper ned i vannet igjen. */
-        [QP.S - 0.01, (S, u, a, t) => { K.cam(mix(58, 55, u), 7, mix(104, 100, u), 0, mix(9, 5, u), 4, 32, -0.02); S.post.sh = 1.2 * hit(t, QP.S + 0.5, 0.9); S.post.fl = 0.35 * hit(t, QP.S, 0.1); S.post.flc = '#e8f4ff'; }],
+        [QP.S - 0.01, (S, u, a, t) => { K.cam(mix(58, 55, u), 7, mix(104, 100, u), 0, mix(9, 5, u), 4, 27, -0.02);   /* 2b.3: utsnittet 32 → 27°, så han ikke er så liten («lenger borte» står) */ S.post.sh = 1.2 * hit(t, QP.S + 0.5, 0.9); S.post.fl = 0.35 * hit(t, QP.S, 0.1); S.post.flc = '#e8f4ff'; }],
         /* Svart og stille (3:45,52–3:46,14). */
         [QP.B2, (S, u, a, t) => { K.cam(0, 200, 0, 0, 0, 1, 40); S.post.fade = 1; }],
         /* 9 Smellet (3:46,15): han er alt oppe foran oss (vannet fosser av ham, en vegg av sprut faller), brøler, lyn rundt ham, kort Primal-tekst; kampen tar til igjen. */
