@@ -274,8 +274,8 @@ void main(){
      horisonten, uSkyB oppe), grønnblått lys i tynne bølgetopper, skum på toppene og i striper etter vinden, og ringer etter regnet. Himmelen bak er 2D (bakteppet),
      så speilingen er fargene stedet setter, ikke et bilde. SEA_H er høyden; K.seaH i JavaScript er samme regning (tallene MÅ være like begge steder).
      uSea = (dønning i enheter, krapp sjø, skum 0–1, regn 0–1) · uWind = (retning x, z, fart, 0) · uRing og uWade som lavaen (ringer ved nedslag, skum rundt det som står i vannet).
-     uSk = 1: havet slik det var før s2b_23 (skyggen med runde finner, men med halen; skummet uten blonder; regnringer i ruter på 1,9): Kyogres bilde ovenfra i introen
-     (Jazz 24.11). */
+     uSk = 1: havet slik det var før s2b_23 (skyggen med runde finner og en bred halevifte; skummet uten blonder; regnringer i ruter på 1,9): Kyogres bilde ovenfra i
+     introen (Jazz 24.11). */
   const SEA_H = `uniform vec4 uSea, uWind; uniform vec4 uRH[4];
 float crest(float p){ float s = .5 + .5 * sin(p); return 2. * s * s - .75; }
 float seaH(vec2 w, float t){ vec2 d = normalize(uWind.xy + vec2(1e-4, 0.)), e = vec2(-d.y, d.x); float a = dot(w, d), b = dot(w, e), sp = uWind.z;
@@ -305,7 +305,9 @@ void main(){
   if (uBody.w > 0.) { vec2 dd = normalize(uBodyD.xy + vec2(1e-4, 0.)), q = w - uBody.xy; float a = dot(q, dd) / uBody.z, b = dot(q, vec2(-dd.y, dd.x)) / uBodyD.z, nz = (fbm(w * .09 + t * .05) - .5) * .25;
     /* 2b.3: finnene er feid bakover og halen har to fliker, så skyggen har hans omriss sett ovenfra (før: to runde lapper rett ut til sidene) */
     float ab = abs(b), e = a * a + b * b * (1. + .6 * max(0., -a)), f = pow((a - .34 + .3 * (ab - .8)) / .34, 2.) + pow((ab - 1.85) / 1.3, 2.), g2 = pow((a + 1.08 + .5 * ab) / .16, 2.) + pow((ab - .5) / .52, 2.);
-    if (uSk > .5) f = pow((a - .15) / .42, 2.) + pow((ab - 1.9) / 1.15, 2.);   /* uSk: de runde finnene fra før; halen står (Jazz 24.11: «Halen er borte nå. Fiks opp i det») */
+    /* uSk: de runde finnene fra før, og halen som en bred vifte bak en smal rot med et hakk midt bak (Kyogres omriss ovenfra, målt på modellen 24.11). Jazz 24.11:
+       «Halen er borte nå. Fiks opp i det», og om Fable sine to tynne fliker på de runde formene: «Halen er rar». */
+    if (uSk > .5) { f = pow((a - .15) / .42, 2.) + pow((ab - 1.9) / 1.15, 2.); g2 = pow((a + 1.08) / .42, 2.) + pow(b / (.34 + clamp(-(a + .78) / .6, 0., 1.)), 2.) + exp(-pow((a + 1.48) / .14, 2.) - b * b / .0676); }
     float k = max(max(1. - smoothstep(.45, 1.1, e + nz), (1. - smoothstep(.4, 1.1, f + nz)) * uBodyD.w), (1. - smoothstep(.4, 1.1, g2 + nz)) * uBodyD.w);
     body *= 1. - .82 * k * uBody.w; }
   if (uGlo.w > 0.) { float d = length(w - uGlo.xy) / max(uGlo.z, .01); gl = exp(-d * d * 2.2) * uGlo.w; body += uGloC * gl; }

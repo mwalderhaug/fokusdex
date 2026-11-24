@@ -336,8 +336,8 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
     const BT = [0, 2.5];            /* båten (x, z): rett over hodet hans, mellom finnene (han kommer opp med hodet mot kameraet, +Z). Hodet løfter den høyest */
     /* Skyggen under båten går jevnt i bildet (Jazz 24.11: «gjør også at kyogre svømmer jevnt fart under båten i klippet»). Kameraet i bilde 2 (CAM2) står 7° skrått,
        så en jevn fart i havet (før: 8 enheter i sekundet) gikk 134 px/s nederst i bildet og 106 px/s øverst. Nå går midten av skyggen jevnt i bildet (128 px/s):
-       snuten (11,5 foran midten) kommer inn nederst på slaget 0:04,57, midten er under båten i lynet 0:07,66 som før, kroppen er ute øverst 0:10,28 og haleflikene
-       rundt 0:11,0, før vinduet slutter 0:11,33 (før forsvant halen brått der).
+       snuten (11,5 foran midten) kommer inn nederst på slaget 0:04,57, midten er under båten i lynet 0:07,66 som før, kroppen er ute øverst 0:10,28 og halen
+       rundt 0:10,8, før vinduet slutter 0:11,33 (før forsvant halen brått der).
        ndc(z) = høyden i bildet (−1 nederst, 1 øverst) for et punkt i havet under kameraet, zAt(n) = det motsatte. */
     const CAM2 = [BT[0] + 0.6, 26, BT[1] + 3.6, BT[0] + 0.6, 0, BT[1] + 0.4, 52];
     const PASSZ = (() => { const [, cy, cz, , ty, tz, fov] = CAM2, L = Math.hypot(ty - cy, tz - cz), fy = (ty - cy) / L, fz = (tz - cz) / L, k = Math.tan(fov * PI / 360);
@@ -436,7 +436,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         lerpC(su.uSkyA, '#2c3c4a', '#8fa6c6', fl); lerpC(su.uSkyB, '#0a121e', '#34486a', fl); lerpC(su.uDeep, '#020f18', '#0a2a3a', fl * 0.6); su.uBri.value = 1 + 0.16 * fl;   /* 2b.3: lynet viser bølgene, det bleker dem ikke (før '#b8cce8' og 1,3) */
         /* Bilde 2 ovenfra (0:04,57–0:13,2) er slik det var før 2b.3 (Jazz 24.11: «Vannet ble for lyst nå kyogre svømte under båten. Likte bedre fargen og at du så
            skyggen av den. Skyggen var også dårligere under vann hos fable. Kan du bytte om det tilbake bare den scenen slik den var før fable byttet?»): det mørke havet,
-           lynet, skummet, gråtonen og disen fra 5ea1b7e, ingen stormsone, og havet fra før s2b_23 (uSk: skyggen med runde finner og halen, regnringene i ruter; Jazz: «Halen er borte nå. Fiks opp i det så er den godkjent etterpå»). Fable hadde gjort
+           lynet, skummet, gråtonen og disen fra 5ea1b7e, ingen stormsone, og havet fra før s2b_23 (uSk: skyggen med runde finner og en bred halevifte, regnringene i ruter; Jazz: «Halen er borte nå. Fiks opp i det så er den godkjent etterpå» og «Halen er rar»). Fable hadde gjort
            havet mørkt blågrønt her (01de9d3) og gitt skyggen hans omriss (s2b_23); det står i resten av filmen. uShal settes i hvert bilde (før ble den stående fra bilde 2
            og ut filmen): '#0d4a58' til og med bilde 2 og '#1a6274' etter, som i filmen Jazz godkjente 24.11. */
         const ovf = S.ovf = t >= QI.PASS - 0.02 && t < QI.B6 - 0.02, st0 = 0.32 + 0.3 * seg(t, 0, QI.UP); if (su.uSk) su.uSk.value = ovf ? 1 : 0;
@@ -448,7 +448,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         /* Kyogre: forbi under båten (0:04,57–0:12,5), opp fra dypet under den (0:13,2–0:23), finnene først (0:23,03), ryggen som en øy, så ligger han høyt og rir på dønningene. */
         let x = 0, y = -40, z = 0, yaw = 0, pit = 0, sh = 0, fin = 0, gl = 0;
         if (t >= QI.PASS - 0.3 && t < QI.W2 + 0.6) {
-          z = t < QI.PASS - 0.04 ? 2.9 - 8 * (t - QI.LY) : PASSZ(t);   /* jevn fart i bildet, han stopper aldri (Jazz 20.11 og 24.11): inn på 0:04,57, midt under båten i lynet 0:07,66, halen ute rundt 0:11,0 (PASSZ). Før klippet (bilde 1, der han synes svakt langt ute) som før */ x = BT[0] + 0.4; y = -7; yaw = PI; sh = 0.8; gl = 0.12; }
+          z = t < QI.PASS - 0.04 ? 2.9 - 8 * (t - QI.LY) : PASSZ(t);   /* jevn fart i bildet, han stopper aldri (Jazz 20.11 og 24.11): inn på 0:04,57, midt under båten i lynet 0:07,66, halen ute rundt 0:10,8 (PASSZ). Før klippet (bilde 1, der han synes svakt langt ute) som før */ x = BT[0] + 0.4; y = -7; yaw = PI; sh = 0.8; gl = 0.12; }
         else if (t >= QI.B6 && t < QI.UP) { const u = seg(t, QI.B6, QI.UP); y = mix(-30, -6.6, io(u)); yaw = 0; sh = 0.25 + 0.65 * u; gl = 0.06 + 0.4 * u * u; fin = 0.75 * seg(t, QI.B6 + 4, QI.UP - 1.5); }
         else if (t >= QI.UP) { const sea = H(0, 0), y1 = KYH + 0.8 * sea + 0.9 * (t >= QI.RO ? back(seg(t, QI.RO, QI.RO + 0.35), 2) * (1 - 0.6 * io(seg(t, QI.NM, QI.NM + 1.2))) : 0);   /* i brølet reiser han seg av vannet */
           y = kf(t, [[QI.UP, -6.4], [24.0, -3.9, io], [26.0, y1, io]]); if (t >= 26.0) y = y1;
