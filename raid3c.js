@@ -329,8 +329,9 @@ const G3C = (() => {
        så et slag på musikken står der det sto. Vendingene er korte og myke (ingen stillstand i toppen og bunnen), og alt er glatt når k, hov og ds glir.
      · Kroppen gynger mot slaget (body: løftes gjennom nedslaget, nesen litt ned først), og hodet står i verden: nakken tar gyngingen (hold).
      · Små rettelser i glid er sjeldne hendelser (X.fly.gust): vingene felles under kroppen, et vindkast løfter dem, eller ett rykk i én vinge.
-     Bruk (i hvert bilde): const st = { v, k, hov, spd, w, ex, asym, load, gust }; bd.begin().place(…); bd.phase(st); bd.wings(bd.beat(st, 0), bd.beat(st, 1)); … bd.neck(…); bd.hold(…).
-     o.fly = { sets: { w, c, p, h } (endringer i slagsettene, i grader), dist: { fordelingene langs vingen }, foldMax, hold: { neck, head, tip } }. */
+     Bruk (i hvert bilde): const st = { v, k, hov, spd, w, ex, asym, load, gust, cup }; bd.begin().place(…); bd.phase(st); bd.wings(bd.beat(st, 0), bd.beat(st, 1)); … bd.neck(…); bd.hold(…).
+     cup = en fast fold uten slag (0–1, som kuppet i et stup). asym > 0: den høyre vingen slår hardest (ruller fuglen mot høyre inn i en sving, er venstre den ytre: asym < 0).
+     o.fly = { sets: { w, c, p, h } (endringer i slagsettene, i grader), dist: { fordelingene langs vingen }, foldMax, hold: { neck, head, max, lim, g, lag } }. */
   X.fly = (f, o) => { const B = X.bird(f, o), n = B.n, R = B.rig, DG = PI / 180, F = o.fly || {}, PO = B.poses, L0 = B.L0;
     /* Fordelingen langs vingen (fra skulderen og ut): hvor mye av slaget, feiingen, vridningen, lasten, etterslepet og spalteåpningen hvert ledd tar, og foldingen (grader ved full fold). */
     const D = Object.assign({ el: [0.5, 1, 1, 1, 1, 1], sw: [0.5, 1, 1, 1, 1, 1], tw: [0.1, 0.3, 0.45, 0.6, 0.8, 1], cu: [0, 0, 0.1, 0.3, 0.65, 1], lg: [0, 0, 0.3, 0.55, 0.8, 1], sl: [0, 0, 0, 0.2, 0.6, 1],
@@ -352,6 +353,7 @@ const G3C = (() => {
         di += el * (1 - M.ax) + swp * M.ax; fw += swp * (1 - M.ax) + el * M.ax;
         tw += M.tw * sh(D.tw, i) * sin(TAU * ui) * DG;                                                 /* forkanten ned i nedslaget, opp i oppslaget */
         fw += fb * sh(D.ff, i) * DG; di += fb * sh(D.fd, i) * DG; tw += fb * sh(D.fq, i) * DG;           /* foldingen i oppslaget */
+        if (st.cup) { fw += st.cup * sh(D.ff, i) * DG; di += st.cup * sh(D.fd, i) * DG; tw += st.cup * sh(D.fq, i) * DG; }   /* kuppet: en fast fold uten slag (stupet) */
         di += (M.curl * ld + 6 * ld0) * cu * DG; fw -= (M.cb * ld + 3 * ld0) * cu * DG;                  /* lasten bøyer spissene opp og litt bakover */
         tw -= (M.slot * up + 8 * ld0 * (1 - up)) * sh(D.sl, i) * DG;                                    /* fjærene åpnes i oppslaget (og når den bremser) */
         if (g) { const s0 = sh(D.sw, i); tw += (24 * g.tk - 7 * g.lt - 9 * jk) * s0 * DG; di += (-9 * g.tk + 11 * g.lf + 8 * jk) * s0 * DG; }   /* rettelsene i glid, om skulderen */
@@ -361,11 +363,30 @@ const G3C = (() => {
     /* Kroppen i slaget: hv = løftet langs ryggen (m: lavest like etter toppen, høyest like etter bunnen), pt = stigningen (rad, nesen ned til rundt 35 % av slaget, så opp),
        sg = et lite rykk fram i nedslaget. Legges på før place. hvAt(du): løftet du slag før (til hodet, som henger rundt 0,23 slag etter). */
     B.body = st => X.fly.body(st, SETS);
-    /* Hodet står i verden, og nakken er fjæra: etter neck() løftes nakken mot kroppens gynging (hodet følger bare g av den, forsinket), og hodet dreies tilbake, så vinkelen står.
-       hv og pt fra body; g = 0,25–0,31 (sangsvanen); hodet følger løftet 0,23 slag etter (body.hvAt). sc = figurens skala. Armen er nakkens lengde (Neck → Head):
-       hodet holder vinkelen, så det flytter seg med Head-benet; en kort nakke tar mindre (HMAX, hold.max: 0,3 rad). */
-    B.hold = (b, g, sc, up) => { if (!dN || !b) return B; const s = sc || f.root.scale.x, gg = g == null ? (HO.g == null ? 0.3 : HO.g) : g, k = 1 - c01(up || 0); let a = k * (gg * b.hvAt(0.23) - b.hv - xN * s * b.pt) / (dN * s); a = HMAX * Math.tanh(a / HMAX);
-      R.rot(NB, L0, -a); R.rot(HB, L0, a + b.pt); for (const [bn] of o.keep || []) R.rot(bn, L0, a); return B; };   /* up: oppreist (nakken står loddrett og kan ikke ta et løft opp–ned) */
+    /* Hodet står i verden, og nakken er fjæra: etter neck() løftes nakken mot kroppens gynging og vippen (hodet følger bare g av gyngingen, lag slag etter), og hodet dreies
+       tilbake, så vinkelen står. b fra body; pk = andelen av kroppens vipp b.pt som er lagt på i place (standard 1), px = vipp i tillegg (rad, et vindkast); g = 0,25–0,31 og
+       lag 0,23 slag (sangsvanen; hold.g, hold.lag); up: oppreist (nakken står loddrett og kan ikke ta et løft opp–ned); sc = figurens skala. Armen er nakkens lengde (Neck → Head):
+       hodet holder vinkelen, så det flytter seg med Head-benet.
+       Rettet etter kontrollen 25.11: (1) nakken tåler høyst hold.max (rad), og en kort nakke kan ikke holde hodet i ro: utslaget i slaget (en sinus i u, regnet fra settene)
+       skaleres mykt ned mot hold.lim · hold.max (0,7), så nakken svinger jevnt, og hodet følger resten av gyngingen. En grense på selve vinkelen (tanh) gjorde nakken til en
+       firkantbølge: den sto i ytterpunktene og smakk 25° fram og tilbake på 3–4 bilder, to ganger i hvert slag (rykk i hodet og nakken). (2) Motdreiningen legges i hodets egen
+       ramme, som om den kom før hodets stigning, gir og rull fra neck(): da står hodet likt i verden også når fuglen krenger (om kroppens akse etter rullen vred den hodet
+       sideveis, opptil 8° og 190 °/s). Hodets retning i verden er da den samme som uten holdet og vippen. */
+    const ANC = [], TQ = G3D.T().Quaternion, qA = new TQ(), qX = new TQ(), qT = new TQ(), qD = new TQ(), vA = new (G3D.T().Vector3)();
+    if (R.B[HB]) { const byB = new Map(); for (const nm in R.B) byB.set(R.B[nm].b, nm); for (let x = R.B[HB].b.parent; x && byB.has(x); x = x.parent) ANC.unshift(byB.get(x)); }   /* benene fra roten til nakken */
+    /* Legger dreiningen Q ytterst i benets egen d (R.rot legger til innerst): d · (d⁻¹ · Q · d) = Q · d. */
+    const outer = (bn, Q) => { const e = R.B[bn]; if (!e) return; qD.copy(e.d || qT.identity()); qT.copy(qD).invert().multiply(Q).multiply(qD); if (qT.w < 0) { qT.x = -qT.x; qT.y = -qT.y; qT.z = -qT.z; qT.w = -qT.w; }
+      const sn = Math.hypot(qT.x, qT.y, qT.z); if (sn > 1e-9) R.rot(bn, vA.set(qT.x / sn, qT.y / sn, qT.z / sn), 2 * Math.atan2(sn, qT.w)); };
+    B.hold = (b, g, sc, up, pk, px) => { if (!dN || !b) return B; const s = sc || f.root.scale.x, gg = g == null ? (HO.g == null ? 0.3 : HO.g) : g, lg = HO.lag == null ? 0.23 : HO.lag, k = 1 - c01(up || 0);
+      const M = b.M || {}, pq = pk == null ? 1 : pk, xx = px || 0, ar = k / (dN * s), HL = (HO.lim == null ? 0.7 : HO.lim) * HMAX, P = xN * s * pq * (M.pt || 0) * DG, hv = M.hv || 0;
+      /* fasoren til utslaget (løftet lag slag før ganget med g, løftet og vippen er cosinuser i u: X · cos(2π(u − φ)) = Re(X · e^(−2πiφ) · e^(2πiu))) */
+      const c1 = cos(TAU * 0.12), s1 = sin(TAU * 0.12), c2 = cos(TAU * (lg + 0.12)), s2 = sin(TAU * (lg + 0.12)), c3 = cos(TAU * 0.85), s3 = sin(TAU * 0.85);
+      const zr = ar * (-gg * hv * c2 + hv * c1 - P * c3), zi = ar * (gg * hv * s2 - hv * s1 + P * s3);
+      const rp = ar * (gg * b.hvAt(lg) - b.hv - xN * s * pq * b.pt), rn = -ar * xN * s * xx, a = (rp + rn) / Math.sqrt(1 + (zr * zr + zi * zi + rn * rn) / (HL * HL));
+      const pt = pq * b.pt + xx; qA.identity(); for (const nm of ANC) if (R.B[nm].d) qA.multiply(R.B[nm].d);   /* A: roten til nakken, før holdet */
+      R.rot(NB, L0, -a);
+      qX.copy(qA).invert().multiply(qT.setFromAxisAngle(L0, pt)).multiply(qA).premultiply(qT.setFromAxisAngle(L0, a)); outer(HB, qX);   /* hodet: R(a) · A⁻¹ · R(pt) · A ytterst */
+      qX.setFromAxisAngle(L0, a); for (const [bn] of o.keep || []) outer(bn, qX); return B; };   /* det som henger på nakken (brystfjærene) blir liggende som før holdet */
     return B; };
   /* Slagsettene (grader og meter, for en stor fugl på rundt 10 m): el = slagets halve utslag i skulderen, em = midten (pluss = over ryggen), sw/sp = feiingen fram–bak og hvor
      mye den leder (0 = en strek fram i bunnen, 0,25 = en ring der oppslaget går bak nedslaget), tw = vridningen i skulderen, fold = foldingen i oppslaget, curl/cb = lasten
@@ -382,12 +403,14 @@ const G3C = (() => {
   X.fly.body = (st, S) => { const u = X.fly.phase(st, S), M = X.fly.mix(st.k || 0, st.hov || 0, S, st.spd), DG = PI / 180;
     return { hv: -M.hv * cos(TAU * (u - 0.12)), pt: M.pt * DG * cos(TAU * (u - 0.85)), sg: M.sg * sin(TAU * (u - 0.3)), hvAt: du => -M.hv * cos(TAU * (u - du - 0.12)), M, u }; };
   X.fly.sets = ch => { const S = {}; for (const k in X.fly.SETS) S[k] = Object.assign({}, X.fly.SETS[k], ch && ch[k] || {}); return S; };
-  /* Settene blandet for styrken k (0–1: det svake slaget vokser fra glid; 1–2 svakt → marsj; 2–3 marsj → kraft) og svevingen hov (0–1). spd (m/s): nedslaget litt kortere i fart. */
+  /* Settene blandet for styrken k (0–1: det svake slaget vokser fra glid; 1–2 svakt → marsj; 2–3 marsj → kraft) og svevingen hov (0–1). spd (m/s): nedslaget litt kortere i fart.
+     Svevesettet vokser mykt med styrken (sm5 over k = 0–3; rettet etter kontrollen 25.11: det var fullt fra k = 1 og lineært under, og knekken ga et sprang i farten
+     når styrken gikk gjennom 1 i en brems eller sveving; med sm5 over 0–2 sank kroppen for brått når styrken falt fra 2,6 til 0 på 0,3 s før forvarselet). */
   X.fly.mix = (k, hov, S, spd) => { S = S || X.fly.SETS; const KY = X.fly.KEYS, M = {}, kk = max(0, min(3, k || 0)), h = c01(hov || 0), MAG = { el: 1, em: 1, sw: 1, tw: 1, fold: 1, curl: 1, cb: 1, slot: 1, hv: 1, pt: 1, sg: 1 };
-    const i = min(2, floor(kk)), x = kk - i;   /* en glatt kurve gjennom settene (Catmull–Rom over k = 0, 1, 2, 3): ingen knekk i farten når styrken går gjennom et sett */
+    const xh = c01(kk / 3), fh = xh * xh * xh * (xh * (6 * xh - 15) + 10), i = min(2, floor(kk)), x = kk - i;   /* en glatt kurve gjennom settene (Catmull–Rom over k = 0, 1, 2, 3): ingen knekk i farten når styrken går gjennom et sett */
     for (const key of KY) { const Q = [MAG[key] ? 0 : S.w[key], S.w[key], S.c[key], S.p[key]], p0 = Q[i], p1 = Q[i + 1], m0 = i ? (Q[i + 1] - Q[i - 1]) / 2 : Q[1] - Q[0], m1 = i < 2 ? (Q[i + 2] - Q[i]) / 2 : Q[3] - Q[2];
       const x2 = x * x, x3 = x2 * x, v = (2 * x3 - 3 * x2 + 1) * p0 + (x3 - 2 * x2 + x) * m0 + (3 * x2 - 2 * x3) * p1 + (x3 - x2) * m1;
-      M[key] = mix(v, S.h[key] * (MAG[key] && kk < 1 ? kk : 1), h); }
+      M[key] = mix(v, S.h[key] * (MAG[key] ? fh : 1), h); }
     if (spd != null) M.ds = max(0.45, M.ds - 0.002 * max(0, spd - 20) * (1 - h));
     return M; };
   /* Fasen: x = andelen av slaget fra toppen (jevn i tid) → u (0,5 = bunnen etter andelen ds). Hver halvdel går med sin egen jevne fart, så farten i vingen er størst midt i

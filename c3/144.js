@@ -109,12 +109,21 @@
   const KK = X.fly.trk([[-3, 2.1], [-0.45, 2.15], [-0.15, 2.7], [0.45, 2.7], [1.0, 0], [3.9, 0], [4.5, 2.4], [5.6, 2.1], [9.9, 2.05], [10.9, 1.9], [11.45, 0.35], [12.6, 0.35], [13.3, 3.0], [14.15, 3.0],
     [14.7, 2.45], [17.0, 2.4], [17.8, 0.3], [21.6, 0.3], [22.0, 1.0], [24.6, 1.0], [24.95, 2.95], [26.1, 2.7], [26.5, 2.6], [27.05, 2.6], [27.35, 0], [F0E - 0.2, 0], [F0E + 0.9, 2.3]]);
   const LD = X.fly.trk([[24.6, 0], [25.1, 0.8], [26.2, 0.8], [26.8, 0]]);   /* bremsen: spissene opp og fjærene åpne (Carruthers m.fl. 2007) */
-  /* Slagene talt fra en bunn (v): hele tall på B0 + k · HP (annethvert slag i låta), som i dag; etter brølet ett slag per takt. */
-  const VB = s => s <= 27.2 ? (s - B0) / HP : s < F0E ? (27.2 - B0) / HP : (s - F0E) / (2 * HP) - 0.6;
+  /* Slagene talt fra en bunn (v): hele tall på B0 + k · HP (annethvert slag i låta), som i dag; etter brølet ett slag per takt. Rettet etter kontrollen 25.11: fasen bremses
+     mykt til stans (VA0–VA1, mens styrken går til null) og står der dagens fryser (27,2), og den settes i gang mykt igjen før F0E (VB0–VB1, mens styrken ennå er null) og går
+     videre fra der den sto, så slagene etter VB1 ligger der de lå. Før: et sprang i fasen på F0E flyttet kroppen 8 cm på ett bilde (0:32,50), og stansen midt i et slag
+     på 27,2 (styrken 1,3) ga vingespissen et vipp og kroppen et hakk (0:30,0). Farten i fasen er sammenhengende, og akselerasjonen også (sm5). */
+  const sm5I = x => x * x * x * x * (x * (x - 3) + 2.5);   /* ∫ sm5 fra 0 til x (1/2 ved x = 1) */
+  const VZ = (27.2 - B0) / HP, VA0 = 27.05, VA1 = 27.35, VB1 = F0E + 0.345, VB0 = F0E - 0.345 - 4 * HP * (1 - (VZ + 0.6) % 1);
+  const VB = s => s <= VA0 ? (s - B0) / HP : s < VA1 ? (VA0 - B0 + (VA1 - VA0) * (seg(s, VA0, VA1) - sm5I(seg(s, VA0, VA1)))) / HP : s <= VB0 ? VZ
+    : s < VB1 ? VZ + (VB1 - VB0) / (2 * HP) * sm5I(seg(s, VB0, VB1)) : VZ + (VB1 - VB0) / (4 * HP) + (s - VB1) / (2 * HP);
   /* Den frosne fasen fra 27,2 (dagens): ny holder den også etter F0E, til vingeslaget har tatt over (dagens hopper til toppen på F0E, så folden i alle vingeleddene
      hopper i ett bilde på 0:32,47: funnet med selvsjekken, rettet bare i den nye). */
   const UFZ = X.bird.warp((27.2 - B0) / HP + 0.56, 0.56);
-  const nbeat = (s, sp, uf) => ({ v: VB(s), k: KK(s), hov: uf, spd: sp, load: LD(s) });
+  /* Kuppet i stupet (rettet etter kontrollen 25.11): i dagens film har vingene en kupp med hendene ned mellom kuppet og dråpen (0:04,32–0:04,45, låta 1,55–1,7), fordi
+     foldingen i X.bird går videre med fasen uten slag. Uten slag har den nye ingen fold, og vingene sto som en strek der: en fast fold (st.cup), uavhengig av styrken. */
+  const CUP = s => 0.8 * sm5(seg(s, 1.49, 1.64)) * (1 - sm5(seg(s, 1.68, 1.85)));   /* som dagens fold i hendene der: inn 1,5–1,65, ut 1,7–1,85 */
+  const nbeat = (s, sp, uf) => ({ v: VB(s), k: KK(s), hov: uf, spd: sp, load: LD(s), cup: CUP(s) });
 
   /* Rykket i brølet: starter i null (ikke et sprang), slår ut på fire bilder, svinger og faller til ro. */
   const kick = a => a <= 0 ? 0 : (1 - Math.exp(-16 * a)) * (0.3 + 0.7 * Math.exp(-3 * a) * cos(8 * a));
@@ -141,8 +150,9 @@
     const sL = Object.assign({}, st, { ex: { di: st.ex.di + 0.05 * kr, fw: 0.12 * kr } }), sR = Object.assign({}, st, { ex: { di: st.ex.di - 0.09 * kr, fw: -0.24 * kr } });   /* vingene bøyes opp av lasten når den retter seg opp etter stupet */
     /* Løftet i vingeslaget, og et lite rykk fram på hvert nedslag der det går fort. */
     const hv = -cos(TAU * (us - 0.12)) * (A * 0.42 + Ah * 0.55), P = V(q.p[0], q.p[1], q.p[2]).addScaledVector(V(0, 0, 0).copy(u).lerp(Y, uf).normalize(), hv).addScaledVector(f, 0.3 * A * sin(TAU * (us - 0.3)) * (1 - uf));
-    /* Det nye vingeslaget (ikke 'stiv'): samme stillinger og samme sving (ex), slaget fra flyriggen 2 og kroppen som gynger mot det. */
-    let nw = null; if (!STIV()) { const n0 = nbeat(s, sp, uf), a = 0.55 * kr, nst = Object.assign(n0, { w: st.w, ex: sL.ex, asym: a }), nsr = Object.assign({}, n0, { ex: sR.ex }), b = X.fly.body(nst, FSETS);
+    /* Det nye vingeslaget (ikke 'stiv'): samme stillinger og samme sving (ex), slaget fra flyriggen 2 og kroppen som gynger mot det. Den ytre vingen slår hardest inn i
+       svingen og den indre ut av den: ruller den mot høyre (kr > 0), er venstre den ytre, så asym = −0,55 · kr (fortegnet var snudd før kontrollen 25.11). */
+    let nw = null; if (!STIV()) { const n0 = nbeat(s, sp, uf), a = -0.55 * kr, nst = Object.assign(n0, { w: st.w, ex: sL.ex, asym: a }), nsr = Object.assign({}, n0, { ex: sR.ex }), b = X.fly.body(nst, FSETS);
       nw = { st: nst, sR: nsr, b }; P.set(q.p[0], q.p[1], q.p[2]).addScaledVector(V(0, 0, 0).copy(u).lerp(Y, uf).normalize(), b.hv).addScaledVector(f, b.sg * (1 - uf)); }
     /* Brølet: den kaster seg litt opp og fram, og faller til ro. */
     const rr = s < L.roar ? 0 : kf(s, [[L.roar, 0], [L.roar + 0.25, 1, eo], [L.name + 0.3, 1], [L.name + 1.3, 0.2, io]]); P.y += 0.6 * kick(s - L.roar) - 0.35 * mt;
@@ -179,14 +189,16 @@
   const pose = (g, bd, q, T, t) => { neckW(q.uf);
     if (q.nw) { const b = q.nw.b, lf = new T.Vector3().crossVectors(q.u, q.f), nose = b.pt * (1 - 0.5 * q.uf);   /* ny: kroppen vipper litt i slaget, og hodet står (nakken tar gyngingen) */
       bd.begin().place(q.P, q.f.clone().applyAxisAngle(lf, -nose), q.u.clone().applyAxisAngle(lf, -nose), SC); bd.q0 = g.root.quaternion.clone();
-      /* Forvarselet og brølet (godkjent) er dagens: der slaget står stille (27,2 til F0E), står vingene som i dag, med dagens fold i den frosne fasen (rw tones inn og ut). */
-      const rw = sm5(seg(q.s, 27.0, 27.4)) * (1 - sm5(seg(q.s, F0E - 0.2, F0E + 0.6))), wg = k => { const Pn = bd.beat(k ? q.nw.sR : q.nw.st, k); if (rw <= 0) return Pn;
-        const o0 = k ? q.sR : q.sL, Po = bd.pose(Object.assign({}, o0, { A: 0, Ah: 0, u: q.s > 27.2 ? UFZ : o0.u }), k); for (const c of ['fw', 'di', 'tw']) Pn[c] = Pn[c].map((v, i) => mix(v, Po[c][i], rw)); return Pn; };
-      bd.wings(wg(0), wg(1)).neck(q.np, q.nr, q.ny).hold(Object.assign({}, b, { pt: nose }), null, SC, q.uf).legs(q.lg); }   /* hodet holder vinkelen mot den vippen kroppen faktisk får */
+      /* Forvarselet og brølet (godkjent) er dagens: der slaget står stille (27,2 til F0E), står vingene som i dag, med dagens fold i den frosne fasen (rw tones inn og ut).
+         Rettet etter kontrollen 25.11: blandingen går mot dagens faktiske vinger (med dagens siste slag som dør ut, og fasen som stanser mykt) og er ferdig før styrken faller
+         (26,9–27,15): det nye slaget foldet seg ut når styrken falt (folden følger styrken), og hånda slo 11–13° fram og tilbake på 0,2 s (0:29,93–0:30,10; dagens ±1,5°). */
+      const rw = sm5(seg(q.s, 26.9, 27.15)) * (1 - sm5(seg(q.s, F0E - 0.2, F0E + 0.6))), wg = k => { const Pn = bd.beat(k ? q.nw.sR : q.nw.st, k); if (rw <= 0) return Pn;
+        const o0 = k ? q.sR : q.sL, Po = bd.pose(Object.assign({}, o0, q.s < 27.5 ? { u: q.s < VA1 ? X.bird.warp(VB(q.s) + 0.56, 0.56) : UFZ } : { A: 0, Ah: 0, u: UFZ }), k);   /* dagens vinger, med fasen som stanser mykt */ for (const c of ['fw', 'di', 'tw']) Pn[c] = Pn[c].map((v, i) => mix(v, Po[c][i], rw)); return Pn; };
+      bd.wings(wg(0), wg(1)).neck(q.np, q.nr, q.ny).hold(b, null, SC, q.uf, 1 - 0.5 * q.uf).legs(q.lg); }   /* hodet holder vinkelen mot den vippen kroppen faktisk får */
     else { bd.begin().place(q.P, q.f, q.u, SC); bd.q0 = g.root.quaternion.clone(); bd.wings(bd.pose(q.sL, 0), bd.pose(q.sR, 1)).neck(q.np, q.nr, q.ny).legs(q.lg); }
     { const td = tailDirs(q, T, bd, t); bd.tail(td[0].map(v => bd.local(v)), td[1]); }
     g.add({ Jaw: [0, -q.jaw, 0] }, 1); g.eye(0, q.rr > 0.4 ? 0.75 : (t % 3.7 < 0.1 ? 0.5 : 0)); };
-  BIRD.pose = (g, bd, q, T, t) => pose(g, bd, q, T, t);   /* til fuglelaben (work/g3d/www/fuglelab.js) */
+  BIRD.pose = (g, bd, q, T, t) => pose(g, bd, q, T, t); BIRD.neckW = neckW;   /* til fuglelaben (work/g3d/www/fuglelab.js): neckW(uf) setter nakken og brystfjærene som filmen */
   /* Vingespissene på tiden s uten å stille figuren (til glitteret og strekene): kroppen pluss vingens vinkel i slaget. */
   const tipAt = (s, sd) => { const q = pva(s), sp = hyp(q.v[0], q.v[1], q.v[2]) || 1, fx = q.v[0] / sp, fz = q.v[2] / sp, an = AMP(s) * (1.3 * cos(TAU * (X.bird.warp(PH(s), 0.56) - 0.19))), r = 5.9;
     return [q.p[0] + sd * fz * r * cos(an), q.p[1] + r * sin(an) - 0.3, q.p[2] - sd * fx * r * cos(an)]; };
