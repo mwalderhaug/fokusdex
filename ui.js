@@ -1169,12 +1169,13 @@ function itemSheet(k) {
 }
 /* Arket til en pakke: hva som er i den (sjansene), og kjøpet. */
 function packSheet(k) {
-  const P = PACKS[k]; if (!P) return; const od = packOdds(k);
+  const P = PACKS[k]; if (!P) return; const od = packOdds(k), pt = pityOf(k);
   const nf = (S.fpk && S.fpk[k]) || 0, free = nf > 0, lock = !free && P.lv && tlv() < P.lv, full = S.pend.length > PACKMAX, can = (free || S.coins >= P.p) && !lock && !full, p10 = P.p * Math.max(0, 10 - nf), can10 = !full && !(P.lv && tlv() < P.lv) && S.coins >= p10;
   openSheet(`<div class="shead it" style="--pc:${P.c}"><span class="pk-ic"><i></i></span><div class="sp"><div class="pn">${P.n}</div><div class="sm tn">${['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'][P.slots.length] || P.slots.length} Pokémon, opened on the spot</div></div>${coinEl(S.coins)}</div>
     <p>${P.d}</p>
-    <div class="pkod" id="pkod"><div class="lab" style="margin:0">${tl('Your odds in one pack right now')}</div><div class="pkod-r">${[['r2', 'Rare or better', od.rare], ['r3', 'Epic', od.epic], ['r4', 'Legendary', od.leg], ['sh', 'Shiny', od.shiny]].map(([c, n, v]) => `<span class="pkod-c ${c}"><b class="tn">${pkPct(v)}</b><small>${n}</small></span>`).join('')}</div></div>
-    <p class="sm">${tl('What is inside follows your routes and the level of your team. Ten at once always hold at least one rare or better, and now and then a pack shines gold: every card in it is rare or better. Pokémon from packs sell for less than wild ones. A legendary from a pack is a raid of its own, with one attempt, and the greatest legendaries are rare in packs: they are mostly met in raids.')}</p>
+    <div class="pkod" id="pkod"><div class="lab" style="margin:0">${tl('Your odds in one pack right now')}</div><div class="pkod-r">${[['r2', 'Rare or better', od.rare], ['r3', 'Epic', od.epic], ['r4', 'Legendary', od.leg], ['sh', 'Shiny', od.shiny]].map(([c, n, v]) => `<span class="pkod-c ${c}"><b class="tn">${pkPct(v)}</b><small>${n}</small></span>`).join('')}</div>
+      ${pt ? `<div class="pkpity"><div class="lab" style="margin:0">${tl('Bad luck has a limit')}</div><div class="pkod-r two">${[['r4', pt.leg, 'packs at most to a legendary'], ['sh', pt.sh, 'packs at most to a shiny']].map(([c, v, n]) => `<span class="pkod-c ${c}"><b class="tn">${v}</b><small>${tl(n)}</small></span>`).join('')}</div></div>` : ''}</div>
+    <p class="sm">${tl('You turn the cards one at a time, or all at once. Every Pokémon goes straight into your collection, and a legendary is a raid of its own, with one attempt. Ten at once always hold at least one rare or better, and now and then a pack shines gold: every card in it is rare or better. Pokémon from packs sell for less than wild ones, and the greatest legendaries are rare in packs: they are mostly met in raids.')}</p>
     ${lock ? `<p class="sm au">Opens at trainer level ${P.lv}. You are level ${tlv()}.</p>` : full ? '<p class="sm au">Catch some of the encounters that are waiting before you open more packs.</p>' : ''}
     <div class="acts pka"><button type="button" class="btn gold" data-a="pack" data-k="${k}"${can ? '' : ' disabled'}>${free ? 'Open · free' : `Open · ${nb(P.p)}`}</button><button type="button" class="btn" data-a="pack" data-k="${k}" data-n="10"${can10 ? '' : ' disabled'}>Open 10 · ${nb(p10)}</button><button type="button" class="btn nf" data-a="close">Close</button></div>`);
 }
@@ -1484,32 +1485,43 @@ function teamSwap(out, inn) { if (!inn || !swapParty(out ? out.u : 0, inn.u)) re
 /* Prosent slik sjansene vises: hele tall, én desimal under ti, og 100 % først når det er sikkert. */
 const pkPct = x => x >= 0.9995 ? '100 %' : x >= 0.995 ? '99 %' : x >= 0.1 ? Math.round(x * 100) + ' %' : (x * 100).toFixed(1).replace(/\.0$/, '') + ' %';
 /* ---------- PAKKEÅPNINGEN (steg 1.7, ønske 13; ny åpning i pa3, Jazz 24.11: «gjør det mer spennende å åpne med tøffere animasjoner per pakke …
-   Desto dyrere pakke desto mer spenning skal det være og wow faktor») ----------
+   Desto dyrere pakke desto mer spenning skal det være og wow faktor»; KORT FOR KORT i pk5, Jazz 25.11: «Åpner et og ett kort og dersom det er sjelden
+   eller alt fra epic ser man litt omriss av, desto mer sjeldent desto tøffere omriss … Man trenger altså et og ett kort men kan velge å åpne alle med en
+   gang». Researchen bak: work/raids3d/research/pakker.md) ----------
    Én pakke eller flere (ti fra Shop). PAKKEN står og venter, og jo dyrere den er, jo mer lever den (t0–t3): Great har et glimt over seg, Ultra folie som
    skifter, og Master folie i alle farger og lys som dreier bak seg. En pakke som holder noe stort (epic, legendarisk, shiny: pkHot), er urolig alt før
    den åpnes, og en GULLPAKKE (alle kortene rare eller bedre: pkGold; game.js gir den av og til med vilje) skinner i gull. Trykk, og den RIVES OPP: større
    jo dyrere (lyset, strålene og lyden; PKRIP er pausen før kortene kommer). Kortene legger seg med baksiden opp: de andre i en VIFTE, og det siste for
-   seg selv, større. Det siste er det beste (pakken er sortert med det beste sist). GLØDEN PÅ BAKSIDEN RØPER SJELDENHETEN før kortet snus.
-   Ett trykk snur hele vifta, kort for kort (pkFan; et stort kort i vifta får sitt eget øyeblikk underveis). Så BYGGER DET SISTE KORTET SEG OPP (pkCharge):
-   det skjelver mer og mer, lyden stiger, og gløden klatrer ett trinn for hver klasse over plassens laveste (uncommon → rare → epic → legendarisk), med
-   shiny som et eget trinn til slutt. Hvor lenge det varer, følger pakken (PKCH før første trinn, PKSTEP per trinn): Master er lengst. Et stort kort, og
-   det siste i en Ultra eller Master Pack, venter på et trykk («Tap to reveal»); ellers snus det av seg selv. Et trykk mens det bygger seg opp, hopper rett
-   til slutten. Når det snus: smellet i klassens farge, gnister (pkSparks), og for epic og bedre (eller shiny) rister skjermen (pkQuake); et stort treff
-   får sitt eget øyeblikk (pkHero): lyset samler seg i klassens farge, kortet løftes fram, og ordet står over. Giant og fem stjerner røpes ikke på
-   forhånd, så også en rolig pakke kan overraske.
-   Med flere pakker fylles raden øverst pakke for pakke, og til slutt kommer SAMMENDRAGET: alt du fikk, det beste først, der du beholder det
-   som er verdt det og slipper resten for mynter med ett trykk (samme regler som duplikatene, packKeepers i game.js).
-   Alt er avgjort og lagret når åpningen starter (openPacks), så ingenting går tapt om appen lukkes underveis: de vanlige kortene er alt i samlingen,
-   de store (pkCatch: epic, shiny) venter i gresset, og en legendarisk er et pakke-raid (praidAdd) som kan tas med en gang («Face it now») eller fra
-   forsiden. Alt i åpningen er laget i kode (CSS og lydene i sfx), ingenting fra spillene.
-   U.pk = { k, packs (hver sortert med det beste sist), i = pakken som står framme, demo, rel = settet som slippes, fin = ferdig valgt, pick, tm = tidtakerne,
-   ph = hvor pakken framme er: pack (uåpnet), fan (vifta venter på trykket), turn (vifta snus), hit (det siste bygger seg opp), wait (venter på trykket), done }. */
+   seg selv, større. Det siste er det beste (pakken er sortert med det beste sist, som i de fysiske pakkene).
+   ETT TRYKK SNUR ETT KORT (pk5), i rekkefølge fra venstre, og trykket virker hvor som helst på kortene; det neste løfter seg litt (nx). Baksidene i vifta
+   røper ingenting før det er kortets tur (før pk5 lyste klassen på alle med en gang). Da kommer VARSELET, sterkere jo sjeldnere (pkTz): common og
+   uncommon snus med en gang; RARE viser en tynn kant og omrisset av Pokémonen så vidt, et halvt sekund (PKRARE), og snus av seg selv; EPIC og SHINY
+   løftes ut av vifta, resten dempes, og silhuetten står svart med en lysende kontur i klassens farge (shiny: gull og glitter) som puster; så venter det
+   på trykket («Tap to reveal»). En LEGENDARISK har ingen form (hvem det er, er hemmelig til introen i pakke-raidet), men lys og stråler som dreier, et
+   spørsmålstegn og risting. Varselet viser alltid kortets egen klasse, aldri mer. Når det snus: smellet i klassens farge, gnistene, for epic og bedre
+   ristingen, og ordet over (pkHero), med en kort sperre så et dobbelttrykk ikke hopper over øyeblikket (X.lk).
+   DET SISTE KORTET har gløden fra plassens laveste klasse (den er sikker) og bygger seg opp når det trykkes (pkCharge): det skjelver mer og mer, lyden
+   stiger, og gløden klatrer ett trinn for hver klasse over plassens laveste (uncommon → rare → epic → legendarisk), med shiny som et eget trinn til slutt;
+   omrisset står fra rare og blir tøffere for hvert trinn (pkOz). Hvor lenge det varer, følger pakken (PKCH før første trinn, PKSTEP per trinn): Master er
+   lengst. Et stort kort, og det siste i en Ultra eller Master Pack, venter på et trykk («Tap to reveal»); ellers snus det av seg selv. Et trykk mens det
+   bygger seg opp, hopper rett til slutten.
+   «OPEN ALL» (pkAll) snur resten av pakken med en gang, raskt etter hverandre og uten varsel (PKFAN), og så det siste med smellet. Giant og fem stjerner
+   røpes ikke på forhånd, så også en rolig pakke kan overraske.
+   Med flere pakker fylles raden øverst pakke for pakke, «Skip to the end» hopper over resten, og til slutt kommer SAMMENDRAGET: alt du fikk, det beste
+   først, der du beholder det som er verdt det og slipper resten for mynter med ett trykk (samme regler som duplikatene, packKeepers i game.js).
+   Alt er avgjort og lagret når åpningen starter (openPacks), så ingenting går tapt om appen lukkes underveis: kortene er alt i samlingen (fra pk4 også
+   epic og shiny), og en legendarisk er et pakke-raid (praidAdd) som kan tas med en gang («Face it now») eller fra forsiden. Alt i åpningen er laget i
+   kode (CSS og lydene i sfx), ingenting fra spillene; silhuetten er Pokémonens eget bilde med brightness(0) og drop-shadow (pkBack).
+   U.pk = { k, packs (hver sortert med det beste sist), i = pakken som står framme, j = kortet som snus neste gang i den, demo, rel = settet som slippes,
+   fin = ferdig valgt, pick, tm = tidtakerne, lk = trykk venter til dette tidspunktet, ph = hvor pakken framme er: pack (uåpnet), fan (kortene ligger og
+   venter på neste trykk), rare (et rare-kort viser kanten før det snus), tz (et stort kort i vifta viser omrisset og venter), hit (det siste bygger seg
+   opp), wait (det siste venter på trykket), turn («Open all» snur resten), done }. */
 const pkIv = e => e.iv ? e.iv.reduce((a, b) => a + b, 0) : 0;
 /* Det som gjør pakken urolig: en legendarisk (et pakke-raid), epic eller shiny. */
 const pkHot = e => !!(e.myst || e.t >= 3 || e.sh);
-/* Kortet er fortsatt ditt: i gresset (epic, shiny), i samlingen (de vanlige, e.u = Pokémonen det ble) eller som pakke-raid (e.pr). */
+/* Kortet er fortsatt ditt: i samlingen (e.u = Pokémonen det ble), som pakke-raid (e.pr) eller i gresset (en legendarisk uten raid). */
 const pkMine = e => S.pend.includes(e) || !!(e.u && monBy(e.u)) || !!(e.pr && praidBy(e.pr));
-/* NEW: arten var ikke fanget før pakkene ble åpnet (U.pk.cw fra openPacks; de vanlige kortene er alt lagt i samlingen når de snus). */
+/* NEW: arten var ikke fanget før pakkene ble åpnet (U.pk.cw fra openPacks; kortene er alt lagt i samlingen når de snus). */
 const pkNew = e => !e.myst && !((U.pk && U.pk.cw) || S.caught)[e.id];
 /* Valget mellom å beholde og å slippe for mynter: på reisen først fra dag 4 (steget «nature»). */
 const pkPickOn = () => !jOn() || has('nature');
@@ -1517,15 +1529,27 @@ const pkBig = e => pkHot(e) || (szOn() && e.sz === 3) || !!(potOn() && e.iv && s
 const pkQ = e => (e.myst ? 100 : 0) + e.t * 10 + (e.sh ? 25 : 0) + (e.iv ? starsFor(pkIv(e)) : 0) + (e.sz === 3 ? 4 : e.sz === 2 ? 1 : 0);
 const pkWord = e => e.myst ? 'Legendary' : [e.sh ? 'Shiny' : '', szOn() && e.sz === 3 ? 'Giant' : '', e.t >= 3 ? TIERS[e.t] : !e.sh && potOn() && e.iv && starsFor(pkIv(e)) >= 5 ? 'Five stars' : ''].filter(Boolean).join(' · ');
 /* Pakkens trinn (0 Poké, 1 Great, 2 Ultra, 3 Master) styrer hvor mye som skjer, i millisekunder: pausen før kortene kommer (PKRIP), tiden før det siste
-   kortet tar første trinn (PKCH), tiden per trinn (PKSTEP) og avstanden mellom kortene når vifta snus (PKFAN). */
-const PKT = { poke: 0, great: 1, ultra: 2, master: 3 }, PKRIP = [330, 430, 580, 760], PKCH = [300, 480, 700, 950], PKSTEP = [360, 430, 520, 620], PKFAN = [140, 125, 110, 95];
+   kortet tar første trinn (PKCH), tiden per trinn (PKSTEP) og avstanden mellom kortene når «Open all» snur resten (PKFAN). PKRARE = hvor lenge et
+   rare-kort viser kanten og omrisset før det snus av seg selv (pk5). */
+const PKT = { poke: 0, great: 1, ultra: 2, master: 3 }, PKRIP = [330, 430, 580, 760], PKCH = [300, 480, 700, 950], PKSTEP = [360, 430, 520, 620], PKFAN = [140, 125, 110, 95], PKRARE = 520;
 const pkTier = X => PKT[X.k] || 0;
 /* Gullpakken: alle kortene rare eller bedre (en legendarisk teller med). */
 const pkGold = p => p.length >= 3 && p.every(e => e.myst || e.t >= 2);
 const pkCls = e => e.myst ? 4 : e.t;
+/* Varselet før et kort i vifta snus (pk5), sterkere jo sjeldnere: 0 ingenting (common, uncommon), 1 rare (kanten og omrisset så vidt, snus av seg selv),
+   2 epic eller shiny (omrisset står og venter på trykket), 3 legendarisk (lys uten form). Fargen (pkOc) er klassens, og gull for shiny. */
+const pkTz = e => e.myst ? 3 : e.t >= 3 || e.sh ? 2 : e.t === 2 ? 1 : 0;
+const pkOc = e => e.sh && !e.myst ? 'var(--gold)' : `var(--r${pkCls(e)})`;
 function pkFront(e) {
   if (e.myst) return '<span class="pk-front pkq"><span class="pkq-o" aria-hidden="true"><i>?</i></span><b>? ? ?</b><span class="tier r4">Legendary</span><span class="sm">Who is it? Face it in a pack raid</span></span>';
   return `<span class="pk-front">${pkNew(e) ? '<i class="pk-new">NEW</i>' : ''}${spr(e.id, { ani: 1, sh: e.sh, mega: defForm(e.id) })}<b>${esc(D(e.id)[0])}${gs(e)}</b><span class="tier r${e.t}">${e.sh ? 'Shiny · ' : ''}${TIERS[e.t]}</span><span class="pk-m tn">Lv ${e.lv}${potOn() && e.iv ? starRow(e) : ''}</span>${szOn() && e.sz != null && e.sz !== 1 ? `<span class="szt sz${e.sz}">${SZN[e.sz]}</span>` : ''}</span>`;
+}
+/* Baksiden: mønsteret og ballen, og under dem omrisset som kommer fram når det er kortets tur (pk5): Pokémonens eget bilde (samme adresse som forsiden,
+   så det hentes én gang), svart med lysende kontur i CSS (.pk-sil), eller et spørsmålstegn for en legendarisk. Bare kort som kan få et varsel, har det,
+   og det er skjult for skjermlesere (alt="Unknown"). */
+function pkBack(e) {
+  const sil = !pkTz(e) ? '' : e.myst ? '<b>?</b>' : spr(e.id, { ani: 1, sh: e.sh, mega: defForm(e.id), sil: 1 });
+  return `<span class="pk-back"><i></i>${sil ? `<span class="pk-sil" aria-hidden="true">${sil}</span>` : ''}</span>`;
 }
 /* Et lite kort (raden øverst og sammendraget). o.act = knapp (trykk bytter mellom å beholde og å slippe), o.rel = slippes, o.in = kommer inn i raden,
    o.wild = venter i gresset (står «catch» under), o.raid = venter som pakke-raid («raid»). */
@@ -1539,9 +1563,9 @@ function packShow(k, packs, demo) {
   packs = packs.map(p => p.slice().sort((a, b) => pkQ(a) - pkQ(b)));
   if (packs.length > 1) { const top = p => pkQ(p[p.length - 1]); let bi = 0; packs.forEach((p, i) => { if (top(p) > top(packs[bi])) bi = i; }); packs.push(packs.splice(bi, 1)[0]); }
   const P = PACKS[k], n = packs.length, slots = packs.slice(0, -1).reduce((a, p) => a + p.length, 0);
-  U.pk = { k, packs, i: 0, demo: demo ? k : '', rel: null, fin: 0, cw, nc, ph: 'pack', tm: [] }; U.pkDemo = demo ? k : '';
+  U.pk = { k, packs, i: 0, j: 0, demo: demo ? k : '', rel: null, fin: 0, cw, nc, ph: 'pack', tm: [] }; U.pkDemo = demo ? k : '';
   ov(`<div class="pko" id="pko" style="--pc:${P.c}">
-    <div class="pk-top"${n > 1 ? '' : ' hidden'}><span class="pill tn" id="pkn"></span><button type="button" class="btn sm2 nf" data-a="pkskip">Open them all</button></div>
+    <div class="pk-top"${n > 1 ? '' : ' hidden'}><span class="pill tn" id="pkn"></span><button type="button" class="btn sm2 nf" data-a="pkskip">Skip to the end</button></div>
     <div class="pk-tray" id="pktray" style="--tc:${Math.min(12, slots)}" aria-hidden="true"${n > 1 ? '' : ' hidden'}>${'<span class="pkm e"></span>'.repeat(slots)}</div>
     <div class="pk-big" id="pkbig" aria-live="polite"></div>
     <div class="pk-stage" id="pkst"></div>
@@ -1549,67 +1573,112 @@ function packShow(k, packs, demo) {
     <div class="acts" id="pka"></div>${demo ? '<p class="sm tn" style="text-align:center">Demo · free, and nothing is kept</p>' : ''}</div>`, 'packov', P.c);
   pkStage();
 }
-/* Tidtakerne i åpningen stoppes (neste pakke, «Open them all», ut av åpningen), og lyden som bygger seg opp, tones ut. */
+/* Tidtakerne i åpningen stoppes (neste pakke, «Open all», «Skip to the end», ut av åpningen), og lyden som bygger seg opp, tones ut. */
 function pkStop(X) { if (X && X.tm) { X.tm.forEach(clearTimeout); X.tm = []; } pkRiseOff(0.12); }
 /* Pakken som står framme, uåpnet: den lever mer jo dyrere den er. Holder den noe stort, er den urolig, og en gullpakke skinner. */
 function pkStage() {
-  const X = U.pk, st = $('#pkst'); if (!X || !st) return; const P = PACKS[X.k], n = X.packs.length, p = X.packs[X.i], hot = p.some(pkHot), gold = pkGold(p), t = pkTier(X);
+  const X = U.pk, st = $('#pkst'); if (!X || !st) return; const P = PACKS[X.k], n = X.packs.length, p = X.packs[X.i], hot = p.some(pkHot), gold = pkGold(p), t = pkTier(X), o = $('#pko');
   if (n > 1) $('#pkn').textContent = `Pack ${X.i + 1} of ${n}`;
-  pkStop(X); X.ph = 'pack';
+  pkStop(X); X.ph = 'pack'; X.j = 0; if (o) o.classList.remove('tzr', 'chg');
   st.className = 'pk-stage'; st.innerHTML = `<button type="button" class="pk-pack t${t}${hot ? ' hot' : ''}${gold ? ' gold' : ''}" data-a="pkopen" aria-label="Open the ${gold ? 'golden ' : ''}pack"><span class="pk-ic big"><i></i><s class="pk-foil" aria-hidden="true"></s></span><b>${P.n}</b>${gold ? '<small class="pk-gt">Golden pack</small>' : ''}</button>`;
   $('#pkt').textContent = gold ? 'It shines gold: every card inside is rare or better.' : hot ? 'This one is restless. Tap it.' : 'Tap the pack to open it'; $('#pka').innerHTML = '';
   if (gold) { sfx.pkgold(); buzz([20, 50, 20, 50, 20, 50, 60]); } else if (hot) buzz([20, 70, 20]);
 }
-/* Kortene ut av pakken: de andre i en vifte (vridd litt ut fra midten) og det siste for seg selv, større. Det siste har gløden fra plassens laveste klasse
-   (data-s0) og klatrer derfra (pkCharge), og shiny-glitteret kommer først på det siste trinnet. */
+/* Kortene ut av pakken: de andre i en vifte (vridd litt ut fra midten) og det siste for seg selv, større. Baksidene i vifta røper ingenting (pk5); det siste
+   har gløden fra plassens laveste klasse (data-s0: den er sikker) og klatrer derfra når det trykkes (pkCharge). --oc = fargen på omrisset. */
 function pkDeal(X) {
   const p = X.packs[X.i], P = PACKS[X.k], n = p.length, e = p[n - 1], c = pkCls(e), s0 = Math.min(c, pkGold(p) ? 2 : (P.slots[P.slots.length - 1].min || 0)), m = (n - 2) / 2, w = n > 4 ? 6 : 8;
-  const card = (x, j, cls, a, sh, sty, ex) => `<button type="button" class="pk-card ${cls} r${x.t} a${a}${sh ? ' shy' : ''}" data-a="pkflip" data-k="${j}"${ex || ''} style="--i:${j};${sty}" aria-label="Card ${j + 1}"><span class="pk-in"><span class="pk-back"><i></i></span>${pkFront(x)}</span></button>`;
-  return `<div class="pk-deal${pkGold(p) ? ' gold' : ''}"><div class="pk-fan">${p.slice(0, -1).map((x, j) => card(x, j, 'fan', pkCls(x), x.sh, `--r:${((j - m) * w).toFixed(1)}deg;--y:${Math.round((j - m) * (j - m) * 4)}px`)).join('')}</div>
-    <div class="pk-hitw">${card(e, n - 1, 'hit', s0, 0, '', ` data-s0="${s0}" data-a0="${s0}"`)}</div></div>`;
+  const card = (x, j, cls, a, oc, sty, ex) => `<button type="button" class="pk-card ${cls} r${x.t} a${a}" data-a="pkflip" data-k="${j}"${ex || ''} style="--i:${j};--oc:${oc};${sty}" aria-label="Card ${j + 1}"><span class="pk-oz" aria-hidden="true"></span><span class="pk-in">${pkBack(x)}${pkFront(x)}</span></button>`;
+  return `<div class="pk-deal${pkGold(p) ? ' gold' : ''}"><div class="pk-fan">${p.slice(0, -1).map((x, j) => card(x, j, 'fan', 0, pkOc(x), `--r:${((j - m) * w).toFixed(1)}deg;--y:${Math.round((j - m) * (j - m) * 4)}px;--tx:${Math.round((m - j) * 30)}px`)).join('')}</div>
+    <div class="pk-hitw">${card(e, n - 1, 'hit', s0, `var(--r${s0})`, '', ` data-s0="${s0}" data-a0="${s0}"`)}</div></div>`;
 }
-/* Ett kort snus. o.i = kortets plass i vifta (en liten lyd som stiger for hvert kort, uten skrik); o.hit = det siste (smellet er alt spilt av pkReveal);
-   ellers klassens lyd og skriket. Svaret er om kortet var stort (pkBig): det får sitt eget øyeblikk. */
+/* Det neste kortet løfter seg litt (nx), så du ser hvor du er (pk5). */
+function pkNext() {
+  const X = U.pk, st = $('#pkst'); if (!X || !st) return;
+  st.querySelectorAll('.pk-card').forEach(el => el.classList.toggle('nx', +el.dataset.k === X.j && !el.classList.contains('on')));
+  X.ph = 'fan';
+}
+/* Et trykk på kortene (pk5): det neste kortet snus, eller varselet før det starter. Det siste bygger seg opp (pkCharge). */
+function pkTap() {
+  const X = U.pk, st = $('#pkst'); if (!X || !st || X.ph !== 'fan') return;
+  const p = X.packs[X.i], n = p.length, j = X.j, el = st.querySelector(`.pk-card[data-k="${j}"]`); if (!el || j >= n) return;
+  el.classList.remove('nx'); el.classList.add('up'); $('#pkt').textContent = '';
+  if (j === n - 1) return pkCharge();
+  const e = p[j], z = pkTz(e);
+  if (!z) return pkFlip(el, e, pkBig(e) ? {} : { i: j });
+  if (z === 1) {
+    X.ph = 'rare'; el.classList.replace('a0', 'a2'); el.classList.add('oz', 'oz1'); sfx.pkstep(2); buzz(18);
+    X.tm.push(setTimeout(() => { if (U.pk === X && X.ph === 'rare') pkFlip(el, e, {}); }, calm() ? 160 : PKRARE));
+    return;
+  }
+  pkTease(el, e);
+}
+/* Varselet for et stort kort i vifta (epic, shiny, legendarisk): det løftes ut av vifta, resten dempes (pko.tzr), og omrisset kommer fram i klassens farge
+   (shiny: gull og glitter; legendarisk: lys og stråler uten form) mens lyden stiger. Så venter det på trykket. */
+function pkTease(el, e) {
+  const X = U.pk, o = $('#pko'), c = pkCls(e);
+  X.ph = 'tz'; el.classList.replace('a0', 'a' + c); el.classList.add('tz', 'oz', e.myst ? 'oz4' : 'oz3'); if (e.sh) el.classList.add('shy');
+  el.setAttribute('aria-label', `${e.myst ? 'A legendary' : e.sh ? 'A shiny' : 'An epic'} card. Tap to reveal`);
+  if (o) { o.style.setProperty('--hc', pkOc(e)); o.classList.add('tzr'); }
+  sfx.pkstep(Math.min(4, c)); if (e.sh) sfx.shiny();
+  if (!calm()) pkRiseOn(e.myst ? 2.4 : 1.4, pkTier(X) + (e.myst ? 1 : 0));
+  buzz(e.myst ? [60, 40, 60, 40, 160] : [40, 30, 70]);
+  $('#pkt').textContent = 'Tap to reveal';
+}
+/* Et kort i vifta snus. Etter et varsel (tz): smellet i klassens farge, gnistene og for epic og bedre ristingen, som det siste kortet, og en kort sperre
+   (X.lk) så et dobbelttrykk ikke hopper over øyeblikket. Så er det neste kortets tur. */
+function pkFlip(el, e, o) {
+  const X = U.pk, tz = X.ph === 'tz', c = pkCls(e), t = pkTier(X), po = $('#pko');
+  pkStop(X); if (po) po.classList.remove('tzr'); $('#pkt').textContent = '';
+  if (tz) { sfx.pkhit(c, e.sh ? 1 : 0, t); buzz(c >= 3 || e.sh ? [70, 40, 70, 40, 260] : [50, 30, 60]); X.lk = Date.now() + 450; }
+  const big = pkTurn(el, e, tz ? { hit: 1 } : o);
+  if (tz && !calm()) { pkSparks(el, e, t); if (c >= 3 || e.sh) pkQuake(c >= 4 ? 2 : 1); }
+  X.j++; pkNext();
+  return big;
+}
+/* Ett kort snus. o.i = kortets plass (en liten lyd som stiger for hvert kort, uten skrik); o.hit = smellet er alt spilt (pkReveal, eller pkFlip etter et
+   varsel); ellers klassens lyd og skriket. o.w = rammen ordet skal stå over (det siste kortet), o.quiet = uten eget øyeblikk («Open all»). Svaret er om
+   kortet var stort (pkBig). */
 function pkTurn(el, e, o) {
   const X = U.pk; o = o || {};
-  el.classList.add('on'); if (!e.myst && !X.demo) S.seen[e.id] = 1;
+  el.classList.remove('nx', 'up', 'tz', 'oz', 'oz1', 'oz3', 'oz4'); el.classList.add('on'); if (!e.myst && !X.demo) S.seen[e.id] = 1;
   el.setAttribute('aria-label', e.myst ? 'A legendary Pokémon. Who it is, you find out in the pack raid' : `${D(e.id)[0]}, ${e.sh ? 'shiny, ' : ''}${TIERS[e.t]}, level ${e.lv}${pkNew(e) ? ', new species' : ''}`);
   if (o.i != null) { sfx.pkflip(o.i); buzz(8); }
   else if (!o.hit) { if (e.myst) { sfx.event(); buzz([80, 50, 80, 50, 80, 50, 320]); } else if (e.t >= 3 || e.sh) { sfx.evo(); buzz([60, 40, 60, 40, 220]); } else if (e.t >= 2) { sfx.got(); buzz(40); } else { sfx.found(); buzz(15); } }
   if (!e.myst && o.i == null) cry(e.id, 280, 0.35);
-  const big = pkBig(e); if (big) pkHero(el, e, o.hit ? el.parentElement : null);
+  const big = pkBig(e); if (big && !o.quiet) pkHero(el, e, o.w || null);
   return big;
 }
-/* Vifta snus, kort for kort. Et stort kort i vifta får sitt eget øyeblikk, og så går det videre. Så bygger det siste kortet seg opp. */
-function pkFan() {
-  const X = U.pk, st = $('#pkst'); if (!X || !st || X.ph !== 'fan') return;
-  X.ph = 'turn'; $('#pkt').textContent = '';
-  const p = X.packs[X.i], cm = calm(), gap = cm ? 60 : PKFAN[pkTier(X)];
-  let at = 0, j = 0;
-  for (const el of st.querySelectorAll('.pk-fan .pk-card')) {
-    const e = p[+el.dataset.k], big = pkBig(e), i = j++;
-    X.tm.push(setTimeout(() => { if (U.pk === X && el.isConnected) pkTurn(el, e, big ? {} : { i }); }, at));
-    at += big ? 1500 : gap;
-  }
-  X.tm.push(setTimeout(() => { if (U.pk === X) pkCharge(); }, at + (cm ? 200 : 560)));
+/* «Open all» (pk5, Jazz 25.11: «kan velge å åpne alle med en gang»): resten av pakken snus med en gang, raskt etter hverandre og uten varsel (PKFAN), og
+   så det siste med smellet og øyeblikket sitt (pkReveal). */
+function pkAll() {
+  const X = U.pk, st = $('#pkst'); if (!X || !st || !['fan', 'rare', 'tz', 'hit', 'wait'].includes(X.ph)) return;
+  pkStop(X); const po = $('#pko'), gap = calm() ? 40 : PKFAN[pkTier(X)], j0 = X.j, p = X.packs[X.i];
+  X.ph = 'turn'; $('#pkt').textContent = ''; $('#pka').innerHTML = ''; if (po) po.classList.remove('tzr');
+  const rest = [...st.querySelectorAll('.pk-fan .pk-card')].filter(el => !el.classList.contains('on'));
+  rest.forEach((el, i) => X.tm.push(setTimeout(() => { if (U.pk === X && el.isConnected) pkTurn(el, p[+el.dataset.k], { i: j0 + i, quiet: 1 }); }, i * gap)));
+  X.tm.push(setTimeout(() => { if (U.pk === X) pkReveal(); }, rest.length * gap + (rest.length ? 240 : 0)));
 }
-/* Det siste kortet bygger seg opp: det skjelver mer for hvert trinn (--amp), lyden stiger (pkRiseOn), og gløden klatrer fra plassens laveste klasse til
-   kortets egen, ett trinn om gangen (pkStep), med shiny som et eget trinn til slutt. Lyset bak kortet (pko.chg) vokser med trinnene (--lv). */
+/* Det siste kortet bygger seg opp når det trykkes (pk5; før startet det av seg selv etter vifta): det skjelver mer for hvert trinn (--amp), lyden stiger
+   (pkRiseOn), og gløden klatrer fra plassens laveste klasse til kortets egen, ett trinn om gangen (pkStep), med shiny som et eget trinn til slutt. Omrisset
+   står fra rare og blir tøffere for hvert trinn (pkOz). Lyset bak kortet (pko.chg) vokser med trinnene (--lv), og resten av skjermen mørkner litt. */
 function pkCharge() {
   const X = U.pk, st = $('#pkst'), el = st && st.querySelector('.pk-hitw .pk-card'); if (!X || !el || el.classList.contains('on')) return;
   const p = X.packs[X.i], e = p[p.length - 1], c = pkCls(e), t = pkTier(X), s0 = +el.dataset.s0 || 0, cm = calm(), ch = cm ? 150 : PKCH[t], sp = cm ? 200 : PKSTEP[t], o = $('#pko');
   const steps = []; for (let s = s0 + 1; s <= c; s++) steps.push(s); if (e.sh) steps.push('sh');
   const d = ch + steps.length * sp;
-  X.ph = 'hit'; el.classList.add('charge'); el.style.setProperty('--amp', '1');
+  X.ph = 'hit'; el.classList.remove('nx'); el.classList.add('charge'); el.style.setProperty('--amp', '1'); if (s0 >= 2) pkOz(el, s0);
   if (o) { o.style.setProperty('--hc', `var(--r${s0})`); o.style.setProperty('--lv', '0'); o.classList.add('chg'); }
   if (!cm) pkRiseOn(d / 1000 + 0.25, t + (pkGold(p) ? 1 : 0)); buzz(12);
   steps.forEach((s, j) => X.tm.push(setTimeout(() => { if (U.pk === X && X.ph === 'hit' && el.isConnected) pkStep(el, s, j + 1, steps.length); }, ch + j * sp)));
   X.tm.push(setTimeout(() => { if (U.pk === X && X.ph === 'hit') pkReady(); }, d + 80));
 }
+/* Omrisset på det siste kortet etter trinnet det har nådd: så vidt for rare (oz1), tydelig for epic (oz3), lys uten form for legendarisk (oz4). */
+function pkOz(el, s) { el.classList.remove('oz1', 'oz3', 'oz4'); el.classList.add('oz', s >= 4 ? 'oz4' : s >= 3 ? 'oz3' : 'oz1'); if (!el.classList.contains('shy')) el.style.setProperty('--oc', `var(--r${s})`); }
 function pkStep(el, s, j, n) {
   const o = $('#pko');
-  if (s === 'sh') { el.classList.add('shy'); sfx.shiny(); buzz([20, 30, 20]); if (o) o.style.setProperty('--hc', 'var(--gold)'); }
-  else { el.classList.remove('a' + el.dataset.a0); el.classList.add('a' + s); el.dataset.a0 = s; sfx.pkstep(s); buzz([30 + s * 10]); if (o) o.style.setProperty('--hc', `var(--r${s})`); }
+  if (s === 'sh') { el.classList.add('shy'); el.style.setProperty('--oc', 'var(--gold)'); if (!el.classList.contains('oz4')) { el.classList.remove('oz1'); el.classList.add('oz', 'oz3'); } sfx.shiny(); buzz([20, 30, 20]); if (o) o.style.setProperty('--hc', 'var(--gold)'); }
+  else { el.classList.remove('a' + el.dataset.a0); el.classList.add('a' + s); el.dataset.a0 = s; if (s >= 2) pkOz(el, s); sfx.pkstep(s); buzz([30 + s * 10]); if (o) o.style.setProperty('--hc', `var(--r${s})`); }
   el.style.setProperty('--amp', String(1 + j * 1.2)); if (o) o.style.setProperty('--lv', String(j / Math.max(1, n)));
   el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
 }
@@ -1620,16 +1689,18 @@ function pkReady() {
   if (pkHot(e) || pkTier(X) >= 2) { X.ph = 'wait'; el.classList.add('ready'); $('#pkt').textContent = 'Tap to reveal'; buzz(25); }
   else pkReveal();
 }
-/* Det siste kortet snus: smellet i klassens farge, gnistene, og for epic og bedre (eller shiny) rister skjermen. */
+/* Det siste kortet snus: smellet i klassens farge, gnistene, og for epic og bedre (eller shiny) rister skjermen. Et stort treff får en kort sperre (X.lk),
+   så et dobbelttrykk ikke går rett til neste pakke. */
 function pkReveal() {
   const X = U.pk, st = $('#pkst'), el = st && st.querySelector('.pk-hitw .pk-card'); if (!X || !el || el.classList.contains('on')) return;
   pkStop(X);
   const p = X.packs[X.i], e = p[p.length - 1], c = pkCls(e), t = pkTier(X), o = $('#pko');
   el.classList.remove('charge', 'ready', 'pop', 'a' + el.dataset.a0); el.classList.add('a' + c); el.dataset.a0 = c; if (e.sh) el.classList.add('shy');
-  if (o) o.classList.remove('chg');
-  X.ph = 'done'; $('#pkt').textContent = '';
+  if (o) o.classList.remove('chg', 'tzr');
+  X.ph = 'done'; X.j = p.length; $('#pkt').textContent = '';
   sfx.pkhit(c, e.sh ? 1 : 0, t); buzz(c >= 3 || e.sh ? [70, 40, 70, 40, 260] : c >= 2 ? [50, 30, 60] : [30]);
-  const big = pkTurn(el, e, { hit: 1 });
+  const big = pkTurn(el, e, { hit: 1, w: el.parentElement });
+  if (big) X.lk = Date.now() + 700;
   if (big && o) { o.classList.add('hitr'); clearTimeout(pkReveal.t); pkReveal.t = setTimeout(() => { if (o.isConnected) o.classList.remove('hitr'); }, 1650); }
   if (!calm()) { if (c >= 2 || e.sh) pkSparks(el, e, t); if (c >= 3 || e.sh) pkQuake(c >= 4 ? 2 : 1); }
   pkPackDone(big);
@@ -1651,6 +1722,7 @@ function pkHero(el, e, w) {
   o.style.setProperty('--hc', e.sh ? 'var(--gold)' : e.myst ? 'var(--r4)' : e.t >= 3 ? `var(--r${e.t})` : 'var(--gold)');
   if (w) { b.innerHTML = ''; const q = w.querySelector('.pk-hw'); if (q) q.remove(); w.insertAdjacentHTML('beforeend', `<b class="pk-hw" aria-hidden="true">${pkWord(e)}</b>`); } else b.innerHTML = `<b>${pkWord(e)}</b>`; o.classList.remove('bigr'); void o.offsetWidth; o.classList.add('bigr'); el.classList.add('hero');
   if (e.sh === 1) { if (getComputedStyle(el).position === 'static') el.style.position = 'relative'; shinyFx(el); }
+  document.querySelectorAll('#pkst .pk-card.hero').forEach(x => { if (x !== el) x.classList.remove('hero'); });
   clearTimeout(pkHero.t); pkHero.t = setTimeout(() => { const q = $('#pko'); if (q) q.classList.remove('bigr'); el.classList.remove('hero'); }, 1700);
 }
 /* Alle kortene i pakken er snudd: neste pakke, eller slutten (big = det siste kortet fikk sitt øyeblikk, som får stå ferdig). */
@@ -1661,11 +1733,11 @@ function pkPackDone(big) {
   $('#pkt').textContent = 'Tap for the next pack'; $('#pka').innerHTML = '<button type="button" class="btn gold" data-a="pknext">Next pack</button>';
 }
 /* Slutten. Én pakke: kortene blir stående. Flere: sammendraget med det beste først. X.rel = de som slippes (forslaget følger reglene for duplikater).
-   v92 (Valg B): de vanlige kortene er alt i samlingen, og bare de store venter i gresset. live = kortene som fortsatt er dine (i samlingen, i gresset
+   v92 (Valg B) og pk4: kortene er alt i samlingen, og bare en legendarisk uten raid venter i gresset. live = kortene som fortsatt er dine (i samlingen, i gresset
    eller som pakke-raid), wild = de som venter i gresset («Catch them now»), rd = legendariske som venter som pakke-raid (pa1: «Face it now» tar den
    første; resten står på forsiden). X.nc = myntene for nye arter (openPacks). */
 function pkEnd() {
-  const X = U.pk, st = $('#pkst'); if (!X || !st) return; clearTimeout(pkPackDone.t); pkStop(X); X.ph = 'done';
+  const X = U.pk, st = $('#pkst'); if (!X || !st) return; clearTimeout(pkPackDone.t); pkStop(X); X.ph = 'done'; { const o = $('#pko'); if (o) o.classList.remove('tzr', 'chg'); }
   const all = X.packs.reduce((a, p) => a.concat(p), []), n = X.packs.length, live = all.filter(e => X.demo || pkMine(e)), wild = X.demo ? [] : live.filter(e => S.pend.includes(e)), rd = X.demo ? [] : all.filter(e => e.pr && praidBy(e.pr));
   const tray = $('#pktray'), top = $('#pko .pk-top'); if (tray) tray.hidden = true; if (top) top.hidden = true;
   const sum = n > 1 || !!X.pick; if (sum && !pkPickOn()) X.fin = 1;
@@ -2129,16 +2201,20 @@ const A = {
     const p = X.packs[X.i], t = pkTier(X), gold = pkGold(p), hot = p.some(pkHot), cm = calm();
     pk.classList.add('rip'); sfx.pkrip(t + (gold ? 1 : 0)); buzz(hot || gold ? [40, 40, 40, 40, 140] : t >= 2 ? [30, 40, 30, 40, 50] : [30, 40, 30]);
     if (!cm && (t >= 2 || gold)) pkFlash(gold ? 'var(--gold)' : 'var(--pc)');
-    X.tm.push(setTimeout(() => { const s2 = $('#pkst'); if (!s2 || U.pk !== X) return; s2.classList.add('open'); s2.innerHTML = pkDeal(X); X.ph = 'fan'; $('#pkt').textContent = 'Tap to turn them'; }, cm ? 220 : PKRIP[t] + (gold ? 140 : 0)));
+    X.tm.push(setTimeout(() => { const s2 = $('#pkst'); if (!s2 || U.pk !== X) return; s2.classList.add('open'); s2.innerHTML = pkDeal(X); X.j = 0; pkNext(); $('#pkt').textContent = 'Tap to turn a card'; $('#pka').innerHTML = '<button type="button" class="btn nf" data-a="pkall">Open all</button>'; }, cm ? 220 : PKRIP[t] + (gold ? 140 : 0)));
   },
-  /* Et trykk på kortene: snur vifta (fan), hopper til slutten av oppbyggingen (hit) eller snur det siste (wait). Når alt er snudd: neste pakke. */
+  /* Et trykk på kortene (pk5): snur det neste kortet (fan), snur et rare-kort med en gang (rare) eller et kort med omrisset (tz), hopper til slutten av
+     oppbyggingen (hit) eller snur det siste (wait). Når alt er snudd: neste pakke. X.lk = en kort sperre etter et stort treff. */
   pkflip: el => {
-    const X = U.pk; if (!X) return;
-    if (X.ph === 'fan') return pkFan();
+    const X = U.pk; if (!X || (X.lk && Date.now() < X.lk)) return;
+    if (X.ph === 'fan') return pkTap();
+    if (X.ph === 'rare' || X.ph === 'tz') { const c = $(`#pkst .pk-card[data-k="${X.j}"]`); if (c) pkFlip(c, X.packs[X.i][X.j], {}); return; }
     if (X.ph === 'hit' || X.ph === 'wait') return pkReveal();
     if (X.ph === 'done' && el.classList.contains('on') && X.i < X.packs.length - 1) A.pknext();
   },
   pknext: () => { const X = U.pk; if (!X || X.i >= X.packs.length - 1) return; const tray = $('#pktray'), at = X.packs.slice(0, X.i).reduce((a, p) => a + p.length, 0); if (tray) X.packs[X.i].forEach((e, j) => { const sl = tray.children[at + j]; if (sl) sl.outerHTML = pkMini(e, j, { in: 1 }); }); X.i++; pkStage(); },
+  /* «Open all» (pk5): resten av pakken snus med en gang. */
+  pkall: () => pkAll(),
   pkskip: () => { const X = U.pk; if (!X) return; pkStop(X); if (!X.demo) { X.packs.forEach(p => p.forEach(e => { if (!e.myst) S.seen[e.id] = 1; })); save(true); } X.i = X.packs.length - 1; pkEnd(); },
   pktog: el => { const X = U.pk; if (!X || X.fin || X.demo) return; const e = X.packs.reduce((a, p) => a.concat(p), [])[+el.dataset.k]; if (!e || e.myst) return; if (X.rel.has(e)) X.rel.delete(e); else X.rel.add(e); pkEnd(); },
   pkrel: () => { const X = U.pk; if (!X) return; const r = releaseEncs([...X.rel]); X.rel = new Set(); X.fin = 1; if (r.n) { sfx.sell(); toast(`${r.n} let go for ${nb(r.v)} coins.`); } pkEnd(); },
