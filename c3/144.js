@@ -97,6 +97,21 @@
     ff: [0, -18, 14, -30, -48, -58], fd: [0, 0, 3, -6, -12, -16], fq: [0, 0, -4, -8, -14, -18],
     ha: [0.5, 1, 1.05, 1.15, 1.25, 1.4], hd: [0.1, 0.25, 0.3, 0.35, 0.4, 0.45], ht: [0, 0.05, 0.1, 0.2, 0.3, 0.4] };
   X.birds = X.birds || {}; X.birds[144] = BIRD; BIRD.path = s => pva(s); BIRD.perf = (s, T) => perf(s, T);   /* til verktøyene (posearkene) og til de neste som flyr */
+  /* ---------- «Bevegelse etter Fable», del 1 (Opus 25.11): vingeslaget fra flyriggen 2 (X.fly i raid3c.js), bak bryteren ----------
+     Bryteren: G3D.alt[144] = 'stiv' (eller 'gammel') gir vingeslaget slik det var, godkjent 24.11 (live: &gammel=stiv; gjennomgangssiden: &alt=stiv; verktøyene:
+     PRE='G3D.alt={144:"stiv"}'). Det nye: slaget fra skulderen med lite etterslep, foldingen i oppslaget, lasten som bøyer spissene opp, fjærene som åpnes, slagsett etter
+     styrken (ikke ett slag ganget opp), nedslagets andel etter oppgaven, kroppen som gynger mot slaget og hodet som står (nakken tar gyngingen). Banen, tidene, stillingene,
+     halen og kameraene er dagens, og bunnen av nedslaget ligger fortsatt på B0 + k · HP. Fuglelaben (work/g3d/www/fuglelab.js) viser hver måte å fly på. */
+  const altv = () => String((G3D.alt && G3D.alt[144]) || ''), STIV = () => /stiv|gammel/.test(altv());
+  BIRD.fly = { foldMax: 0.85, hold: { neck: 'Neck', head: 'Head', max: 0.22, g: 0.45 } };   /* en stor seiler: mindre fold (Baliga m.fl. 2019); nakken er kort (0,3 m), så hodet tar rundt halve gyngingen */
+  const FSETS = X.fly.sets(BIRD.fly.sets);
+  /* Styrken (0 glid, 1 svakt, 2 marsj, 3 kraft), lagt etter dagens utslag (AMP): det første slaget etter et glid er sterkest og avtar slag for slag (Berg og Biewener 2010). */
+  const KK = X.fly.trk([[-3, 2.1], [-0.45, 2.15], [-0.15, 2.7], [0.45, 2.7], [1.0, 0], [3.9, 0], [4.5, 2.4], [5.6, 2.1], [9.9, 2.05], [10.9, 1.9], [11.45, 0.35], [12.6, 0.35], [13.3, 3.0], [14.15, 3.0],
+    [14.7, 2.45], [17.0, 2.4], [17.8, 0.3], [21.6, 0.3], [22.0, 1.0], [24.6, 1.0], [24.95, 2.95], [26.1, 2.7], [26.5, 2.6], [27.05, 2.6], [27.35, 0], [F0E - 0.2, 0], [F0E + 0.9, 2.3]]);
+  const LD = X.fly.trk([[24.6, 0], [25.1, 0.8], [26.2, 0.8], [26.8, 0]]);   /* bremsen: spissene opp og fjærene åpne (Carruthers m.fl. 2007) */
+  /* Slagene talt fra en bunn (v): hele tall på B0 + k · HP (annethvert slag i låta), som i dag; etter brølet ett slag per takt. */
+  const VB = s => s <= 27.2 ? (s - B0) / HP : s < F0E ? (27.2 - B0) / HP : (s - F0E) / (2 * HP) - 0.6;
+  const nbeat = (s, sp, uf) => ({ v: VB(s), k: KK(s), hov: uf, spd: sp, load: LD(s) });
 
   /* Rykket i brølet: starter i null (ikke et sprang), slår ut på fire bilder, svinger og faller til ro. */
   const kick = a => a <= 0 ? 0 : (1 - Math.exp(-16 * a)) * (0.3 + 0.7 * Math.exp(-3 * a) * cos(8 * a));
@@ -123,6 +138,9 @@
     const sL = Object.assign({}, st, { ex: { di: st.ex.di + 0.05 * kr, fw: 0.12 * kr } }), sR = Object.assign({}, st, { ex: { di: st.ex.di - 0.09 * kr, fw: -0.24 * kr } });   /* vingene bøyes opp av lasten når den retter seg opp etter stupet */
     /* Løftet i vingeslaget, og et lite rykk fram på hvert nedslag der det går fort. */
     const hv = -cos(TAU * (us - 0.12)) * (A * 0.42 + Ah * 0.55), P = V(q.p[0], q.p[1], q.p[2]).addScaledVector(V(0, 0, 0).copy(u).lerp(Y, uf).normalize(), hv).addScaledVector(f, 0.3 * A * sin(TAU * (us - 0.3)) * (1 - uf));
+    /* Det nye vingeslaget (ikke 'stiv'): samme stillinger og samme sving (ex), slaget fra flyriggen 2 og kroppen som gynger mot det. */
+    let nw = null; if (!STIV()) { const n0 = nbeat(s, sp, uf), a = 0.55 * kr, nst = Object.assign(n0, { w: st.w, ex: sL.ex, asym: a }), nsr = Object.assign({}, n0, { ex: sR.ex }), b = X.fly.body(nst, FSETS);
+      nw = { st: nst, sR: nsr, b }; P.set(q.p[0], q.p[1], q.p[2]).addScaledVector(V(0, 0, 0).copy(u).lerp(Y, uf).normalize(), b.hv).addScaledVector(f, b.sg * (1 - uf)); }
     /* Brølet: den kaster seg litt opp og fram, og faller til ro. */
     const rr = s < L.roar ? 0 : kf(s, [[L.roar, 0], [L.roar + 0.25, 1, eo], [L.name + 0.3, 1], [L.name + 1.3, 0.2, io]]); P.y += 0.6 * kick(s - L.roar) - 0.35 * mt;
     /* Hodet: ser dit den flyr og holdes vannrett i svingene; under Ice Beam sikter det på punktet strålen treffer; i brølet løftes det. */
@@ -132,7 +150,7 @@
     const bu = bmU(s), bp = bmP(bu), aim = V(bp[0], 0.2, bp[1]);
     if (bw > 0) { const d = aim.clone().sub(P).normalize(), lft = V(0, 0, 0).crossVectors(u, f), th = Math.atan2(d.dot(f), -d.dot(u)), psi = Math.asin(max(-1, min(1, d.dot(lft)))); np = mix(np, th, bw); ny = ny * (1 - bw) + psi * bw * 0.9; nr *= 1 - bw; }
     np += -0.14 * rr - 0.3 * mt;   /* i brølet skytes hodet fram mot oss (ansiktet skal synes, ikke haka); i forvarselet trekkes det ned */
-    return { s, P, f, u, sp, uf, st, sL, sR, kr, np, nr, ny, lg: 1 - uf - 0.35 * sin(PI * c01((s - 25.2) / 1.1)), jaw: max(0.42 * io(seg(s, BM.ch, BM.on)) * (1 - seg(s, BM.end, BM.off)), 0.52 * rr), rr, aim, bw, A, Ah, us, mt }; };
+    return { s, P, f, u, sp, uf, st, sL, sR, kr, np, nr, ny, nw, lg: 1 - uf - 0.35 * sin(PI * c01((s - 25.2) / 1.1)), jaw: max(0.42 * io(seg(s, BM.ch, BM.on)) * (1 - seg(s, BM.end, BM.off)), 0.52 * rr), rr, aim, bw, A, Ah, us, mt }; };
   /* Halen (Jazz 24.11: «Halen må være bevegelig slik som den er ment å være»): i modellen er den en rett, flat kniv med 19 ledd, og den er ment som et langt bånd
      («streamer») som blafrer og bølger bak den. Hvert ledd får en retning i verden og en vridning:
      · grunnlinja er banen den nettopp fløy (leddet peker dit kroppen var litt før), så halen legger seg i svingene, i stupet og i rullen
@@ -155,10 +173,19 @@
         d.lerp(h.normalize(), hang); tw += hang * w * 0.4 * sin(0.9 * t - 2 * w); }
       D.push(d.normalize()); TW.push(tw); }
     return [D, TW]; };
-  const pose = (g, bd, q, T, t) => { neckW(q.uf); bd.begin().place(q.P, q.f, q.u, SC); bd.q0 = g.root.quaternion.clone(); bd.wings(bd.pose(q.sL, 0), bd.pose(q.sR, 1)).neck(q.np, q.nr, q.ny).legs(q.lg); { const td = tailDirs(q, T, bd, t); bd.tail(td[0].map(v => bd.local(v)), td[1]); }
+  const pose = (g, bd, q, T, t) => { neckW(q.uf);
+    if (q.nw) { const b = q.nw.b, lf = new T.Vector3().crossVectors(q.u, q.f), nose = b.pt * (1 - 0.5 * q.uf);   /* ny: kroppen vipper litt i slaget, og hodet står (nakken tar gyngingen) */
+      bd.begin().place(q.P, q.f.clone().applyAxisAngle(lf, -nose), q.u.clone().applyAxisAngle(lf, -nose), SC); bd.q0 = g.root.quaternion.clone(); bd.wings(bd.beat(q.nw.st, 0), bd.beat(q.nw.sR, 1)).neck(q.np, q.nr, q.ny).hold(b, null, SC, q.uf).legs(q.lg); }
+    else { bd.begin().place(q.P, q.f, q.u, SC); bd.q0 = g.root.quaternion.clone(); bd.wings(bd.pose(q.sL, 0), bd.pose(q.sR, 1)).neck(q.np, q.nr, q.ny).legs(q.lg); }
+    { const td = tailDirs(q, T, bd, t); bd.tail(td[0].map(v => bd.local(v)), td[1]); }
     g.add({ Jaw: [0, -q.jaw, 0] }, 1); g.eye(0, q.rr > 0.4 ? 0.75 : (t % 3.7 < 0.1 ? 0.5 : 0)); };
+  BIRD.pose = (g, bd, q, T, t) => pose(g, bd, q, T, t);   /* til fuglelaben (work/g3d/www/fuglelab.js) */
   /* Vingespissene på tiden s uten å stille figuren (til glitteret og strekene): kroppen pluss vingens vinkel i slaget. */
   const tipAt = (s, sd) => { const q = pva(s), sp = hyp(q.v[0], q.v[1], q.v[2]) || 1, fx = q.v[0] / sp, fz = q.v[2] / sp, an = AMP(s) * (1.3 * cos(TAU * (X.bird.warp(PH(s), 0.56) - 0.19))), r = 5.9;
+    return [q.p[0] + sd * fz * r * cos(an), q.p[1] + r * sin(an) - 0.3, q.p[2] - sd * fx * r * cos(an)]; };
+  /* Den nye spissbanen (til glitteret og snømisten): slaget fra skulderen med spissens lille etterslep, lasten som bøyer den opp, og foldingen som trekker den inn i oppslaget. */
+  const tipAt2 = (s, sd) => { const q = pva(s), sp = hyp(q.v[0], q.v[1], q.v[2]) || 1, fx = q.v[0] / sp, fz = q.v[2] / sp, st = nbeat(s, sp, UF(s)), u = X.fly.phase(st, FSETS), M = X.fly.mix(st.k, st.hov, FSETS, sp), ul = u - M.lag;
+    const an = (M.el * X.fly.E(ul, M.rv) + M.em + M.curl * X.fly.ld(ul)) * PI / 180, r = 5.9 * (1 - 0.3 * min(0.85, M.fold) * X.fly.fb(u));
     return [q.p[0] + sd * fz * r * cos(an), q.p[1] + r * sin(an) - 0.3, q.p[2] - sd * fx * r * cos(an)]; };
 
   /* ---------- GLSL: himmelen (delt av kuppelen og speilingen i vann og is), fjellryggen og bregnefrosten ---------- */
@@ -422,11 +449,11 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float k
     len: LEN, hold: 1, R: F(L.roar), at: -CO, mus: { bed: 'sfx/natur/articuno_intro.mp3' },   /* lydsengen følger filmens klokke (work/raids3d/articuno/lyd/bed.py) */ fig: 2, models: ['articuno'], edge: null, env: { rim: '#ffd0e6', glow: '#a8d0ff', fog: '#9978ad', glowH: 9, ink: '#141a3a' },
     make(K, T) { const S = { scene: new T.Scene(), figs: [], T }; place(K, T, S);
       const gl = K.model('articuno'), src2 = cloneSk(gl.scene);   /* kopien til speilbildet, før figuren tar over modellen */
-      const g = S.gr = K.figure(gl); g.root.scale.setScalar(SC); S.scene.add(g.root); S.figs.push(g); S.bd = X.bird(g, BIRD);
+      const g = S.gr = K.figure(gl); g.root.scale.setScalar(SC); S.scene.add(g.root); S.figs.push(g); S.bd = X.fly(g, BIRD);
       /* Speilbildet: samme skuespill, speilet om flaten (en gruppe med y = −1), i omgivelsenes lag. */
       { const f = S.rf = K.figure({ scene: src2, model: 'articuno' }), un = { uTint: K.uv(new T.Vector3(0.62, 0.62, 0.8)), uA: K.uv(0.8), uRL: K.uv(RL), uWob: K.uv(1) }; S.rfU = un;
         f.root.traverse(q => { if (!q.isMesh) return; const mp = q.material.uniforms && q.material.uniforms.map ? q.material.uniforms.map.value : null; q.material = K.shader(REFL_V, REFL_F, Object.assign({ map: K.uv(mp) }, un), Object.assign(K.blend.soft(), { depthWrite: true, side: T.DoubleSide })); q.layers.set(0); q.renderOrder = -3; q.frustumCulled = false; });
-        f.root.scale.setScalar(SC); S.mir = new T.Group(); S.mir.scale.y = -1; S.mir.add(f.root); S.scene.add(S.mir); S.figs.push(f); S.rbd = X.bird(f, BIRD); }
+        f.root.scale.setScalar(SC); S.mir = new T.Group(); S.mir.scale.y = -1; S.mir.add(f.root); S.scene.add(S.mir); S.figs.push(f); S.rbd = X.fly(f, BIRD); }
       /* Sporet der vannet fryser: banen fra den retter seg opp lavt over vannet til aksenten. */
       { const tk = [3.9, 4.5, 5.2, 6.2, 7.4, 8.6, 9.8, 11.1, 12.5, L.acc]; let ln = 0, pp = null; S.lake.material.uniforms.uTrk.value.forEach((v, i) => { const p = path(tk[i]); if (pp) ln += hyp(p[0] - pp[0], p[2] - pp[2]); pp = p; v.set(p[0], p[2], F(tk[i]) + 0.05, ln); }); }   /* w: lengden langs sporet (avsmalningen fra starten) */
       /* Strålen (kjerne, glød, dis), og lyset i nebbet og der den treffer isen. */
@@ -454,9 +481,10 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float k
       /* Frostrøyken over det åpne vannet (faller sammen på aksenten), glitteret etter vingene, snøen som raser av tretoppene på 0:00, og isstøvet bremseslagene blåser utover. */
       S.smoke = K.pts(1100, i => { const a = rnd(i, 1) * TAU, r = Math.sqrt(rnd(i, 2)) * 122, sz = i % 3 ? [(rnd(i, 10) - 0.5) * 130, 20 + rnd(i, 17) * 100] : [cos(a) * r, sin(a) * r]; return { p: [sz[0], 0.15 + rnd(i, 3) * 0.7, sz[1]], v: [0.6 + rnd(i, 4) * 0.8, 0.25 + rnd(i, 5) * 0.55, -0.3 + rnd(i, 6) * 0.6], b: rnd(i, 7) * 9, l: 6 + rnd(i, 8) * 5, z: 1.6 + rnd(i, 9) * 3.2 }; },
         { loop: 1, px: 120, sway: 0.9, c: ['#f6dcea', '#e2d2ee', '#c4bae2'], fade: 0.3, a: 0.2, sz0: 0.45, sz1: 2.6, near: 6 }); S.scene.add(S.smoke);
-      { const T0 = 3.5, T1 = 26.4, NTr = 1300; S.trail = K.pts(NTr, i => { const s0 = T0 + (T1 - T0) * (i / NTr), w = tipAt(s0, i % 2 ? 1 : -1), c = path(s0), k = i % 5 === 0 ? 0 : 1;
+      /* Glitteret etter vingespissene og snømisten der de stryker vannet: dagens etter dagens spissbane (S.trail, S.wmist), og det nye etter den nye (S.trail2, S.wmist2); bryteren velger i act. */
+      for (const [key, tipF] of [['trail', tipAt], ['trail2', tipAt2]]) { const T0 = 3.5, T1 = 26.4, NTr = 1300; S[key] = K.pts(NTr, i => { const s0 = T0 + (T1 - T0) * (i / NTr), w = tipF(s0, i % 2 ? 1 : -1), c = path(s0), k = i % 5 === 0 ? 0 : 1;
           return { p: [mix(c[0], w[0], k) + (rnd(i, 21) - 0.5) * 1.6, mix(c[1], w[1], k) + (rnd(i, 22) - 0.5), mix(c[2], w[2], k) + (rnd(i, 23) - 0.5) * 1.6], v: [(rnd(i, 24) - 0.5) * 0.9, -0.3 - rnd(i, 25) * 0.4, (rnd(i, 26) - 0.5) * 0.9], b: s0 - T0, l: 2 + rnd(i, 27) * 2.4, z: 0.5 + rnd(i, 28) * 0.9 }; },
-          { t0: F(T0), add: 1, px: 42, c: ['#ffffff', '#e2f2ff', '#bcd8ff'], fade: 0.45, a: 0.9 }); S.scene.add(S.trail); }
+          { t0: F(T0), add: 1, px: 42, c: ['#ffffff', '#e2f2ff', '#bcd8ff'], fade: 0.45, a: 0.9 }); S.scene.add(S[key]); }
       S.burst = K.pts(380, i => { const big = i % 3 === 0, x = (rnd(i, 31) - 0.5) * 44, z = 152 + rnd(i, 32) * 36, y = terrH(x, z) + 19 + rnd(i, 33) * 11; return { p: [x, y, z], v: [(rnd(i, 34) - 0.5) * 8, 1.5 + rnd(i, 35) * 6, (rnd(i, 36) - 0.5) * 6 - 4.5], b: rnd(i, 37) * 0.35 + max(0, (182 - z) / 60) * 0.5, l: 2.8 + rnd(i, 38) * 2.4, z: big ? 12 + rnd(i, 39) * 16 : 2 + rnd(i, 39) * 5 }; },
         { t0: F(-0.42), g: 4.5, drag: 0.6, px: 96, c: ['#fff4fa', '#f0dcee', '#cabfe6'], fade: 0.25, a: 0.34, sz0: 0.45, sz1: 2.2 }); S.scene.add(S.burst);   /* snøen fra tretoppene: store, myke skyer (bildet har lang linse) og små klumper */
       /* Når innsjøen fryser (Jazz 24.11: «gjerne noe ekstra effekter»): en vegg av frostrøyk som rir på fronten (hver dott tennes når fronten når den) og glimt som
@@ -470,10 +498,11 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float k
          · der vingespissene stryker vannet i bunnen av hvert nedslag lavt over sjøen, og frostrøyk som stiger av den ferske isen bak den
          · et stort støt av snømist under den i det tunge vingeslaget på aksenten, og snømist rundt den når den skriker like etter
          · ringen av snømist i brølet; lav frosttåke som driver over sjøen hele tiden (svak over det åpne vannet, tettere når isen har lagt seg) */
-      { const W = []; for (let k = 0; ; k++) { const s0 = B0 + k * HP; if (s0 > 11) break; if (s0 < 4.2 || AMP(s0) < 0.3) continue; for (const sd of [-1, 1]) { const w = tipAt(s0, sd); for (let j = 0; j < 9; j++) W.push([s0, w[0], w[2], j, sd]); } }
-        S.wmist = K.pts(W.length + 340, i => { if (i < W.length) { const [s0, x, z, j] = W[i], a = rnd(i, 151) * TAU, sp = 1 + rnd(i, 152) * 2.5; return { p: [x + (rnd(i, 153) - 0.5) * 1.5, 0.3, z + (rnd(i, 154) - 0.5) * 1.5], v: [cos(a) * sp, 0.6 + rnd(i, 155) * 1.4, sin(a) * sp], b: s0 + 0.04 * j, l: 1.8 + rnd(i, 156) * 1.6, z: 2.2 + rnd(i, 157) * 3.6 }; }
+      for (const [key, tipF, on, dt] of [['wmist', tipAt, s0 => AMP(s0) >= 0.3, 0], ['wmist2', tipAt2, s0 => KK(s0) >= 1.5, 0.02]]) { const W = []; for (let k = 0; ; k++) { const s0 = B0 + k * HP; if (s0 > 11) break; if (s0 < 4.2 || !on(s0)) continue; for (const sd of [-1, 1]) { const w = tipF(s0 + dt, sd); for (let j = 0; j < 9; j++) W.push([s0, w[0], w[2], j, sd]); } }
+        S[key] = K.pts(W.length + 340, i => { if (i < W.length) { const [s0, x, z, j] = W[i], a = rnd(i, 151) * TAU, sp = 1 + rnd(i, 152) * 2.5; return { p: [x + (rnd(i, 153) - 0.5) * 1.5, 0.3, z + (rnd(i, 154) - 0.5) * 1.5], v: [cos(a) * sp, 0.6 + rnd(i, 155) * 1.4, sin(a) * sp], b: s0 + 0.04 * j, l: 1.8 + rnd(i, 156) * 1.6, z: 2.2 + rnd(i, 157) * 3.6 }; }
             const s0 = 4 + rnd(i, 161) * 9.8, c = path(s0); return { p: [c[0] + (rnd(i, 162) - 0.5) * 6, 0.25, c[2] + (rnd(i, 163) - 0.5) * 6], v: [(rnd(i, 164) - 0.5) * 1.2, 0.4 + rnd(i, 165) * 1.1, (rnd(i, 166) - 0.5) * 1.2], b: s0 + 0.15 + rnd(i, 167) * 0.6, l: 2 + rnd(i, 168) * 1.8, z: 2.2 + rnd(i, 169) * 3.4 }; },   /* frostrøyk av den ferske isen */
-          { t0: CO, drag: 0.6, px: 140, sway: 0.5, c: ['#ebe5f7', '#cbc4e4', '#a69fca'], shade: 1, fade: 0.3, a: 0.2, sz0: 0.5, sz1: 2.2, near: 6 }); S.scene.add(S.wmist);
+          { t0: CO, drag: 0.6, px: 140, sway: 0.5, c: ['#ebe5f7', '#cbc4e4', '#a69fca'], shade: 1, fade: 0.3, a: 0.2, sz0: 0.5, sz1: 2.2, near: 6 }); S.scene.add(S[key]); }
+      {
         const c0 = path(L.acc), c1 = path(L.acc + 0.35); S.amist = K.pts(380, i => { const a = rnd(i, 171) * TAU, cry = i >= 300, sp = cry ? 1 + rnd(i, 172) * 3 : 8 + rnd(i, 172) * 16, r = cry ? rnd(i, 173) * 3 : 1 + rnd(i, 173) * 4, cc = cry ? c1 : c0;   /* c1: der den er når den skriker */
             return { p: [cc[0] + cos(a) * r, cry ? cc[1] - 1.5 + rnd(i, 174) * 3 : 0.4 + rnd(i, 174) * 0.8, cc[2] + sin(a) * r], v: [cos(a) * sp, cry ? 0.5 + rnd(i, 175) * 1.5 : 0.8 + rnd(i, 175) * 2, sin(a) * sp], b: cry ? 0.3 + rnd(i, 176) * 0.25 : rnd(i, 176) * 0.15, l: 1.8 + rnd(i, 177) * 1.6, z: cry ? 3 + rnd(i, 178) * 4 : 4 + rnd(i, 178) * 7 }; },
           { t0: F(L.acc), drag: 1.3, px: 220, sway: 0.4, c: ['#ebe5f7', '#cbc4e4', '#a69fca'], shade: 1, fade: 0.25, a: 0.17, sz0: 0.5, sz1: 2.3, near: 8 }); S.scene.add(S.amist);   /* vingeslaget på aksenten (ringen på isen) og skriket (rundt den) */
@@ -498,6 +527,7 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float k
       return S; },
     act(S, t, o) { const s = t - CO, T = S.T, lu = S.lake.material.uniforms, q = S.q = perf(s, T);
       light(S, T, s >= L.top);
+      { const ny = !q.nw ? 0 : 1; S.trail.visible = !ny; S.trail2.visible = !!ny; S.wmist.visible = !ny; S.wmist2.visible = !!ny; lu.uBeat.value.x = CO + B0 + (ny ? 0.02 : 0.05); }   /* den nye spissen er nede rett etter slaget (lite etterslep) */
       pose(S.gr, S.bd, q, T, t); pose(S.rf, S.rbd, q, T, t); S.rf.root.position.copy(S.gr.root.position); S.rf.root.quaternion.copy(S.gr.root.quaternion);
       S.gr.apply(); S.rw = q.rr; S.spc = '#d8f0ff';
       /* Speilbildet: klart i det svarte vannet, svakere og roligere i isen. */

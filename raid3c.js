@@ -316,5 +316,103 @@ const G3C = (() => {
     return B; };
   /* Nedslaget tar lengre tid enn oppslaget: ph (0–1, jevnt i tid, 0 = toppen) → u (0,5 = bunnen etter andelen ds av slaget). */
   X.bird.warp = (ph, ds) => { ph = ((ph % 1) + 1) % 1; ds = ds || 0.56; return ph < ds ? 0.5 * ph / ds : 0.5 + 0.5 * (ph - ds) / (1 - ds); };
+
+  /* ---------- Flyriggen 2: flukten etter ekte fugler (Articuno del 1, Opus 25.11) ----------
+     X.fly(f, o) er X.bird(f, o) med et nytt vingeslag i tillegg. Det X.bird har (pose, flap, wings, place, neck, legs, tail, heave), er urørt, så alt som bruker X.bird, er likt.
+     Reglene og kildene: work/RAIDS3D.md, «Bevegelse for alle» (Fugleflukt). I korte trekk:
+     · Skulderen lager slaget: opp–ned, fram–bak (spissen går i en sløyfe sett fra siden) og vridningen (forkanten ned i nedslaget). Albue og håndledd folder vingen i oppslaget
+       (én fold-parameter, mest 40 % inn i oppslaget, strukket før toppen) og vifter aldri selv. Etterslepet utover er noen prosent av slaget, ikke en gummipisk: pisken kommer av
+       foldingen og av lasten, som bøyer spissene opp og litt bakover i nedslaget, og fjærene åpnes i oppslaget (hånda vris forkant opp, som en persienne).
+     · Styrken k velger mellom slagsett med hver sin form (0 glid, 1 svakt, 2 marsj, 3 kraft; hov blander inn svevingen): et sterkt slag er ikke et svakt slag ganget opp. Hver
+       vinge kan få sin egen styrke (asym > 0: den høyre slår hardere; den ytre vingen slår hardere inn i en sving, den indre ut av den).
+     · Nedslagets andel ds følger oppgaven (rundt 0,5 i marsj, 0,56 i kraft, 0,6 når den står i lufta), og bunnen av nedslaget ligger på hele tall i v (slag talt fra en bunn),
+       så et slag på musikken står der det sto. Vendingene er korte og myke (ingen stillstand i toppen og bunnen), og alt er glatt når k, hov og ds glir.
+     · Kroppen gynger mot slaget (body: løftes gjennom nedslaget, nesen litt ned først), og hodet står i verden: nakken tar gyngingen (hold).
+     · Små rettelser i glid er sjeldne hendelser (X.fly.gust): vingene felles under kroppen, et vindkast løfter dem, eller ett rykk i én vinge.
+     Bruk (i hvert bilde): const st = { v, k, hov, spd, w, ex, asym, load, gust }; bd.begin().place(…); bd.phase(st); bd.wings(bd.beat(st, 0), bd.beat(st, 1)); … bd.neck(…); bd.hold(…).
+     o.fly = { sets: { w, c, p, h } (endringer i slagsettene, i grader), dist: { fordelingene langs vingen }, foldMax, hold: { neck, head, tip } }. */
+  X.fly = (f, o) => { const B = X.bird(f, o), n = B.n, R = B.rig, DG = PI / 180, F = o.fly || {}, PO = B.poses, L0 = B.L0;
+    /* Fordelingen langs vingen (fra skulderen og ut): hvor mye av slaget, feiingen, vridningen, lasten, etterslepet og spalteåpningen hvert ledd tar, og foldingen (grader ved full fold). */
+    const D = Object.assign({ el: [0.5, 1, 1, 1, 1, 1], sw: [0.5, 1, 1, 1, 1, 1], tw: [0.1, 0.3, 0.45, 0.6, 0.8, 1], cu: [0, 0, 0.1, 0.3, 0.65, 1], lg: [0, 0, 0.3, 0.55, 0.8, 1], sl: [0, 0, 0, 0.2, 0.6, 1],
+      ff: [0, -18, 14, -30, -48, -58], fd: [0, 2, 4, -8, -18, -24], fq: [0, 0, -4, -8, -14, -18] }, F.dist || {});
+    const sh = (a, i) => { if (!a) return 0; if (a.length === n) return a[i]; const x = n > 1 ? i / (n - 1) * (a.length - 1) : 0, j = min(a.length - 2, floor(x)); return mix(a[j], a[j + 1], x - j); };
+    const SETS = X.fly.sets(F.sets), FMAX = F.foldMax == null ? 1 : F.foldMax, HO = F.hold || {}, NB = HO.neck || 'Neck', HB = HO.head || 'Head', HT = HO.tip || 'Jaw';
+    const MID = new (G3D.T().Vector3)(...(o.mid || [0, 2.3, 0])), dN = R.B[NB] && R.B[HB] ? R.pos(HB).distanceTo(R.pos(NB)) : 0, xN = R.B[NB] ? R.pos(NB).sub(MID).dot(B.F0) : 0, HMAX = HO.max || 0.3;
+    B.sets = SETS;
+    /* Slagets fase for bildet: st.u (0 = toppen, 0,5 = bunnen) fra st.v (slag talt fra en bunn) og ds; regnes én gang per bilde og deles av vingene og kroppen. */
+    B.phase = st => X.fly.phase(st, SETS);
+    /* Én vinge (k: 0 venstre, 1 høyre) som { fw, di, tw } per ledd (radianer), til bd.wings. Stillingene (w) som i X.bird.pose, og slaget, foldingen, lasten og spaltene oppå. */
+    B.beat = (st, k) => { const P = { fw: [], di: [], tw: [] }, w = st.w || { glide: 1 }, ex = st.ex || {}, u = B.phase(st), k0 = st.k || 0, as = st.asym || 0;
+      const kw = max(0, k0 + (k ? as : -as) * min(1, k0)), M = X.fly.mix(kw, st.hov || 0, SETS, st.spd), g = st.gust, jk = g ? (k ? g.jr : g.jl) : 0;
+      const sf = st.spd == null ? 1 : 1.15 - 0.55 * c01((st.spd - 12) / 20), fo = min(FMAX, M.fold * sf * (st.fold == null ? 1 : st.fold)), fb = X.fly.fb(u) * fo, up = X.fly.up(u), ld0 = st.load || 0;
+      for (let i = 0; i < n; i++) { let fw = ex.fw || 0, di = ex.di || 0, tw = ex.tw || 0;
+        for (const key in w) { const q = PO[key], x = w[key]; if (!q || !x) continue; fw += q.fw[i] * x; di += q.di[i] * x; tw += q.tw[i] * x; }
+        const ui = u - M.lag * sh(D.lg, i), E = X.fly.E(ui, M.rv), ld = X.fly.ld(ui), cu = sh(D.cu, i);
+        const el = (M.el * E + M.em) * sh(D.el, i) * DG, swp = -M.sw * sh(D.sw, i) * cos(TAU * (ui + M.sp)) * DG;   /* slaget og feiingen fra skulderen; ax = 1: slaget langs kroppen (står oppreist) */
+        di += el * (1 - M.ax) + swp * M.ax; fw += swp * (1 - M.ax) + el * M.ax;
+        tw += M.tw * sh(D.tw, i) * sin(TAU * ui) * DG;                                                 /* forkanten ned i nedslaget, opp i oppslaget */
+        fw += fb * sh(D.ff, i) * DG; di += fb * sh(D.fd, i) * DG; tw += fb * sh(D.fq, i) * DG;           /* foldingen i oppslaget */
+        di += (M.curl * ld + 6 * ld0) * cu * DG; fw -= (M.cb * ld + 3 * ld0) * cu * DG;                  /* lasten bøyer spissene opp og litt bakover */
+        tw -= (M.slot * up + 8 * ld0 * (1 - up)) * sh(D.sl, i) * DG;                                    /* fjærene åpnes i oppslaget (og når den bremser) */
+        if (g) { const s0 = sh(D.sw, i); tw += (24 * g.tk - 7 * g.lt - 9 * jk) * s0 * DG; di += (-9 * g.tk + 11 * g.lf + 8 * jk) * s0 * DG; }   /* rettelsene i glid, om skulderen */
+        P.fw.push(fw); P.di.push(di); P.tw.push(tw); }
+      return P; };
+    B.fly = st => B.wings(B.beat(st, 0), B.beat(st, 1));
+    /* Kroppen i slaget: hv = løftet langs ryggen (m: lavest like etter toppen, høyest like etter bunnen), pt = stigningen (rad, nesen ned til rundt 35 % av slaget, så opp),
+       sg = et lite rykk fram i nedslaget. Legges på før place. hvAt(du): løftet du slag før (til hodet, som henger rundt 0,23 slag etter). */
+    B.body = st => X.fly.body(st, SETS);
+    /* Hodet står i verden, og nakken er fjæra: etter neck() løftes nakken mot kroppens gynging (hodet følger bare g av den, forsinket), og hodet dreies tilbake, så vinkelen står.
+       hv og pt fra body; g = 0,25–0,31 (sangsvanen); hodet følger løftet 0,23 slag etter (body.hvAt). sc = figurens skala. Armen er nakkens lengde (Neck → Head):
+       hodet holder vinkelen, så det flytter seg med Head-benet; en kort nakke tar mindre (HMAX, hold.max: 0,3 rad). */
+    B.hold = (b, g, sc, up) => { if (!dN || !b) return B; const s = sc || f.root.scale.x, gg = g == null ? (HO.g == null ? 0.3 : HO.g) : g, k = 1 - c01(up || 0); let a = k * (gg * b.hvAt(0.23) - b.hv - xN * s * b.pt) / (dN * s); a = HMAX * Math.tanh(a / HMAX);
+      R.rot(NB, L0, -a); R.rot(HB, L0, a + b.pt); for (const [bn] of o.keep || []) R.rot(bn, L0, a); return B; };   /* up: oppreist (nakken står loddrett og kan ikke ta et løft opp–ned) */
+    return B; };
+  /* Slagsettene (grader og meter, for en stor fugl på rundt 10 m): el = slagets halve utslag i skulderen, em = midten (pluss = over ryggen), sw/sp = feiingen fram–bak og hvor
+     mye den leder (0 = en strek fram i bunnen, 0,25 = en ring der oppslaget går bak nedslaget), tw = vridningen i skulderen, fold = foldingen i oppslaget, curl/cb = lasten
+     (spissene opp og bakover i nedslaget), slot = fjærene åpnes i oppslaget, rv = korte vendinger (0 = cosinus), ds = nedslagets andel, lag = spissens etterslep (slag), hv/pt/sg =
+     kroppen (løft m, stigning grader, rykk fram m), ax = 1: slaget langs kroppen (oppreist). w svakt, c marsj, p kraft, h sveving. Kildene: RAIDS3D «Fugleflukt». */
+  X.fly.SETS = {
+    w: { el: 10, em: 1, sw: 2, sp: 0.1, tw: 4, fold: 0.12, curl: 3, cb: 1, slot: 2, rv: 0, ds: 0.5, lag: 0.015, hv: 0.05, pt: 0.4, sg: 0.03, ax: 0 },
+    c: { el: 22, em: 2, sw: 8, sp: 0.22, tw: 8, fold: 0.45, curl: 12, cb: 4, slot: 6, rv: 0.25, ds: 0.5, lag: 0.025, hv: 0.15, pt: 1.0, sg: 0.1, ax: 0 },
+    p: { el: 44, em: 6, sw: 16, sp: 0.24, tw: 14, fold: 0.85, curl: 22, cb: 8, slot: 14, rv: 0.45, ds: 0.56, lag: 0.035, hv: 0.34, pt: 2.5, sg: 0.24, ax: 0 },
+    h: { el: 25, em: 0, sw: 8, sp: 0.22, tw: 14, fold: 0.6, curl: 9, cb: 4, slot: 18, rv: 0.3, ds: 0.6, lag: 0.03, hv: 0.22, pt: 3, sg: 0, ax: 1 } };
+  X.fly.KEYS = ['el', 'em', 'sw', 'sp', 'tw', 'fold', 'curl', 'cb', 'slot', 'rv', 'ds', 'lag', 'hv', 'pt', 'sg', 'ax'];
+  /* Fasen og kroppen uten riggen (rene funksjoner, til skuespillet og effektene som må vite hvor vingene er): phase(st, S) setter st.ds og st.u én gang per bilde. */
+  X.fly.phase = (st, S) => { if (st.u == null) { const M = X.fly.mix(st.k || 0, st.hov || 0, S, st.spd); if (st.ds == null) st.ds = M.ds; st.u = X.fly.u((st.v || 0) + st.ds, st.ds); } return st.u; };
+  X.fly.body = (st, S) => { const u = X.fly.phase(st, S), M = X.fly.mix(st.k || 0, st.hov || 0, S, st.spd), DG = PI / 180;
+    return { hv: -M.hv * cos(TAU * (u - 0.12)), pt: M.pt * DG * cos(TAU * (u - 0.85)), sg: M.sg * sin(TAU * (u - 0.3)), hvAt: du => -M.hv * cos(TAU * (u - du - 0.12)), M, u }; };
+  X.fly.sets = ch => { const S = {}; for (const k in X.fly.SETS) S[k] = Object.assign({}, X.fly.SETS[k], ch && ch[k] || {}); return S; };
+  /* Settene blandet for styrken k (0–1: det svake slaget vokser fra glid; 1–2 svakt → marsj; 2–3 marsj → kraft) og svevingen hov (0–1). spd (m/s): nedslaget litt kortere i fart. */
+  X.fly.mix = (k, hov, S, spd) => { S = S || X.fly.SETS; const KY = X.fly.KEYS, M = {}, kk = max(0, min(3, k || 0)), h = c01(hov || 0), MAG = { el: 1, em: 1, sw: 1, tw: 1, fold: 1, curl: 1, cb: 1, slot: 1, hv: 1, pt: 1, sg: 1 };
+    for (const key of KY) { let v;
+      if (kk <= 1) v = MAG[key] ? S.w[key] * kk : S.w[key];
+      else if (kk <= 2) v = mix(S.w[key], S.c[key], kk - 1); else v = mix(S.c[key], S.p[key], kk - 2);
+      M[key] = mix(v, S.h[key] * (MAG[key] && kk < 1 ? kk : 1), h); }
+    if (spd != null) M.ds = max(0.45, M.ds - 0.002 * max(0, spd - 20) * (1 - h));
+    return M; };
+  /* Fasen: x = andelen av slaget fra toppen (jevn i tid) → u (0,5 = bunnen etter andelen ds). Glatt (farten i u er en sinus, ingen knekk i toppen og bunnen), og u(ds) = 0,5. */
+  X.fly.u = (ph, ds) => { const x = ((ph % 1) + 1) % 1, d = ds == null ? 0.5 : ds, c = TAU * (d - 0.5) / (1 - cos(TAU * d)); return x - c * (1 - cos(TAU * x)) / TAU; };
+  /* Slagets form: cosinus med kortere vendinger (rv > 0: litt mot en trekant, toppen av farten bredere), 1 i toppen og −1 i bunnen. */
+  X.fly.E = (u, rv) => { const th = TAU * u, r = rv || 0; return (cos(th) + r * cos(3 * th) / 9) / (1 + r / 9); };
+  /* Foldingen i oppslaget (0–1): null gjennom nedslaget, mest rundt 40 % inn i oppslaget, ute igjen før toppen (en glatt betakurve). */
+  X.fly.fb = u => { const x = (((u % 1) + 1) % 1 - 0.5) / 0.5; return x <= 0 || x >= 1 ? 0 : Math.pow(x / 0.4, 2.5) * Math.pow((1 - x) / 0.6, 3.75); };
+  /* Lasten (−0,3…1): sin² av slaget, positiv i nedslaget og svakere motsatt vei i oppslaget (vingen er foldet og fjærene åpne). up: oppslaget alene (0–1). */
+  const sgn = u => Math.tanh(6 * sin(TAU * u)) / Math.tanh(6);
+  X.fly.ld = u => { const s = sin(TAU * u); return s * s * (0.35 + 0.65 * sgn(u)); };
+  X.fly.up = u => { const s = sin(TAU * u); return s * s * 0.5 * (1 - sgn(u)); };
+  /* Rettelsene i glid (Reynolds m.fl. 2014, Cheney m.fl. 2020): sjeldne hendelser, en ren funksjon av tiden. o = { rate (i minuttet, 2,7), dur (s, 0,35 for en ørn; √størrelse), seed, ev (faste hendelser i stedet) }.
+     Gir { tk: vingene felles under kroppen (forkanten ned om skulderen), lf: begge løftes av et vindkast, lt: vridningen etter løftet, jl/jr: ett rykk i én vinge, nose: nesen ned }. */
+  X.fly.gust = (t, o) => { o = o || {}; const L = 60 / (o.rate || 2.7), d = o.dur || 0.35, sd = o.seed || 7, r = { tk: 0, lf: 0, lt: 0, jl: 0, jr: 0, nose: 0 };
+    const sm = x => x * x * x * (x * (6 * x - 15) + 10), env = x => x <= 0 || x >= 1 ? 0 : x < 0.3 ? sm(x / 0.3) : x < 0.55 ? 1 : sm((1 - x) / 0.45);
+    const one = (a, ty, am, sd2) => { if (a < 0 || a > 1.6 * d) return; const e = env(a / d) * am;
+      if (ty < 0.45) { r.tk += e; r.nose += e; } else if (ty < 0.8) { r.lf += e; r.lt += env(a / d - 0.35) * am; } else if (sd2 < 0.5) r.jl += e; else r.jr += e; };
+    if (o.ev) { for (const [t0, ty, am] of o.ev) one(t - t0, ty === 'tuck' ? 0 : ty === 'kast' ? 0.6 : 0.9, am == null ? 1 : am, ty === 'venstre' ? 0 : 1); return r; }   /* faste hendelser: [[t, 'tuck' | 'kast' | 'venstre' | 'høyre', styrke]] */
+    const k0 = floor(t / L); for (let k = k0 - 2; k <= k0 + 1; k++) one(t - (k + 0.15 + 0.7 * rnd(k, sd)) * L, rnd(k, sd + 1), 0.6 + 0.4 * rnd(k, sd + 3), rnd(k, sd + 2));
+    return r; };
+  /* En glatt kurve gjennom nøkler [[t, v], …] uten overskudd mellom dem (monoton kubisk, Fritsch–Carlson): til styrken, foldingen og svevingen, som skal gå gjennom nøklene. */
+  X.fly.trk = P => { const n = P.length, d = [], m = new Array(n).fill(0); for (let i = 0; i < n - 1; i++) d.push((P[i + 1][1] - P[i][1]) / (P[i + 1][0] - P[i][0]));
+    for (let i = 1; i < n - 1; i++) { const h0 = P[i][0] - P[i - 1][0], h1 = P[i + 1][0] - P[i][0]; m[i] = d[i - 1] * d[i] <= 0 ? 0 : 3 * (h0 + h1) / ((2 * h1 + h0) / d[i - 1] + (h1 + 2 * h0) / d[i]); }
+    return t => { if (t <= P[0][0]) return P[0][1]; if (t >= P[n - 1][0]) return P[n - 1][1]; let i = 0; while (t > P[i + 1][0]) i++;
+      const h = P[i + 1][0] - P[i][0], s = (t - P[i][0]) / h, s2 = s * s, s3 = s2 * s; return (2 * s3 - 3 * s2 + 1) * P[i][1] + (s3 - 2 * s2 + s) * h * m[i] + (3 * s2 - 2 * s3) * P[i + 1][1] + (s3 - s2) * h * m[i + 1]; }; };
   return X;
 })();
