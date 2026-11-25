@@ -606,7 +606,9 @@ function fresh() {
     last: { fag: 'annet', min: 60 }, cap: 360, sound: 0, cries: 1, vol: 70, cvol: 70, mvol: 70, timer: null,
     lad: { n: 0, lap: 0, best: 0, day: '', lost: '', next: null, seen: [] }, fac: { run: null, best: 0, lost: '' }, raid: null, boost: null, bfast: 0, music: 1, av: '',
     /* diff: vanskelighetsgrad (0 Easy, 1 Normal, 2 Hard). hfx/hty: vis effektivitet på angrepene og typer i kamp. */
-    diff: 1, hfx: 1, hty: 1
+    diff: 1, hfx: 1, hty: 1,
+    /* isn: introene spilleren har sett helt ut, per art ({ 493: 1 }): en intro med noskip (Arceus) kan hoppes over hele veien fra andre gang (legendIntro i bui.js). */
+    isn: {}
   };
 }
 let S = fresh();
