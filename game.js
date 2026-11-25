@@ -639,6 +639,10 @@ function migrate11() {
 /* SPRÅK: forklaringer og introduksjoner kan leses på norsk (S.lang = 'no'). Navn, typer, angrep, knapper og faner står alltid på engelsk.
    tl(tekst, verdier): den engelske teksten er nøkkelen, LNO[tekst] den norske; {navn} byttes med verdier.navn. Mangler en oversettelse, står den engelske. */
 const LNO = {
+  // Hodetelefonkortet før introen i et raid (hpCard i bui.js)
+  'Headphones recommended': 'Hodetelefoner anbefales',
+  'A lot of time and planning has gone into developing and designing the intros. Headphones give the best experience.': 'Det er brukt mye tid og planlegging på å utvikle og designe introene. Hodetelefoner gir den beste opplevelsen.',
+  'Take your time. The intro starts when you tap Continue.': 'Ta den tiden du trenger. Introen starter når du trykker på Continue.',
   // v86: Electivire som kom tilbake (backSheet i ui.js)
   'Your Electivire is back': 'Electivire-en din er tilbake',
   'A trade took your shiny Electivire by mistake. Here it is again: shiny, Lv {lv}, with full IVs like every shiny.': 'Et bytte tok den shiny Electivire-en din ved et uhell. Her er den igjen: shiny, nivå {lv}, med full IV som alle shiny.',

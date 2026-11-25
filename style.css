@@ -2055,6 +2055,17 @@ button.pkm{cursor:pointer}
 .rarr-c .raid-sp.qm{animation:rarrP 2.2s ease-in-out infinite}
 .rarr-c .acts{width:100%;margin-top:8px}
 @keyframes rarrP{50%{box-shadow:0 0 0 9px color-mix(in srgb,var(--gold) 22%,transparent),0 0 44px color-mix(in srgb,var(--gold) 70%,transparent)}}
+/* HODETELEFONKORTET (bui.js, hpCard): rett før introen i et raid. Rolig og midt på, i appens eget utseende (lys eller mørk og fargesettet), ikke i den mørke
+   sonen. Bildet er en strektegning i currentColor (gull), og lydbølgene puster sakte. */
+.hpc{gap:14px}
+.hpc-ic{display:block;width:min(40vw,152px);aspect-ratio:4/3;color:var(--gold);margin-bottom:4px}
+.hpc-ic svg{display:block;width:100%;height:100%;overflow:visible}
+.hpc-h{font-size:28px}
+.hpc-p,.hpc-s{max-width:32ch;margin:0 auto;text-wrap:balance}
+.hpc-ic .w1,.hpc-ic .w2{animation:hpw 3s ease-in-out infinite}
+.hpc-ic .w2{animation-delay:.45s}
+@keyframes hpw{0%,100%{opacity:.18}50%{opacity:.8}}
+@media (prefers-reduced-motion:reduce){.hpc-ic .w1,.hpc-ic .w2{animation:none;opacity:.55}}
 /* Demoen: hvem vil du møte. */
 .labtr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:4px}
 .labtr button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 6px;border-radius:16px;background:var(--card);box-shadow:0 0 0 1px var(--line);min-width:0;text-align:center}
