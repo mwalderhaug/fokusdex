@@ -89,6 +89,8 @@
       const hx = -dz / Math.hypot(dx, dz), hz = dx / Math.hypot(dx, dz);   /* vannrett, på tvers av synslinja */
       c[3] += hx * yaw * d; c[5] += hz * yaw * d; c[4] += pit * d;
       return c.concat([v[6], (v[7] || 0) + rol]); }; };
+  /* Kjeven går aldri forbi lukket (tennene): et mykt stopp et hårstrå åpent (−0,004), ikke en hard grense (den ga et rykk når kjeften lukket seg). */
+  const kj = j => { const o = -j - 0.004; return -0.004 - 0.5 * (o + Math.sqrt(o * o + 0.0004)); };
   const camV = v => K.cam(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7]);
 
   /* ---------- Stedet: stormhavet ----------
@@ -475,7 +477,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
       const UP = QI.UP, RO = QI.RO, T0 = UP - 1.0, Z3 = [0, 0, 0], RJ = 33.7;   /* T0: fjærene starter under vann (han synes fra 0:28,36), så de alt er i gang når han kommer opp */
       /* Roten: dagens til RJ (båten ligger på ham til 0:33,59), så nye nøkler som starter med dagens fart (hs med fart i den første nøkkelen). */
       const v0 = (P, t) => [t, hs(t, P), (hs(t + 0.001, P) - hs(t - 0.001, P)) / 0.002];
-      const KD2 = [v0(KD, RJ), [34.35, -0.07], [35.1, -0.17], [35.5, -0.15], [35.93, 0.3], [36.6, 0.08], [37.4, -0.03], [38.45, 0.1], [38.95, 0.07, 0], [39.75, 0.19], [40.7, 0.16], [41.1, 0.13], [41.3, -0.02, 0],
+      const KD2 = [v0(KD, RJ), [34.35, -0.07], [35.1, -0.17], [35.5, -0.15], [35.93, 0.3], [36.6, 0.08], [37.4, -0.03], [38.45, 0.1], [38.95, 0.084, 0], [39.75, 0.19], [40.7, 0.16], [41.1, 0.13], [41.3, -0.02, 0],
         [41.46, 0.12], [41.6, 0.86], [41.76, 1.52], [42.1, 1.58], [42.5, 1.54], [43.0, 1.43], [44.2, 1.05], [46, 0.82]];
       const KP2 = [v0(KP, RJ), [34.4, 0.005], [35.15, 0.025], [35.5, 0.02], [35.85, -0.045], [36.5, 0.012], [37.3, -0.004], [38.45, 0], [38.95, 0.012, 0], [39.7, -0.035], [41.3, -0.05], [41.44, -0.045, 0],
         [41.62, -0.15], [41.8, -0.18], [42.5, -0.15], [43.0, -0.14], [44.5, -0.09], [46, -0.07]];
@@ -501,19 +503,19 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         ch: [[T0, Z3], [29.5, [0.012, 0.026, 0]], [30.9, [-0.01, 0.012, 0]], [31.75, [0.006, -0.018, 0]], [32.9, [0, 0.006, 0]], [33.8, Z3], [34.35, [0, -0.015, 0]], [35.12, [0.01, 0.045, 0]], [35.42, [0.008, 0.035, 0]],
           [35.58, [-0.012, -0.045, 0]], [36.15, [0.004, 0.016, 0]], [36.9, [0, -0.006, 0]], [37.9, Z3], [38.95, [0, -0.012, 0]], [39.5, [0, 0.04, 0]], [41.3, [0.006, 0.055, 0]], [41.48, [0.006, 0.055, 0]],
           [41.62, [-0.01, -0.02, 0]], [42.3, [-0.012, -0.026, 0]], [42.92, [-0.008, -0.02, 0]], [43.3, [-0.006, -0.016, 0]], [44.3, [0.002, -0.004, 0]], [45.4, Z3]],
-        nk: [[T0, Z3], [29.2, [0, 0.05, 0]], [30.4, [0, 0.09, 0]], [31.4, [0, -0.02, 0]], [32.2, [0, -0.045, 0]], [33.4, [0, 0.02, 0]], [34.6, [0, 0.04, 0]], [35.47, [0, 0.025, 0]], [35.7, [0, -0.04, 0]], [36.35, [0, -0.01, 0]],
-          [37.2, [0, 0.015, 0]], [38.5, Z3], [38.97, nk(-0.15, 0)], [39.55, nk(0.75, 0)], [41.3, nk(1, 0)], [41.46, nk(1, 0)], [41.62, nk(0, 1.1)], [41.95, nk(0, 1)], [42.25, nk(0, 1.04)], [42.6, nk(0, 0.99)], [42.92, nk(0, 1.01)],
+        nk: [[T0, Z3], [29.2, [0, 0.05, 0]], [30.4, [0, 0.09, 0]], [31.4, [0, -0.02, 0]], [32.2, [0, -0.045, 0]], [33.4, [0, 0.02, 0]], [34.6, [0, 0.035, 0]], [35.47, [0, 0.025, 0]], [35.72, [0, -0.025, 0]], [36.4, [0, -0.008, 0]],
+          [37.2, [0, 0.015, 0]], [38.5, Z3], [38.97, nk(-0.15, 0)], [39.55, nk(0.75, 0)], [41.3, nk(1, 0)], [41.46, nk(1, 0)], [41.66, nk(0, 1.1)], [41.98, nk(0, 1)], [42.45, nk(0, 1)], [42.72, nk(0, 1.04)], [42.92, nk(0, 1.02)],
           [43.42, nk(0, 0.93)], [44.25, nk(0, 0.06)], [45.2, Z3]],
-        hd: [[T0, Z3], [29.15, [0, 0.03, 0]], [30.35, [0, 0.05, 0]], [31.35, [0, -0.012, 0]], [32.15, [0, -0.03, 0]], [33.3, [0, 0.012, 0]], [34.5, [0, 0.025, 0]], [35.5, [0, 0.015, 0]], [35.68, [0, -0.03, 0]],
-          [36.35, [0, -0.008, 0]], [37.3, [0, 0.01, 0]], [38.45, Z3], [38.94, hd(-0.15, 0)], [39.5, hd(0.75, 0)], [41.3, hd(1, 0)], [41.48, hd(1, 0)], [41.66, hd(0, 1.12)], [42.0, hd(0, 1.02)], [42.3, hd(0, 1.05)], [42.65, hd(0, 1)],
-          [42.92, hd(0, 1.02)], [43.22, hd(0, 0.7)], [43.95, hd(0, 0.05)], [44.9, Z3]],
+        hd: [[T0, Z3], [29.15, [0, 0.03, 0]], [30.35, [0, 0.05, 0]], [31.35, [0, -0.012, 0]], [32.15, [0, -0.03, 0]], [33.3, [0, 0.012, 0]], [34.5, [0, 0.022, 0]], [35.5, [0, 0.015, 0]], [35.74, [0, -0.018, 0]],
+          [36.4, [0, -0.006, 0]], [37.3, [0, 0.01, 0]], [38.45, Z3], [38.94, hd(-0.15, 0)], [39.5, hd(0.75, 0)], [41.3, hd(1, 0)], [41.48, hd(1, 0)], [41.7, hd(0, 1.12)], [42.02, hd(0, 1.02)], [42.47, hd(0, 1.02)], [42.75, hd(0, 1.05)],
+          [42.92, hd(0, 1.03)], [43.22, hd(0, 0.7)], [43.95, hd(0, 0.05)], [44.9, Z3]],
         jw: [[T0, J(-0.004)], [31.95, J(-0.004)], [32.35, J(-0.07)], [32.9, J(-0.004)], [35.3, J(-0.004)], [35.5, J(-0.05)], [35.9, J(-0.004)], [38.95, J(-0.004)], [39.6, J(-0.15 * 0.75)], [41.3, J(-0.15)],
-          [41.41, J(-0.15)], [41.55, J(-0.92)], [42.92, J(-0.9)], [43.18, J(-0.86)], [43.95, J(-0.004)]],
-        sh: [[T0, Z3], [38.6, Z3], [38.97, sh(-0.15, 0)], [39.6, sh(0.75, 0)], [41.3, sh(1, 0)], [41.46, sh(1, 0)], [41.62, sh(0, 1.12)], [41.95, sh(0, 1)], [42.92, sh(0, 1)], [43.35, sh(0, 0.9)], [44.4, Z3]],
+          [41.41, J(-0.15)], [41.58, J(-0.92)], [42.92, J(-0.9)], [43.18, J(-0.86)], [43.95, J(-0.004)]],
+        sh: [[T0, Z3], [38.6, Z3], [38.97, sh(-0.15, 0)], [39.6, sh(0.75, 0)], [41.3, sh(1, 0)], [41.46, sh(1, 0)], [41.66, sh(0, 1.12)], [41.98, sh(0, 1)], [42.92, sh(0, 1)], [43.35, sh(0, 0.9)], [44.4, Z3]],
         ar: [[T0, Z3], [41.49, Z3], [41.68, ar(1)], [42.92, ar(1)], [43.45, ar(0.8)], [44.5, Z3]],
         hp: [[T0, Z3], [35.0, Z3], [35.42, [0, 0.06, 0]], [35.82, [0, -0.22, 0]], [36.4, [0, -0.04, 0]], [37.3, [0, 0.02, 0]], [38.5, Z3], [38.99, [0, 0.015, 0]], [39.65, [0, DK.Hips[1] * 0.75, 0]],
           [41.3, [0, DK.Hips[1], 0]], [41.54, [0, DK.Hips[1], 0]], [41.76, [0, RR.Hips[1], 0]], [42.92, [0, RR.Hips[1], 0]], [43.65, [0, 0.6 * RR.Hips[1], 0]], [44.8, Z3]] };
-      const F = { ch: [1.2, 0.66, 2.8, 2.0], nk: [1.25, 0.7, 3.2, 1.6], hd: [1.4, 0.68, 3.3, 1.7], jw: [2.0, 0.64, 3.6, 2.2], sh: [1.1, 0.62, 3.2, 2.7], ar: [1.0, 0.62, 2.4, 2.0], hp: [0.95, 0.72, 2.2, 2.2] };   /* [myk, z, stiv i brølet, stiv i slaget] */
+      const F = { ch: [1.2, 0.66, 2.8, 2.0], nk: [1.25, 0.7, 2.9, 1.6], hd: [1.4, 0.68, 3.0, 1.7], jw: [2.0, 0.64, 3.3, 2.2], sh: [1.1, 0.62, 2.9, 2.7], ar: [1.0, 0.62, 2.4, 2.0], hp: [0.95, 0.72, 2.2, 2.2] };   /* [myk, z, stiv i brølet, stiv i slaget] */
       const S = {}; for (const k in G) { const L = G[k], q = F[k], sp = followV(t => keyAt(L, t), t => [mix(mix(q[0], q[3], kastS(t)), q[2], kastB(t)), q[1]], T0); S[k] = t => G3D.dbgKey ? keyAt(L, t) : sp(t); }
       /* Finnene: skulderen følger dagens kurve (KFL/KFR, med slaget 0,035 s tidligere: fjæren henger litt etter, så finnene treffer vannet på 0:35,51) gjennom en fjær (myk,
          stiv i slaget), og finnen er en kjede (Arm, ForeArm, Hand) som henger etter skulderen og etter kroppen når den løftes (vannet holder igjen tuppene), slår forbi når
@@ -534,7 +536,8 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
       const FL = fin(KL2, 0, 1), FR = fin(KR2, 1.9, 0.93);
       /* Halen: en kjede fra roten og ut (Tail1, Tail2 og halefinnene), som henger etter hoftene, kroppens stamp og løftet, og svinger sakte når han ligger stille. */
       const life = t => c01((t - 32.6) / 2) * (1 - 0.6 * kastR(t));
-      const tail = kjede({ n: 5, t0: T0, fo: 0.86, lim: 0.6, fz: t => [mix(mix(0.8, 0.45, rest(t)), 1.6, kastF(t)), 0.5],
+      const kastT = t => max(win(t, 35.05, 35.9, 0.45), 0.6 * io(c01((t - 40.9) / 0.45)) * (1 - io(c01((t - (RO + 0.6)) / 0.6))));   /* halen skifter stivhet langsomt (den svinger hele tiden) */
+      const tail = kjede({ n: 5, t0: T0, fo: 0.86, lim: 0.6, fz: t => [mix(mix(0.8, 0.45, rest(t)), 1.6, kastT(t)), 0.62],
         drive: t => { const r = t < RJ ? KYM(t) : { dy: hs(t, KD2), pit: hs(t, KP2) }, h = G3D.dbgKey ? keyAt(G.hp, t)[1] : S.hp(t)[1];
           return [0, -h + 0.06 * r.dy + 0.6 * r.pit + (0.08 * sin(TAU * 0.15 * t + 2.1) + 0.03 * sin(TAU * 0.07 * t)) * max(life(t), rest(t)), 0.06 * sin(TAU * 0.085 * t + 0.7) * life(t)]; } });
       /* Blikket: hodet snur seg i små vendinger mot nye punkter (hver 2,6–3,6 s), og nakken kommer etter (Groudon: «blikket i små vendinger»): når han ligger og venter
@@ -550,7 +553,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
           const op = -min(0, q.jw[1]) / 0.9, hold = dbg ? 0 : c01((op - 0.55) / 0.3) * (1 - c01((t - 43.05) / 0.3)), l = dbg ? 0 : max(lv(t), 0.6 * lv0(t) * (1 - c01((t - 38.6) / 0.5))), b = dbg ? 0 : pust(t, 30.6, 4.6, 61);
           const syl = hold * 0.06 * (0.5 - pust(t, RO + 0.22, 0.74, 41)), w = dbg ? 0 : gw(t), g1 = w * gz(t), g2 = w * gz(t - 0.32);
           g.add({ Spine: [q.ch[0], q.ch[1] + 0.014 * b * l, q.ch[2]], Neck: [0, q.nk[1] + 0.012 * hold * X.noise(t, 47, 1.2) + 0.009 * b * l, q.nk[2] + 0.6 * g2],
-            Head: [0, q.hd[1] + 0.01 * hold * X.noise(t, 55, 2.4), q.hd[2] + 0.014 * hold * X.noise(t, 53, 2.1) + g1], Jaw: [0, min(-0.004, q.jw[1] + syl + 0.022 * hold * X.noise(t, 51, 2.6) - 0.015 * b * l), 0],
+            Head: [0, q.hd[1] + 0.01 * hold * X.noise(t, 55, 2.4), q.hd[2] + 0.014 * hold * X.noise(t, 53, 2.1) + g1], Jaw: [0, kj(q.jw[1] + syl + 0.022 * hold * X.noise(t, 51, 2.6) - 0.015 * b * l), 0],
             '*Arm': q.ar, Hips: q.hp }, 1);
           for (const [s, P, C, sg] of [['L', KL2, FL, 1], ['R', KR2, FR, -1]]) { const d = dbg ? [Z3, Z3, Z3] : C(t), sag = sagOf(P, t), fz = fl ? fl[s] || 0 : 0;
             g.add({ [s + 'Shoulder']: [0, 0, sg * shZ(P, t)], [s + 'Arm']: [0, 0, sg * (d[0][2] + 0.7 * sag + fz)], [s + 'ForeArm']: [0, 0, sg * (d[1][2] + 0.85 * sag + fz)], [s + 'Hand']: [0, 0, sg * (d[2][2] + sag)] }, 1);
@@ -755,12 +758,13 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         /* Kyogre: forbi under båten (0:04,57–0:12,5), opp fra dypet under den (0:13,2–0:23), finnene først (0:23,03), ryggen som en øy, så ligger han høyt og rir på dønningene. */
         let x = 0, y = -40, z = 0, yaw = 0, pit = 0, sh = 0, fin = 0, gl = 0, mv = null;
         const tf = ny ? X.freeze(t, [QI.SLAM], 3, 0.3) : t;   /* figurens tid: to frosne bilder når finnene treffer vannet i slaget (låta, kameraet og vannet går videre) */
+        if (ny && tf !== t) setRH(su, tf);   /* ny: i de frosne bildene flyter han på havet slik det var i nedslaget (ringen fra slaget står), så ingenting av ham rører seg */
         if (t >= QI.PASS - 0.3 && t < QI.B6 - 0.02) {
           z = t < QI.PASS - 0.04 ? 2.9 - 8 * (t - QI.MID) : PASSZ(t);   /* jevn fart i bildet, han stopper aldri (Jazz 20.11 og 24.11): inn på 0:04,57, midt under båten i lynet 0:07,66, halen ute rundt 0:10,8 (PASSZ). Før klippet (bilde 1, der han synes svakt langt ute) som før */ x = BT[0] + 0.4; y = -7; yaw = PI; sh = 0.8; gl = 0.12; }
         else if (t >= QI.B6 && t < QI.UP) { const u = seg(t, QI.B6, QI.UP); y = mix(-30, -6.6, io(u)); yaw = 0; sh = 0.25 + 0.65 * u; gl = 0.06 + 0.4 * u * u; fin = 0.75 * seg(t, QI.B6 + 4, QI.UP - 1.5); }
         else if (t >= QI.UP) { const m = ny ? MVI.KYM(tf) : KYM(t), h0 = ny ? K.seaH(su, 0, 0, tf * TS) : H(0, 0); y = KYH + 0.8 * h0 * io(seg(ny ? tf : t, QI.UP, QI.UP + 2.57)) + m.dy; if (ny) z = m.z; pit = m.pit; yaw = m.yaw; S.krl = m.roll; sh = 0.6 * (1 - seg(t, QI.UP, QI.UP + 1.57)); }   /* rettelse 2: se KYM */
         g.root.visible = y > -32; g.root.position.set(x, y, z); g.root.rotation.set(pit, yaw, t >= QI.UP ? S.krl : 0);
-        if (ny && t >= QI.UP - 0.06) mv = MVI.pose(g, tf, finFlyt(su, tf * TS, tf, yaw, y)); else if (t < QI.UP) { SWIM(g, t, 0.8, 1.1); g.add({ '*Shoulder': [0, 0, 1] }, fin); } else KYB(g, t);   /* ny: figurens tid (frosne bilder i slaget), også havet han flyter på */
+        if (ny && t >= QI.UP - 0.06) { mv = MVI.pose(g, tf, finFlyt(su, tf * TS, tf, yaw, y)); if (tf !== t) setRH(su, t); } else if (t < QI.UP) { SWIM(g, t, 0.8, 1.1); g.add({ '*Shoulder': [0, 0, 1] }, fin); } else KYB(g, t);   /* ny: figurens tid (frosne bilder i slaget), også havet han flyter på */
         /* Pulsene er slagene (SL): linjene blusser på slaget og lader seg opp mens finnene løftes. Forvarselet 0:39,24 og brølet 0:41,52. */
         let pul = 0; for (const tp of [QI.SLAM]) pul = max(pul, hit(t, tp, 1.6));
         const lad = t > QI.HIT + 1.5 && t < QI.SLAM + 0.5 ? 0.4 * c01((max(hs(t, KFL), hs(t, KFR)) - 0.5) / 0.6) : 0;
@@ -913,7 +917,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
       const brFin = ph => kjede({ n: 3, t0: BR0, fo: 0.86, lim: 0.8, fz: () => [1.25, 0.54],
         drive: t => { const q = dbg() ? keyAt(bShK, t) : bSh(t); return [0, q[1], q[2] + 0.035 * brY(t) + 0.02 * sin(TAU * 0.9 * t + ph)]; } });
       const bFL = brFin(0), bFR = brFin(1.3);
-      const brTail = kjede({ n: 6, t0: BR0, fo: 0.88, lim: 0.6, fz: () => [1.0, 0.6], drive: t => [0, 0.035 * brY(t) - 0.25 * brP(t) + 0.04 * sin(TAU * 0.7 * t + 0.4), 0], pose: (t, i) => [0, i < 2 ? -0.12 : 0, 0] });
+      const brTail = kjede({ n: 6, t0: BR0, fo: 0.88, lim: 0.6, fz: () => [1.0, 0.7], drive: t => [0, 0.035 * brY(t) - 0.25 * brP(t) + 0.04 * sin(TAU * 0.7 * t + 0.4), 0], pose: (t, i) => [0, i < 2 ? -0.12 : 0, 0] });
       const brN = followV(t => keyAt([[BR0, [0, 0.05, 0]], [QP.C, [0, 0, 0]], [QP.C + 0.4, [0, -0.2, -0.03]], [QP.B1, [0, -0.24, -0.04]]], t), () => [1.5, 0.5], BR0);
       /* Pangen: han har falt siden toppen i det svarte (8 enheter i sekundet ned, så tyngden). Finnene legges bakover og henger igjen oppover; halen henger igjen. */
       const PA0 = QP.S - 0.5, pY = t => { const s = t - QP.S; return 10 - 8 * s - 0.5 * PG * s * s; }, pR = t => 0.45 + 0.85 * (t - QP.S);
@@ -943,7 +947,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
       const roFin = (ph, fk) => kjede({ n: 3, t0: L0, fo: 0.86, lim: 0.7, fz: t => [fk * mix(1.7, 1.0, soft(t)), 0.55],
         drive: t => [0, 0, (dbg() ? keyAt(Gr.sh, t)[2] : RS.sh(t)[2]) + 0.06 * rRy(t) + 0.02 * sin(TAU * 0.6 * t + ph) * c01((t - Lq - 0.6) / 0.6)] });
       const rFL = roFin(0, 1), rFR = roFin(1.6, 0.92);
-      const roTail = kjede({ n: 6, t0: L0, fo: 0.88, lim: 0.6, fz: () => [1.0, 0.58], drive: t => [0, -(dbg() ? keyAt(Gr.hp, t)[1] : RS.hp(t)[1]) + 0.06 * rRy(t) + 0.04 * sin(TAU * 0.35 * t), 0] });
+      const roTail = kjede({ n: 6, t0: L0, fo: 0.88, lim: 0.6, fz: () => [1.0, 0.66], drive: t => [0, -(dbg() ? keyAt(Gr.hp, t)[1] : RS.hp(t)[1]) + 0.06 * rRy(t) + 0.04 * sin(TAU * 0.35 * t), 0] });
       /* Halen i Primal: Tail1, Tail2, halefinnene B1–B2 og den lange fliken C1–C4 som én kjede; fliken D følger C. */
       const tailP = (p, tl) => { if (!tl) return; p.add({ Tail1: [0, tl[0][1], 0], Tail2: [0, tl[1][1], 0], Tail3: [0, 0.5 * tl[2][1], 0], '*FeelerB1': [0, tl[2][1], 0], '*FeelerB2': [0, tl[3][1], 0], '*FeelerC1': [0, tl[4][1], 0], '*FeelerC2': [0, tl[5][1], 0],
         '*FeelerC3': [0, 0.8 * tl[5][1], 0], '*FeelerD1': [0, 0.8 * tl[4][1], 0], '*FeelerD2': [0, 0.8 * tl[5][1], 0], '*FeelerD3': [0, 0.6 * tl[5][1], 0] }, 1); };
@@ -959,7 +963,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         roar(p, t) { const q = {}; for (const k in RS) q[k] = RS[k](t); const op = -min(0, q.jw[1]) / 0.9, hold = dbg() ? 0 : c01((op - 0.55) / 0.3) * (1 - 0.6 * c01((t - Lq - 1.6) / 0.6));
           const syl = hold * 0.06 * (0.5 - pust(t, Lq + 0.2, 0.72, 43)), b = dbg() ? 0 : pust(t, Lq + 0.4, 1.6, 71) * c01((t - Lq - 0.6) / 0.5);   /* han puster tungt etter brølet */
           p.add({ Spine: [q.ch[0], q.ch[1] + 0.012 * b, q.ch[2]], Neck: [0, q.nk[1] + 0.012 * hold * X.noise(t, 37, 1.2), 0], Head: [0, q.hd[1] + 0.01 * hold * X.noise(t, 39, 2.4), 0.014 * hold * X.noise(t, 41, 2.1)],
-            Jaw: [0, min(-0.004, q.jw[1] + syl + 0.022 * hold * X.noise(t, 45, 2.6)), 0], '*Shoulder': q.sh, '*Arm': q.ar, Hips: q.hp }, 1);
+            Jaw: [0, kj(q.jw[1] + syl + 0.022 * hold * X.noise(t, 45, 2.6)), 0], '*Shoulder': q.sh, '*Arm': q.ar, Hips: q.hp }, 1);
           finP(p, dbg() ? null : rFL(t), dbg() ? null : rFR(t), 0); tailP(p, dbg() ? null : roTail(t)); return op; } };
     })();
 
