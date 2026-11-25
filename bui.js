@@ -532,6 +532,25 @@ async function bossFilm(B) {
   root.classList.add('d'); await T(240);
   return true;
 }
+/* HODETELEFONKORTET (Jazz 25.11): rett før introen i et raid og et pakke-raid (startBattle), etter raidvarselet, så spilleren rekker å finne AirPods eller
+   headset. Ingen tidsfrist: Continue starter introen. Bare når introen har lyd og film: lyden er på (uten pakken spilles den innebygde oppbyggingen), og ikke
+   med redusert bevegelse (calm: bare et stillbilde). Ikke i sandkassa, demoen, showcase eller møtene i gresset (de kaller legendIntro selv), og ikke når
+   Dark Mewtwo reiser seg midt i raidet (B.rise, darkRise). Bildet er en egen strektegning i currentColor; kortet følger utseendet (lys eller mørk, fargesettet). */
+const hpOn = B => B.mode === 'raid' && !B.rise && !!S.sound && !calm() && typeof CINE !== 'undefined' && !!CINE.info(B.tr.dk ? 'dk' + B.tr.leg : B.tr.leg);
+const HPSVG = '<svg viewBox="0 0 96 72" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M27 41v-1a21 21 0 0 1 42 0v1"/><rect x="20" y="41" width="14" height="24" rx="7"/><rect x="62" y="41" width="14" height="24" rx="7"/><path class="w1" d="M13.5 47q-3.2 6 0 12M82.5 47q3.2 6 0 12"/><path class="w2" d="M7.5 43q-5.5 10 0 20M88.5 43q5.5 10 0 20"/></svg>';
+function hpCard(B) {
+  ov(`<div class="mid hpc"><span class="hpc-ic" aria-hidden="true">${HPSVG}</span><h1 class="big hpc-h">${tl('Headphones recommended')}</h1>
+      <p class="mut hpc-p">${tl('A lot of time and planning has gone into developing and designing the intros. Headphones give the best experience.')}</p>
+      <p class="sm hpc-s">${tl('Take your time. The intro starts when you tap Continue.')}</p></div>
+    <div class="acts"><button type="button" class="btn gold" id="hpgo">Continue</button></div>`, 'tint hpov', 'var(--gold)');
+  const go = $('#hpgo'); try { go.focus({ preventScroll: true }); } catch (_) {}
+  return new Promise(res => {
+    let done = false; const fin = () => { if (done) return; done = true; clearInterval(w); res(); };
+    const w = setInterval(() => { if (BT.B !== B || !go.isConnected) fin(); }, 300);
+    /* Trykket er det iPhone krever for å starte lyd: den låses opp her, i selve trykket, før introen starter (spilleren kan ha vært ute av appen og koblet til). */
+    go.addEventListener('click', () => { if (done) return; PACK.unlock(); sfx.tap(); go.disabled = true; fin(); });
+  });
+}
 /* INTROENE SPILLEREN HAR SETT (S.isn, per art; Jazz 25.11): en film med noskip (Arceus: fløyta) kan hoppes over hele veien fra andre gang. */
 const introSeen = id => !!(S.isn && S.isn[id]);
 function introSaw(id) { if (!S.isn || typeof S.isn !== 'object') S.isn = {}; if (S.isn[id]) return; S.isn[id] = 1; save(true); }
@@ -1749,7 +1768,8 @@ async function startBattle(B) {
   /* Bildene til begge lagene hentes mens introen går. De to første ventes det på (litt), resten kommer i bakgrunnen. */
   const pre = Promise.all([preSpr(B.me[0].id, { ani: 1, back: 1, sh: B.me[0].sh, mega: B.me[0].mega }), preSpr(B.foe[0].id, { ani: 1, sh: B.foe[0].sh, mega: B.foe[0].mega })]);
   B.me.slice(1).forEach(b => preSpr(b.id, { ani: 1, back: 1, sh: b.sh, mega: b.mega })); B.foe.slice(1).forEach(b => preSpr(b.id, { ani: 1, sh: b.sh, mega: b.mega }));
-  if (B.tr.wild) { await Promise.race([prep, new Promise(r => setTimeout(r, 2500))]); if (BT.B !== B) return; await legendIntro(B); }
+  /* Et raid: hodetelefonkortet først (hpCard), mens kampen gjøres klar bak det, og så introen. */
+  if (B.tr.wild) { const pw = Promise.race([prep, new Promise(r => setTimeout(r, 2500))]); if (hpOn(B)) { await hpCard(B); if (BT.B !== B) return; } await pw; if (BT.B !== B) return; await legendIntro(B); }
   else {
     await PACK.introPrep(B); if (BT.B !== B) return;
     /* De to helt spesielle har sin egen film før oppstillingen. */
@@ -1857,7 +1877,8 @@ async function darkRise(B) {
   BSFX.dread(); buzz([40, 60, 40, 60, 200]); shake(1100, 3); ar.classList.add('dkrise');
   await Promise.all([say('…but its shadow stays behind, and it is rising!'), new Promise(r => setTimeout(r, 1400))]); if (!ok()) return;
   await say('Your team is restored. This is not over.'); if (!ok()) return;
-  BT.busy = false; startBattle(raidBattle(BT.lead, B.mode === 'lab' ? 'dk' : undefined));
+  const B2 = raidBattle(BT.lead, B.mode === 'lab' ? 'dk' : undefined); B2.rise = 1;   /* midt i raidet: hodetelefonkortet er alt vist (hpOn) */
+  BT.busy = false; startBattle(B2);
 }
 
 /* ---------- Etter kampen ---------- */
