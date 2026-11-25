@@ -1881,12 +1881,12 @@ function meet(e) {
   sfx.appear(); cry(E.e.id, 650);
   setTimeout(() => { E.busy = false; aim(); }, MEETQ[encQ(E.e) ? 0 : 1]);
 }
-/* Hvem den legendariske er, vises først her: hodetelefonkortet, filmen dens (den samme som i et raid), og så står den i gresset. */
+/* Hvem den legendariske er, vises først her: hodetelefonkortet (bare før en intro i 3D), filmen dens (den samme som i et raid), og så står den i gresset. */
 async function mystIntro(e) {
   /* me: [] (tomt lag, som i Films): legendIntro leser laget (foePose), og uten det kastet den, så møtet kom uten film (fra 18.11 til v95). */
   const B = { tr: legTr(e.id), foe: [{ id: e.id, lv: e.lv }], me: [], b: 0, mode: 'myst', lap: 0, over: '' };
   BT.B = B; E.mus = 1;
-  /* Hodetelefonkortet først, som før et raid (hpCard i bui.js; Jazz 25.11: «Ja på hver legendary»), så filmen. */
+  /* Hodetelefonkortet først, som før et raid (hpCard i bui.js; Jazz 25.11: «Ja på hver legendary»; fra v96 bare når introen er i 3D, hpOn), så filmen. */
   try { PACK.unlock(); if (hpOn(B)) { await hpCard(B); if (BT.B !== B) return; } await legendIntro(B); } catch (_) {}
   if (BT.B !== B) { return; }
   BT.B = null;

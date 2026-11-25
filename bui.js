@@ -533,13 +533,18 @@ async function bossFilm(B) {
   root.classList.add('d'); await T(240);
   return true;
 }
-/* HODETELEFONKORTET (Jazz 25.11): rett før introen til hver legendarisk, så spilleren rekker å finne AirPods eller headset: et raid og et pakke-raid
+/* HODETELEFONKORTET (Jazz 25.11): rett før introen til en legendarisk, så spilleren rekker å finne AirPods eller headset: et raid og et pakke-raid
    (startBattle, etter raidvarselet) og en mystisk legendarisk i gresset (mystIntro i ui.js; v95: «Ja på hver legendary»). Ingen tidsfrist: Continue starter
-   introen. Bare når introen har film, og ikke med redusert bevegelse (calm: bare et stillbilde). Er lyden av, vises kortet likevel, med en rolig linje og en
-   knapp som slår den på (v95: «Veldig gjerne hint om å skru på lyden»). Ikke i sandkassa, Films, showcase eller traileren (de kaller legendIntro selv, med
-   mode 'lab'), og ikke når Dark Mewtwo reiser seg midt i raidet (B.rise, darkRise). Bildet er en egen strektegning i currentColor; kortet følger utseendet
-   (lys eller mørk, fargesettet). Lydbølgene i bildet står stille og svake mens lyden er av. */
-const hpOn = B => (B.mode === 'raid' || B.mode === 'myst') && !B.rise && !calm() && typeof CINE !== 'undefined' && !!CINE.info(B.tr.dk ? 'dk' + B.tr.leg : B.tr.leg);
+   introen. Fra v96 bare når introen som spilles, er en av de nye cutscenene i 3D (Jazz 25.11: «Kun varsel om hodetelefoner på de som har ny intro tenker
+   jeg, så de ikke blir skuffa»): samme sjekk som legendIntro (c3Can), så en ny art i G3C.ARTS får kortet av seg selv. De andre artene, Dark Mewtwo, spillere
+   uten pakken med 3D (eller uten WebGL 2) og redusert bevegelse (calm: bare et stillbilde) får ingen kort. Er lyden av, vises kortet likevel, med en rolig
+   linje og en knapp som slår den på (v95: «Veldig gjerne hint om å skru på lyden»). Ikke i sandkassa, Films, showcase eller traileren (de kaller legendIntro
+   selv, med mode 'lab'), og ikke når Dark Mewtwo reiser seg midt i raidet (B.rise, darkRise). Bildet er en egen strektegning i currentColor; kortet følger
+   utseendet (lys eller mørk, fargesettet). Lydbølgene i bildet står stille og svake mens lyden er av. */
+/* Spilles introen som cutscene i 3D? Arten har en fil i c3/ (G3C.ARTS), pakken har 3D-filene og nettleseren WebGL 2 (G3D.can), og det er ikke Dark Mewtwo
+   eller redusert bevegelse. legendIntro venter så på artens fil og modellene; lar de seg ikke hente i tide, går sprite-filmen som før. */
+const c3Can = tr => !tr.dk && !calm() && typeof G3C !== 'undefined' && G3D.can() && G3C.has(tr.leg);
+const hpOn = B => (B.mode === 'raid' || B.mode === 'myst') && !B.rise && typeof CINE !== 'undefined' && !!CINE.info(B.tr.dk ? 'dk' + B.tr.leg : B.tr.leg) && c3Can(B.tr);
 const HPSVG = '<svg viewBox="0 0 96 72" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M27 41v-1a21 21 0 0 1 42 0v1"/><rect x="20" y="41" width="14" height="24" rx="7"/><rect x="62" y="41" width="14" height="24" rx="7"/><path class="w1" d="M13.5 47q-3.2 6 0 12M82.5 47q3.2 6 0 12"/><path class="w2" d="M7.5 43q-5.5 10 0 20M88.5 43q5.5 10 0 20"/></svg>';
 function hpCard(B) {
   const off = !S.sound;
@@ -574,8 +579,9 @@ async function legendIntro(B) {
   ov(`<div class="lgi" id="lgi" style="--cc:${tr.cc}"><div class="lgi-s"><canvas class="lgi-cv" id="lgicv" width="512" height="384"></canvas></div><i class="lgi-wait"></i><button type="button" class="lgi-skip" id="lgiskip" hidden>Skip</button><button type="button" class="lgi-go" id="lgigo" hidden>Continue</button></div>`, 'battle vsov');
   const root = $('#lgi'), cv = $('#lgicv'), gone = () => BT.B !== B || !root.isConnected, o = { name: tr.n, cap: tr.title, lv: 0, cc: tr.cc, pose: foePose(B) };
   /* Cutscenen i 3D (raid3d.js, raid3c.js og artens fil i c3/): finnes den for arten, og har pakken 3D-filene, spilles den i stedet for sprite-filmen. Den ender i
-     brølet med navnet og nivået og venter på Continue; så virvel og hvitt blink, og rett inn i kampen. Lar den seg ikke hente i tide, går sprite-filmen som før. */
-  const id3 = 'c3:' + tr.leg, c3 = !tr.dk && !calm() && typeof G3C !== 'undefined' && G3D.can() && G3C.has(tr.leg) && await Promise.race([G3C.load(tr.leg).then(() => G3D.ready(id3)).then(() => true, () => false), T(G3D.isReady(id3) ? 300 : 12000).then(() => false)]);
+     brølet med navnet og nivået og venter på Continue; så virvel og hvitt blink, og rett inn i kampen. Lar den seg ikke hente i tide, går sprite-filmen som før.
+     Sjekken (c3Can) avgjør også hodetelefonkortet (hpOn): bare introene i 3D har det. */
+  const id3 = 'c3:' + tr.leg, c3 = c3Can(tr) && await Promise.race([G3C.load(tr.leg).then(() => G3D.ready(id3)).then(() => true, () => false), T(G3D.isReady(id3) ? 300 : 12000).then(() => false)]);
   if (gone()) return;
   if (c3) { id = id3; info = CINE.info(id); o.lv = f.lv; root.classList.add('c3'); c3warm();   /* også Primal-lydene: de trengs senere i kampen */
     /* Arenaen i 3D (samme sted som cutscenen) må stå klar når kampen starter. Primal-cutscenen hentes når kampen er i gang (ikke mens introen spiller). */
@@ -1778,7 +1784,7 @@ async function startBattle(B) {
   /* Bildene til begge lagene hentes mens introen går. De to første ventes det på (litt), resten kommer i bakgrunnen. */
   const pre = Promise.all([preSpr(B.me[0].id, { ani: 1, back: 1, sh: B.me[0].sh, mega: B.me[0].mega }), preSpr(B.foe[0].id, { ani: 1, sh: B.foe[0].sh, mega: B.foe[0].mega })]);
   B.me.slice(1).forEach(b => preSpr(b.id, { ani: 1, back: 1, sh: b.sh, mega: b.mega })); B.foe.slice(1).forEach(b => preSpr(b.id, { ani: 1, sh: b.sh, mega: b.mega }));
-  /* Et raid: hodetelefonkortet først (hpCard), mens kampen gjøres klar bak det, og så introen. */
+  /* Et raid: hodetelefonkortet først (hpCard; bare når introen er i 3D, hpOn), mens kampen gjøres klar bak det, og så introen. */
   if (B.tr.wild) { const pw = Promise.race([prep, new Promise(r => setTimeout(r, 2500))]); if (hpOn(B)) { await hpCard(B); if (BT.B !== B) return; } await pw; if (BT.B !== B) return; await legendIntro(B); }
   else {
     await PACK.introPrep(B); if (BT.B !== B) return;
