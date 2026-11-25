@@ -41,6 +41,56 @@
   const SWIM = (f, t, k, sp) => { const w = t * (sp || 2.2); f.add({ '*Shoulder': [0, 0, 0.32 * sin(w) * k], '*Arm': [0, 0, 0.14 * sin(w - 0.6) * k], Hips: [0, 0.1 * sin(w + 1.2) * k, 0], Tail1: [0, 0.16 * sin(w + 0.4) * k, 0], Tail2: [0, 0.16 * sin(w - 0.3) * k, 0] }, 1); };
   const BREACH = { Neck: [0, -0.2, 0], Head: [0, -0.12, 0], '*Shoulder': [0, 0, 0.42], '*Arm': [0.35, 0, 0.12], Hips: [0, 0.18, 0], Tail1: [0, -0.2, 0], Tail2: [0, -0.2, 0] };
 
+  /* ---------- BEVEGELSEN etter Fable (Opus 25.11; reglene: work/RAIDS3D.md, «Bevegelse»; posene: work/raids3d/kyogre/bevegelse/poser.jpg) ----------
+     Fra finnene bryter flaten i introen (0:28,36) og ut, og i hele Primal-filmen (dykket, breachen, pangen og brølet). Posene er nøkler, og motoren lager bevegelsen mellom
+     dem: målet for hver gruppe av ben glir mellom posene, og en fjær per gruppe (followV) gir tyngden, etterslepet og overskuddet; fjærene er stive i et kast som er låst til
+     låta (slaget, brølet) og myke ellers. Det som henger på kroppen (finnene, halen og halefinnene) er kjeder (kjede): de henger etter skulderen, hoftene og kroppens bevegelse
+     (vannet holder igjen), og slår forbi når den stanser; ingen fast forsinkelse per ledd. Kameraene har en tenkt rigg (camLive): på havet en båt som vugger sakte (under
+     0,2 Hz) og rir på dønningene, høyt oppe et helikopter eller en drone som glir. Bryteren: G3D.alt[382] = 'stiv' (eller 'gammel') gir bevegelsen og kameraene slik de var
+     (godkjent 24.11) i begge filmene (live: &gammel=stiv; gjennomgangssiden: &alt=stiv; verktøyene: PRE='G3D.alt={382:"stiv"}'). G3D.dbgKey = 1: posene uten fjærene (posearket).
+     Nye poser og kurver har egne navn: ROAR, DUCK og SWIM er også kampfigurens (form og idle i arenaen). */
+  const altv = () => String((G3D.alt && G3D.alt[382]) || ''), STIV = () => /stiv|gammel/.test(altv());
+  const sm5 = x => { x = c01(x); return x * x * x * (x * (6 * x - 15) + 10); };
+  /* Nøklene [[tid, vektor eller tall, (kurve)], …]: målet glir mellom dem (io, eller nøkkelens egen kurve inn til den), og står før den første og etter den siste. */
+  const keyAt = (L, t) => { if (t <= L[0][0]) return L[0][1]; for (let i = 1; i < L.length; i++) if (t < L[i][0]) { const a = L[i - 1], b = L[i], u = (b[2] || io)((t - a[0]) / (b[0] - a[0]));
+      return typeof a[1] === 'number' ? a[1] + (b[1] - a[1]) * u : a[1].map((x, j) => x + (b[1][j] - x) * u); } return L[L.length - 1][1]; };
+  /* En fjær der stivheten endres med tiden (fz(t) → [f, z]): myk i lange, rolige bevegelser og stiv i et kast på en lyd (fra Groudon, c3/383.js). Ren funksjon av tiden:
+     faste steg på 1/240 s fra t0, tilstanden lagret hvert kvarte sekund, så filmen kan spoles og hoppes i. */
+  const followV = (src, fz, t0) => { const dt = 1 / 240, M = 60, n = src(t0).length, marks = [], s = new Float64Array(2 * n); let at = -1;
+    const st = k => { if (at < 0 || at > k) { if (!marks.length) { const v = src(t0), s0 = new Float64Array(2 * n); for (let j = 0; j < n; j++) s0[j] = v[j]; marks.push(s0); } const m = min(floor(k / M), marks.length - 1); s.set(marks[m]); at = m * M; }
+      while (at < k) { const tt = t0 + at * dt, v = src(tt), q = fz(tt), w = TAU * q[0], z = q[1]; for (let j = 0; j < n; j++) { s[n + j] += (w * w * (v[j] - s[j]) - 2 * z * w * s[n + j]) * dt; s[j] += s[n + j] * dt; }
+        at++; if (at % M === 0 && at / M === marks.length) marks.push(Float64Array.from(s)); } return s; };
+    return t => t <= t0 ? Array.from(src(t)) : Array.from(st(max(0, Math.round((t - t0) / dt))).subarray(0, n)); };
+  /* En kjede som X.chain (raid3c.js), men med stivheten som en funksjon av tiden (fz(t) → [f i leddet innerst, z]; fo: frekvensen ganges med dette per ledd utover).
+     drive(t) → [rx, ry, rz]: ankeret (skulderen, hoftene; kroppens løft og stamp tas med som en vinkel), pose(t, i) → leddets egen stive pose. Gir avviket fra posen per ledd. */
+  const kjede = o => { const n = o.n, t0 = o.t0, fo = o.fo == null ? 0.8 : o.fo, lim = o.lim || 0, N = 3 * n, dt = 1 / 240, M = 60, marks = [], s = new Float64Array(2 * N), Z3 = [0, 0, 0]; let at = -1;
+    const pz = (t, i) => o.pose ? o.pose(t, i) || Z3 : Z3, FO = Array.from({ length: n }, (_, i) => Math.pow(fo, i));
+    const st = k => { if (at < 0 || at > k) { if (!marks.length) { const a = o.drive(t0), s0 = new Float64Array(2 * N); for (let c = 0; c < 3; c++) { let p = a[c] || 0; for (let i = 0; i < n; i++) { p += pz(t0, i)[c] || 0; s0[3 * i + c] = p; } } marks.push(s0); }
+        const m = min(floor(k / M), marks.length - 1); s.set(marks[m]); at = m * M; }
+      while (at < k) { const tt = t0 + at * dt, a = o.drive(tt), q = o.fz(tt), z = q[1];
+        for (let i = 0; i < n; i++) { const p = pz(tt, i), w = TAU * q[0] * FO[i]; for (let c = 0; c < 3; c++) { const j = 3 * i + c, tg = (i ? s[j - 3] : a[c] || 0) + (p[c] || 0); s[N + j] += (w * w * (tg - s[j]) - 2 * z * w * s[N + j]) * dt; s[j] += s[N + j] * dt; } }
+        at++; if (at % M === 0 && at / M === marks.length) marks.push(Float64Array.from(s)); } return s; };
+    return t => { const out = []; if (t <= t0) { for (let i = 0; i < n; i++) out.push([0, 0, 0]); return out; } const k = max(0, Math.round((t - t0) / dt)), s = st(k), tk = t0 + k * dt, a = o.drive(tk);
+      for (let i = 0; i < n; i++) { const p = pz(tk, i), r = [0, 0, 0]; for (let c = 0; c < 3; c++) { const j = 3 * i + c; let d = s[j] - (i ? s[j - 3] : a[c] || 0) - (p[c] || 0); if (lim) d = lim * Math.tanh(d / lim); r[c] = d; } out.push(r); }
+      return out; }; };
+  /* Pusten: 0 → 1 (inn, 40 % av perioden) → 0 (ut), myk i begge ender (sm5); perioden og dybden glir litt (støy), så den ikke går som en klokke. */
+  const pust = (t, t0, P, sd) => { if (t < t0) return 0; const u = ((t - t0) / P + 0.05 * X.noise(t, sd, 0.07)) % 1, a = 0.4, b = u < a ? sm5(u / a) : 1 - sm5((u - a) / (1 - a)); return b * (1 + 0.15 * X.noise(t, sd + 3, 0.09)); };
+  /* Kameraet med en tenkt rigg (camLive): banen følges med en fjær (etterslep, f 2,0 og z 0,8), og støyen er en VINKEL (grader, så skjelvet er likt på skjermen uansett avstand:
+     research «rask_bevegelse» 21), ganget med linsa (fov/45). rig: 'baat' = en båt som vugger sakte (krenging og stamp på 0,12–0,16 Hz, under kvalmebåndet 0,2–0,4 Hz) og
+     et lite skjelv; 'heli' = helikopter eller drone som glir (svak drift på 0,1 Hz). tIn: støyen tones inn; tEnd: fra da står kameraet nøyaktig på banen. src(t) → K.cam-argumentene. */
+  const camLive = (src, o) => { const lag = X.follow(t => src(t).slice(0, 6), { f: o.f || 2.0, z: o.z == null ? 0.8 : o.z, t0: o.t0 }), sd = o.seed || 1, baat = o.rig === 'baat', A = o.amp == null ? 1 : o.amp;
+    return t => { const v = src(t), c = G3D.dbgKey ? v.slice(0, 6) : lag(t), w = (o.tIn != null ? io(c01((t - o.tIn) / 0.6)) : 1) * (o.tEnd != null ? 1 - io(c01((t - (o.tEnd - (o.ut || 1))) / (o.ut || 1))) : 1);
+      const dx = v[3] - v[0], dy = v[4] - v[1], dz = v[5] - v[2], d = Math.hypot(dx, dy, dz) || 1, fk = (v[6] || 40) / 45, D2R = PI / 180;
+      const yaw = (baat ? 0.1 * X.noise(t, sd, 0.55) + 0.06 * X.noise(t, sd + 5, 0.13) : 0.05 * X.noise(t, sd, 0.1) + 0.025 * X.noise(t, sd + 5, 0.45)) * fk * A * w * D2R;
+      const pit = (baat ? 0.32 * sin(TAU * 0.137 * t + sd) + 0.08 * X.noise(t, sd + 9, 0.55) : 0.04 * X.noise(t, sd + 9, 0.1) + 0.02 * X.noise(t, sd + 13, 0.45)) * fk * A * w * D2R;
+      const rol = baat ? (0.45 * sin(TAU * 0.121 * t + 2 * sd) + 0.06 * X.noise(t, sd + 17, 0.5)) * A * w * D2R : 0.03 * X.noise(t, sd + 17, 0.12) * A * w * D2R;
+      const e = o.tEnd != null ? 1 - io(c01((t - (o.tEnd - (o.ut || 1))) / (o.ut || 1))) : 1;
+      for (let i = 0; i < 6; i++) c[i] = v[i] + (c[i] - v[i]) * e;
+      const hx = -dz / Math.hypot(dx, dz), hz = dx / Math.hypot(dx, dz);   /* vannrett, på tvers av synslinja */
+      c[3] += hx * yaw * d; c[5] += hz * yaw * d; c[4] += pit * d;
+      return c.concat([v[6], (v[7] || 0) + rol]); }; };
+  const camV = v => K.cam(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7]);
+
   /* ---------- Stedet: stormhavet ----------
      Havet er arenaens materiale (K.ground('sea')): dønninger med skum på toppene, vindstriper og regnringer. En kystlinje av mørke klipper bak, sjøstakker ute i havet der
      bølgene slår inn og spruter opp (hver gang en topp når steinen), og himmelen bak er stormhimmelen (skyQ). k = stormen (1 = storm, 2 = Primordial Sea). */
@@ -414,6 +464,101 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         g.add({ [s + 'Shoulder']: [0, 0, sg * a[0]], [s + 'Arm']: [0, 0, sg * (FK * (a[1] - a[0]) + fl(1))], [s + 'ForeArm']: [0, 0, sg * (FK * (a[2] - a[1]) + fl(2))], [s + 'Hand']: [0, 0, sg * (FK * (a[3] - a[2]) + fl(3))] }, 1); }
       const nk = hs(t, KN), nk2 = hs(t - 0.14, KN);
       g.add({ Neck: [0, nk, 0], Head: [0, 0.55 * nk2, 0], Hips: [0, hs(t, KHP) + 0.07 * sin(t * 0.95 + 1.2) * sw, 0], Tail1: [0, 0.13 * sin(t * 0.95 + 0.4) * sw, 0], Tail2: [0, 0.15 * sin(t * 0.95 - 0.4) * sw, 0] }, 1); };
+    /* ---------- BEVEGELSEN i introen etter Fable (Opus 25.11; se «BEVEGELSEN» øverst i fila) ----------
+       Nøkkelposene (arket: work/raids3d/kyogre/bevegelse/poser.jpg): I1 finnene bryter flaten (løftet, tuppene henger etter i vannet) · I2 ryggen hever seg som en øy
+       (brystet og snuten leder, finnene sprer seg og synker) · I3 oppe (litt forbi, og et lite nikk når oppdriften snur) · I4 opptrekket til slaget (finnene høyt, tuppene
+       henger, kroppen synker litt) · I5 slaget 0:35,51 (finnene slås ned med roten først og tuppene etter, to frosne bilder, kroppen kastes opp, halen etter) · I6 forvarselet
+       0:39,24 (et lite dykk motsatt vei, så samler han seg: snuten opp, finnene ned, kroppen synker) · I7 brølet 0:41,52 (kjeven først, så brystet, nakken, hodet, finnene og
+       halen; stive fjærer i kastet) · I8 holdet (kjeven former skriket i stavelser, skjelv under 3 Hz) · I9 navnet (hodet leder ned, kjeften lukkes uten å gå forbi) · I10 livet
+       (pusten, finnene flyter på dønningene, halen svinger sakte, blikket i små vendinger). Roten (KYM) er dagens til 0:33,7, så båten (boatSim) og lydsengen står. */
+    const MVI = (() => {
+      const UP = QI.UP, RO = QI.RO, T0 = UP - 1.0, Z3 = [0, 0, 0], RJ = 33.7;   /* T0: fjærene starter under vann (han synes fra 0:28,36), så de alt er i gang når han kommer opp */
+      /* Roten: dagens til RJ (båten ligger på ham til 0:33,59), så nye nøkler som starter med dagens fart (hs med fart i den første nøkkelen). */
+      const v0 = (P, t) => [t, hs(t, P), (hs(t + 0.001, P) - hs(t - 0.001, P)) / 0.002];
+      const KD2 = [v0(KD, RJ), [34.35, -0.07], [35.1, -0.17], [35.5, -0.15], [35.93, 0.3], [36.6, 0.08], [37.4, -0.03], [38.45, 0.1], [38.95, 0.07, 0], [39.75, 0.19], [40.7, 0.16], [41.1, 0.13], [41.3, -0.02, 0],
+        [41.46, 0.12], [41.6, 0.86], [41.76, 1.52], [42.1, 1.58], [42.5, 1.54], [43.0, 1.43], [44.2, 1.05], [46, 0.82]];
+      const KP2 = [v0(KP, RJ), [34.4, 0.005], [35.15, 0.025], [35.5, 0.02], [35.85, -0.045], [36.5, 0.012], [37.3, -0.004], [38.45, 0], [38.95, 0.012, 0], [39.7, -0.035], [41.3, -0.05], [41.44, -0.045, 0],
+        [41.62, -0.15], [41.8, -0.18], [42.5, -0.15], [43.0, -0.14], [44.5, -0.09], [46, -0.07]];
+      /* Litt fram og tilbake (z): slaget skyver ham bakover og han glir tilbake, og i brølet kaster han seg litt fram mot oss (en bue, ikke en loddrett strek). */
+      const KZ2 = [[RJ, 0], [35.2, 0], [35.55, -0.05], [36.2, -0.22], [37.4, -0.05], [38.45, 0], [38.95, 0.03], [39.9, -0.12], [41.3, -0.16, 0], [41.7, 0.3], [42.3, 0.38], [43.2, 0.3], [45, 0.1], [46.5, 0]];
+      const kastR = t => io(c01((t - 41.25) / 0.08)) * (1 - io(c01((t - (RO + 0.55)) / 0.4)));   /* roten er stiv i brølet (skiftes mens han står i bunnen av krøket), myk ellers */
+      const dyF = followV(t => [t < RJ ? hs(t, KD) : hs(t, KD2), t < RJ ? hs(t, KP) : hs(t, KP2), t < RJ ? 0 : hs(t, KZ2)], t => [mix(1.3, 3.4, kastR(t)), 0.62], RJ);
+      const lv = t => c01((t - 43.2) / 1.6), lv0 = t => c01((t - 30.6) / 1.6);   /* livet etter navnet; og pusten, finnene og halen fra han er oppe */
+      const KYM2 = t => { const yw = 0.045 * sin(PI * sm5(seg(t, UP + 0.3, UP + 3.9)));   /* han dreier seg litt mens han stiger og retter seg ut igjen (snuten går i en bue; båten merker ikke dreiningen); finnene bryter flaten som i dag */
+        if (t < RJ) { const m = KYM(t); return { dy: m.dy, pit: m.pit, roll: m.roll, yaw: m.yaw + yw, z: 0 }; }
+        const q = G3D.dbgKey ? [hs(t, KD2), hs(t, KP2), hs(t, KZ2)] : dyF(t), l = lv(t);
+        return { dy: q[0] + 0.05 * l * sin(TAU * 0.09 * t + 0.4), pit: q[1] + 0.012 * l * sin(TAU * 0.09 * t - 0.9), roll: hs(t, KR) + 0.03 * sin(t * 0.37) * seg(t, QI.HIT, QI.HIT + 1.5) + 0.01 * sin(TAU * 0.07 * t + 1.1) * c01((t - 36) / 2), yaw: hs(t, KY) + 0.05 * sin(t * 0.3), z: q[2] }; };
+      /* Stivheten i fjærene: stiv i slaget og brølet (følger de korte nøklene tett, så det kommer på slaget), litt stivere i forvarselet, myk ellers. Skiftes der målet
+         står stille: i toppen av opptrekket (0:35,2), i bunnen av det lille dykket før forvarselet (0:38,95) og i krøket før brølet (0:41,3–0:41,44). */
+      const win = (t, a, b, ui) => io(c01((t - a) / 0.1)) * (1 - io(c01((t - b) / ui)));
+      const kastS = t => win(t, 35.08, 35.85, 0.4), kastB = t => max(win(t, 41.32, RO + 0.5, 0.45), 0.45 * win(t, 38.9, 39.6, 0.45)), kast = t => max(kastS(t), kastB(t));
+      /* Gruppene: brystet (Spine: x rull, y snuten opp, z vri), nakken og hodet (y: + løfter snuten, z: blikket), kjeven (y: − åpner), skuldrene i felles pose (z: + løfter
+         finnene; hver side har i tillegg sin egen kurve), armene (ROAR sin vri) og hoftene (y: + senker halen). Nøklene per gruppe er forskjøvet 1–3 bilder: den som leder,
+         først (i brølet kjeven og roten → brystet → nakken → skuldrene → hodet → armene → hoftene; i forvarselet og ved navnet hodet først). */
+      const J = v => [0, v, 0], DK = DUCK, RR = ROAR;
+      const nk = (d, r) => [0, d * DK.Neck[1] + r * RR.Neck[1], 0], hd = (d, r) => [0, d * DK.Head[1] + r * RR.Head[1], 0], sh = (d, r) => [0, 0, d * DK['*Shoulder'][2] + r * RR['*Shoulder'][2]], ar = k => RR['*Arm'].map(x => x * k);
+      const G = {
+        ch: [[T0, Z3], [29.5, [0.012, 0.026, 0]], [30.9, [-0.01, 0.012, 0]], [31.75, [0.006, -0.018, 0]], [32.9, [0, 0.006, 0]], [33.8, Z3], [34.35, [0, -0.015, 0]], [35.12, [0.01, 0.045, 0]], [35.42, [0.008, 0.035, 0]],
+          [35.58, [-0.012, -0.045, 0]], [36.15, [0.004, 0.016, 0]], [36.9, [0, -0.006, 0]], [37.9, Z3], [38.95, [0, -0.012, 0]], [39.5, [0, 0.04, 0]], [41.3, [0.006, 0.055, 0]], [41.48, [0.006, 0.055, 0]],
+          [41.62, [-0.01, -0.02, 0]], [42.3, [-0.012, -0.026, 0]], [42.92, [-0.008, -0.02, 0]], [43.3, [-0.006, -0.016, 0]], [44.3, [0.002, -0.004, 0]], [45.4, Z3]],
+        nk: [[T0, Z3], [29.2, [0, 0.05, 0]], [30.4, [0, 0.09, 0]], [31.4, [0, -0.02, 0]], [32.2, [0, -0.045, 0]], [33.4, [0, 0.02, 0]], [34.6, [0, 0.04, 0]], [35.47, [0, 0.025, 0]], [35.7, [0, -0.04, 0]], [36.35, [0, -0.01, 0]],
+          [37.2, [0, 0.015, 0]], [38.5, Z3], [38.97, nk(-0.15, 0)], [39.55, nk(0.75, 0)], [41.3, nk(1, 0)], [41.46, nk(1, 0)], [41.62, nk(0, 1.1)], [41.95, nk(0, 1)], [42.25, nk(0, 1.04)], [42.6, nk(0, 0.99)], [42.92, nk(0, 1.01)],
+          [43.42, nk(0, 0.93)], [44.25, nk(0, 0.06)], [45.2, Z3]],
+        hd: [[T0, Z3], [29.15, [0, 0.03, 0]], [30.35, [0, 0.05, 0]], [31.35, [0, -0.012, 0]], [32.15, [0, -0.03, 0]], [33.3, [0, 0.012, 0]], [34.5, [0, 0.025, 0]], [35.5, [0, 0.015, 0]], [35.68, [0, -0.03, 0]],
+          [36.35, [0, -0.008, 0]], [37.3, [0, 0.01, 0]], [38.45, Z3], [38.94, hd(-0.15, 0)], [39.5, hd(0.75, 0)], [41.3, hd(1, 0)], [41.48, hd(1, 0)], [41.66, hd(0, 1.12)], [42.0, hd(0, 1.02)], [42.3, hd(0, 1.05)], [42.65, hd(0, 1)],
+          [42.92, hd(0, 1.02)], [43.22, hd(0, 0.7)], [43.95, hd(0, 0.05)], [44.9, Z3]],
+        jw: [[T0, J(-0.004)], [31.95, J(-0.004)], [32.35, J(-0.07)], [32.9, J(-0.004)], [35.3, J(-0.004)], [35.5, J(-0.05)], [35.9, J(-0.004)], [38.95, J(-0.004)], [39.6, J(-0.15 * 0.75)], [41.3, J(-0.15)],
+          [41.41, J(-0.15)], [41.55, J(-0.92)], [42.92, J(-0.9)], [43.18, J(-0.86)], [43.95, J(-0.004)]],
+        sh: [[T0, Z3], [38.6, Z3], [38.97, sh(-0.15, 0)], [39.6, sh(0.75, 0)], [41.3, sh(1, 0)], [41.46, sh(1, 0)], [41.62, sh(0, 1.12)], [41.95, sh(0, 1)], [42.92, sh(0, 1)], [43.35, sh(0, 0.9)], [44.4, Z3]],
+        ar: [[T0, Z3], [41.49, Z3], [41.68, ar(1)], [42.92, ar(1)], [43.45, ar(0.8)], [44.5, Z3]],
+        hp: [[T0, Z3], [35.0, Z3], [35.42, [0, 0.06, 0]], [35.82, [0, -0.22, 0]], [36.4, [0, -0.04, 0]], [37.3, [0, 0.02, 0]], [38.5, Z3], [38.99, [0, 0.015, 0]], [39.65, [0, DK.Hips[1] * 0.75, 0]],
+          [41.3, [0, DK.Hips[1], 0]], [41.54, [0, DK.Hips[1], 0]], [41.76, [0, RR.Hips[1], 0]], [42.92, [0, RR.Hips[1], 0]], [43.65, [0, 0.6 * RR.Hips[1], 0]], [44.8, Z3]] };
+      const F = { ch: [1.2, 0.66, 2.8, 2.0], nk: [1.25, 0.7, 3.2, 1.6], hd: [1.4, 0.68, 3.3, 1.7], jw: [2.0, 0.64, 3.6, 2.2], sh: [1.1, 0.62, 3.2, 2.7], ar: [1.0, 0.62, 2.4, 2.0], hp: [0.95, 0.72, 2.2, 2.2] };   /* [myk, z, stiv i brølet, stiv i slaget] */
+      const S = {}; for (const k in G) { const L = G[k], q = F[k], sp = followV(t => keyAt(L, t), t => [mix(mix(q[0], q[3], kastS(t)), q[2], kastB(t)), q[1]], T0); S[k] = t => G3D.dbgKey ? keyAt(L, t) : sp(t); }
+      /* Finnene: skulderen følger dagens kurve (KFL/KFR, med slaget 0,035 s tidligere: fjæren henger litt etter, så finnene treffer vannet på 0:35,51) gjennom en fjær (myk,
+         stiv i slaget), og finnen er en kjede (Arm, ForeArm, Hand) som henger etter skulderen og etter kroppen når den løftes (vannet holder igjen tuppene), slår forbi når
+         den stanser, og henger under sin egen tyngde når den er løftet. Fingrene følger hånda. */
+      const tidlig = P => P.map(q => q[0] > 34 && q[0] < 36.2 ? [q[0] - 0.035].concat(q.slice(1)) : q), KL2 = tidlig(KFL), KR2 = tidlig(KFR);
+      const swim = t => { const fo = 1 - io(c01((t - UP) / 0.7)); return fo > 0 ? 0.8 * fo * 0.32 * sin(t * 1.1) : 0; };
+      const kastF = t => max(win(t, 35.05, 35.9, 0.45), 0.6 * win(t, 41.32, RO + 0.6, 0.5), 0.5 * (1 - io(c01((t - (UP + 0.5)) / 0.6))));   /* stivere i de første bildene: finnene bryter flaten som i dag */
+      const shF = P => followV(t => [hs(t, P) + swim(t)], t => [mix(1.6, 4.0, kastF(t)), 0.7], T0);
+      const SL2 = shF(KL2), SR2 = shF(KR2);
+      const shZ = (P, t) => (G3D.dbgKey ? hs(t, P) + swim(t) : (P === KL2 ? SL2 : SR2)(t)[0]) + S.sh(t)[2] + 0.03 * pust(t, 30.6, 4.6, 61) * lv0(t);
+      const sagOf = (P, t) => -0.12 * c01((hs(t, P) + swim(t) - 0.18) / 0.6) * c01((t - UP) / 1.5) + 0.05 * (1 - sm5((t - UP - 0.4) / 0.9));   /* tyngden i tuppene kommer når finnen er ute av vannet (som i dag: finnene bryter flaten rette) */
+      const bump = (t, a0, a1, b0, b1) => sm5((t - a0) / (a1 - a0)) * (1 - sm5((t - b0) / (b1 - b0)));
+      const rest = t => bump(t, 31.6, 32.4, 33.9, 34.3) + bump(t, 36.3, 37.1, 38.5, 38.95) + sm5((t - 43.3) / 1.0);   /* han ligger stille: finnene og halen er myke og bølger (som dagens levende bølge, men fra kjeden) */
+      const dyR = t => t < RJ ? hs(t, KD) : hs(t, KD2);
+      const fin = (P, ph, fk) => kjede({ n: 3, t0: T0, fo: 0.86, lim: 0.7, fz: t => [fk * mix(mix(0.95, 0.5, rest(t)), 1.7, kastF(t)), mix(0.58, 0.45, rest(t))],
+        drive: t => [0, 0, shZ(P, t) + 0.05 * dyR(t) + (0.1 * sin(TAU * 0.24 * t + ph) + 0.04 * sin(TAU * 0.11 * t + 2 * ph)) * rest(t)],
+        pose: (t, i) => [0, 0, sagOf(P, t) * (0.7 + 0.15 * i)] });
+      const FL = fin(KL2, 0, 1), FR = fin(KR2, 1.9, 0.93);
+      /* Halen: en kjede fra roten og ut (Tail1, Tail2 og halefinnene), som henger etter hoftene, kroppens stamp og løftet, og svinger sakte når han ligger stille. */
+      const life = t => c01((t - 32.6) / 2) * (1 - 0.6 * kastR(t));
+      const tail = kjede({ n: 5, t0: T0, fo: 0.86, lim: 0.6, fz: t => [mix(mix(0.8, 0.45, rest(t)), 1.6, kastF(t)), 0.5],
+        drive: t => { const r = t < RJ ? KYM(t) : { dy: hs(t, KD2), pit: hs(t, KP2) }, h = G3D.dbgKey ? keyAt(G.hp, t)[1] : S.hp(t)[1];
+          return [0, -h + 0.06 * r.dy + 0.6 * r.pit + (0.08 * sin(TAU * 0.15 * t + 2.1) + 0.03 * sin(TAU * 0.07 * t)) * max(life(t), rest(t)), 0.06 * sin(TAU * 0.085 * t + 0.7) * life(t)]; } });
+      /* Blikket: hodet snur seg i små vendinger mot nye punkter (hver 2,6–3,6 s), og nakken kommer etter (Groudon: «blikket i små vendinger»): når han ligger og venter
+         etter slaget (0:36,9–0:38,6) og etter navnet. */
+      const gz = t => { const u = (t - 36.6) / 2.4; if (u <= 0) return 0; const k = floor(u), f = u - k, val = j => j < 1 ? 0 : 0.07 * (rnd(j, 51) - 0.5) * 2; return mix(val(k), val(k + 1), sm5(f / 0.42)) + 0.012 * sin(TAU * 0.13 * t + 0.8); };
+      const gw = t => c01((t - 36.7) / 0.6) * (1 - c01((t - 38.55) / 0.4)) + lv(t) * c01((t - 43.9) / 0.6);
+      const ZZ = () => [Z3, Z3, Z3, Z3, Z3];
+      return {
+        KYM: KYM2, kast,
+        /* Stillingen: gruppene, finnene (begge sider) og halen, pluss holdet (stavelser og skjelv) og livet (pusten, blikket). fl = { L, R }: finnene flyter på dønningene
+           (vinkelen fra havet, regnet i act). Gir hvor åpen kjeften er (0 lukket, 1 brølet, også forbi 1) til gnistene, øynene og linjene. */
+        pose(g, t, fl) { const q = {}; for (const k in S) q[k] = S[k](t); const dbg = G3D.dbgKey;
+          const op = -min(0, q.jw[1]) / 0.9, hold = dbg ? 0 : c01((op - 0.55) / 0.3) * (1 - c01((t - 43.05) / 0.3)), l = dbg ? 0 : max(lv(t), 0.6 * lv0(t) * (1 - c01((t - 38.6) / 0.5))), b = dbg ? 0 : pust(t, 30.6, 4.6, 61);
+          const syl = hold * 0.06 * (0.5 - pust(t, RO + 0.22, 0.74, 41)), w = dbg ? 0 : gw(t), g1 = w * gz(t), g2 = w * gz(t - 0.32);
+          g.add({ Spine: [q.ch[0], q.ch[1] + 0.014 * b * l, q.ch[2]], Neck: [0, q.nk[1] + 0.012 * hold * X.noise(t, 47, 1.2) + 0.009 * b * l, q.nk[2] + 0.6 * g2],
+            Head: [0, q.hd[1] + 0.01 * hold * X.noise(t, 55, 2.4), q.hd[2] + 0.014 * hold * X.noise(t, 53, 2.1) + g1], Jaw: [0, min(-0.004, q.jw[1] + syl + 0.022 * hold * X.noise(t, 51, 2.6) - 0.015 * b * l), 0],
+            '*Arm': q.ar, Hips: q.hp }, 1);
+          for (const [s, P, C, sg] of [['L', KL2, FL, 1], ['R', KR2, FR, -1]]) { const d = dbg ? [Z3, Z3, Z3] : C(t), sag = sagOf(P, t), fz = fl ? fl[s] || 0 : 0;
+            g.add({ [s + 'Shoulder']: [0, 0, sg * shZ(P, t)], [s + 'Arm']: [0, 0, sg * (d[0][2] + 0.7 * sag + fz)], [s + 'ForeArm']: [0, 0, sg * (d[1][2] + 0.85 * sag + fz)], [s + 'Hand']: [0, 0, sg * (d[2][2] + sag)] }, 1);
+            for (const [k, f] of [['FingerA', 0.55], ['FingerB', 0.7], ['FingerC', 0.6], ['FingerD', 0.45]]) g.add({ [s + k]: [0, 0, sg * f * d[2][2]] }, 1); }
+          const tl = dbg ? ZZ() : tail(t);
+          g.add({ Tail1: [0, tl[0][1], tl[0][2]], Tail2: [0, tl[1][1], tl[1][2]], Tail3: [0, 0.5 * tl[2][1], 0], '*FeelerB1': [0, tl[2][1], 0], '*FeelerB2': [0, tl[3][1], 0], '*FeelerB3': [0, tl[4][1], 0], '*FeelerB4': [0, 0.6 * tl[4][1], 0], '*FeelerC1': [0, 0.6 * tl[3][1], 0] }, 1);
+          return { rw: op, dk: c01(keyAt([[38.95, 0], [39.6, 0.75], [41.3, 1], [41.52, 0]], t)) }; } };
+    })();
     /* Slagene: [tid, side (1 venstre, +x; −1 høyre), størrelse]. Kronen står der finnen treffer (8 ut fra midten, 1,5 fram), dreid med ham i treffet. */
     const SL = [[QI.SLAM, 1, 2], [QI.SLAM + 0.02, -1, 2]];   /* rettelse 3: ett slag med begge finnene (før tre) */
     const SLZ = [{ r: 2.4, out: 2.6, h: 8, up: 1.4 }, { r: 2.9, out: 3.2, h: 10, up: 1.5 }, { r: 3.1, out: 3.4, h: 11.5, up: 1.6 }];
@@ -443,9 +588,9 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
        tyngden (BG, filmens tyngde for faste ting: tregere enn plaskene, PG, så den er stor), tipper over kanten og faller fritt. Regnet én gang (240 steg i sekundet)
        fra 0:28,36 til den treffer vannet; i vannet: se båten i act. th er helningen (opp-pila vippet mot (x, z), vinkelen er lengden), yw dreiningen. */
     const BG = 3.0, BMU = 0.08, BPUSH = [1.56, 2.08];
-    const boatSim = su => {
+    const boatSim = (su, KM) => { KM = KM || KYM;
       const dt = 1 / 240, sea = (x, z, t) => K.seaH(su, x, z, t * TS);
-      const top = (x, z, t) => { const m = KYM(t); return backTop(KYH + 0.8 * sea(0, 0, t) * io(seg(t, QI.UP, QI.UP + 2.57)) + m.dy, x, z, m.roll, m.pit); };
+      const top = (x, z, t) => { const m = KM(t); return backTop(KYH + 0.8 * sea(0, 0, t) * io(seg(t, QI.UP, QI.UP + 2.57)) + m.dy, x, z, m.roll, m.pit); };
       const fl = (x, z, t) => sea(x, z, t) - 0.08 + 0.6 * io(seg(t, QI.UP, QI.LIFT));   /* vannet hever seg over ryggen hans før han bryter flaten */
       const gr = (f, x, z, t) => { const e = 0.12; return [(f(x + e, z, t) - f(x - e, z, t)) / (2 * e), (f(x, z + e, t) - f(x, z - e, t)) / (2 * e)]; };
       const tilt = g => { const G = Math.hypot(g[0], g[1]); return G < 1e-6 ? [0, 0] : [-g[0] * Math.atan(G) / G, -g[1] * Math.atan(G) / G]; };
@@ -493,6 +638,41 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
     /* Lysene på båten (vender mot kameraet): to vinduer, topplyset og lykta akter. Lokale punkter i båten. */
     const LAMPS = [[-0.14, 0.6, 0.5, 0.36, '#ffd27a'], [0.14, 0.6, 0.5, 0.36, '#ffd27a'], [0, 2.16, 0.22, 0.5, '#fff0c8'], [0, 1.15, -1.05, 0.6, '#ffcf70'], [0, 0.95, 0.44, 0.3, '#ffe2a0']];   /* to vinduer, topplyset, lykta akter, og lyset i brua (2b.3) */
 
+    /* Lynene i introen (en ren funksjon av tiden; act og den nye fargen på skyen og regnet bruker den samme). Lynene slår ned et stykke unna, bak og rundt ham, aldri på ham
+       (Jazz 20.11). Bare lynet i brølet står nær, bak ham, som i skisse 1 («Det passet»). */
+    const lynI = t => { const L = []; for (const q of strikes(t, 0.12 + 0.3 * seg(t, 0, QI.RO), 61)) L.push({ d: t - q[0], k: q[1] * 0.7, a: q[2] * 0.5, s: q[3] });
+      for (const [tb, kk2, a, near] of [[QI.LY0, 0.7, 0.05, 0], [QI.CW, 0.55, 0.4, 0], [QI.CL2, 0.6, 1.4, 0], [QI.PASS, 0.6, -0.9, 0], [QI.LY, 1, 0.6, 0], [QI.W2, 0.75, -0.8, 0], [QI.W3, 0.8, 1.1, 0], [QI.W4, 0.9, -1.2, 0]])
+        L.push({ d: t - tb, k: kk2, a, s: floor(tb * 31), near: !!near });
+      for (const [tb, kb, sx, big] of [[QI.CL, 1, -34, 1], [QI.RO, 1, 62, 1], [QI.RO + 0.38, 0.85, -196, 0], [QI.RO + 0.74, 0.8, 214, 0]]) L.push({ d: t - tb, k: kb, a: 0, sx, big, s: floor(tb * 31) });   /* 2b.3: brølet. Det store lynet står bak ham (bak ryggen), i bakteppet */
+      if (t < QI.CW - 0.02) for (const [tb, kb, a] of [[QI.LY0, 0.9, PI - 0.1], [2.62, 0.55, PI + 0.16], [3.45, 0.8, PI + 0.05]]) L.push({ d: t - tb, k: kb, a, s: floor(tb * 29), lo: 1 });   /* 2b.3: lyn inne i regnet under stormen langt ute */
+      return L; };
+    /* Ringbølgene i havet for tiden t (uRH: ringen fra slaget og brølet, og dønningen mot klippen). Den nye bevegelsen setter dem før havet leses i act. */
+    const setRH = (su, t) => { for (let i = 0; i < 4; i++) { const r = i < RINGS.length ? ringAt(i, t) : null; su.uRH.value[i].set(0, 0, r ? r.R : 0, r ? r.a : 0); }
+      { const cw = cwAt(t); if (cw) su.uRH.value[3].set(CWC[0], CWC[1], cw.R, cw.a); } };
+    /* Båten i den nye bevegelsen: boatSim regnet med havet slik act setter det mens båten ligger på ham (0:28,36–0:35,51: stormen k = 1,65, ingen ringbølger), så den er en
+       ren funksjon av tiden uansett hvilket bilde som tegnes først (før: havet slik det sto i det første bildet etter 0:28,36). Roten er dagens til 0:33,7, så banen er den samme. */
+    const boatSimP = su => { const kq = 1 + 0.2 * seg(QI.UP, 0, QI.B6) + 0.45 * io(seg(QI.UP, QI.B6, QI.UP)) + 0.1 * seg(QI.UP, QI.RO, QI.RO + 0.6), kk = kq - 1, a = su.uSea.value.clone(), w = su.uWind.value.clone(), rh = su.uRH.value.map(v => v.clone());
+      su.uSea.value.set(1.15 + 0.5 * kk, 1.3 + 0.5 * kk, 0.22 + 0.08 * kk, min(1, 0.8 + 0.25 * kk)); su.uWind.value.set(0.35, 1, 1.05, 0); for (const v of su.uRH.value) v.set(0, 0, 0, 0);
+      try { return boatSim(su, MVI.KYM); } finally { su.uSea.value.copy(a); su.uWind.value.copy(w); su.uRH.value.forEach((v, i) => v.copy(rh[i])); } };
+    /* Finnene flyter på dønningene når de ligger på vannet: vinkelen fra roten til tuppen etter havet under dem (regnet med havet i dette bildet), fordelt på to ledd. */
+    const finFlyt = (su, ts, t, yaw, ry) => { const o = {}; for (const [s, P, sx] of [['L', KFL, 1], ['R', KFR, -1]]) { const w = 1 - c01((hs(t, P) - 0.15) / 0.35); if (w <= 0) { o[s] = 0; continue; }
+        const at = (lx, lz) => K.seaH(su, lx * cos(yaw) + lz * sin(yaw), -lx * sin(yaw) + lz * cos(yaw), ts), hb = at(2.4 * sx, 2.6), ht = at(9.3 * sx, 4.0);
+        o[s] = 0.5 * 0.8 * w * Math.atan2(ht - hb, 7) * c01((t - QI.UP - 2.6) / 1.2); }
+      return o; };
+    /* Kameraene med en tenkt rigg (camLive; Opus 25.11), ett per klipp: banene er de samme som før, men uten havet; havet legges på etterpå med havet i DETTE bildet
+       (camRid: kameraet rir på dønningene som før, kh av høyden på kameraet og kt på siktet), så fjæren ikke leser havet i et annet bilde. Lavt over havet en båt som vugger
+       sakte, høyt oppe et helikopter eller en drone. Klippet ovenfra (2) har bare en svak drift: farten i bildet er målt for det faste kameraet (PASSZ). */
+    const camRid = (S, c, t, kh, kt) => { const h = K.seaH(S.sea.material.uniforms, c[0], c[2], t * TS); c[1] += kh * h; c[4] += kt * h; camV(c); };
+    const uOf = (t, a, b) => c01((t - a) / max(1e-6, b - a));
+    const CAMI = [
+      camLive(t => { const e = io(uOf(t, 0, QI.CW - 0.04)); return [mix(5, 4, e), 2.6, mix(-21, -18, e), mix(1.5, 1, e), 4, 160, 44, 0.02]; }, { t0: 0, rig: 'baat', seed: 31 }),
+      camLive(t => { const e = io(uOf(t, QI.CW - 0.04, QI.PASS - 0.04)); return [mix(-17, -13, e), 11, mix(-88, -91, e), CS[0], mix(8, 9.5, e), CS[1] + 4, 40, 0.015]; }, { t0: QI.CW - 0.04, rig: 'heli', seed: 32 }),
+      camLive(() => CAM2.concat([0]), { t0: QI.PASS - 0.04, rig: 'heli', seed: 33, amp: 0.5 }),
+      camLive(t => { const e = io(uOf(t, QI.B6, QI.UP - 0.05)); return [mix(6.4, 5.2, e), 2.5, mix(10.8, 9.2, e), -2.5, 1.4, -10, 48, -0.02]; }, { t0: QI.B6, rig: 'baat', seed: 34 }),
+      camLive(t => { const e = io(seg(t, QI.UP, QI.HIT)), e2 = io(seg(t, QI.HIT, QI.S5)); return [mix(5, 6, e), mix(11.2, 11.8, e), 54, mix(0, 2.2, e) + 1.6 * e2, mix(1.4, 2.6, e), BT[1], mix(23, 26, e), 0.01]; }, { t0: QI.UP - 0.05, rig: 'heli', seed: 35 }),
+      camLive(t => { const e = io(uOf(t, QI.S5, 38.45)); return [mix(26, 24, e), mix(12, 11, e), mix(25, 23, e), -2, 1, -4, 46, -0.01]; }, { t0: QI.S5, rig: 'heli', seed: 36 }),
+      camLive(t => { const k2 = io(seg(t, 38.45, QI.RO)), w = 0.05 * sin(max(0, t - QI.RO) * 0.25);
+        return [mix(8.5, 5.5, k2) + w * 4, mix(5.4, 4.3, k2), mix(31, 24.5, k2), -0.9, mix(2.6, 4.1, k2), 0, 50 - 5 * eo(seg(t, QI.RO, QI.RO + 0.3)) + 2 * io(seg(t, QI.NM, QI.NM + 1.5)), -0.03]; }, { t0: 38.45, rig: 'baat', seed: 37 })];
     G3D.def('c3:382', {
       len: QI.END, hold: 1, R: QI.RO, at: 0, mus: { bed: 'sfx/natur/kyogre_intro.mp3' },   /* lydsengen følger kamplåta (raids3d/kyogre/lyd/bed.py) */ models: ['kyogre'], edge: 'sea', env: { rim: '#a8c8ff', glow: '#2a6c9a', fog: '#16222e', glowH: 3 },
       make(K, T) { const S = storm(T), g = S.gr = kyFig(); S.T = T; S.scene.add(g.root); S.figs.push(g); S.v3 = new T.Vector3();
@@ -538,16 +718,18 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         mkStorm(S, K, T);   /* 2b.3 (Fable): stormen i det første bildet er den samme i 3D som i Primal, ikke den flate veggen (Jazz 20.11: «Noter at stormen må forbedres både på intro og til primal») */
         return S; },
       act(S, t, o) {
+        const ny = !STIV();   /* den nye bevegelsen (Opus 25.11); 'stiv' = slik den var */
         const tsea = t >= QI.PASS - 0.02 && t < QI.B6 - 0.02 ? t - (QI.PASS - 4.57) : t;   /* rettelse 3: havet i bildet ovenfra går på den gamle tiden (samme hav som Jazz godkjente) */
         const g = S.gr, U = K.U(), su = S.sea.material.uniforms, ts = tsea * TS; su.uTime.value = ts;
         const H = (x, z) => K.seaH(su, x, z, ts);
+        if (ny) setRH(su, t);   /* ny: ringbølgene for DETTE bildet før havet leses (før: forrige bildes, så han og båten avhang av bildet før) */
         /* Stormen kommer nærmere gjennom hele introen. Dønningene blir høyere (ikke raskere) fra 0:13,2. */
         const k = 1 + 0.2 * seg(t, 0, QI.B6) + 0.45 * io(seg(t, QI.B6, QI.UP)) + 0.1 * seg(t, QI.RO, QI.RO + 0.6), kk = k - 1;
         su.uSea.value.set(1.15 + 0.5 * kk, 1.3 + 0.5 * kk, 0.22 + 0.08 * kk, min(1, 0.8 + 0.25 * kk)); su.uWind.value.set(0.35, 1, 1.05, 0);
         /* 2b.3 (Fable): stormen er den samme i 3D i hele introen (mkStorm, stormSort, himmelen skyQ), ikke den flate veggen i 2D (Jazz 20.11: «Noter at stormen må
            forbedres både på intro og til primal»). Bilde 1: langt ute over det åpne havet. Ovenfra: ingen himmel. Fra 0:13,2: stadig lenger inne i den (inn 0–1):
            grått, regnsøyler rundt oss, stormhav med småskum overalt, og lyn i det fjerne (S.fb). Kysten er skjult i bilde 1 (stormen kommer fra det åpne havet). */
-        { const far = t < QI.CW - 0.02, top = t >= QI.PASS - 0.02 && t < QI.B6 - 0.02, inn = far ? 0 : top ? 0.3 : t < QI.PASS ? 0.15 : 0.4 + 0.6 * io(seg(t, QI.B6, QI.UP + 2)), pu = S.puff.m.material.uniforms, ru = S.rain.m.material.uniforms, sf = S.fl || 0, bl = C.blend;
+        { const far = t < QI.CW - 0.02, top = t >= QI.PASS - 0.02 && t < QI.B6 - 0.02, inn = far ? 0 : top ? 0.3 : t < QI.PASS ? 0.15 : 0.4 + 0.6 * io(seg(t, QI.B6, QI.UP + 2)), pu = S.puff.m.material.uniforms, ru = S.rain.m.material.uniforms, sf = ny ? flashOf(lynI(t)) : S.fl || 0, bl = C.blend;   /* ny: lynet i DETTE bildet (før: forrige bildes, så skyen og regnet avhang av bildet før) */
           S.inn = inn; S.far = far; S.sky3 = true; S.st = 0; S.sta = PI; S.fb = !top; S.stormOn = !top; S.ov = far ? 0.1 : inn; S.sd = far ? 0.15 : 0; S.sa = PI; S.ss = 1; S.sy = far ? 0.58 : 1; S.zf = far ? mix(212, 186, t / QI.CW) : -1000;   /* lav nok til at himmelen over stormen synes: den står som en egen, mørk masse i horisonten */ S.grey = 0.5 * S.ov;
           su.uStm.value.set(far ? S.zf + 4 : -1000, 5, far ? 1 : inn, far ? 1 : 0.55 * inn);
           lerpC(pu.uCL, far ? '#6f7d8a' : '#4e5963', '#c8dcf4', sf * 0.3); lerpC(pu.uCD, far ? '#232c35' : '#1b2229', '#5a6f88', sf * 0.3); lerpC(pu.uCB, '#0f1418', '#3e5068', sf * 0.3);
@@ -555,11 +737,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
           S.cliff = S.cliff || S.scene.children[1]; S.cliff.visible = !far;
         }
         /* Lynene slår ned et stykke unna, bak og rundt ham, aldri på ham (Jazz 20.11). Bare lynet i brølet står nær, bak ham, som i skisse 1 («Det passet»). */
-        const L = []; for (const q of strikes(t, 0.12 + 0.3 * seg(t, 0, QI.RO), 61)) L.push({ d: t - q[0], k: q[1] * 0.7, a: q[2] * 0.5, s: q[3] });
-        for (const [tb, kk2, a, near] of [[QI.LY0, 0.7, 0.05, 0], [QI.CW, 0.55, 0.4, 0], [QI.CL2, 0.6, 1.4, 0], [QI.PASS, 0.6, -0.9, 0], [QI.LY, 1, 0.6, 0], [QI.W2, 0.75, -0.8, 0], [QI.W3, 0.8, 1.1, 0], [QI.W4, 0.9, -1.2, 0]])
-          L.push({ d: t - tb, k: kk2, a, s: floor(tb * 31), near: !!near });
-        for (const [tb, kb, sx, big] of [[QI.CL, 1, -34, 1], [QI.RO, 1, 62, 1], [QI.RO + 0.38, 0.85, -196, 0], [QI.RO + 0.74, 0.8, 214, 0]]) L.push({ d: t - tb, k: kb, a: 0, sx, big, s: floor(tb * 31) });   /* 2b.3: brølet. Det store lynet står bak ham (bak ryggen), i bakteppet */
-        if (t < QI.CW - 0.02) for (const [tb, kb, a] of [[QI.LY0, 0.9, PI - 0.1], [2.62, 0.55, PI + 0.16], [3.45, 0.8, PI + 0.05]]) L.push({ d: t - tb, k: kb, a, s: floor(tb * 29), lo: 1 });   /* 2b.3: lyn inne i regnet under stormen langt ute */
+        const L = lynI(t);
         S.L = L; const fl = flashOf(L); S.fl = fl;
         lerpC(su.uSkyA, '#2c3c4a', '#8fa6c6', fl); lerpC(su.uSkyB, '#0a121e', '#34486a', fl); lerpC(su.uDeep, '#020f18', '#0a2a3a', fl * 0.6); su.uBri.value = 1 + 0.16 * fl;   /* 2b.3: lynet viser bølgene, det bleker dem ikke (før '#b8cce8' og 1,3) */
         /* Bilde 2 ovenfra (0:04,57–0:13,2) er slik det var før 2b.3 (Jazz 24.11: «Vannet ble for lyst nå kyogre svømte under båten. Likte bedre fargen og at du så
@@ -575,20 +753,22 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         S.stacks.forEach((m, i) => { const t0 = crestAt(su, m.position.x, m.position.z, ts) / TS, cw = i === 5 && t >= QI.CW - 0.3 && t < QI.PASS + 1; S.fx(S.sprays[i], cw ? -1e5 : t0); S.scp[i].at(t, cw ? -1e5 : t0); });
 
         /* Kyogre: forbi under båten (0:04,57–0:12,5), opp fra dypet under den (0:13,2–0:23), finnene først (0:23,03), ryggen som en øy, så ligger han høyt og rir på dønningene. */
-        let x = 0, y = -40, z = 0, yaw = 0, pit = 0, sh = 0, fin = 0, gl = 0;
+        let x = 0, y = -40, z = 0, yaw = 0, pit = 0, sh = 0, fin = 0, gl = 0, mv = null;
+        const tf = ny ? X.freeze(t, [QI.SLAM], 3, 0.3) : t;   /* figurens tid: to frosne bilder når finnene treffer vannet i slaget (låta, kameraet og vannet går videre) */
         if (t >= QI.PASS - 0.3 && t < QI.B6 - 0.02) {
           z = t < QI.PASS - 0.04 ? 2.9 - 8 * (t - QI.MID) : PASSZ(t);   /* jevn fart i bildet, han stopper aldri (Jazz 20.11 og 24.11): inn på 0:04,57, midt under båten i lynet 0:07,66, halen ute rundt 0:10,8 (PASSZ). Før klippet (bilde 1, der han synes svakt langt ute) som før */ x = BT[0] + 0.4; y = -7; yaw = PI; sh = 0.8; gl = 0.12; }
         else if (t >= QI.B6 && t < QI.UP) { const u = seg(t, QI.B6, QI.UP); y = mix(-30, -6.6, io(u)); yaw = 0; sh = 0.25 + 0.65 * u; gl = 0.06 + 0.4 * u * u; fin = 0.75 * seg(t, QI.B6 + 4, QI.UP - 1.5); }
-        else if (t >= QI.UP) { const m = KYM(t); y = KYH + 0.8 * H(0, 0) * io(seg(t, QI.UP, QI.UP + 2.57)) + m.dy; pit = m.pit; yaw = m.yaw; S.krl = m.roll; sh = 0.6 * (1 - seg(t, QI.UP, QI.UP + 1.57)); }   /* rettelse 2: se KYM */
+        else if (t >= QI.UP) { const m = ny ? MVI.KYM(tf) : KYM(t), h0 = ny ? K.seaH(su, 0, 0, tf * TS) : H(0, 0); y = KYH + 0.8 * h0 * io(seg(ny ? tf : t, QI.UP, QI.UP + 2.57)) + m.dy; if (ny) z = m.z; pit = m.pit; yaw = m.yaw; S.krl = m.roll; sh = 0.6 * (1 - seg(t, QI.UP, QI.UP + 1.57)); }   /* rettelse 2: se KYM */
         g.root.visible = y > -32; g.root.position.set(x, y, z); g.root.rotation.set(pit, yaw, t >= QI.UP ? S.krl : 0);
-        if (t < QI.UP) { SWIM(g, t, 0.8, 1.1); g.add({ '*Shoulder': [0, 0, 1] }, fin); } else KYB(g, t);
+        if (ny && t >= QI.UP - 0.06) mv = MVI.pose(g, tf, finFlyt(su, tf * TS, tf, yaw, y)); else if (t < QI.UP) { SWIM(g, t, 0.8, 1.1); g.add({ '*Shoulder': [0, 0, 1] }, fin); } else KYB(g, t);   /* ny: figurens tid (frosne bilder i slaget), også havet han flyter på */
         /* Pulsene er slagene (SL): linjene blusser på slaget og lader seg opp mens finnene løftes. Forvarselet 0:39,24 og brølet 0:41,52. */
         let pul = 0; for (const tp of [QI.SLAM]) pul = max(pul, hit(t, tp, 1.6));
         const lad = t > QI.HIT + 1.5 && t < QI.SLAM + 0.5 ? 0.4 * c01((max(hs(t, KFL), hs(t, KFR)) - 0.5) / 0.6) : 0;
         const dk = kf(t, [[QI.DK - 0.7, 0], [QI.DK, 0.75, io], [QI.RO - 0.12, 1, io], [QI.RO + 0.04, 0, eo]]), r2 = t < QI.RO ? 0 : back(seg(t, QI.RO, QI.RO + 0.3), 2.4) * (1 - io(seg(t, QI.NM + 0.2, QI.NM + 0.9)));
-        g.add(DUCK, dk); g.add(ROAR, r2); g.rot('Jaw', 0, 0.04 * sin(t * 57) * r2, 0); S.rw = r2; S.mouth = null;
-        g.eye(0, r2 > 0.2 ? 0.75 : 0, 0.6);   /* øynene er åpne hele tiden: øyne som åpner seg er Groudon sitt (Jazz 20.11) */
-        lines(g, 0.85 + 0.5 * (y < -1 ? 1 : 0) * (0.6 + 0.4 * sin(t * 2.2)) + 0.9 * pul + lad + 0.5 * dk + 0.5 * r2, 0);
+        if (mv) { S.rw = mv.rw; S.mouth = null; g.eye(0, mv.rw > 0.25 ? 0.75 : 0, 0.6); }
+        else { g.add(DUCK, dk); g.add(ROAR, r2); g.rot('Jaw', 0, 0.04 * sin(t * 57) * r2, 0); S.rw = r2; S.mouth = null;
+        g.eye(0, r2 > 0.2 ? 0.75 : 0, 0.6); }   /* øynene er åpne hele tiden: øyne som åpner seg er Groudon sitt (Jazz 20.11) */
+        lines(g, 0.85 + 0.5 * (y < -1 ? 1 : 0) * (0.6 + 0.4 * sin(t * 2.2)) + 0.9 * pul + lad + 0.5 * (mv ? mv.dk : dk) + 0.5 * (mv ? min(1.2, mv.rw) : r2), 0);
         /* Skyggen og det røde skjæret i havet; lynet 0:07,66 gjør hele kroppen tydelig. */
         su.uBody.value.set(x, z, 12, y < -1 ? min(1, sh * (0.85 + 1.2 * fl)) : 0); su.uBodyD.value.set(sin(yaw), cos(yaw), 6, 1);
         su.uGlo.value.set(x, z, 5.5 + 3 * seg(t, QI.B6, QI.UP), y < -1 && y > -32 ? gl + 0.22 * fl : 0); su.uGloC.value.set(0.9, 0.12, 0.14);   /* bare når han er der (før lyste et rødt skjær opp ved båten i lynene i bilde 1, før han kom) */
@@ -603,7 +783,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
           const wk = t > QI.W1 ? Math.exp(-(t - QI.W1) / 1.6) * sin((t - QI.W1) * 2.1) : 0; roll += 0.42 * wk; by += 0.25 * wk;
           pitch -= 0.22 * (t > QI.W2 ? Math.exp(-(t - QI.W2) / 0.9) * sin((t - QI.W2) * 2.6) : 0); b.rotation.set(pitch, yawB, roll); }
         else {   /* rettelse 4: boatSim til den treffer vannet, så tungt i vannet */
-          const bs = S.bs || (S.bs = boatSim(su)); let th, yw;
+          const bs = ny ? S.bs2 || (S.bs2 = boatSimP(su)) : S.bs || (S.bs = boatSim(su)); let th, yw;
           if (t < bs.tL) { [bx, by, bz, th, yw] = bs.at(t); }
           else { const L = bs.L, tau = t - bs.tL, Td = 0.45, TL = Math.hypot(L.th[0], L.th[1]), ux = TL > 1e-4 ? L.th[0] / TL : 1, uz = TL > 1e-4 ? L.th[1] / TL : 0;
             /* farten bremses av vannet på et halvt sekund, så driver den sakte bort fra ham */
@@ -625,8 +805,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         S.fx(S.bow, QI.W2 - 0.05, bx, by, bz); S.bow.rotation.y = yawB; S.fx(S.cap, QI.BH, BL[0], 0, BL[1]); S.cap.visible = t < QI.BH + 1.9;
 
         /* Ringbølgene (0:28,36 · 0:31,91 · 0:35,51, og brølet): havet løfter seg (uRH, motor.py) med skum på toppen, og de knuser mot stakkene i tungt, langsomt sprut. */
-        for (let i = 0; i < 4; i++) { const r = i < RINGS.length ? ringAt(i, t) : null; su.uRH.value[i].set(0, 0, r ? r.R : 0, r ? r.a : 0); }
-        { const cw = cwAt(t); if (cw) su.uRH.value[3].set(CWC[0], CWC[1], cw.R, cw.a); }   /* rettelse 3: dønningen mot klippen */
+        setRH(su, t);
         const ring = (i, xx, zz, R, a) => su.uRing.value[i].set(xx, zz, R, a);
         if (t < QI.SLAM) { ring(0, -9.5, 2, 1.5 + (t - QI.UP) * 2.2, t >= QI.UP ? hit(t, QI.UP, 3.5) : 0); ring(1, 9.5, 2, 1.5 + (t - QI.UP) * 2.2, t >= QI.UP ? hit(t, QI.UP, 3.5) : 0);
           ring(2, BL[0], BL[1], 1 + (t - QI.BH) * 3.5, t >= QI.BH ? hit(t, QI.BH, 2.5) : 0); const cw = cwAt(t); ring(3, CWC[0], CWC[1], cw ? cw.R - 0.6 : 0, cw ? 0.8 * c01(cw.a / 1.2) : 0); }
@@ -653,28 +832,28 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
       },
       shots: [
         /* 1 Stormen filmes: lavt over havet mot veggskyen; tråleren klatrer sakte over dønningene. */
-        [0, (S, u, a, t) => { const e = io(u), x = mix(5, 4, e), z = mix(-21, -18, e), h = K.seaH(S.sea.material.uniforms, x, z, t * TS); K.cam(x, h + 2.6, z, mix(1.5, 1, e), 4 + 0.4 * h, 160, 44, 0.02); S.post.fade = 1 - seg(t, 0.9, 1.9); }],
+        [0, (S, u, a, t) => { const e = io(u), x = mix(5, 4, e), z = mix(-21, -18, e), h = K.seaH(S.sea.material.uniforms, x, z, t * TS); if (STIV()) K.cam(x, h + 2.6, z, mix(1.5, 1, e), 4 + 0.4 * h, 160, 44, 0.02); else camRid(S, CAMI[0](t), t, 1, 0.4); S.post.fade = 1 - seg(t, 0.9, 1.9); }],
         /* 1b (rettelse 3) Bølgen mot klippen: lavt fra siden mot den høyeste stakken; dønningen ruller inn fra venstre i stillheten i låta og knuser mot den på 0:07,66
            med lynet bak, og igjen 0:09,08 og 0:10,73. Kameraet glir sakte nærmere. */
-        [QI.CW - 0.04, (S, u, a, t) => { const e = io(u), x = mix(-17, -13, e), z = mix(-88, -91, e), h = K.seaH(S.sea.material.uniforms, x, z, t * TS); K.cam(x, 11 + 0.2 * h, z, CS[0], mix(8, 9.5, e), CS[1] + 4, 40, 0.015);
+        [QI.CW - 0.04, (S, u, a, t) => { const e = io(u), x = mix(-17, -13, e), z = mix(-88, -91, e), h = K.seaH(S.sea.material.uniforms, x, z, t * TS); if (STIV()) K.cam(x, 11 + 0.2 * h, z, CS[0], mix(8, 9.5, e), CS[1] + 4, 40, 0.015); else camRid(S, CAMI[1](t), t, 0.2, 0);
           S.post.sh = 1.5 * hit(t, QI.CL, 1.3) + 0.6 * hit(t, QI.CL2, 0.8) + 0.5 * hit(t, QI.CL3, 0.8); S.post.fl = 0.32 * hit(t, QI.CL, 0.12); S.post.flc = '#e8f2ff'; }],
         /* 2 Ovenfra: båten alene; skyggen kommer inn nedenfra på 0:04,57, glir under båten i stillheten, lynet viser hele kroppen, og den er ute før klippet. */
-        [QI.PASS - 0.04, (S, u, a, t) => { K.cam(...CAM2, 0); S.post.fl = 0.35 * hit(t, QI.LY, 0.12); S.post.flc = '#e8f2ff'; S.post.sh = 0.6 * hit(t, QI.W1, 0.8); }],
+        [QI.PASS - 0.04, (S, u, a, t) => { if (STIV()) K.cam(...CAM2, 0); else camV(CAMI[2](t)); S.post.fl = 0.35 * hit(t, QI.LY, 0.12); S.post.flc = '#e8f2ff'; S.post.sh = 0.6 * hit(t, QI.W1, 0.8); }],
         /* 3 Noe stort kommer: lavt ved båten mot stakkene; det røde skjæret vokser under den. */
-        [QI.B6, (S, u, a, t) => { const e = io(u), x = mix(6.4, 5.2, e), z = mix(10.8, 9.2, e), h = K.seaH(S.sea.material.uniforms, x, z, t * TS); K.cam(x, h + 2.5, z, -2.5, 1.4, -10, 48, -0.02);   /* 2b.3: nærmere og lavere (før 14 enheter unna), så tråleren er stor og tung i bildet */ S.post.sh = 0.7 * hit(t, QI.W3, 0.6) + 0.8 * hit(t, QI.W4, 0.6) + 0.25 * seg(t, QI.B6, QI.UP); }],
+        [QI.B6, (S, u, a, t) => { const e = io(u), x = mix(6.4, 5.2, e), z = mix(10.8, 9.2, e), h = K.seaH(S.sea.material.uniforms, x, z, t * TS); if (STIV()) K.cam(x, h + 2.5, z, -2.5, 1.4, -10, 48, -0.02); else camRid(S, CAMI[3](t), t, 1, 0);   /* 2b.3: nærmere og lavere (før 14 enheter unna), så tråleren er stor og tung i bildet */ S.post.sh = 0.7 * hit(t, QI.W3, 0.6) + 0.8 * hit(t, QI.W4, 0.6) + 0.25 * seg(t, QI.B6, QI.UP); }],
         /* 4 Finnene først: lavt og rett forfra; båten midt i bildet mellom finnene. Ryggen løfter den, den glir av og velter. */
-        [QI.UP - 0.05, (S, u, a, t) => { const e = io(seg(t, QI.UP, QI.HIT)), e2 = io(seg(t, QI.HIT, QI.S5)), x = mix(5, 6, e), z = 54, h = K.seaH(S.sea.material.uniforms, x, z, t * TS); K.cam(x, h * 0.2 + mix(11.2, 11.8, e), z, mix(0, 2.2, e) + 1.6 * e2, mix(1.4, 2.6, e), BT[1], mix(23, 26, e), 0.01); S.post.sh = 1.6 * hit(t, QI.UP, 1.6) + 0.5 * hit(t, QI.HIT, 1.0) + 1.3 * hit(t, QI.BH, 1.2); }],
+        [QI.UP - 0.05, (S, u, a, t) => { const e = io(seg(t, QI.UP, QI.HIT)), e2 = io(seg(t, QI.HIT, QI.S5)), x = mix(5, 6, e), z = 54, h = K.seaH(S.sea.material.uniforms, x, z, t * TS); if (STIV()) K.cam(x, h * 0.2 + mix(11.2, 11.8, e), z, mix(0, 2.2, e) + 1.6 * e2, mix(1.4, 2.6, e), BT[1], mix(23, 26, e), 0.01); else camRid(S, CAMI[4](t), t, 0.2, 0); S.post.sh = 1.6 * hit(t, QI.UP, 1.6) + 0.5 * hit(t, QI.HIT, 1.0) + 1.3 * hit(t, QI.BH, 1.2); }],
         /* 5 Ringbølgene, litt ovenfra: han ligger høyt i vannet, og ringene ruller ut mot stakkene. */
-        [QI.S5, (S, u, a, t) => { const e = io(u); K.cam(mix(26, 24, e), mix(12, 11, e), mix(25, 23, e), -2, 1, -4, 46, -0.01); S.post.sh = 1.1 * hit(t, QI.SLAM, 1.0); }],   /* rettelse 3: slaget (før ringbølgene 0:27,9) */
+        [QI.S5, (S, u, a, t) => { const e = io(u); if (STIV()) K.cam(mix(26, 24, e), mix(12, 11, e), mix(25, 23, e), -2, 1, -4, 46, -0.01); else camV(CAMI[5](t)); S.post.sh = 1.1 * hit(t, QI.SLAM, 1.0); }],   /* rettelse 3: slaget (før ringbølgene 0:27,9) */
         /* 6 Lavt ved stakken: ringen ruller mot kameraet og knuser mot stakken (0:35,51). */
         /* 7 Vidt og lavt for forvarselet og brølet (som i skisse 1, uten båten); kameraet høyt nok til at ingen bølge skjuler ham. */
         [38.45, (S, u, a, t) => { const k2 = io(seg(t, 38.45, QI.RO)), w = 0.05 * sin(max(0, t - QI.RO) * 0.25), x = mix(8.5, 5.5, k2) + w * 4, z = mix(31, 24.5, k2), h = K.seaH(S.sea.material.uniforms, x, z, t * TS);
           /* 2b.3 (Fable): «et sted mellom skisse 1 og 2». Lavere (4,3 over sjøen; skisse 1: 2,2, skisse 2: 6,2), nærmere, og skrått forfra (rundt 35° fra retningen
              hans; skisse 2: 48°), så hodet, øyet og gapet synes («i brølet synes ansiktet, ikke bare haka»; rett forfra er hodet hans en blank kuppel: prøvd).
              Utsnittet rykker inn i brølet (samme bane, ingen skjøt). */
-          K.cam(x, h * 0.5 + mix(5.4, 4.3, k2), z, -0.9, mix(2.6, 4.1, k2), 0, 50 - 5 * eo(seg(t, QI.RO, QI.RO + 0.3)) + 2 * io(seg(t, QI.NM, QI.NM + 1.5)), -0.03);
+          if (STIV()) K.cam(x, h * 0.5 + mix(5.4, 4.3, k2), z, -0.9, mix(2.6, 4.1, k2), 0, 50 - 5 * eo(seg(t, QI.RO, QI.RO + 0.3)) + 2 * io(seg(t, QI.NM, QI.NM + 1.5)), -0.03); else camRid(S, CAMI[6](t), t, 0.5, 0);
           S.post.fl = max(0.3 * hit(t, QI.RO, 0.1), 0.2 * hit(t, QI.RO + 0.35, 0.08)); S.post.flc = '#eef6ff'; S.post.sh = 1.0 * hit(t, 38.53, 0.8) + 4 * hit(t, QI.RO, 1.2) + 0.6 * S.rw; if (t >= QI.RO) X.mouth(S, S.gr, QI.RO, t); }],
-      ].map(([t0, f]) => [t0, (S, u, a, t) => { f(S, u, a, t); stormSort(S, t); }]),
+      ].map(([t0, f]) => [t0, (S, u, a, t) => { f(S, u, a, t); if (!STIV()) S.lamps.forEach(m => K.face(m)); stormSort(S, t); }]),   /* ny: lysene på båten mot DETTE bildets kamera (før: forrige bildes) */
     });
     X.reg('c3:382', { spid: 382, skin: 'sea', back: skyQ, look: lookS, roar: () => QI.RO, cues: [[QI.RO, 'cry']],   /* naturlydene ligger i lydsengen; brølet er artens eget */
       over: (x, t, o) => X.plate(x, t - QI.NM, Object.assign({ skin: 'sea' }, o)),
@@ -699,6 +878,90 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
       HP: [[0, 0], [0.5, -0.06], [1.2, 0.1], [1.7, -0.2], [2.3, -0.7], [2.9, -0.45], [3.4, -0.2]], NK: [[0, 0], [0.45, 0.1], [1.3, -0.18], [2.4, -0.1], [3.4, -0.05]] };
     const DVT = 2.2, DVZ = 3.5;   /* når og hvor halen går under (målt med dvPath og benene) */
     const dvPath = s => { let y = 0, z = 0; const n = Math.ceil(max(0, s) * 90), h = n ? s / n : 0; for (let i = 0; i < n; i++) { const q = (i + 0.5) * h, th = hs(q, DVK.TH), v = hs(q, DVK.V); y -= v * sin(th) * h; z += v * cos(th) * h; } return [y, z]; };
+    /* ---------- BEVEGELSEN i Primal-filmen etter Fable (Opus 25.11; se «BEVEGELSEN» øverst i fila). Nøkkelposene (arket: work/raids3d/kyogre/bevegelse/poser.jpg):
+       P1 dykket (godkjent: banen, formen og tidene står; finnene og halen er kjeder som henger etter, hodet leder ned) · P2 breachen 3:42,96 (han er halvveis ute på klippet;
+       finnene ligger bakover og svinger ut og opp når han bremser, kroppen ruller litt som en knølhval, halen og halefinnene henger etter) · P3 pangen 3:44,55 (han faller med
+       snuten først; finnene og halen henger igjen oppover, finnene legges bakover) · P4 brølet på smellet 3:46,15 (kjeven først, så nakken, skuldrene, hodet og armene; stive
+       fjærer i kastet; holdet med stavelser og skjelv under 3 Hz; slakker mot slutten som før). Klippene til breachen, pangen og brølet starter med fart: fjærene starter
+       0,3–0,6 s før i det svarte, så finnene og halen alt henger etter når bildet kommer. */
+    const MVP = (() => {
+      const Z3 = [0, 0, 0], dbg = () => G3D.dbgKey;
+      /* Dykket: nøklene i DVK står (godkjent). Finnene: kjeder etter skulderen (SH) og sveipet bakover (AY); halen: en kjede etter hoftene (HP) med en langsom halebølge
+         i ankeret (før: sin per ledd med fast fase). Hodet og nakken som fjærer (hodet raskere, så det leder ned). */
+      const D0 = QP.DV - 0.06, sOf = t => max(0, t - QP.DV);
+      const dFin = ph => kjede({ n: 3, t0: D0, fo: 0.86, lim: 0.8, fz: () => [1.1, 0.48],
+        drive: t => { const s = sOf(t); return [0, hs(s, DVK.AY) * 0.6, hs(s, DVK.SH) + 0.08 * hs(s, DVK.TH)]; }, pose: (t, i) => [0, i === 1 ? 0.15 * hs(sOf(t), DVK.AY) : 0, 0] });
+      const dFL = dFin(0), dFR = dFin(1);
+      const dTail = kjede({ n: 4, t0: D0, fo: 0.88, lim: 0.7, fz: () => [0.9, 0.42],
+        drive: t => { const s = sOf(t); return [0, -hs(s, DVK.HP) + 0.35 * hs(s, DVK.TH) + 0.1 * sin(t * 1.5) * c01(s / 0.8), 0]; },
+        pose: (t, i) => [0, i === 0 ? 0.35 * hs(sOf(t), DVK.HP) : i === 1 ? 0.25 * hs(sOf(t), DVK.HP) : 0, 0] });
+      const dNk = followV(t => [hs(sOf(t), DVK.NK)], () => [1.5, 0.55], D0), dHd = followV(t => [0.5 * hs(sOf(t) + 0.04, DVK.NK)], () => [2.0, 0.5], D0);
+      const dive = (g, t) => { const s = sOf(t), a0 = hs(s, DVK.SH), ay = hs(s, DVK.AY), d = dbg() ? null : [dFL(t), dFR(t)], tl = dbg() ? null : dTail(t);
+        g.add({ '*Shoulder': [0, 0, a0], '*Arm': [0, ay, 0], '*ForeArm': [0, 0.15 * ay, 0], Neck: [0, dbg() ? hs(s, DVK.NK) : dNk(t)[0], 0], Head: [0, dbg() ? 0.5 * hs(s, DVK.NK) : dHd(t)[0], 0], Hips: [0, hs(s, DVK.HP), 0],
+          Tail1: [0, 0.35 * hs(s, DVK.HP), 0], Tail2: [0, 0.25 * hs(s, DVK.HP), 0] }, 1);
+        if (!d) return; [['L', 0], ['R', 1]].forEach(([sd, k]) => { const q = d[k], sg = sd === 'L' ? 1 : -1;
+          g.add({ [sd + 'Arm']: [0, q[0][1], sg * q[0][2]], [sd + 'ForeArm']: [0, q[1][1], sg * q[1][2]], [sd + 'Hand']: [0, q[2][1], sg * q[2][2]] }, 1);
+          for (const [f, w] of [['FingerA', 0.5], ['FingerB', 0.65], ['FingerC', 0.55], ['FingerD', 0.4]]) g.add({ [sd + f]: [0, 0, sg * w * q[2][2]] }, 1); });
+        g.add({ Tail1: [0, tl[0][1], 0], Tail2: [0, tl[1][1], 0], '*FeelerB1': [0, tl[2][1], 0], '*FeelerB2': [0, tl[3][1], 0], '*FeelerC1': [0, 0.7 * tl[3][1], 0] }, 1); };
+      /* Primal: finnene, halen og halefinnene (de lange flikene C og D) som kjeder. drive: skulderens løft og sveip, og kroppens løft og stamp som vinkler (vannet og lufta holder
+         igjen: han stiger → tuppene henger ned; han bremser → de svinger forbi). */
+      const BR0 = QP.C - 0.6, ub = t => (t - (QP.C - 0.02)) / (QP.B1 + 0.6 - (QP.C - 0.02));
+      const brY = t => { const u = ub(t); return u >= 0 ? mix(2.5, 15.5, eo(c01(u))) : 2.5 + 13 * 3 * u; };   /* breachens løft (som i dag), og før klippet med samme fart (i det svarte) */
+      const brP = t => mix(-1.38, -1.12, io(c01(ub(t))));
+      const bShK = [[BR0, [0, 0.55, 0.05]], [QP.C - 0.05, [0, 0.5, 0.1]], [QP.C + 0.3, [0, 0.12, 0.48]], [QP.C + 0.62, [0, -0.05, 0.62]], [QP.B1, [0, 0, 0.58]]];   /* [_, sveip bakover (Arm y), løft (Shoulder z)] */
+      const bSh = followV(t => keyAt(bShK, t), () => [1.6, 0.5], BR0);
+      const brFin = ph => kjede({ n: 3, t0: BR0, fo: 0.86, lim: 0.8, fz: () => [1.25, 0.54],
+        drive: t => { const q = dbg() ? keyAt(bShK, t) : bSh(t); return [0, q[1], q[2] + 0.035 * brY(t) + 0.02 * sin(TAU * 0.9 * t + ph)]; } });
+      const bFL = brFin(0), bFR = brFin(1.3);
+      const brTail = kjede({ n: 6, t0: BR0, fo: 0.88, lim: 0.6, fz: () => [1.0, 0.6], drive: t => [0, 0.035 * brY(t) - 0.25 * brP(t) + 0.04 * sin(TAU * 0.7 * t + 0.4), 0], pose: (t, i) => [0, i < 2 ? -0.12 : 0, 0] });
+      const brN = followV(t => keyAt([[BR0, [0, 0.05, 0]], [QP.C, [0, 0, 0]], [QP.C + 0.4, [0, -0.2, -0.03]], [QP.B1, [0, -0.24, -0.04]]], t), () => [1.5, 0.5], BR0);
+      /* Pangen: han har falt siden toppen i det svarte (8 enheter i sekundet ned, så tyngden). Finnene legges bakover og henger igjen oppover; halen henger igjen. */
+      const PA0 = QP.S - 0.5, pY = t => { const s = t - QP.S; return 10 - 8 * s - 0.5 * PG * s * s; }, pR = t => 0.45 + 0.85 * (t - QP.S);
+      const pShK = [[PA0, [0, 0.05, 0.4]], [QP.S, [0, 0.2, 0.3]], [QP.S + 0.5, [0, 0.55, 0.12]], [QP.B2, [0, 0.7, 0.05]]];
+      const pSh = followV(t => keyAt(pShK, t), () => [1.4, 0.62], PA0);
+      const paFin = ph => kjede({ n: 3, t0: PA0, fo: 0.86, lim: 0.8, fz: () => [1.2, 0.54],
+        drive: t => { const q = dbg() ? keyAt(pShK, t) : pSh(t); return [0, q[1], q[2] + 0.04 * pY(t) + 0.02 * sin(TAU * 1.1 * t + ph)]; } });
+      const pFL = paFin(0), pFR = paFin(1.1);
+      const paTail = kjede({ n: 6, t0: PA0, fo: 0.88, lim: 0.6, fz: () => [1.0, 0.5], drive: t => [0, 0.04 * pY(t) + 0.3 * pR(t), 0] });
+      const paN = followV(t => keyAt([[PA0, [0, -0.04, 0]], [QP.S, [0, -0.08, 0]], [QP.S + 0.55, [0, -0.2, 0.02]], [QP.B2, [0, -0.26, 0.03]]], t), () => [1.4, 0.55], PA0);   /* snuten leder ned i stupet */
+      /* Brølet på smellet: nøkler per gruppe som i introen, fjærene starter 0,3 s før klippet (i det svarte) i krøket, så kastet er i gang når bildet kommer. */
+      const L0 = QP.L - 0.45, Lq = QP.L, DK = DUCK, RR = ROAR, J = v => [0, v, 0];
+      const nk = (d, r) => [0, d * DK.Neck[1] + r * RR.Neck[1], 0], hd = (d, r) => [0, d * DK.Head[1] + r * RR.Head[1], 0], sh = (d, r) => [0, 0, d * DK['*Shoulder'][2] + r * RR['*Shoulder'][2]], ar = k => RR['*Arm'].map(x => x * k);
+      const E = QP.E, sl = k => 1 - 0.5 * k;   /* holdet slakker mot slutten (som i dag: 1 − 0,5 · io) */
+      const Gr = {
+        ch: [[L0, [0, 0.05, 0]], [Lq - 0.17, [0, 0.05, 0]], [Lq - 0.01, [-0.01, -0.02, 0]], [Lq + 1.0, [-0.012, -0.03, 0]], [Lq + 1.6, [-0.01, -0.025, 0]], [E, [-0.006, -0.012, 0]]],
+        nk: [[L0, nk(1, 0)], [Lq - 0.15, nk(1, 0)], [Lq + 0.02, nk(0, 1.08)], [Lq + 0.3, nk(0, 1)], [Lq + 0.8, nk(0, 1.03)], [Lq + 1.6, nk(0, 1)], [E, nk(0, sl(0.8))]],
+        hd: [[L0, hd(1, 0)], [Lq - 0.13, hd(1, 0)], [Lq + 0.05, hd(0, 1.1)], [Lq + 0.35, hd(0, 1.03)], [Lq + 0.85, hd(0, 1.05)], [Lq + 1.6, hd(0, 1)], [E, hd(0, sl(0.8))]],
+        jw: [[L0, J(-0.12)], [Lq - 0.2, J(-0.15)], [Lq - 0.03, J(-0.95)], [Lq + 0.25, J(-0.92)], [Lq + 1.6, J(-0.9)], [E, J(-0.9 * sl(0.8))]],
+        sh: [[L0, sh(1, 0)], [Lq - 0.15, sh(1, 0)], [Lq + 0.03, sh(0, 1.1)], [Lq + 0.3, sh(0, 1.02)], [Lq + 1.6, sh(0, 1)], [E, sh(0, sl(0.8))]],
+        ar: [[L0, Z3], [Lq - 0.12, Z3], [Lq + 0.07, ar(1)], [Lq + 1.6, ar(1)], [E, ar(sl(0.8))]],
+        hp: [[L0, [0, DK.Hips[1], 0]], [Lq - 0.1, [0, DK.Hips[1], 0]], [Lq + 0.12, [0, RR.Hips[1], 0]], [E, [0, RR.Hips[1] * sl(0.8), 0]]] };
+      const Fr = { ch: [2.6, 0.6], nk: [2.8, 0.55], hd: [2.9, 0.5], jw: [3.2, 0.62], sh: [2.7, 0.55], ar: [2.4, 0.55], hp: [2.2, 0.55] };
+      const soft = t => io(c01((t - (Lq + 0.5)) / 0.45));   /* stiv i kastet, myk i holdet */
+      const RS = {}; for (const k in Gr) { const L = Gr[k], q = Fr[k], sp = followV(t => keyAt(L, t), t => [mix(q[0], q[0] * 0.5, soft(t)), q[1]], L0); RS[k] = t => dbg() ? keyAt(L, t) : sp(t); }
+      const rRy = t => 1.8 * (1 - eo(c01((t - Lq) / 1.1)));   /* han synker på plass på smellet (som i dag) */
+      const roFin = (ph, fk) => kjede({ n: 3, t0: L0, fo: 0.86, lim: 0.7, fz: t => [fk * mix(1.7, 1.0, soft(t)), 0.55],
+        drive: t => [0, 0, (dbg() ? keyAt(Gr.sh, t)[2] : RS.sh(t)[2]) + 0.06 * rRy(t) + 0.02 * sin(TAU * 0.6 * t + ph) * c01((t - Lq - 0.6) / 0.6)] });
+      const rFL = roFin(0, 1), rFR = roFin(1.6, 0.92);
+      const roTail = kjede({ n: 6, t0: L0, fo: 0.88, lim: 0.6, fz: () => [1.0, 0.58], drive: t => [0, -(dbg() ? keyAt(Gr.hp, t)[1] : RS.hp(t)[1]) + 0.06 * rRy(t) + 0.04 * sin(TAU * 0.35 * t), 0] });
+      /* Halen i Primal: Tail1, Tail2, halefinnene B1–B2 og den lange fliken C1–C4 som én kjede; fliken D følger C. */
+      const tailP = (p, tl) => { if (!tl) return; p.add({ Tail1: [0, tl[0][1], 0], Tail2: [0, tl[1][1], 0], Tail3: [0, 0.5 * tl[2][1], 0], '*FeelerB1': [0, tl[2][1], 0], '*FeelerB2': [0, tl[3][1], 0], '*FeelerC1': [0, tl[4][1], 0], '*FeelerC2': [0, tl[5][1], 0],
+        '*FeelerC3': [0, 0.8 * tl[5][1], 0], '*FeelerD1': [0, 0.8 * tl[4][1], 0], '*FeelerD2': [0, 0.8 * tl[5][1], 0], '*FeelerD3': [0, 0.6 * tl[5][1], 0] }, 1); };
+      const finP = (p, dL, dR, sw) => { [['L', dL, 1], ['R', dR, -1]].forEach(([s, q, sg]) => { if (!q) return; p.add({ [s + 'Arm']: [0, q[0][1] - sw, sg * q[0][2]], [s + 'ForeArm']: [0, q[1][1], sg * q[1][2]], [s + 'Hand']: [0, q[2][1], sg * q[2][2]] }, 1);
+        for (const [f, w] of [['FingerA', 0.5], ['FingerB', 0.65], ['FingerC', 0.55], ['FingerD', 0.4]]) p.add({ [s + f]: [0, 0, sg * w * q[2][2]] }, 1); }); };
+      return { dive,
+        breach(p, t) { const q = dbg() ? keyAt(bShK, t) : bSh(t), n = dbg() ? keyAt([[BR0, [0, 0.05, 0]], [QP.C, Z3], [QP.C + 0.4, [0, -0.2, -0.03]], [QP.B1, [0, -0.24, -0.04]]], t) : brN(t);
+          p.add({ '*Shoulder': [0, 0, q[2]], Neck: n, Head: [0, 0.6 * n[1], 0], Jaw: [0, -0.22 * sm5((t - QP.C) / 0.6), 0], Hips: [0, 0.12, 0] }, 1);
+          finP(p, dbg() ? null : bFL(t), dbg() ? null : bFR(t), 0); p.add({ '*Arm': [0.35, q[1], 0.12], Tail1: [0, -0.12, 0], Tail2: [0, -0.12, 0] }, 1); tailP(p, dbg() ? null : brTail(t));
+          return 0.1 + 0.24 * sm5((t - QP.C) / 0.9); },   /* rullen (z), som en knølhval som ruller over */
+        pang(p, t) { const q = dbg() ? keyAt(pShK, t) : pSh(t), u = io(c01((t - QP.S) / (QP.B2 - QP.S))), n = dbg() ? [0, -0.1, 0] : paN(t); p.add({ '*Shoulder': [0, 0, q[2]], '*Arm': [0.35 * (1 - u), q[1], 0.12 * (1 - u)], Neck: n, Head: [0, 0.6 * n[1], 0] }, 1);
+          finP(p, dbg() ? null : pFL(t), dbg() ? null : pFR(t), 0); tailP(p, dbg() ? null : paTail(t)); },
+        roar(p, t) { const q = {}; for (const k in RS) q[k] = RS[k](t); const op = -min(0, q.jw[1]) / 0.9, hold = dbg() ? 0 : c01((op - 0.55) / 0.3) * (1 - 0.6 * c01((t - Lq - 1.6) / 0.6));
+          const syl = hold * 0.06 * (0.5 - pust(t, Lq + 0.2, 0.72, 43)), b = dbg() ? 0 : pust(t, Lq + 0.4, 1.6, 71) * c01((t - Lq - 0.6) / 0.5);   /* han puster tungt etter brølet */
+          p.add({ Spine: [q.ch[0], q.ch[1] + 0.012 * b, q.ch[2]], Neck: [0, q.nk[1] + 0.012 * hold * X.noise(t, 37, 1.2), 0], Head: [0, q.hd[1] + 0.01 * hold * X.noise(t, 39, 2.4), 0.014 * hold * X.noise(t, 41, 2.1)],
+            Jaw: [0, min(-0.004, q.jw[1] + syl + 0.022 * hold * X.noise(t, 45, 2.6)), 0], '*Shoulder': q.sh, '*Arm': q.ar, Hips: q.hp }, 1);
+          finP(p, dbg() ? null : rFL(t), dbg() ? null : rFR(t), 0); tailP(p, dbg() ? null : roTail(t)); return op; } };
+    })();
 
     /* ---------- Stormen i 3D (bare i skissen; Fable lager den ordentlig) ----------
        Som bildene Jazz sendte (fanart/kyogre/IMG_6597 og IMG_6596): en hyllesky med lys, bulende overside og mørk underside, regnsøyler som fosser ned i havet under den (lysere
@@ -726,6 +989,17 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         g.beginPath(); g.moveTo(cx + cos(a) * r0 * sz, cy + sin(a) * r0 * sz * 0.75); g.lineTo(cx + cos(a) * r1 * sz, cy + sin(a) * r1 * sz * 0.75); g.stroke(); }
       g.restore(); };
 
+    /* Kameraene i Primal med en tenkt rigg (camLive; se kameraene i introen): banene er de samme som før, havet legges på etterpå (camRid). */
+    const CAMQ = [
+      camLive(t => { const e = io(uOf(t, 0, QP.DR - 0.02)); return [mix(34, 30, e), 4.6, mix(36, 40, e), mix(-150, -140, e), 12, 320, 42, 0.02]; }, { t0: 0, rig: 'baat', seed: 41 }),
+      camLive(t => { const e = io(uOf(t, QP.DR - 0.02, QP.DV - 0.05)), cx = mix(66, 44, e), cy = mix(19, 15.5, e), cz = zfAt(t) - 30; return [cx, cy, cz, cx - 80, 9, cz + 9, 52, 0.02]; }, { t0: QP.DR, rig: 'heli', seed: 42 }),   /* t0 på DR: banen følger stormfronten, som hopper der (zfAt) */
+      camLive(t => { const e = io(seg(t, QP.DV, QP.DV + 2.2)); return [-1.6, 2.6, -13, 0, mix(2.4, 3.6, e), mix(-2, 2, e), 70, 0.03]; }, { t0: QP.DV - 0.05, rig: 'baat', seed: 43 }),
+      camLive(t => { const e = io(uOf(t, QP.CL, QP.DEEP - 0.03)); return [7, mix(7, 9, e), -14, 0, 0, 3, 50, 0]; }, { t0: QP.CL, rig: 'heli', seed: 44 }),
+      camLive(t => { const e = io(uOf(t, QP.DEEP - 0.03, QP.SH - 0.03)); return [GL[0] + mix(7, 6, e), mix(9, 8.5, e), GL[1] + mix(27, 24, e), GL[0], 0, GL[1] - 5, 46, 0.02]; }, { t0: QP.DEEP - 0.03, rig: 'heli', seed: 45 }),
+      camLive(t => { const e = io(seg(t, QP.SH, QP.UP)), e2 = ei(seg(t, QP.UP, QP.C)); return [GL[0] + mix(4.5, 3.5, e), mix(9.5, 8.5, e) - 1.2 * e2, GL[1] + mix(16, 13, e) - 2 * e2, GL[0], 0, GL[1] - 1, mix(50, 54, e2), 0.02]; }, { t0: QP.SH - 0.03, rig: 'heli', seed: 46 }),
+      camLive(t => [23, 1.3, 54, 0, mix(7.5, 9.5, io(uOf(t, QP.C - 0.02, QP.B1))), 4, 48, -0.04], { t0: QP.C - 0.02, rig: 'baat', seed: 47 }),
+      camLive(t => { const u = uOf(t, QP.S - 0.01, QP.B2); return [mix(58, 55, u), 7, mix(104, 100, u), 0, mix(9, 5, u), 4, 27, -0.02]; }, { t0: QP.S - 0.01, rig: 'heli', seed: 48 }),
+      camLive(t => { const e = io(seg(t, QP.L, QP.E)); return [mix(15, 12.5, e), mix(5.1, 4.5, e), mix(30, 26, e), -0.5, mix(4.5, 4.1, e), 2, 50, -0.03]; }, { t0: QP.L - 0.01, rig: 'baat', seed: 49 })];
     G3D.def('c3:382p', {
       len: QP.E, R: QP.L, at: 195.7, mus: { bed: 'sfx/natur/kyogre_primal.mp3' }, models: ['kyogre', 'kyogre_primal'], edge: 'sea', env: { rim: '#a8c8ff', glow: '#2a8acc', fog: '#16222e', glowH: 3 },
       make(K, T) { const S = storm(T), g = S.gr = kyFig(), p = S.pg = kypFig(); S.scene.add(g.root); S.scene.add(p.root); S.figs.push(g, p); S.T = T;
@@ -743,6 +1017,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         S.wcr = crown(S, T, { r: 9, out: 9, h: 22, up: 1.3, dir: [-0.47, -0.88], arc: -0.25, lean: 3, sd: 27, a: 0.78, c0: '#b9c9d4', c1: '#73899a' });   /* mørkere enn de andre: den står rett bak ham i lynet og skal ikke bli en hvit vegg */ S.pmist = mistP(46, 9, 16, 321); S.scene.add(S.pmist);
         return S; },
       act(S, t, o) {
+        const ny = !STIV();   /* den nye bevegelsen (Opus 25.11); 'stiv' = slik den var */
         const g = S.gr, p = S.pg, U = K.U(), su = S.sea.material.uniforms, ts = t * TS; su.uTime.value = ts; S.under = 0;
         const black = (t >= QP.B1 && t < QP.S) || (t >= QP.B2 && t < QP.L); S.black = black;
         const drone = t >= QP.DR - 0.02 && t < QP.DV - 0.05, outside = t < QP.DV - 0.05;
@@ -778,7 +1053,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         if (g.root.visible) { const s = max(0, t - QP.DV), [py, pz] = dvPath(s), dl = 0.14;   /* finpuss: dykket som en hval (DVK) */
           g.root.position.set(HOME[0], (KYH * 0.7 + 0.8 * sea0) * (1 - io(seg(s, 0, 1.2))) + py, HOME[2] + pz); g.root.rotation.set(hs(s, DVK.TH), 0, 0);
           const a0 = hs(s, DVK.SH), a1 = hs(s - dl, DVK.SH), a2 = hs(s - 2 * dl, DVK.SH), ay = hs(s, DVK.AY);   /* finnen bøyer seg: hvert ledd henger etter det forrige */
-          g.add({ '*Shoulder': [0, 0, a0], '*Arm': [0, ay, 0.9 * (a1 - a0)], '*ForeArm': [0, 0.3 * ay, 0.9 * (a2 - a1)], Neck: [0, hs(s, DVK.NK), 0], Head: [0, 0.5 * hs(s - 0.12, DVK.NK), 0],
+          if (ny) MVP.dive(g, t); else g.add({ '*Shoulder': [0, 0, a0], '*Arm': [0, ay, 0.9 * (a1 - a0)], '*ForeArm': [0, 0.3 * ay, 0.9 * (a2 - a1)], Neck: [0, hs(s, DVK.NK), 0], Head: [0, 0.5 * hs(s - 0.12, DVK.NK), 0],
             Hips: [0, hs(s, DVK.HP), 0], Tail1: [0, 0.6 * hs(s - 0.15, DVK.HP) + 0.1 * sin(t * 1.5), 0], Tail2: [0, 0.5 * hs(s - 0.3, DVK.HP) + 0.12 * sin(t * 1.5 - 0.7), 0] }, 1);
           lines(g, 0.8 + 0.3 * dv, 0); g.eye(0, 0, 0.3); }
         /* Lyset langt nede fra 3:34,9: dybden 62 → 44 til suget (3:39,8), 44 → 24 til riseren (3:42,45), så dritfort opp til flaten på slaget (3:42,96). */
@@ -790,13 +1065,13 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
            lenger borte på 3:44,55 og stuper ned igjen; alt oppe foran oss på smellet 3:46,15. */
         p.root.visible = !black && t >= QP.C - 0.02; let glo = 0; S.rw = 0; S.glo = 0;
         if (t >= QP.C - 0.02 && t < QP.B1) { const u = seg(t, QP.C - 0.02, QP.B1 + 0.6); p.root.position.set(GL[0], mix(2.5, 15.5, eo(u)), GL[1]);   /* godt oppe allerede på slaget */ p.root.rotation.set(mix(-1.38, -1.12, io(u)), -0.3, 0.1);
-          p.add(BREACH, 1); glo = 1.22; lines(p, glo, 1); S.glo = 0.4; }   /* 2b.3: over rundt 1,25 brenner linjene ut til hvitt (figurens maske ganger fargen med 1,2 × styrken); før 2,6 */
+          if (ny) p.root.rotation.z = MVP.breach(p, t); else p.add(BREACH, 1); glo = 1.22; lines(p, glo, 1); S.glo = 0.4; }   /* 2b.3: over rundt 1,25 brenner linjene ut til hvitt (figurens maske ganger fargen med 1,2 × styrken); før 2,6 */
         else if (t >= QP.S && t < QP.B2) { const u = seg(t, QP.S, QP.B2), s = t - QP.S;   /* finpuss: faller med tyngde og jevn rotasjon (før en ease-in fra 15 enheter) */
           p.root.position.set(HOME[0], 10 - 8 * s - 0.5 * PG * s * s, HOME[2] + 2 + 4.2 * s); p.root.rotation.set(0.45 + 0.85 * s, -0.3, 0.06 * sin(s * 3));   /* han har falt siden toppen i det svarte: 8 enheter i sekundet ned, og tyngden videre */
-          p.add(BREACH, 1 - io(u)); p.add({ '*Arm': [0, 0.6 * io(u), 0], '*Shoulder': [0, 0, -0.2 * io(u)] }, 1); SWIM(p, t, 0.3, 1.4); glo = 1.18; lines(p, glo, 1); S.glo = 0.35; }
+          if (ny) MVP.pang(p, t); else { p.add(BREACH, 1 - io(u)); p.add({ '*Arm': [0, 0.6 * io(u), 0], '*Shoulder': [0, 0, -0.2 * io(u)] }, 1); SWIM(p, t, 0.3, 1.4); } glo = 1.18; lines(p, glo, 1); S.glo = 0.35; }
         else if (t >= QP.L) { const tq = t - QP.L, ry = KYH + 2.2 + 0.8 * sea0 + 1.8 * (1 - eo(seg(tq, 0, 1.1)));   /* finpuss 2: 2,2 høyere, så hodet og kjeven er over vannet i brølet */
-          p.root.position.set(HOME[0], ry, HOME[2] + 2); p.root.rotation.set(mix(-0.32, 0, eo(seg(tq, 0, 1.0))), mix(0.1, -0.4, io(seg(tq, 0, QP.E - QP.L))), 0);
-          const rw = back(seg(tq, 0, 0.35), 2.2) * (1 - 0.5 * io(seg(tq, 1.6, QP.E - QP.L))); p.add(ROAR, rw); p.rot('Jaw', 0, 0.04 * sin(t * 55) * rw, 0); S.rw = rw; S.mouth = null; p.eye(0, rw > 0.2 ? 0.75 : 0, 0.7);
+          p.root.position.set(HOME[0], ry + (ny ? 0.22 : 0), HOME[2] + 2); p.root.rotation.set(mix(-0.32, 0, eo(seg(tq, 0, 1.0))),   /* ny: litt høyere, så kjeven står i flaten som i dag også når hodet kastes forbi */ mix(0.1, -0.4, io(seg(tq, 0, QP.E - QP.L))), 0);
+          let rw; if (ny) rw = MVP.roar(p, t); else { rw = back(seg(tq, 0, 0.35), 2.2) * (1 - 0.5 * io(seg(tq, 1.6, QP.E - QP.L))); p.add(ROAR, rw); p.rot('Jaw', 0, 0.04 * sin(t * 55) * rw, 0); } S.rw = rw; S.mouth = null; p.eye(0, rw > (ny ? 0.25 : 0.2) ? 0.75 : 0, 0.7);
           glo = 1.1 + 0.08 * rw + 0.22 * hit(tq, 0, 1); lines(p, glo, 1); S.glo = 0.3 + 0.5 * c01(glo - 1); }   /* 2b.3: linjene lyser, men brenner ikke ut til hvite flater (før 2,2–3,4) */
         S.fx(S.brk, QP.C - 0.12, GL[0], 0, GL[1]); S.fx(S.sheet, QP.C + 0.05, GL[0], 4, GL[1]); S.fx(S.col, QP.S + 0.5, HOME[0], 0, HOME[2] + 8); S.fx(S.wallp, QP.L - 0.32, HOME[0], 0, HOME[2] + 3); S.col.visible = t < QP.B2; S.brk.visible = t < QP.B1;   /* dråpene fra forrige bilde skal ikke henge som snø foran ham i brølet */ S.fx(S.dsp, QP.DV + 1.0, HOME[0], 0, HOME[2] - 7);
         S.dcr.at(t, QP.DV + DVT, HOME[0], 0, HOME[2] + DVZ); S.dfp.forEach((q, i) => q.at(t, QP.DV + 0.75, HOME[0] + (i ? 10 : -10), 0, HOME[2] + 4)); S.dnp.at(t, QP.DV + 0.8, HOME[0], 0, HOME[2] + 7);
@@ -819,30 +1094,30 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
       shots: [
         /* 1 Stormen langt borte (Jazz 20.11: «første klipp kan man heller bare se langt borte at det nærmer seg en forferdelig storm»): lavt over et roligere hav mot det åpne
            havet; himmelen over oss er grå og lys, og stormen står mørk ute i horisonten med regn som fosser ned og lyn inni. Kyogre er ikke med. */
-        [0, (S, u, a, t) => { const e = io(u), x = mix(34, 30, e), z = mix(36, 40, e), h = K.seaH(S.sea.material.uniforms, x, z, t * TS); K.cam(x, h * 0.5 + 4.6, z, mix(-150, -140, e), 12, 320, 42, 0.02); S.post.fade = 1 - seg(t, 0, 0.5); }],   /* skrått mot fronten, så den forsvinner mot horisonten til venstre (IMG_6596) */
+        [0, (S, u, a, t) => { const e = io(u), x = mix(34, 30, e), z = mix(36, 40, e), h = K.seaH(S.sea.material.uniforms, x, z, t * TS); if (STIV()) K.cam(x, h * 0.5 + 4.6, z, mix(-150, -140, e), 12, 320, 42, 0.02); else camRid(S, CAMQ[0](t), t, 0.5, 0); S.post.fade = 1 - seg(t, 0, 0.5); }],   /* skrått mot fronten, så den forsvinner mot horisonten til venstre (IMG_6596) */
         /* 2 Dronen følger stormen (3:21,14), vinkelen fra skisse 3 (Jazz: «var bedre»): høyt og skrått langs fronten mot vest. Stormen til venstre presser inn mot arenaen foran;
            havet under den er mørkt og grovt, utenfor grått og roligere. Fronten er forbi arenaen på 3:27,54. */
-        [QP.DR - 0.02, (S, u, a, t) => { const e = io(u), cx = mix(66, 44, e), cy = mix(19, 15.5, e), cz = S.zf - 30; K.cam(cx, cy, cz, cx - 80, 9, cz + 9, 52, 0.02); }],
+        [QP.DR - 0.02, (S, u, a, t) => { const e = io(u), cx = mix(66, 44, e), cy = mix(19, 15.5, e), cz = S.zf - 30; if (STIV()) K.cam(cx, cy, cz, cx - 80, 9, cz + 9, 52, 0.02); else camV(CAMQ[1](t)); }],
         /* 3 Han stuper (3:29,1): lavt bak ham, halefinnen slår en bue over kameraet, og sprut skyller over. */
         [QP.DV - 0.05, (S, u, a, t) => { const e = io(seg(t, QP.DV, QP.DV + 2.2)), ch = K.seaH(S.sea.material.uniforms, -1.6, -13, t * TS);   /* finpuss 2: over dønningene (Jazz: «man kommer under vannet der. kamera må litt opp») */
-          K.cam(-1.6, 2.6 + ch, -13, 0, mix(2.4, 3.6, e), mix(-2, 2, e), 70, 0.03); S.post.sh = 2.2 * hit(t, QP.DV + 1.1, 0.8); S.post.fl = 0.35 * hit(t, QP.DV + 1.2, 0.35); S.post.flc = '#dde8ee'; }],
+          if (STIV()) K.cam(-1.6, 2.6 + ch, -13, 0, mix(2.4, 3.6, e), mix(-2, 2, e), 70, 0.03); else camRid(S, CAMQ[2](t), t, 1, 0); S.post.sh = 2.2 * hit(t, QP.DV + 1.1, 0.8); S.post.fl = 0.35 * hit(t, QP.DV + 1.2, 0.35); S.post.flc = '#dde8ee'; }],
         /* 4 Vannet lukker seg over ham. */
-        [QP.CL, (S, u, a, t) => { const e = io(u); K.cam(7, mix(7, 9, e), -14, 0, 0, 3, 50, 0); }],
+        [QP.CL, (S, u, a, t) => { const e = io(u); if (STIV()) K.cam(7, mix(7, 9, e), -14, 0, 0, 3, 50, 0); else camV(CAMQ[3](t)); }],
         /* 5 Lyset langt nede (3:34,9): skrått over havet i stormen, som Godzilla 1:56–2:03; et lite, svakt lys dypt nede som stiger hele tiden. */
-        [QP.DEEP - 0.03, (S, u, a, t) => { const e = io(u); K.cam(GL[0] + mix(7, 6, e), mix(9, 8.5, e), GL[1] + mix(27, 24, e), GL[0], 0, GL[1] - 5, 46, 0.02); S.post.sh = 0.4 * hit(t, QP.DEEP, 0.8); }],
+        [QP.DEEP - 0.03, (S, u, a, t) => { const e = io(u); if (STIV()) K.cam(GL[0] + mix(7, 6, e), mix(9, 8.5, e), GL[1] + mix(27, 24, e), GL[0], 0, GL[1] - 5, 46, 0.02); else camV(CAMQ[4](t)); S.post.sh = 0.4 * hit(t, QP.DEEP, 0.8); }],
         /* 6 Sterkere (3:39,8), og dritfort opp på riseren (3:42,45): nærmere og brattere; flaten buler opp og lyser like før han bryter ut. */
-        [QP.SH - 0.03, (S, u, a, t) => { const e = io(seg(t, QP.SH, QP.UP)), e2 = ei(seg(t, QP.UP, QP.C)); K.cam(GL[0] + mix(4.5, 3.5, e), mix(9.5, 8.5, e) - 1.2 * e2, GL[1] + mix(16, 13, e) - 2 * e2, GL[0], 0, GL[1] - 1, mix(50, 54, e2), 0.02);
+        [QP.SH - 0.03, (S, u, a, t) => { const e = io(seg(t, QP.SH, QP.UP)), e2 = ei(seg(t, QP.UP, QP.C)); if (STIV()) K.cam(GL[0] + mix(4.5, 3.5, e), mix(9.5, 8.5, e) - 1.2 * e2, GL[1] + mix(16, 13, e) - 2 * e2, GL[0], 0, GL[1] - 1, mix(50, 54, e2), 0.02); else camV(CAMQ[5](t));
           S.post.sh = 0.25 + 0.4 * e + 2.6 * e2; }],
         /* 7 Det første slaget (3:42,96), som bildet Jazz sendte fra skisse 1: lavt fra siden; han er alt halvveis ute når bildet kommer, med lyn på begge sider, og stiger videre. */
-        [QP.C - 0.02, (S, u, a, t) => { K.cam(23, 1.3, 54, 0, mix(7.5, 9.5, io(u)), 4, 48, -0.04); S.post.fl = 0.32 * hit(t, QP.C, 0.12); S.post.flc = '#e8f4ff'; S.post.sh = 5 * hit(t, QP.C, 0.6); }],
+        [QP.C - 0.02, (S, u, a, t) => { if (STIV()) K.cam(23, 1.3, 54, 0, mix(7.5, 9.5, io(u)), 4, 48, -0.04); else camV(CAMQ[6](t)); S.post.fl = 0.32 * hit(t, QP.C, 0.12); S.post.flc = '#e8f4ff'; S.post.sh = 5 * hit(t, QP.C, 0.6); }],
         /* Svart i stillheten (3:43,90–3:44,54). */
         [QP.B1, (S, u, a, t) => { K.cam(0, 200, 0, 0, 0, 1, 40); S.post.fade = 1; }],
         /* 8 Pangen (3:44,55): lenger borte; han er i lufta og stuper ned i vannet igjen. */
-        [QP.S - 0.01, (S, u, a, t) => { K.cam(mix(58, 55, u), 7, mix(104, 100, u), 0, mix(9, 5, u), 4, 27, -0.02);   /* 2b.3: utsnittet 32 → 27°, så han ikke er så liten («lenger borte» står) */ S.post.sh = 1.2 * hit(t, QP.S + 0.5, 0.9); S.post.fl = 0.35 * hit(t, QP.S, 0.1); S.post.flc = '#e8f4ff'; }],
+        [QP.S - 0.01, (S, u, a, t) => { if (STIV()) K.cam(mix(58, 55, u), 7, mix(104, 100, u), 0, mix(9, 5, u), 4, 27, -0.02); else camV(CAMQ[7](t));   /* 2b.3: utsnittet 32 → 27°, så han ikke er så liten («lenger borte» står) */ S.post.sh = 1.2 * hit(t, QP.S + 0.5, 0.9); S.post.fl = 0.35 * hit(t, QP.S, 0.1); S.post.flc = '#e8f4ff'; }],
         /* Svart og stille (3:45,52–3:46,14). */
         [QP.B2, (S, u, a, t) => { K.cam(0, 200, 0, 0, 0, 1, 40); S.post.fade = 1; }],
         /* 9 Smellet (3:46,15): han er alt oppe foran oss (vannet fosser av ham, en vegg av sprut faller), brøler, lyn rundt ham, kort Primal-tekst; kampen tar til igjen. */
-        [QP.L - 0.01, (S, u, a, t) => { const e = io(seg(t, QP.L, QP.E)); K.cam(mix(15, 12.5, e), mix(5.1, 4.5, e), mix(30, 26, e), -0.5, mix(4.5, 4.1, e), 2, 50, -0.03);
+        [QP.L - 0.01, (S, u, a, t) => { const e = io(seg(t, QP.L, QP.E)); if (STIV()) K.cam(mix(15, 12.5, e), mix(5.1, 4.5, e), mix(30, 26, e), -0.5, mix(4.5, 4.1, e), 2, 50, -0.03); else camV(CAMQ[8](t));
           S.post.fl = max(0.3 * hit(t, QP.L, 0.1), 0.2 * hit(t, QP.L + 0.4, 0.08), seg(t, QP.F, QP.E - 0.04)); S.post.flc = '#f2f8ff'; S.post.sh = 6 * hit(t, QP.L, 1.4) + 0.8 * S.rw; S.spc = '#bfe4ff'; X.mouth(S, S.pg, QP.L, t, 2.2); }],
       ].map(([t0, f]) => [t0, (S, u, a, t) => { f(S, u, a, t); stormSort(S, t); }]),
     });
