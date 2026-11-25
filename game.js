@@ -209,12 +209,14 @@ function openPack(k) { const o = openPacks(k, 1); if (!o) return null; o[0].cw =
    raid (raidBattle med R0), og nivået settes etter laget når pakken åpnes, som når et raid viser seg (raidLvFor, gulvet raidFloor, raidHx; Jazz: «Som
    et vanlig raid»), så trening før kampen hjelper. ETT FORSØK (Jazz 24.11): det brukes i det kampen starter (praidUse), og taper laget, er den borte.
    Vinner det, er den din (finishPraid), med XP til laget, men uten myntene og gjenstandene fra et vanlig raid: pakken var prisen. Hvem det er, er
-   hemmelig til introen. e.pr = nøkkelen, så åpningen vet hvilket raid kortet ble. false = arten har ikke noe raid (da venter den i gresset som før). */
-function praidAdd(e, pk) {
+   hemmelig til introen. e.pr = nøkkelen, så åpningen vet hvilket raid kortet ble. false = arten har ikke noe raid (da venter den i gresset som før).
+   by = navnet på bossen når raidet er premien for å slå Cynthia eller Ghetsis (cg1, Jazz 25.11; legPrize i league.js): det samme raidet med ett forsøk,
+   men det heter «Legendary raid» og sier hvem det kom fra. Uten by er det et pakke-raid (pk = pakken). */
+function praidAdd(e, pk, by) {
   if (typeof LEG === 'undefined' || !LEG[e.id] || typeof raidLvFor !== 'function') return false;
   const t = LEG[e.id].t, k = S.uid++;
   if (!Array.isArray(S.praid)) S.praid = [];
-  S.praid.push({ k, id: e.id, sh: e.sh ? 1 : 0, lv: raidLvFor(t), fl: raidFloor(), hx: +raidHx(t).toFixed(2), at: dayKey(), pk: pk || '' });
+  S.praid.push(Object.assign({ k, id: e.id, sh: e.sh ? 1 : 0, lv: raidLvFor(t), fl: raidFloor(), hx: +raidHx(t).toFixed(2), at: dayKey(), pk: pk || '' }, by ? { by } : {}));
   e.pr = k; return true;
 }
 const praidBy = k => (Array.isArray(S.praid) ? S.praid : []).find(r => r.k === k) || null;
