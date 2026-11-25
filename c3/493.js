@@ -490,7 +490,7 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
   G3D.def('c3:493', {
     len: LEN, hold: 1, R: DROP, at: -K0,   /* kamplåta kommer inn 49,3 s ut i filmen (en kald start), og filmens klokke er dens */
     mus: { seq: [['Azure Flute', 0], ['Hall of Origin', H0, [HFADE, HEND]]], noskip: 19.36,   /* fløyta og Hall of Origin foran kamplåta (PACK.seq); hele fløyta spilles før Skip vises */
-      bed: 'sfx/natur/arceus_intro.mp3', hold: ['sfx/natur/arceus_hold.mp3', 0.2, DROP] },   /* lydsengen på filmens klokke (work/raids3d/arceus/lyd/bed.py), og sløyfa mens fingeren holdes fra droppet */
+      get bed() { return OLDE() ? 'sfx/natur/arceus_intro_gammel.mp3' : 'sfx/natur/arceus_intro.mp3'; }, hold: ['sfx/natur/arceus_hold.mp3', 0.2, DROP] },   /* lydsengen på filmens klokke (work/raids3d/arceus/lyd/bed.py; den gamle slutten bak bryteren har sin gamle seng), og sløyfa mens fingeren holdes fra droppet */
     fig: 2, models: ['arceus'], edge: null, env: { rim: '#ffe2a0', glow: '#bfe9ff', fog: '#04050b', glowH: 6, ink: '#191430' },
     make(K, T) { const S = { scene: new T.Scene(), figs: [] };
       place(K, T, S, { grow: (q, i) => [LIFT[2] + 0.45 + min(hyp(q[0], q[1]), 72) / 62 * 2.5 + rnd(i, 3) * 0.1, 2.2], grow2: (q, i) => PT2[i] });   /* gammel: ringen går 24,8 m/s utover gulvet, og søylene stiger der den går forbi; ny (PT2): de skyter opp */
