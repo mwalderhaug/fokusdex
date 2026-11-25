@@ -331,13 +331,19 @@ const G3C = (() => {
      · Små rettelser i glid er sjeldne hendelser (X.fly.gust): vingene felles under kroppen, et vindkast løfter dem, eller ett rykk i én vinge.
      Bruk (i hvert bilde): const st = { v, k, hov, spd, w, ex, asym, load, gust, cup }; bd.begin().place(…); bd.phase(st); bd.wings(bd.beat(st, 0), bd.beat(st, 1)); … bd.neck(…); bd.hold(…).
      cup = en fast fold uten slag (0–1, som kuppet i et stup). asym > 0: den høyre vingen slår hardest (ruller fuglen mot høyre inn i en sving, er venstre den ytre: asym < 0).
-     o.fly = { sets: { w, c, p, h } (endringer i slagsettene, i grader), dist: { fordelingene langs vingen }, foldMax, hold: { neck, head, max, lim, g, lag } }. */
+     Manøveren (ar33; Jazz 25.11: «ikke vanlig at vingene er helt ute ved barrel roll hos fugler eller når de snur rundt sånn»): man (0–1) bøyer begge vingene i albuen og håndleddet,
+     så hånda trekkes inn og bakover og spennet blir kortere (D.mf, md, mq: full bøy per ledd); trn (−1…1, + = svinger mot høyre) bøyer den indre vingen mer og strekker den ytre ut og
+     litt fram; rol (−1…1, + = ruller mot høyre, som rulleakselerasjonen: X.fly.ail) vrir den ene hånda forkant opp og den andre ned og bøyer den som skal løfte minst. Glatte kurver inn og ut.
+     o.fly = { sets: { w, c, p, h } (endringer i slagsettene, i grader), dist: { fordelingene langs vingen }, foldMax, hold: { neck, head, max, lim, g, lag },
+       man: { t, r, f, q } (manøveren: den indre vingens ekstra bøy i en sving, bøyen i en rull, den ytre vingen fram i grader, rullens vridning i grader) }. */
   X.fly = (f, o) => { const B = X.bird(f, o), n = B.n, R = B.rig, DG = PI / 180, F = o.fly || {}, PO = B.poses, L0 = B.L0;
     /* Fordelingen langs vingen (fra skulderen og ut): hvor mye av slaget, feiingen, vridningen, lasten, etterslepet og spalteåpningen hvert ledd tar, og foldingen (grader ved full fold). */
     const D = Object.assign({ el: [0.5, 1, 1, 1, 1, 1], sw: [0.5, 1, 1, 1, 1, 1], tw: [0.1, 0.3, 0.45, 0.6, 0.8, 1], cu: [0, 0, 0.1, 0.3, 0.65, 1], lg: [0, 0, 0.3, 0.55, 0.8, 1], sl: [0, 0, 0, 0.2, 0.6, 1], sx: [0, 0, 0.25, 0.55, 0.9, 1],
-      ff: [0, -18, 14, -30, -48, -58], fd: [0, 2, 4, -8, -18, -24], fq: [0, 0, -4, -8, -14, -18] }, F.dist || {});
+      ff: [0, -18, 14, -30, -48, -58], fd: [0, 2, 4, -8, -18, -24], fq: [0, 0, -4, -8, -14, -18],
+      mf: [-4, -26, 22, -34, -48, -54], md: [0, 2, 5, 2, -4, -8], mq: [0, 0, 0, 1, 2, 3], mo: [0.4, 0.8, 1, 1, 1, 1], rq: [0, 0.3, 0.5, 0.7, 0.9, 1] }, F.dist || {});   /* ar33: manøveren (full bøy: sveip, løft og vridning i grader), den ytre vingen fram, og rullens vridning */
     const sh = (a, i) => { if (!a) return 0; if (a.length === n) return a[i]; const x = n > 1 ? i / (n - 1) * (a.length - 1) : 0, j = min(a.length - 2, floor(x)); return mix(a[j], a[j + 1], x - j); };
     const SETS = X.fly.sets(F.sets), FMAX = F.foldMax == null ? 1 : F.foldMax, HO = F.hold || {}, NB = HO.neck || 'Neck', HB = HO.head || 'Head', HT = HO.tip || 'Jaw';
+    const MA = Object.assign({ t: 0.3, r: 0.18, f: 9, q: 10 }, F.man || {});   /* ar33: manøveren (st.man, trn, rol) */
     const MID = new (G3D.T().Vector3)(...(o.mid || [0, 2.3, 0])), dN = R.B[NB] && R.B[HB] ? R.pos(HB).distanceTo(R.pos(NB)) : 0, xN = R.B[NB] ? R.pos(NB).sub(MID).dot(B.F0) : 0, HMAX = HO.max || 0.3;
     B.sets = SETS;
     /* Slagets fase for bildet: st.u (0 = toppen, 0,5 = bunnen) fra st.v (slag talt fra en bunn) og ds; regnes én gang per bilde og deles av vingene og kroppen. */
@@ -346,6 +352,7 @@ const G3C = (() => {
     B.beat = (st, k) => { const P = { fw: [], di: [], tw: [] }, w = st.w || { glide: 1 }, ex = st.ex || {}, u = B.phase(st), k0 = st.k || 0, as = st.asym || 0;
       const kw = max(0, k0 + (k ? as : -as) * min(1, k0)), M = X.fly.mix(kw, st.hov || 0, st.S || SETS, st.spd), g = st.gust, jk = g ? (k ? g.jr : g.jl) : 0;
       const sf = st.spd == null ? 1 : 1.15 - 0.55 * c01((st.spd - 12) / 20), fo = min(FMAX, M.fold * sf * (st.fold == null ? 1 : st.fold)), fb = X.fly.fb(u) * fo, up = X.fly.up(u), ld0 = st.load || 0;
+      const tr = st.trn || 0, rl = st.rol || 0, sk = k ? 1 : -1, mk = (st.man || 0) + (MA.t * tr + MA.r * rl) * sk;   /* ar33: manøveren: hvor mye denne vingen bøyes (den indre i en sving, den som skal løfte minst i en rull) */
       for (let i = 0; i < n; i++) { let fw = ex.fw || 0, di = ex.di || 0, tw = ex.tw || 0;
         for (const key in w) { const q = PO[key], x = w[key]; if (!q || !x) continue; fw += q.fw[i] * x; di += q.di[i] * x; tw += q.tw[i] * x; }
         const ui = u - M.lag * sh(D.lg, i), E = X.fly.E(ui, M.rv), ld = X.fly.ld(ui), cu = sh(D.cu, i);
@@ -355,6 +362,7 @@ const G3C = (() => {
         fw += fb * sh(D.ff, i) * DG; di += fb * sh(D.fd, i) * DG; tw += fb * sh(D.fq, i) * DG;           /* foldingen i oppslaget */
         fw += M.spr * ld * sh(D.sx, i) * DG;                                                           /* ar32: hånda strekkes helt ut i nedslaget (spennet størst midt i nedslaget), og litt inn i oppslaget */
         if (st.cup) { fw += st.cup * sh(D.ff, i) * DG; di += st.cup * sh(D.fd, i) * DG; tw += st.cup * sh(D.fq, i) * DG; }   /* kuppet: en fast fold uten slag (stupet) */
+        if (mk || tr || rl) { fw += (mk * sh(D.mf, i) - sk * tr * MA.f * sh(D.mo, i)) * DG; di += mk * sh(D.md, i) * DG; tw += (mk * sh(D.mq, i) + sk * rl * MA.q * sh(D.rq, i)) * DG; }   /* ar33: manøveren: bøyen, den ytre vingen fram, og vridningen som driver rullen */
         di += (M.curl * ld + 6 * ld0) * cu * DG; fw -= (M.cb * ld + 3 * ld0) * cu * DG;                  /* lasten bøyer spissene opp og litt bakover */
         tw -= (M.slot * up + 8 * ld0 * (1 - up)) * sh(D.sl, i) * DG;                                    /* fjærene åpnes i oppslaget (og når den bremser) */
         if (g) { const s0 = sh(D.sw, i); tw += (24 * g.tk - 7 * g.lt - 9 * jk) * s0 * DG; di += (-9 * g.tk + 11 * g.lf + 8 * jk) * s0 * DG; }   /* rettelsene i glid, om skulderen */
@@ -461,6 +469,12 @@ const G3C = (() => {
      den starter litt før bunnen (u 0,46, håndleddet begynner å bøyes mens nedslaget slutter) og vokser roligere (eksponent 2,6 og toppen på u 0,72), så underarmen og hånda
      ikke får en spiss i farten i starten av hvert oppslag (selvsjekken: rykk i alle flyutsnitt; største akselerasjon i folden 44 % lavere, største fart 23 % lavere). */
   X.fly.fb = u => { const y = ((((u % 1) + 1) % 1) - 0.46) / 0.52; return y <= 0 || y >= 1 ? 0 : Math.pow(y / 0.5, 2.6) * Math.pow((1 - y) / 0.5, 2.6); };
+  /* Rullens vridning (ar33; som rulleakselerasjonen, men null fart i begge ender): x = rullens fremdrift (0–1) → −1…1, pluss i første halvdel (setter rullen i gang) og minus i andre
+     (stopper den). Til st.rol: la den ligge litt foran rullen (vingene vris først, så ruller kroppen), og la kroppen rulle etter X.fly.rull. */
+  X.fly.ail = x => x <= 0 || x >= 1 ? 0 : sin(TAU * x) * Math.pow(sin(PI * x), 2) / 0.65;
+  /* Rullens fremdrift (0–1 → 0–1): farten som x^2,5 · (1 − x)^2,5 (en beta-kurve), så rykket starter og slutter i null og er lavest av de glatte: en full rull på 0,77 s har
+     høyst 33 000 °/s³ (sm5: 48 000 og et sprang i første og siste bilde; sm7: 42 000) og 950 °/s på det raskeste (sm5: 877). Lukket form: x = sin²(u/2), ∫ sin⁶. */
+  X.fly.rull = x => { const u = 2 * Math.asin(Math.sqrt(c01(x))); return (5 * u / 16 - 15 * sin(2 * u) / 64 + 3 * sin(4 * u) / 64 - sin(6 * u) / 192) / (5 * PI / 16); };
   /* Lasten (−0,3…1): sin² av slaget, positiv i nedslaget og svakere motsatt vei i oppslaget (vingen er foldet og fjærene åpne). up: oppslaget alene (0–1). */
   const sgn = u => Math.tanh(6 * sin(TAU * u)) / Math.tanh(6);
   X.fly.ld = u => { const s = sin(TAU * u); return s * s * (0.35 + 0.65 * sgn(u)); };
