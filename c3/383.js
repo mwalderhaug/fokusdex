@@ -216,7 +216,7 @@ void main(){ float y = vUv.y, x = vUv.x * 6.2832; vec2 c = vec2(cos(x), sin(x));
      målet for hver gruppe av ben glir mellom posene (io), og en fjær per gruppe (X.follow) gir tyngden, etterslepet og overskuddet. Gruppene starter etter tur: i et
      kast (brølet, reisingen) leder brystet, så kommer nakken, hodet og armene, og klørne sist; når han senker seg (kjeften lukkes ved navnet), leder hodet. Halen henger
      etter kroppen (X.chain), aldri en halepisk for seg. Skjelvet er støy (X.noise), ikke rene sinuser; pusten er langsom og litt ujevn (en stor kropp), og blikket
-     glir: hodet først, nakken etter. Kameraene har liv (camLive). Ingenting rører seg i de tre bildene etter knuset og smellet (frosne bilder ved nedslag).
+     går i små vendinger: hodet først, nakken etter. Kameraene har liv (camLive). Ingenting rører seg i de tre bildene etter knuset og smellet (frosne bilder ved nedslag).
      Bryteren: G3D.alt[383] = 'stiv' gir bevegelsen og kameraene slik de var (Fable 23.11) i begge filmene (live: &gammel=stiv; gjennomgangssiden: &alt=stiv;
      verktøyene: PRE='G3D.alt={383:"stiv"}'). G3D.dbgKey = 1: posene uten fjærene (posearket, work/g3d/scripts/poser.js; aldri satt i appen).
      Nye poser har egne navn: STAT, ROAR, DUCK, PROAR og PDUCK er også kampfigurens (form i arenaen), og STAT steinflakenes (bodyPts). */
@@ -238,6 +238,10 @@ void main(){ float y = vUv.y, x = vUv.x * 6.2832; vec2 c = vec2(cos(x), sin(x));
       for (let i = 0; i < 6; i++) c[i] = v[i] + (c[i] - v[i]) * e + X.noise(t, (o.seed || 1) + i * 17, o.hz || 0.6) * A[i < 3 ? 0 : 1] * w * e;
       return c.concat([v[6], v[7] || 0]); }; };
   const camV = v => K.cam(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7]);
+  /* Lys og glød som skal stå mot kameraet (K.face), og ting som plasseres etter figuren (g.at), regnes i act, før stillingen og kameraet for bildet er satt: de fikk
+     forrige bildes kamera og stilling, så bildet avhenget av hvilket bilde som ble tegnet før (funnet 25.11 med gjennomgangssidens løkskinn; også i den godkjente filmen,
+     der det står). I den nye bevegelsen rettes de etter klippets kamera: vendt(def, fn) kaller fn(S, t) etter hvert klipp (bak bryteren 'stiv' som før). */
+  const vendt = (d, fn) => Object.assign(d, { shots: d.shots.map(([s0, f]) => [s0, (S, u, a, t) => { f(S, u, a, t); if (!STIV()) fn(S, t); }]) });
   /* Benene i gruppene: den vanlige formen og Primal (Primal har ikke Spine3, men Neck3; Hips er hoftene med beina på Primal, så den står: ellers sklir føttene). */
   const BENV = { ch: ['Spine1', 'Spine2', 'Spine3'], nk: ['Neck1', 'Neck2'], hd: ['Head'], jw: ['Jaw'], ar: ['*Arm'], hn: ['*Hand'], hp: ['Hips'] }, HALEV = ['Tail1', 'Tail2', 'Tail3', 'Tail4', 'Tail5'];   /* på den vanlige formen er Hips bare halens rot (beina er egne røtter) */
   const BENP = { ch: ['Spine1', 'Spine2'], nk: ['Neck1', 'Neck2', 'Neck3'], hd: ['Head'], jw: ['Jaw'], ar: ['*Arm'], hn: ['*Hand'] }, HALEP = ['Tail1', 'Tail2', 'Tail3', 'Tail4', 'Tail5'];
@@ -284,7 +288,7 @@ void main(){ float y = vUv.y, x = vUv.x * 6.2832; vec2 c = vec2(cos(x), sin(x));
   const PBROL = { Neck1: [0, 0.17, 0], Neck2: [0, 0.13, 0], Neck3: [0, 0.09, 0], Head: [0, 0.1, 0], Jaw: [0, -0.85, 0], Spine1: [0, 0.08, 0], Spine2: [0, 0.14, 0], '*Arm': [-0.35, 0.15, 0.75], '*Hand': [0.3, 0, 0] };   /* PROAR uten Hips: på Primal er Hips hoftene med beina, og føttene skled 0,25 i brølet */
   const PKROK = { Spine1: [0, -0.03, 0.02] }, PVRI = { Spine1: [0, 0, -0.025], Spine2: [0, 0, -0.02], Neck1: [0, 0, -0.03] }, PHALE = { Tail1: [0, 0.04, 0], Tail2: [0, 0.1, 0], Tail3: [0, 0.1, 0] };   /* krøket lener seg litt til siden; PVRI: overkroppen og hodet vris litt mot kameraet etter kastet (sporet blir en bue) */
   /* Ned i krøket: sakte først, så fortere, og mykt inn i bunnen (han dukker mer og mer, og er nesten i ro før slaget). */
-  const dyk = u => { const v = Math.pow(c01(u), 1.7); return v * v * (3 - 2 * v); }, opp = u => { const v = Math.pow(c01(u), 1.35); return v * v * (3 - 2 * v); };   /* opp: reisingen samler krefter først, så den ikke går med lik fart */
+  const dyk = u => { const v = Math.pow(c01(u), 1.7); return v * v * (3 - 2 * v); }, opp = u => { const v = Math.pow(c01(u), 1.5); return v * v * (3 - 2 * v); };   /* opp: reisingen samler krefter først, så den ikke går med lik fart */
   /* Den vanlige formen (0–1,97): sammentrukket (DUCK) med en myk start, og et støt inn på hvert trommeslag; brystet først, så armene, nakken og hodet (litt etter
      hverandre), halen henger etter (kjede), og skjelvet sitter i overkroppen og kjeven (støy), ikke i roten. */
   const MVG = (() => { const bump = a => a < 0 ? 0 : a < 0.09 ? io(a / 0.09) : 1 - io(c01((a - 0.09) / 0.25)), dk = t => 0.9 * io(seg(t, 0.05, 0.75)) + PT.H.reduce((s, h) => s + 0.16 * bump(t - h), 0);
@@ -321,9 +325,10 @@ void main(){ float y = vUv.y, x = vUv.x * 6.2832; vec2 c = vec2(cos(x), sin(x));
     if (G3D.dbgKey) return 0;
     const R = PT.R, c2 = Math.pow(t < R ? seg(t, PT.Q, R) : max(0, 1 - (t - R) / 0.12), 2), op = t < R ? 0 : c01(-q.jw[1] / 0.85);
     if (c2 > 0.001) p.add({ Spine1: [0.012 * X.noise(t, 84, 5.5), 0, 0.01 * X.noise(t, 85, 5)], Head: [0, 0.006 * X.noise(t, 86, 4), 0.012 * X.noise(t, 87, 4)], Jaw: [0, 0.02 * X.noise(t, 88, 5), 0], '*Hand': [0.025 * X.noise(t, 89, 4.5), 0, 0] }, c2);
-    if (op > 0.001) p.add({ Jaw: [0, 0.035 * X.noise(t, 51, 3.5), 0], Head: [0, 0.008 * X.noise(t, 55, 2.6), 0.014 * X.noise(t, 53, 3)], Neck1: [0, 0.02 * X.noise(t, 47, 1.2), 0.006 * X.noise(t, 57, 2.5) + 0.014 * X.noise(t, 49, 0.9)], Neck2: [0, 0.012 * X.noise(t, 48, 1.2), 0], '*Hand': [0.015 * X.noise(t, 59, 4), 0, 0] }, op);
+    if (op > 0.001) p.add({ Jaw: [0, 0.03 * X.noise(t, 51, 3) - 0.05 * pust(t, PT.R, 0.85, 99), 0], Head: [0, 0.008 * X.noise(t, 55, 2.4), 0.014 * X.noise(t, 53, 2.8)], Neck1: [0, 0.02 * X.noise(t, 47, 1.2), 0.006 * X.noise(t, 57, 2.5) + 0.014 * X.noise(t, 49, 0.9)], Neck2: [0, 0.012 * X.noise(t, 48, 1.2), 0], '*Hand': [0.012 * X.noise(t, 59, 3), 0, 0] }, op);
     const b = pust(t, PT.S + 0.2, 3.0, 77) * (1 - io(seg(t, PT.Q, PT.Q + 0.4))), b2 = pust(t - 0.5, PT.S + 0.2, 3.0, 77) * (1 - io(seg(t, PT.Q, PT.Q + 0.4)));   /* b2: nakken retter hodet etter brystet */
     if (b > 0.001 || b2 > 0.001) p.add({ Spine1: [0, 0.03 * b, 0], Spine2: [0, 0.018 * b, 0], Neck1: [0, -0.014 * b2, 0], '*Arm': [0, 0.02 * b, 0] }, 1);
+    { const u = seg(t, PT.S + 0.3, PT.W - 0.3), l = Math.pow(sin(PI * u), 2); if (l > 0.001) p.add({ Spine1: [0.022 * l, 0, 0.012 * l] }, 1); }   /* vekten over på den ene siden mens han reiser seg (en bue, ikke en strek) */
     return 0; };
   /* Kameraene med liv (camLive), ett per klipp; banene er de samme som før. */
   const CAMP = [
@@ -333,7 +338,7 @@ void main(){ float y = vUv.y, x = vUv.x * 6.2832; vec2 c = vec2(cos(x), sin(x));
     camLive(t => { const e = io(c01((t - PT.CU) / (PT.W - PT.CU))); return [mix(8.4, 4.4, e), mix(1.3, 4.9, e), mix(10.8, 16.5, e), mix(3.3, 0.2, e), mix(1.9, 8.4, e), mix(2.6, 6.4, e), mix(40, 42, e), -0.05]; }, { t0: PT.CU, tIn: PT.CU, amp: [0.025, 0.018], seed: 24 }),
     camLive(t => { const e = io(c01((t - PT.W) / (PT.E - PT.W))), k = seg(t, PT.R + 0.1, PT.R + 2.9), e2 = k * k * k * (k * (k * 6 - 15) + 10), w = 0.04 * sin(t * 0.5);
       return [10 + 0.1 * e + 0.4 * e2 + w * 3, 1.45 + 0.15 * e, 19.3 + 0.5 * e + 3 * e2, 1.7 + 0.3 * e + 0.9 * e2, 5.35 - 0.15 * e2, 0.2, 58 + 3 * e + 9 * e2, -0.045]; }, { t0: PT.W, tIn: PT.W, amp: [0.05, 0.03], seed: 25 })];
-  G3D.def('c3:383p', {
+  G3D.def('c3:383p', vendt({
     len: PT.E, R: PT.R, at: 168.1, models: ['groudon', 'groudon_primal'],   /* at: låta står på tl.pre når filmen starter (verktøyene spiller låta derfra, med sløyfa) */
     make(K, T) {
       const S = crater(T), g = S.gr = K.figure(K.model('groudon')), p = S.pg = primalFig(); S.scene.add(g.root); S.scene.add(p.root); S.figs.push(g, p);
@@ -461,7 +466,7 @@ void main(){ float y = vUv.y, x = vUv.x * 6.2832; vec2 c = vec2(cos(x), sin(x));
         S.post.sh = 7 * hit(t, PT.R, 1.2) + 5 * hit(t, PT.B2, 1) + 2.2 * hit(t, PT.R + 0.3, 2.4) + 0.8 * S.rw + 1.6 * (S.chg || 0) * (S.chg || 0) + 3.2 * hit(t, PT.FN, 0.7) + PBOMB.reduce((q, b) => q + 1.8 * b[4] * hit(t, PT.R + b[0] + b[1], 0.4), 0);
         X.mouth(S, S.pg, PT.R, t, 2.6); S.post.heat = 0.8 + 0.6 * S.rw;  pdbg(S); }],
     ],
-  });
+  }, S => { K.face(S.aura); K.face(S.burst); for (const f of S.fnt) K.face(f.lt); K.face(S.vflash); }));
 
 
   /* Bakteppet, tegnet i 2D med verktøykassa fra steg 2 (de samme tegnerne som arenaen i raid2.js): nattehimmel som gløder nedenfra, askeskyer lyst opp av
@@ -963,8 +968,8 @@ void main(){
       const G = fjaerer(BENV, {
         ch: [[R - 0.04, st], [R + 0.28, br], [R + 0.5, brv], [R + 1.08, bpv], [N + 0.15, hov], [N + 0.5, hov], [N + 1.15, kv], [N + 1.6, ka]],
         nk: [[R - 0.02, st], [R + 0.36, br], [R + 0.72, br], [R + 1.08, bo(1.06)], [N + 0.15, ho], [N + 0.38, ho], [N + 1.15, kn], [N + 1.6, ka]],
-        hd: [[R, st], [R + 0.38, bo(1.08)], [R + 0.75, br], [R + 1.12, bo(1.05)], [N + 0.15, ho], [N + 0.26, ho], [N + 1.05, ka]],
-        jw: [[R - 0.03, st], [R + 0.2, br], [N + 0.32, br], [N + 1.12, ka]],
+        hd: [[R, st], [R + 0.38, bo(1.04)], [R + 0.75, br], [R + 1.2, bo(1.04)], [N + 0.15, ho], [N + 0.26, ho], [N + 1.05, ka]],
+        jw: [[R, st], [R + 0.2, br], [N + 0.32, br], [N + 1.12, ka]],   /* kjeven åpner seg med skriket, ikke før */
         ar: [[R + 0.01, st], [R + 0.45, br], [N + 0.15, ho], [N + 0.48, ho], [N + 1.35, ka]],
         hn: [[R + 0.06, st], [R + 0.54, br], [N + 0.52, br], [N + 1.42, ka]],
         hp: [[R + 0.1, st], [R + 0.7, [[BHALE, 1]]], [N + 0.6, [[BHALE, 1]]], [N + 1.6, ka]] },
@@ -972,7 +977,9 @@ void main(){
       const ry = fjaer([[R - 0.04, 0], [R + 0.4, 0.05], [R + 1.2, 0], [N + 0.4, -0.02], [N + 1.3, 0]], 1.4, 0.55, C);
       const lv = t => io(seg(t, N + 1.0, N + 2.6)), life = t => io(seg(t, N + 0.6, N + 1.8)), pitch = t => { const v = G.ch(t); return v[1] + v[4] + v[7]; };
       /* Blikket glir (han ser seg sakte om): målet er langsom støy; hodet følger raskt og nakken sakte, så hodet leder og nakken kommer etter. */
-      const gT = t => { const k = lv(t); return [0.12 * X.noise(t, 91, 0.14) * k, 0.045 * X.noise(t, 93, 0.19) * k]; }, gN = X.follow(gT, { f: 0.35, z: 0.85, t0: C }), gH = X.follow(gT, { f: 0.85, z: 0.7, t0: C });
+      const GL = [[N + 1.0, 0, 0]]; for (let i = 0, tt = N + 1.6; tt < 120; i++) { GL.push([tt, 0.11 * (rnd(i, 95) * 2 - 1), 0.04 * (rnd(i, 96) * 2 - 1)]); tt += 1.8 + 2.6 * rnd(i, 97); }   /* blikket: et nytt punkt hvert 1,8–4,4 s */
+      const gT = t => { let i = 0; while (i < GL.length - 1 && t >= GL[i + 1][0]) i++; const a = GL[i], p = GL[max(0, i - 1)], k = lv(t), w = io(seg(t, a[0], a[0] + 0.5));
+        return [mix(p[1], a[1], w) * k, mix(p[2], a[2], w) * k]; }, gN = X.follow(gT, { f: 0.35, z: 0.85, t0: C }), gH = X.follow(gT, { f: 1.0, z: 0.75, t0: C });   /* hodet snur seg raskt mot punktet og holder; nakken kommer sakte etter (hodet leder) */
       /* Halen: posen fra nøklene, og ankeret er det kroppen gjør (brystet som kastes bakover, roten opp og ned) pluss en lat, langsom sving når han står. */
       const tail = haleK(HALEV, [[R + 0.1, []], [R + 0.7, [[BHALE, 1]]], [R + 1.3, [[BHALE, 1], [BHZ, 1]]], [N + 0.6, [[BHALE, 1], [BHZ, 1]]], [N + 1.6, []]], t => [0, 0.2 * pitch(t) - 0.3 * ry(t), 0.04 * X.noise(t, 81, 0.16) * life(t)], { f: 1.0, fo: 0.85, z: 0.6, lim: 0.25, t0: C });
       return t => { const tl = tail(t); return { g: { ch: G.ch(t), nk: G.nk(t), hd: G.hd(t), jw: G.jw(t), ar: G.ar(t), hn: G.hn(t), hp: G.hp(t) }, y: ry(t), tail: tl, gN: gN(t), gH: gH(t), lv: lv(t), life: life(t) }; }; })();
@@ -980,7 +987,7 @@ void main(){
     const poseI = (g, A, t) => { const B = BENV, q = A.g; for (const k in B) putV(g, B[k], q[k]); A.tail.forEach((r, i) => g.add({ [HALEV[i]]: r }, 1));
       const op = c01(-q.jw[1] / 0.85); if (G3D.dbgKey) return op;
       const e = op * (1 - io(seg(t, Q.NAME + 0.25, Q.NAME + 0.95)));
-      if (e > 0.001) g.add({ Jaw: [0, 0.032 * X.noise(t, 51, 3.5), 0], Head: [0, 0.007 * X.noise(t, 55, 2.6), 0.012 * X.noise(t, 53, 3)], Neck1: [0, 0.02 * X.noise(t, 47, 1.2), 0.006 * X.noise(t, 57, 2.5) + 0.014 * X.noise(t, 49, 0.9)], Neck2: [0, 0.012 * X.noise(t, 48, 1.2), 0], '*Hand': [0.015 * X.noise(t, 59, 4), 0, 0] }, e);   /* og nakken presser i skriket; skjelvet er langsomt (en stor kjeve dirrer sakte) */
+      if (e > 0.001) g.add({ Jaw: [0, 0.03 * X.noise(t, 51, 3) - 0.07 * pust(t, Q.ROAR, 0.62, 99), 0], Head: [0, 0.007 * X.noise(t, 55, 2.4), 0.012 * X.noise(t, 53, 2.8)], Neck1: [0, 0.02 * X.noise(t, 47, 1.2), 0.006 * X.noise(t, 57, 2.5) + 0.014 * X.noise(t, 49, 0.9)], Neck2: [0, 0.012 * X.noise(t, 48, 1.2), 0], '*Hand': [0.012 * X.noise(t, 59, 3), 0, 0] }, e);   /* kjeven former skriket (langsomt opp og ned) og dirrer, og nakken presser; skjelvet er langsomt (en stor kjeve dirrer sakte; X.noise har et lag på 2,17 × farten, så over rundt 3 Hz blir det flimmer i 30 bilder i sekundet) */
       /* Pusten etter holdet: brystet hever seg og skuldrene følger, mens hodet holdes nesten i ro; den første pusten etter brølet er dyp. Kjeven følger pusten. */
       const bt = d => pust(t - d, Q.NAME + 0.8, 3.4, 71) * (1 + 0.7 * hit(t - d, Q.NAME + 0.8, 3.4)), b = bt(0), b3 = bt(0.3), b2 = bt(0.6);   /* pusten går oppover ryggen (b3), og nakken retter hodet etter (b2): sporet blir en ellipse, ikke en strek */
       if (A.life > 0.001) g.add({ Spine1: [0.008 * X.noise(t, 75, 0.08), 0.016 * b, 0], Spine2: [0, 0.02 * b, 0], Spine3: [0, 0.014 * b3, 0], Neck1: [0, -0.018 * b2, 0], '*Arm': [0.02 * b, 0.04 * b, 0], '*Hand': [0.02 * X.noise(t, 76, 0.2), 0, 0] }, A.life);   /* og vekten flytter seg litt (Spine1 x), klørne lever */
@@ -993,7 +1000,7 @@ void main(){
     const CAM9 = camLive(t => { const k = io(seg(t, Q.CLX + 0.7, Q.CLX + 5.2)), w = 0.04 * sin(max(0, t - Q.CLX - 5.2) * 0.23);
       return [mix(3.4, -6.2, k) + sin(w) * 1.6, mix(0.85, 1.65, k), mix(13.6, 19.9, k), mix(-0.6, -3.5, k), mix(5.9, 4.6, k), mix(2.5, 2.8, k), mix(58, 52, k), -0.04 * (1 - k)]; },
       { t0: Q.CLX - 0.035, tIn: Q.CLX - 0.035, tEnd: Q.CLX + 5.2, f: 2.0, z: 0.85, amp: [0.04, 0.025], seed: 9 });
-    G3D.def('c3:383', {
+    G3D.def('c3:383', vendt({
       /* Filmen går på introlåta (Epikus) fra 0:00. Continue kommer når navnet står (len), og scenen lever videre til spilleren trykker eller låta er ute (1:48). */
       len: Q.NAME + 0.7, hold: 1, R: Q.ROAR, at: 0, models: ['groudon'],
       mus: { song: 'Epikus', bed: 'sfx/natur/groudon_intro.mp3', auto: 107.8, bar: [84.82, 2.82], next: { fade: 0.6, gap: 0.5, at: 1.6, hit: 2.1 } },
@@ -1329,7 +1336,7 @@ void main(){
           if (STIV()) K.cam(mix(3.4, -6.2, k) + sin(w) * 1.6, mix(0.85, 1.65, k), mix(13.6, 19.9, k), mix(-0.6, -3.5, k), mix(5.9, 4.6, k), mix(2.5, 2.8, k), mix(58, 52, k), -0.04 * (1 - k)); else camV(CAM9(t));
           S.post.fl = t < Q.CLX ? 0.7 : hit(t, Q.CLX, 0.09) * 0.9; S.post.flc = '#fff0b8'; S.post.sh = 5 * hit(t, Q.CLX, 1.0) + 2.5 * hit(t, Q.ROAR, 0.6) + 0.7 * S.rw; X.mouth(S, S.gr, Q.ROAR, t); S.post.heat = 0.6 + 0.6 * S.rw; dbg(); }],
       ],
-    });
+    }, (S, t) => { if (t < Q.CLX) return; const ch = S.gr.at('Spine2'); S.aura.position.set(ch.x, ch.y + 0.4, ch.z - 0.6); K.face(S.aura); K.face(S.vflash); }));   /* fra knuset: lyset ved brystet etter dette bildets stilling og kamera */
     /* Lyn inne i askeskyen (vulkansk, fiolett-rødlig, uten regn): på de sterke slagene i bilde 4 og noen flere, tegnet over 3D-bildet der søylen står. */
     const LT = [[8.58, 0.5], [11.4, 0.7], [Q.LY, 1], [40.75, 0.8], [43.88, 0.5], [46.7, 0.7], [48.13, 0.5], [Q.ROAR, 1.4], [Q.ROAR + 0.2, 0.9], [87.64, 0.7], [93.28, 0.5], [98.92, 0.6], [101.76, 0.7], [104.58, 0.6]];
     X.reg('c3:383', { spid: 383, skin: 'lava', back: backdrop, look, over: (x, t, o) => X.plate(x, t - Q.NAME, o), cues: [[Q.ROAR, 'cry']], roar: () => Q.ROAR,
