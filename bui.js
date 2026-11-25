@@ -532,6 +532,9 @@ async function bossFilm(B) {
   root.classList.add('d'); await T(240);
   return true;
 }
+/* INTROENE SPILLEREN HAR SETT (S.isn, per art; Jazz 25.11): en film med noskip (Arceus: fløyta) kan hoppes over hele veien fra andre gang. */
+const introSeen = id => !!(S.isn && S.isn[id]);
+function introSaw(id) { if (!S.isn || typeof S.isn !== 'object') S.isn = {}; if (S.isn[id]) return; S.isn[id] = 1; save(true); }
 /* Kampvinkelen (--cz, som camFit) og størrelsen den legendariske får (som sprK) når kampen starter: filmene som ender i arenaen, bruker dem. */
 const foePose = B => { const f = B.foe[0], m = B.me[0], h = Math.max(htOf(f.id, f.mega), m ? htOf(m.id, m.mega) : 0); return { cz: h <= 1.6 ? 1.1 : h >= 4 ? 1 : 1.1 - 0.1 * (h - 1.6) / 2.4, k: hK(htOf(f.id, f.mega)) }; };
 /* Filmen når en legendarisk Pokémon viser seg (raid.js og raidf.js). Hver av de store har sin egen, lagt på slagene i låta si, og trioene og de mindre har
@@ -558,7 +561,7 @@ async function legendIntro(B) {
      Kamplåta kommer etter filmen: Continue venter til neste taktstrek (bar: [første, lengde]), introlåta tones ut (fade), det er stille (gap), kamplåta starter et
      stykke inn (at), og virvelen ender i hvitt på dens første slag (hit). Har ikke spilleren trykket innen auto, går det videre av seg selv. */
   const mus = c3 && info.mus ? info.mus : null, own = mus && mus.song ? PACK.special(new RegExp(mus.song)) : '', nx = (mus && mus.next) || {};
-  /* FLERE LÅTER I FILMEN (def.mus.seq, Arceus): låter fra «special» på filmens klokke foran kamplåta (PACK.seq). noskip: ingen Skip før så mange sekunder (hele fløyta). */
+  /* FLERE LÅTER I FILMEN (def.mus.seq, Arceus): låter fra «special» på filmens klokke foran kamplåta (PACK.seq). noskip: ingen Skip før filmens klokke har passert så mange sekunder (hele fløyta), og bare første gang (S.isn). */
   const seq = mus && mus.seq && tk && !V ? mus.seq.map(q => ({ f: PACK.special(new RegExp(q[0])), at: q[1], out: q[2] || null })) : null;
   if (calm()) { await ready; if (gone()) return; root.classList.add('on'); await CINE.still(cv, id, Math.min(info.len - 0.6, info.R + 2), o); if (V) PACK.music(V, { loop: false, at: 0, fade: 1.2, from: 0.1 }).then(k => { if (k) music(''); }); else battleMusic(B, { fade: 1.2, from: 0.1 }); cry(f.id, 300, 0.5); await T(2600); if (gone()) return; root.classList.add('d'); await T(260); return; }
   /* Låta og filmen starter samtidig. Uten låt i pakken spilles den innebygde oppbyggingen, med drønnet i det den viser seg. */
@@ -570,7 +573,7 @@ async function legendIntro(B) {
     if (gone()) return;
   }
   const started = own ? await PACK.music(own, { at: info.at, loop: false, out: 0.3 }) : tk ? await (seq ? PACK.seq(tk, seq, { at: info.at }) : PACK.music(tk, V ? { at: 0, loop: false, out: 0.3 } : { at: info.at })) : false; if (gone()) { PACK.seqStop(0.1); return; }
-  const seqOn = !!seq && started, noskip = started && mus && mus.noskip ? mus.noskip : 0;
+  const seqOn = !!seq && started, noskip = started && mus && mus.noskip && !introSeen(tr.leg) ? mus.noskip : 0;
   const ownOn = !!own && started, bedOn = !!(started && mus && mus.bed && (ownOn || !mus.song)); if (bedOn) PACK.sting(mus.bed, false, () => PACK.clock());   /* sengen følger låta: filmens egen introlåt, eller kamplåta når filmen går på den (Kyogre) */
   const hs = bedOn && mus.hold ? mus.hold : null; if (hs) PACK.loopWarm(hs[0]);   /* Hold-sløyfa (def.mus.hold: [fil, styrke, fra]): hører til sengen */
   let stop = () => {};
@@ -590,14 +593,17 @@ async function legendIntro(B) {
     skipped = true; sfx.tap(); stop(); if (c3) { if (sk) sk.hidden = true; if (go) go.hidden = true; if (!held) { cry(f.id, 0, 0.7, 1); buzz([80, 40, 260]); } } pl.skip();   /* Continue: brølet er over, ikke et nytt inn i kampen. Skip midt i filmen: brølet han ellers ville gitt */
     if (ownOn) { PACK.music('', { out: 0.3 }); PACK.stingOut(0.3); later(() => battleMusic(B, { at: nx.at || 0 }), 350); } else if (bedOn) PACK.stingOut(0.5);
     if (seqOn) { const early = now() < -info.at - 0.05; PACK.seqStop(0.3); if (early) { PACK.music('', { out: 0.3 }); later(() => battleMusic(B, { at: 0 }), 350); } } };   /* hoppet over før kamplåta kom: den starter fra 0 */
-  setTimeout(() => { if (!gone() && sk && !skipped && (!go || go.hidden)) sk.hidden = false; }, Math.max(1200, noskip * 1000)); if (sk) sk.addEventListener('click', skip); if (go) go.addEventListener('click', skip);
+  /* Skip etter 1,2 s. Med noskip: når filmens klokke er forbi (watch under), samme klokke som skip() sjekker, så det første trykket alltid virker. */
+  const skOn = () => { if (!gone() && sk && sk.hidden && !skipped && !leaving && (!go || go.hidden) && !(noskip && now() < noskip)) sk.hidden = false; };
+  setTimeout(skOn, 1200); if (sk) sk.addEventListener('click', skip); if (go) go.addEventListener('click', skip);
   const key = e => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') skip(); }; document.addEventListener('keydown', key);
   /* HOLD (Arceus): fingeren mot skjermen mens lyset regner. Filmen leser G3D.hold og gjør resten selv (valgfritt, bare for følelsen: filmen er den samme uten). */
   let hh = null; const holdT = hs ? setInterval(() => { const on = !gone() && !skipped && !leaving && !!G3D.hold && now() >= hs[2]; if (on && !hh) hh = PACK.loop(hs[0], hs[1]); else if (!on && hh) { hh.stop(0.5); hh = null; } }, 50) : 0;   /* sløyfa spilles mens fingeren holdes fra droppet, og tones ut når den slipper */
   const hold = v => { if (c3) { if (v && !G3D.hold) buzz(14); G3D.hold = v; } }; root.addEventListener('pointerdown', e => { if (!(e.target && e.target.closest && e.target.closest('button'))) hold(1); }); for (const n of ['pointerup', 'pointercancel', 'pointerleave']) root.addEventListener(n, () => hold(0));
-  const watch = setInterval(() => { if (gone()) return pl.stop(); if (ownOn && mus.auto && !leaving && !skipped && now() >= mus.auto - 0.5) leave(mus.auto); }, 200);
+  const watch = setInterval(() => { if (gone()) return pl.stop(); if (noskip) skOn(); if (ownOn && mus.auto && !leaving && !skipped && now() >= mus.auto - 0.5) leave(mus.auto); }, 200);
   await pl.done; clearInterval(watch); document.removeEventListener('keydown', key); hold(0); if (holdT) clearInterval(holdT); if (hh) { hh.stop(0.3); hh = null; }
   if (gone()) { tms.forEach(clearTimeout); if (ownOn || bedOn) PACK.stingOut(0.2); PACK.seqStop(0.2); return stop(); }
+  if (noskip && now() >= noskip) introSaw(tr.leg);   /* spilt helt ut, eller hoppet over etter fløyta: neste gang virker Skip hele veien */
   if (ownOn || bedOn) PACK.stingOut(0.3);
   if (!started && !PACK.playing() && !MUSIC.playing()) battleMusic(B);
   /* Filmen til en arena slutter i hvilestillingen. Bildet males på nytt, så animasjonen i kampen starter fra samme bilde. */
