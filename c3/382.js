@@ -83,7 +83,7 @@
       const dx = v[3] - v[0], dy = v[4] - v[1], dz = v[5] - v[2], d = Math.hypot(dx, dy, dz) || 1, fk = (v[6] || 40) / 45, D2R = PI / 180;
       const yaw = (baat ? 0.1 * X.noise(t, sd, 0.55) + 0.06 * X.noise(t, sd + 5, 0.13) : 0.05 * X.noise(t, sd, 0.1) + 0.025 * X.noise(t, sd + 5, 0.45)) * fk * A * w * D2R;
       const pit = (baat ? 0.32 * sin(TAU * 0.137 * t + sd) + 0.08 * X.noise(t, sd + 9, 0.55) : 0.04 * X.noise(t, sd + 9, 0.1) + 0.02 * X.noise(t, sd + 13, 0.45)) * fk * A * w * D2R;
-      const rol = baat ? (0.45 * sin(TAU * 0.121 * t + 2 * sd) + 0.06 * X.noise(t, sd + 17, 0.5)) * A * w * D2R : 0.03 * X.noise(t, sd + 17, 0.12) * A * w * D2R;
+      const rol = baat ? (0.13 * sin(TAU * 0.121 * t + 2 * sd) + 0.03 * X.noise(t, sd + 17, 0.5)) * A * w * D2R : 0.012 * X.noise(t, sd + 17, 0.12) * A * w * D2R;   /* rullen høyst 0,4 × stampen (den er mest kvalmende; raids3d/research/REGLER.md, «Kamera: liv og risting») */
       const e = o.tEnd != null ? 1 - io(c01((t - (o.tEnd - (o.ut || 1))) / (o.ut || 1))) : 1;
       for (let i = 0; i < 6; i++) c[i] = v[i] + (c[i] - v[i]) * e;
       const hx = -dz / Math.hypot(dx, dz), hz = dx / Math.hypot(dx, dz);   /* vannrett, på tvers av synslinja */
