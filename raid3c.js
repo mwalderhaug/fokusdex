@@ -341,10 +341,10 @@ const G3C = (() => {
     const MID = new (G3D.T().Vector3)(...(o.mid || [0, 2.3, 0])), dN = R.B[NB] && R.B[HB] ? R.pos(HB).distanceTo(R.pos(NB)) : 0, xN = R.B[NB] ? R.pos(NB).sub(MID).dot(B.F0) : 0, HMAX = HO.max || 0.3;
     B.sets = SETS;
     /* Slagets fase for bildet: st.u (0 = toppen, 0,5 = bunnen) fra st.v (slag talt fra en bunn) og ds; regnes én gang per bilde og deles av vingene og kroppen. */
-    B.phase = st => X.fly.phase(st, SETS);
+    B.phase = st => X.fly.phase(st, st.S || SETS);   /* st.S: egne slagsett for dette bildet (Articuno del 2: større slag i bremsen og svevingen), ellers artens */
     /* Én vinge (k: 0 venstre, 1 høyre) som { fw, di, tw } per ledd (radianer), til bd.wings. Stillingene (w) som i X.bird.pose, og slaget, foldingen, lasten og spaltene oppå. */
     B.beat = (st, k) => { const P = { fw: [], di: [], tw: [] }, w = st.w || { glide: 1 }, ex = st.ex || {}, u = B.phase(st), k0 = st.k || 0, as = st.asym || 0;
-      const kw = max(0, k0 + (k ? as : -as) * min(1, k0)), M = X.fly.mix(kw, st.hov || 0, SETS, st.spd), g = st.gust, jk = g ? (k ? g.jr : g.jl) : 0;
+      const kw = max(0, k0 + (k ? as : -as) * min(1, k0)), M = X.fly.mix(kw, st.hov || 0, st.S || SETS, st.spd), g = st.gust, jk = g ? (k ? g.jr : g.jl) : 0;
       const sf = st.spd == null ? 1 : 1.15 - 0.55 * c01((st.spd - 12) / 20), fo = min(FMAX, M.fold * sf * (st.fold == null ? 1 : st.fold)), fb = X.fly.fb(u) * fo, up = X.fly.up(u), ld0 = st.load || 0;
       for (let i = 0; i < n; i++) { let fw = ex.fw || 0, di = ex.di || 0, tw = ex.tw || 0;
         for (const key in w) { const q = PO[key], x = w[key]; if (!q || !x) continue; fw += q.fw[i] * x; di += q.di[i] * x; tw += q.tw[i] * x; }
@@ -362,7 +362,7 @@ const G3C = (() => {
     B.fly = st => B.wings(B.beat(st, 0), B.beat(st, 1));
     /* Kroppen i slaget: hv = løftet langs ryggen (m: lavest like etter toppen, høyest like etter bunnen), pt = stigningen (rad, nesen ned til rundt 35 % av slaget, så opp),
        sg = et lite rykk fram i nedslaget. Legges på før place. hvAt(du): løftet du slag før (til hodet, som henger rundt 0,23 slag etter). */
-    B.body = st => X.fly.body(st, SETS);
+    B.body = st => X.fly.body(st, st.S || SETS);
     /* Hodet står i verden, og nakken er fjæra: etter neck() løftes nakken mot kroppens gynging og vippen (hodet følger bare g av gyngingen, lag slag etter), og hodet dreies
        tilbake, så vinkelen står. b fra body; pk = andelen av kroppens vipp b.pt som er lagt på i place (standard 1), px = vipp i tillegg (rad, et vindkast); g = 0,25–0,31 og
        lag 0,23 slag (sangsvanen; hold.g, hold.lag); up: oppreist (nakken står loddrett og kan ikke ta et løft opp–ned); sc = figurens skala. Armen er nakkens lengde (Neck → Head):
@@ -420,8 +420,10 @@ const G3C = (() => {
     const I = x <= e ? e * P(x / e) : x <= d - e ? x - 0.5 * e : x <= d ? d - e - e * P((d - x) / e) : d - e; return au * x + (ad - au) * I; };
   /* Slagets form: cosinus med kortere vendinger (rv > 0: litt mot en trekant, toppen av farten bredere), 1 i toppen og −1 i bunnen. */
   X.fly.E = (u, rv) => { const th = TAU * u, r = rv || 0; return (cos(th) + r * cos(3 * th) / 9) / (1 + r / 9); };
-  /* Foldingen i oppslaget (0–1): null gjennom nedslaget, mest rundt 40 % inn i oppslaget, ute igjen før toppen (en glatt betakurve). */
-  X.fly.fb = u => { const x = (((u % 1) + 1) % 1 - 0.5) / 0.5; return x <= 0 || x >= 1 ? 0 : Math.pow(x / 0.4, 2.5) * Math.pow((1 - x) / 0.6, 3.75); };
+  /* Foldingen i oppslaget (0–1): null gjennom nedslaget, mest rundt 40 % inn i oppslaget, ute igjen før toppen (en glatt betakurve). Rettet i Articuno del 2 (Opus 25.11 natt):
+     den starter litt før bunnen (u 0,46, håndleddet begynner å bøyes mens nedslaget slutter) og vokser roligere (eksponent 2,6 og toppen på u 0,72), så underarmen og hånda
+     ikke får en spiss i farten i starten av hvert oppslag (selvsjekken: rykk i alle flyutsnitt; største akselerasjon i folden 44 % lavere, største fart 23 % lavere). */
+  X.fly.fb = u => { const y = ((((u % 1) + 1) % 1) - 0.46) / 0.52; return y <= 0 || y >= 1 ? 0 : Math.pow(y / 0.5, 2.6) * Math.pow((1 - y) / 0.5, 2.6); };
   /* Lasten (−0,3…1): sin² av slaget, positiv i nedslaget og svakere motsatt vei i oppslaget (vingen er foldet og fjærene åpne). up: oppslaget alene (0–1). */
   const sgn = u => Math.tanh(6 * sin(TAU * u)) / Math.tanh(6);
   X.fly.ld = u => { const s = sin(TAU * u); return s * s * (0.35 + 0.65 * sgn(u)); };

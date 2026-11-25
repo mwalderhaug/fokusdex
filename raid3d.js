@@ -830,7 +830,7 @@ void main(){ float x = 1. - abs(vQ.x * 2. - 1.), a = x * x * (1. - vQ.y) * (1. -
     const D = DEF[id], S = D && D.S; if (!S || G.dead) return null;
     try {
       scale(rs || 1);
-      const fps = D.fps || 30, tq = floor(t * fps + 1e-6) / fps, sp = D.spr, fsc = sp ? 1 : D.fig || 1, RF = figRT(fsc);   /* kampen (spr) er alltid i 256 × 192: samme korn som frontspritene */
+      const fps = (typeof D.fps === 'function' ? D.fps(t) : D.fps) || 30, tq = floor(t * fps + 1e-6) / fps,   /* D.fps kan være en funksjon av tiden (Articuno del 2, forsøket '60': stupet mot kameraet i 60 bilder i sekundet) */ sp = D.spr, fsc = sp ? 1 : D.fig || 1, RF = figRT(fsc);   /* kampen (spr) er alltid i 256 × 192: samme korn som frontspritene */
       o = Object.assign({}, o || {}, { out: (o && o.out) || G.out || 0 });
       /* Samme bilde som sist (filmen går i 30 bilder i sekundet, skjermen ofte i 60): lerretet står som det er. */
       const key = id + '|' + floor(tq * fps + 0.5) + '|' + (rs || 1) + '|' + o.out.toFixed(3); if (key === lastKey && !D.live) return cv; lastKey = '';
