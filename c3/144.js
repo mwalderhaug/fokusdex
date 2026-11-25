@@ -91,7 +91,8 @@
       tuck: { fw: [-20, -50, 35, -65, -80, -85], di: [0, 4, 8, 2, 0, 0], tw: [0, 0, 0, 0, 0, 0] },                  /* kuppet / M-form: vingene feid bakover */
       stoop: { fw: [-35, -75, 55, -80, -88, -92], di: [0, 8, 14, 10, 6, 4], tw: [0, 0, 0, 0, 0, 0] },                /* dråpen: lagt helt inntil kroppen, hånda langs halen */
       open: { fw: [15, 30, 38, 36, 30, 26], di: [0, -4, -6, -6, -4, -2], tw: [0, 0, 0, 0, 0, 0] },                  /* brølet: vingene helt ut og høyt */
-      mant: { fw: [8, 6, 26, -8, -36, -48], di: [-6, -20, -30, -38, -40, -40], tw: [0, 4, 8, 12, 14, 14] } },       /* forvarselet: trukket fram rundt kroppen */
+      mant: { fw: [8, 6, 26, -8, -36, -48], di: [-6, -20, -30, -38, -40, -40], tw: [0, 4, 8, 12, 14, 14] },        /* forvarselet: trukket fram rundt kroppen */
+      brake: { fw: [26, 30, 26, 20, 14, 8], di: [8, 6, 2, -2, -4, -2], tw: [0, 2, 4, 6, 8, 10] } },                  /* bremsen (del 2, ar32): vingene ført fram og spredt helt ut, litt kuppet */
     lag: [0, 0.01, 0.05, 0.1, 0.135, 0.19], fa: [0.5, 1, 1.06, 1.14, 1.22, 1.32], fm: [0.06, 0.14, 0.14, 0.1, 0.06, 0],
     fs: [0.14, 0.28, 0.28, 0.28, 0.28, 0.28], ft: [0.05, 0.1, 0.18, 0.28, 0.4, 0.5],
     ff: [0, -18, 14, -30, -48, -58], fd: [0, 0, 3, -6, -12, -16], fq: [0, 0, -4, -8, -14, -18],
@@ -103,7 +104,10 @@
      styrken (ikke ett slag ganget opp), nedslagets andel etter oppgaven, kroppen som gynger mot slaget og hodet som står (nakken tar gyngingen). Banen, tidene, stillingene,
      halen og kameraene er dagens, og bunnen av nedslaget ligger fortsatt på B0 + k · HP. Fuglelaben (work/g3d/www/fuglelab.js) viser hver måte å fly på. */
   const altv = () => String((G3D.alt && G3D.alt[144]) || ''), STIV = () => /stiv|gammel/.test(altv());
-  BIRD.fly = { foldMax: 0.85, hold: { neck: 'Neck', head: 'Head', max: 0.22, g: 0.45 } };   /* en stor seiler: mindre fold (Baliga m.fl. 2019); nakken er kort (0,3 m), så hodet tar rundt halve gyngingen */
+  BIRD.fly = { foldMax: 1, hold: { neck: 'Neck', head: 'Head', max: 0.22, g: 0.45 },   /* ar32: foldingen helt ut (før 0,85; Jazz 25.11: «ser ikke forskjell») */
+    /* Nakkens form (ar32; X.fly.neck2 og nlim i raid3c.js): ryggleddet foran nakken og nakken fram, hodet i linje med kroppen og nebbet litt ned (i flukt), og nakken fram foran
+       brystet med nebbet vannrett når den står oppreist; grensen: nakken aldri over 5° mot ryggen fra kroppens akse (myk fra −5°), hodet aldri over 80° bakover fra nakken. */
+    form: { fly: [23, 18, 15], up: [15, 30, 20], hi: 5, knee: 10, hb: 80, hbk: 20 } };   /* nakken er kort (0,3 m), så hodet tar rundt halve gyngingen (hold.g) */
   const FSETS = X.fly.sets(BIRD.fly.sets);
   /* Styrken (0 glid, 1 svakt, 2 marsj, 3 kraft), lagt etter dagens utslag (AMP): det første slaget etter et glid er sterkest og avtar slag for slag (Berg og Biewener 2010). */
   const KK = X.fly.trk([[-3, 2.1], [-0.45, 2.15], [-0.15, 2.7], [0.45, 2.7], [1.0, 0], [3.9, 0], [4.5, 2.4], [5.6, 2.1], [9.9, 2.05], [10.9, 1.9], [11.45, 0.35], [12.6, 0.35], [13.3, 3.0], [14.15, 3.0],
@@ -139,14 +143,26 @@
      · bremsen og svevingen: større slag (Jazz: «bremser med store slag»), kroppen går i en ellipse (ikke rett opp og ned), beina og halens sving starter mykt
      · brølet: kjeven og hodet først, så skuldrene, underarmen og hånda ett og to bilder etter (pisken utover, med overskudd), kroppen og halen sist; den lener seg mot oss
      · blikket i korte, myke skift med ro imellom, og små blikk i svevingen etter navnet
-     · halen etter farten (research/lange_haler.md), kameraene med liv som vinkler, og is og tåke etter forskningen (REGLER del 4 «Articuno») */
+     · halen etter farten (research/lange_haler.md), kameraene med liv som vinkler, og is og tåke etter forskningen (REGLER del 4 «Articuno»)
+     Etter Jazz sin tilbakemelding 25.11 kveld (ar32; «ser ikke spesielt forskjell … Nakken … bøyd alt for mye bakover … landingen»), også bak bryteren:
+     · nakken fram og hodet i linje med kroppen, nebbet vannrett eller litt ned, og en grense i riggen så den aldri knekker bakover (X.fly.neck2 og nlim, BIRD.fly.form)
+     · en ekte, tung bremselanding i lufta (KB, FSETSB, BIRD.poses.brake): kroppen reiser seg bratt, vingene fram og helt ut i store bremseslag, halen fram og ned, føttene fram
+     · de nye vingene også i forvarselet og brølet (samme rekkefølge og tider), større slag og løft i svevingen, og vingen foldes og spres tydelig (flyriggens sett, spr) */
   const P2 = k => { const a = altv(); return !/stiv|gammel|del1/.test(a) && !(k && a.indexOf('g' + k) >= 0); };
   /* Styrken i del 2: som KK, men glid er glid (0, ikke 0,3–0,35: det ga et jevnt småflaks på ±3° i glidet). */
   const KK2 = X.fly.trk([[-3, 2.1], [-0.45, 2.15], [-0.15, 2.7], [0.45, 2.7], [1.0, 0], [3.9, 0], [4.5, 2.4], [5.6, 2.1], [9.9, 2.05], [10.9, 1.9], [11.45, 0], [12.6, 0], [13.3, 3.0], [14.15, 3.0],
     [14.7, 2.45], [17.0, 2.4], [17.8, 0], [21.6, 0], [22.0, 1.0], [24.6, 1.0], [24.95, 2.95], [26.1, 2.7], [26.5, 2.6], [27.05, 2.6], [27.35, 0], [F0E - 0.2, 0], [F0E + 0.9, 2.3]]);
   /* Slagsettene i del 2: større i kraft og sveving enn standarden for en stor fugl (Jazz 24.11: «bremser med store slag», «raskere og mer intenst»; spissen i bremsen var 7,1 m
      opp–ned i del 1 mot 9,0 i dag). Bare kraft og sveving: marsj og svakt er som i del 1 (store fugler slår smått når de ikke trenger kraften). */
-  const FSETS2 = X.fly.sets({ p: { el: 52, em: 7 }, h: { el: 33 } });
+  const FSETS2 = X.fly.sets({ p: { el: 52, em: 7 }, h: { el: 40, hv: 0.36, fold: 0.8, pt: 4.5 } });   /* ar32: svevingen med større slag og et tydelig løft (Jazz 25.11: «ser ikke forskjell»; før ±33° og 0,22 m) */
+  /* Bremselandingen i lufta (ar32; Jazz 25.11: «Føler verken landingen til articuno …»; ørn, svane og trane, research/svevende.md og RAIDS3D «Fugleflukt», Brems og landing):
+     kroppen reiser seg bratt, vingene føres fram (BIRD.poses.brake og ex.fw) og spres helt ut i store bremseslag som skyver lufta fram (slaget i kroppens ramme i kraft, ax 0,
+     og mest langs kroppen når den står, ax 0,7), spissene bøyes opp av lasten og fjærene åpnes i oppslaget, kroppen løftes og senkes med slaget, halen svinger fram og ned og vris flat mot lufta, og føttene
+     kommer fram. KB er bremsens vekt (fra Ice Beam slipper til svevingen har tatt over); slagene ligger der de lå (bunnene 25,00 · 25,70 · 26,39 · 27,09). */
+  const KB = s => sm5(seg(s, 24.85, 25.3)) * (1 - sm5(seg(s, 26.55, 27.0)));
+  const FSETSB = X.fly.sets({ p: { el: 62, em: 12, sw: 30, sp: 0.24, tw: 18, fold: 1, curl: 38, cb: 12, slot: 28, rv: 0.25, ds: 0.58, lag: 0.04, hv: 0.6, pt: 7, sg: 0.32, ax: 0, spr: 26 },
+    h: { el: 56, em: 6, sw: 30, sp: 0.26, tw: 18, fold: 0.9, curl: 32, cb: 10, slot: 30, rv: 0.2, ds: 0.6, lag: 0.04, hv: 0.55, pt: 6, sg: 0.1, ax: 0.7, spr: 22 } });
+  const setsMix = (A, Bs, x) => { if (x <= 0) return A; const S = {}; for (const k in A) { S[k] = {}; for (const key in A[k]) S[k][key] = mix(A[k][key], Bs[k][key], x); } return S; };
   /* Rettelsene i glid (faste hendelser, [låtas tid, type, styrke]): to små styringer i stupet, et vindkast over innsjøen (sett ovenfra), og vingene felles og ett rykk i
      én vinge i klatringen og vingeoveren. Varigheten 0,8 s (en ørn 0,35 s, ganget med √størrelse). */
   const GUST = [[2.12, 'venstre', 0.35], [2.5, 'høyre', 0.3], [11.6, 'kast', 0.9], [18.3, 'tuck', 0.8], [19.5, 'høyre', 0.6]], gustAt = s => X.fly.gust(s, { ev: GUST, dur: 0.8 });
@@ -154,7 +170,8 @@
   const recoil = a => a <= 0 ? 0 : (1 - Math.exp(-(a / 0.09) * (a / 0.09))) * Math.exp(-a / 0.35) * cos(TAU * 1.4 * a);
   const brace = s => 0.45 * Math.pow(sin(PI * c01((s - 22.15) / 0.8)), 2);
   const nbeat2 = (s, sp, uf) => {
-    return { v: VB(s), k: KK2(s), hov: uf, spd: sp, load: LD(s) + brace(s), cup: CUP(s), gust: gustAt(s), S: FSETS2 }; };
+    const kb = KB(s), fw = 1 - sm5(seg(s, 26.95, 27.25)) * (1 - sm5(seg(s, F0E - 0.2, F0E + 0.6)));   /* ar32: det siste bremseslaget går rett over i forvarselet uten å foldes (vingene blir liggende fram) */
+    return { v: VB(s), k: KK2(s), hov: uf, spd: sp, load: LD(s) + brace(s) + 0.35 * kb + 0.5 * OPEN2(s), cup: CUP(s), gust: gustAt(s), S: setsMix(FSETS2, FSETSB, kb), kb, fold: fw }; };   /* ar32: bremsen og brølet spriker med fjærene */   /* ar32: bremsen og brølet spriker med fjærene */
   /* Glidet etter farten: hånda feies inn jo raskere det går (en glatt funksjon av farten, oppå dagens nøkler). */
   const SWV = sp => 0.25 * sm5(c01((sp - 12) / 25));
   /* Brølet i del 2: kjeven og hodet starter halvannet bilde før skriket med null fart (sm5), halvåpen 0,05 s etter; vingene ut med null fart i starten og et overskudd på 10 %
@@ -185,10 +202,12 @@
   /* rt: brølet holdes med vingene helt ut, og kraften i brølet får dem til å dirre (en liten bølge utover, under 3 Hz), i stedet for å stå helt stille i 1,4 s. */
   const RW = [0.3, 0.5, 0.65, 0.8, 0.9, 1];
   const life = (P, k, q) => { const s = q.s, tr = q.trem || 0, ai = q.ail || 0, rt = q.rt || 0; if (!tr && !ai && !rt) return P; const ph = k ? 1.7 : 0;
-    for (let i = 0; i < 6; i++) { P.tw[i] += (tr * HW[i] * (0.6 * sin(TAU * 2.3 * s + ph) + 0.4 * sin(TAU * 1.55 * s + 0.9 + ph * 1.7)) + (k ? 1 : -1) * ai * AW[i] + rt * RW[i] * 1.2 * sin(TAU * 2.2 * s - 0.35 * i + ph)) * DGR;
-      P.di[i] += (tr * HW[i] * 0.6 * sin(TAU * 1.9 * s + 2.1 + ph) + rt * RW[i] * 0.8 * sin(TAU * 1.7 * s + 1.3 - 0.3 * i + ph)) * DGR; }
+    for (let i = 0; i < 6; i++) { P.tw[i] += (tr * HW[i] * (0.6 * sin(TAU * 2.3 * s + ph) + 0.4 * sin(TAU * 1.55 * s + 0.9 + ph * 1.7)) + (k ? 1 : -1) * ai * AW[i] + rt * RW[i] * 2.4 * sin(TAU * 2.2 * s - 0.35 * i + ph)) * DGR;   /* ar32: holdet dirrer synlig (før 1,2°) */
+      P.di[i] += (tr * HW[i] * 0.6 * sin(TAU * 1.9 * s + 2.1 + ph) + rt * RW[i] * 1.8 * sin(TAU * 1.7 * s + 1.3 - 0.3 * i + ph)) * DGR; }
     return P; };
 
+  /* Bremsens stilling i blandingen (ar32): de andre stillingene ganges ned, og bremsen kommer inn med vekten (summen er fortsatt 1). */
+  const brakeW = (w, kb) => { const o = {}; for (const k in w) o[k] = w[k] * (1 - 0.85 * kb); o.brake = 0.85 * kb; return o; };
   /* Rykket i brølet: starter i null (ikke et sprang), slår ut på fire bilder, svinger og faller til ro. */
   const kick = a => a <= 0 ? 0 : (1 - Math.exp(-16 * a)) * (0.3 + 0.7 * Math.exp(-3 * a) * cos(8 * a));
   /* Kroppen på tiden s: midtpunktet, hodets og ryggens retning, og alt vingene, nakken, beina og halen trenger. V = en ny T.Vector3. */
@@ -204,7 +223,7 @@
     const ro = ROLL(s); if (ro > 0 && ro < TAU) u.applyAxisAngle(f, ro);
     const left = V(0, 0, 0).crossVectors(u, f), aoa = 0.03 + 5 / (sp * sp + 30); f.applyAxisAngle(left, -aoa); u.applyAxisAngle(left, -aoa);   /* nesen litt opp, mest når det går sakte */
     /* Oppreist: hodet opp og litt fram mot din Pokémon; den reiser seg forbi og faller til ro (overskudd). */
-    const E = 1.25 + 0.22 * Math.pow(sin(PI * c01((s - 25.5) / 0.9)), 2) - (p2 ? 0.09 * LEAN(s) : 0),   /* sin²: starter og slutter i ro (før en knekk på 25,5 og 26,4); del 2: lener seg mot oss etter brølet */ hf = V(sin(HYAW) * cos(E), sin(E), cos(HYAW) * cos(E)), hu = V(-sin(HYAW) * sin(E), cos(E), -cos(HYAW) * sin(E));
+    const E = 1.25 + 0.22 * Math.pow(sin(PI * c01((s - 25.5) / 0.9)), 2) - (p2 ? 0.09 * LEAN(s) - 0.16 * Math.pow(sin(PI * c01((s - 25.3) / 1.15)), 2) : 0),   /* sin²: starter og slutter i ro (før en knekk på 25,5 og 26,4); del 2: lener seg mot oss etter brølet */ hf = V(sin(HYAW) * cos(E), sin(E), cos(HYAW) * cos(E)), hu = V(-sin(HYAW) * sin(E), cos(E), -cos(HYAW) * sin(E));
     if (uf > 0) { const m = new T.Matrix4(), qa = new T.Quaternion().setFromRotationMatrix(m.makeBasis(V(0, 0, 0).crossVectors(u, f), u, f)), qb = new T.Quaternion().setFromRotationMatrix(m.makeBasis(V(0, 0, 0).crossVectors(hu, hf), hu, hf));
       qa.slerp(qb, uf); f.set(0, 0, 1).applyQuaternion(qa); u.set(0, 1, 0).applyQuaternion(qa); }
     const bk2 = bankAt(s + 0.05, T, LB) - bankAt(s - 0.05, T, LB), kr = Math.tanh(Math.atan2(sin(bk2), cos(bk2)) / 0.1 / 1.4) * (1 - uf);   /* rullefarten (rundt 0,76 ved 80 °/s mot høyre; myk grense, ingen knekk) */
@@ -217,7 +236,8 @@
     const hv = -cos(TAU * (us - 0.12)) * (A * 0.42 + Ah * 0.55), P = V(q.p[0], q.p[1], q.p[2]).addScaledVector(V(0, 0, 0).copy(u).lerp(Y, uf).normalize(), hv).addScaledVector(f, 0.3 * A * sin(TAU * (us - 0.3)) * (1 - uf));
     /* Det nye vingeslaget (ikke 'stiv'): samme stillinger og samme sving (ex), slaget fra flyriggen 2 og kroppen som gynger mot det. Den ytre vingen slår hardest inn i
        svingen og den indre ut av den: ruller den mot høyre (kr > 0), er venstre den ytre, så asym = −0,55 · kr (fortegnet var snudd før kontrollen 25.11). */
-    let nw = null; if (!STIV()) { const n0 = p2 ? nbeat2(s, sp, uf) : nbeat(s, sp, uf), a = -0.55 * kr, nst = Object.assign(n0, { w: st.w, ex: sL.ex, asym: a }), nsr = Object.assign({}, n0, { ex: sR.ex }), b = X.fly.body(nst, p2 ? FSETS2 : FSETS);
+    let nw = null; if (!STIV()) { const n0 = p2 ? nbeat2(s, sp, uf) : nbeat(s, sp, uf), a = -0.55 * kr, kb = n0.kb || 0, wb = kb ? brakeW(st.w, kb) : st.w, xf = 0.42 * kb;   /* ar32: bremsen (vingene fram og spredt) */
+      const nst = Object.assign(n0, { w: wb, ex: xf ? { di: sL.ex.di, fw: (sL.ex.fw || 0) + xf } : sL.ex, asym: a }), nsr = Object.assign({}, n0, { ex: xf ? { di: sR.ex.di, fw: (sR.ex.fw || 0) + xf } : sR.ex }), b = X.fly.body(nst, p2 ? nst.S : FSETS);
       nw = { st: nst, sR: nsr, b };
       /* del 2, aksenten: tre frosne bilder i bunnen av det tunge slaget: vingene og kroppens løft står (alt vingene får, fra bildet slaget traff), og tar igjen tiden på 0,3 s;
          banen, halen, isen og kameraet går videre */
@@ -240,7 +260,7 @@
     const wD = p2 && s > 27.72 && s < 28.28 ? [wAt(s - 1 / 30, s), wAt(s - 2 / 30, s - 1 / 30), wAt(s - 3 / 30, s - 2 / 30)] : null, gu = nw && nw.st.gust;
     const rt = p2 ? sm5(seg(s, L.roar + 0.3, L.roar + 0.55)) * (1 - sm5(seg(s, L.name - 0.1, L.name + 0.4))) : 0; if (rt) np += 0.02 * rt * sin(TAU * 2.4 * s);   /* hodet dirrer også, litt */
     const xt = p2 ? { p2, wD, rt, trem: 2.0 * STP(s) * c01((sp - 18) / 12) * (1 - uf), ail: 8 * AIL(s) * (1 - uf), px: -0.06 * (nw ? nw.rc : 0) + 0.035 * (gu ? gu.nose : 0) } : null;
-    return Object.assign({ s, P, f, u, sp, uf, st, sL, sR, kr, np, nr, ny, nw, lg: 1 - uf - 0.35 * Math.pow(sin(PI * c01((s - 25.2) / 1.1)), p2 ? 2 : 1), jaw: max(0.42 * io(seg(s, BM.ch, BM.on)) * (1 - (p2 ? sm5(seg(s, BM.end - 0.02, BM.off + 0.1)) : seg(s, BM.end, BM.off))), 0.52 * rr), rr, aim, bw, A, Ah, us, mt }, xt); };
+    return Object.assign({ s, P, f, u, sp, uf, st, sL, sR, kr, np, nr, ny, nw, lg: p2 ? 1 - uf - 1.15 * Math.pow(sin(PI * c01((s - 25.1) / 1.5)), 2) : 1 - uf - 0.35 * sin(PI * c01((s - 25.2) / 1.1)), jaw: max(0.42 * io(seg(s, BM.ch, BM.on)) * (1 - (p2 ? sm5(seg(s, BM.end - 0.02, BM.off + 0.1)) : seg(s, BM.end, BM.off))), 0.52 * rr), rr, aim, bw, A, Ah, us, mt }, xt); };
   /* Halen (Jazz 24.11: «Halen må være bevegelig slik som den er ment å være»): i modellen er den en rett, flat kniv med 19 ledd, og den er ment som et langt bånd
      («streamer») som blafrer og bølger bak den. Hvert ledd får en retning i verden og en vridning:
      · grunnlinja er banen den nettopp fløy (leddet peker dit kroppen var litt før), så halen legger seg i svingene, i stupet og i rullen
@@ -283,7 +303,7 @@
     /* Bølgens fase ut langs halen: c(x) = √((0,72 · U)² + g · x) med x målt fra tuppen (en hengende kjede når det går sakte), integrert fra roten: φ(x0) = 2π · f · (2/g) · (√(a² + g · L) − √(a² + g · (L − x0))).
        Endelig også når den står i lufta, og den endrer seg rolig når farten faller (fasen 2π · f · x0 / (0,72 · U) fór av gårde i bremsen). */
     const phx = x0 => (2 / 9.81) * (rL - Math.sqrt(a2 + 9.81 * max(0, LT - x0)));
-    const a8 = s - 26.8, swing = 0.9 * Math.pow(sin(PI * c01((s - 25.3) / 1.5)), 2) + (a8 > 0 ? 0.2 * sm5(c01(a8 / 0.3)) * Math.exp(-a8) * sin(TAU * 0.42 * a8) : 0), kk = kick2(s - L.roar - 0.07);
+    const kb = KB(s), a8 = s - 26.8, swing = (0.9 + 0.35 * kb) * Math.pow(sin(PI * c01((s - 25.3) / 1.5)), 2) + (a8 > 0 ? 0.2 * sm5(c01(a8 / 0.3)) * Math.exp(-a8) * sin(TAU * 0.42 * a8) : 0), kk = kick2(s - L.roar - 0.07);   /* ar32: i bremsen svinger halen lenger fram og ned */
     const b = new T.Vector3(), b0 = new T.Vector3(), n = new T.Vector3(), sd = new T.Vector3(), h = new T.Vector3(), dn = new T.Vector3();
     const R = x => { const p = path(x), hv = hvAt(x, q.sp, q.uf); return [p[0] + q.u.x * hv, p[1] + q.u.y * hv, p[2] + q.u.z * hv]; };
     let ra = R(s - 0.07); const hu = q.nw ? q.nw.b.u : q.us, ah = q.nw ? 0.34 * c01(KK2(s) / 2.6) * q.uf : q.Ah;   /* når den henger: slaget fra det nye vingeslaget (dagens fase har en knekk i hver bunn) */
@@ -298,9 +318,9 @@
       const ps = env * slow * (0.24 * sin(2.9 * t - 0.63 * ph) + 0.08 * sin(6.1 * t - 1.33 * ph + 2)) + fl * tz * 0.06 * calm * sin(TAU * 1.9 * t - 1.9 * pf + 2.2);
       const d = b.clone().multiplyScalar(cos(th) * cos(ps)).addScaledVector(n, sin(th)).addScaledVector(sd, sin(ps) * cos(th));
       let tw = w * (0.5 + 0.95 * sin(1.25 * t - 2.4 * w)) * (1 - hang) * (0.55 + 0.45 * slow) * (1 - 0.7 * st);
-      if (hang > 0) { const a = 0.44 + 2.25 * Math.pow(w, 1.15) + 0.22 * sin(1.5 * t - 3 * w) + 0.3 * ah * sin(TAU * (hu - 0.25) - 2.2 * w) * w, sg = 1.0 * cos(PI * w * 1.15) + 0.18 * sin(1.15 * t - 2.6 * w);
+      if (hang > 0) { const a = 0.44 + 2.25 * Math.pow(w, 1.15) + 0.22 * sin(1.5 * t - 3 * w) + 0.3 * ah * sin(TAU * (hu - 0.25) - 2.2 * w) * w, sg = (1.0 + 0.5 * kb) * cos(PI * w * 1.15) + 0.18 * sin(1.15 * t - 2.6 * w);   /* ar32: bremsen sprer båndet ut til siden */
         h.copy(Y).multiplyScalar(-cos(a)).addScaledVector(fh, -0.75 * sin(a)).addScaledVector(lf, sg * sin(a)).addScaledVector(fh, swing * (1 - w * 0.5) * sin(PI * min(1, w * 1.6)) - 1.1 * kk * w);
-        d.lerp(h.normalize(), hang); tw += hang * w * 0.4 * sin(0.9 * t - 2 * w); }
+        d.lerp(h.normalize(), hang); tw += hang * w * (0.4 * sin(0.9 * t - 2 * w) + 1.1 * kb * sm5(c01(w * 1.4))); }   /* ar32: og vrir det flatt mot lufta */
       D.push(d.normalize()); TW.push(tw); }
     TD2 = { s, r: [D, TW] }; return TD2.r; };
   const pose = (g, bd, q, T, t) => { neckW(q.uf);
@@ -309,11 +329,15 @@
       /* Forvarselet og brølet (godkjent) er dagens: der slaget står stille (27,2 til F0E), står vingene som i dag, med dagens fold i den frosne fasen (rw tones inn og ut).
          Rettet etter kontrollen 25.11: blandingen går mot dagens faktiske vinger (med dagens siste slag som dør ut, og fasen som stanser mykt) og er ferdig før styrken faller
          (26,9–27,15): det nye slaget foldet seg ut når styrken falt (folden følger styrken), og hånda slo 11–13° fram og tilbake på 0,2 s (0:29,93–0:30,10; dagens ±1,5°). */
-      const rw = sm5(seg(q.s, 26.9, 27.15)) * (1 - sm5(seg(q.s, F0E - 0.2, F0E + 0.6))), wg = k => { const Pn = bd.beat(k ? q.nw.sR : q.nw.st, k); if (rw <= 0) return life(Pn, k, q);
+      /* Del 2 (ar32; Jazz 25.11: «Føler verken landingen … og noen bevegelser ikke er forskjellig i det hele tatt»): de nye vingene også i forvarselet og brølet (rw = 0), med
+         rekkefølgen og tidene som før: skuldrene, underarmen og hånda ett, to og tre bilder etter hodet (q.wD), og liv i holdet (life). */
+      const rw = q.p2 ? 0 : sm5(seg(q.s, 26.9, 27.15)) * (1 - sm5(seg(q.s, F0E - 0.2, F0E + 0.6))), wg = k => { const s0 = k ? q.nw.sR : q.nw.st, Pn = bd.beat(s0, k);
+        if (q.p2 && q.wD) q.wD.forEach((w, j) => { const Pd = bd.beat(Object.assign({}, s0, { w }), k); for (const c of ['fw', 'di', 'tw']) for (let i = 2 * j; i < 2 * j + 2; i++) Pn[c][i] = Pd[c][i]; });
+        if (rw <= 0) return life(Pn, k, q);
         const o0 = k ? q.sR : q.sL, ov = q.s < 27.5 ? { u: q.s < VA1 ? X.bird.warp(VB(q.s) + 0.56, 0.56) : UFZ } : { A: 0, Ah: 0, u: UFZ }, Po = bd.pose(Object.assign({}, o0, ov), k);   /* dagens vinger, med fasen som stanser mykt */
         if (q.wD) q.wD.forEach((w, j) => { const Pd = bd.pose(Object.assign({}, o0, ov, { w }), k); for (const c of ['fw', 'di', 'tw']) for (let i = 2 * j; i < 2 * j + 2; i++) Po[c][i] = Pd[c][i]; });   /* del 2: skuldrene, underarmen og hånda hver sitt bilde */
         for (const c of ['fw', 'di', 'tw']) Pn[c] = Pn[c].map((v, i) => mix(v, Po[c][i], rw)); return life(Pn, k, q); };
-      bd.wings(wg(0), wg(1)).neck(q.np, q.nr, q.ny).hold(b, null, SC, q.uf, pk, px).legs(q.lg); }   /* hodet holder vinkelen mot den vippen kroppen faktisk får */
+      bd.wings(wg(0), wg(1)); (q.p2 ? bd.neck2(q.np, q.nr, q.ny, q.uf, 1 - q.bw) : bd.neck(q.np, q.nr, q.ny)).hold(b, null, SC, q.uf, pk, px); if (q.p2) bd.nlim(); bd.legs(q.lg); }   /* hodet holder vinkelen mot den vippen kroppen faktisk får; del 2 (ar32): nakkens form og grense */
     else { bd.begin().place(q.P, q.f, q.u, SC); bd.q0 = g.root.quaternion.clone(); bd.wings(bd.pose(q.sL, 0), bd.pose(q.sR, 1)).neck(q.np, q.nr, q.ny).legs(q.lg); }
     { const td = q.p2 && P2('hale') ? tailDirs2(q, T, bd, t) : tailDirs(q, T, bd, t); bd.tail(td[0].map(v => bd.local(v)), td[1]); }
     g.add({ Jaw: [0, -q.jaw, 0] }, 1); g.eye(0, q.rr > 0.4 ? 0.75 : (t % 3.7 < 0.1 ? 0.5 : 0)); };
