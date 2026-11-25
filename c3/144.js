@@ -111,6 +111,9 @@
   const LD = X.fly.trk([[24.6, 0], [25.1, 0.8], [26.2, 0.8], [26.8, 0]]);   /* bremsen: spissene opp og fjærene åpne (Carruthers m.fl. 2007) */
   /* Slagene talt fra en bunn (v): hele tall på B0 + k · HP (annethvert slag i låta), som i dag; etter brølet ett slag per takt. */
   const VB = s => s <= 27.2 ? (s - B0) / HP : s < F0E ? (27.2 - B0) / HP : (s - F0E) / (2 * HP) - 0.6;
+  /* Den frosne fasen fra 27,2 (dagens): ny holder den også etter F0E, til vingeslaget har tatt over (dagens hopper til toppen på F0E, så folden i alle vingeleddene
+     hopper i ett bilde på 0:32,47: funnet med selvsjekken, rettet bare i den nye). */
+  const UFZ = X.bird.warp((27.2 - B0) / HP + 0.56, 0.56);
   const nbeat = (s, sp, uf) => ({ v: VB(s), k: KK(s), hov: uf, spd: sp, load: LD(s) });
 
   /* Rykket i brølet: starter i null (ikke et sprang), slår ut på fire bilder, svinger og faller til ro. */
@@ -175,7 +178,11 @@
     return [D, TW]; };
   const pose = (g, bd, q, T, t) => { neckW(q.uf);
     if (q.nw) { const b = q.nw.b, lf = new T.Vector3().crossVectors(q.u, q.f), nose = b.pt * (1 - 0.5 * q.uf);   /* ny: kroppen vipper litt i slaget, og hodet står (nakken tar gyngingen) */
-      bd.begin().place(q.P, q.f.clone().applyAxisAngle(lf, -nose), q.u.clone().applyAxisAngle(lf, -nose), SC); bd.q0 = g.root.quaternion.clone(); bd.wings(bd.beat(q.nw.st, 0), bd.beat(q.nw.sR, 1)).neck(q.np, q.nr, q.ny).hold(b, null, SC, q.uf).legs(q.lg); }
+      bd.begin().place(q.P, q.f.clone().applyAxisAngle(lf, -nose), q.u.clone().applyAxisAngle(lf, -nose), SC); bd.q0 = g.root.quaternion.clone();
+      /* Forvarselet og brølet (godkjent) er dagens: der slaget står stille (27,2 til F0E), står vingene som i dag, med dagens fold i den frosne fasen (rw tones inn og ut). */
+      const rw = sm5(seg(q.s, 27.0, 27.4)) * (1 - sm5(seg(q.s, F0E - 0.2, F0E + 0.6))), wg = k => { const Pn = bd.beat(k ? q.nw.sR : q.nw.st, k); if (rw <= 0) return Pn;
+        const o0 = k ? q.sR : q.sL, Po = bd.pose(Object.assign({}, o0, { A: 0, Ah: 0, u: q.s > 27.2 ? UFZ : o0.u }), k); for (const c of ['fw', 'di', 'tw']) Pn[c] = Pn[c].map((v, i) => mix(v, Po[c][i], rw)); return Pn; };
+      bd.wings(wg(0), wg(1)).neck(q.np, q.nr, q.ny).hold(Object.assign({}, b, { pt: nose }), null, SC, q.uf).legs(q.lg); }   /* hodet holder vinkelen mot den vippen kroppen faktisk får */
     else { bd.begin().place(q.P, q.f, q.u, SC); bd.q0 = g.root.quaternion.clone(); bd.wings(bd.pose(q.sL, 0), bd.pose(q.sR, 1)).neck(q.np, q.nr, q.ny).legs(q.lg); }
     { const td = tailDirs(q, T, bd, t); bd.tail(td[0].map(v => bd.local(v)), td[1]); }
     g.add({ Jaw: [0, -q.jaw, 0] }, 1); g.eye(0, q.rr > 0.4 ? 0.75 : (t % 3.7 < 0.1 ? 0.5 : 0)); };

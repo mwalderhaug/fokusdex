@@ -390,8 +390,11 @@ const G3C = (() => {
       M[key] = mix(v, S.h[key] * (MAG[key] && kk < 1 ? kk : 1), h); }
     if (spd != null) M.ds = max(0.45, M.ds - 0.002 * max(0, spd - 20) * (1 - h));
     return M; };
-  /* Fasen: x = andelen av slaget fra toppen (jevn i tid) → u (0,5 = bunnen etter andelen ds). Glatt (farten i u er en sinus, ingen knekk i toppen og bunnen), og u(ds) = 0,5. */
-  X.fly.u = (ph, ds) => { const x = ((ph % 1) + 1) % 1, d = ds == null ? 0.5 : ds, c = TAU * (d - 0.5) / (1 - cos(TAU * d)); return x - c * (1 - cos(TAU * x)) / TAU; };
+  /* Fasen: x = andelen av slaget fra toppen (jevn i tid) → u (0,5 = bunnen etter andelen ds). Hver halvdel går med sin egen jevne fart, så farten i vingen er størst midt i
+     slaget også når nedslaget er langt (en sinus-warp flatet den ut: «flatt» i selvsjekken); farten skifter mykt (sm5) i de ytterste 6 % av nedslaget, der vingen nesten står
+     i vendingen, så akselerasjonen ikke hopper. u(ds) = 0,5 og u(1) = 1. */
+  X.fly.u = (ph, ds) => { const x = ((ph % 1) + 1) % 1, d = ds == null ? 0.5 : ds, e = 0.06, au = 0.5 / (1 - d), ad = au + (1 - au) / (d - e), P = t => t * t * t * t * (t * (t - 3) + 2.5);
+    const I = x <= e ? e * P(x / e) : x <= d - e ? x - 0.5 * e : x <= d ? d - e - e * P((d - x) / e) : d - e; return au * x + (ad - au) * I; };
   /* Slagets form: cosinus med kortere vendinger (rv > 0: litt mot en trekant, toppen av farten bredere), 1 i toppen og −1 i bunnen. */
   X.fly.E = (u, rv) => { const th = TAU * u, r = rv || 0; return (cos(th) + r * cos(3 * th) / 9) / (1 + r / 9); };
   /* Foldingen i oppslaget (0–1): null gjennom nedslaget, mest rundt 40 % inn i oppslaget, ute igjen før toppen (en glatt betakurve). */
