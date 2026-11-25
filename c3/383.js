@@ -323,8 +323,8 @@ void main(){ float y = vUv.y, x = vUv.x * 6.2832; vec2 c = vec2(cos(x), sin(x));
   const MVP = (() => { const S = PT.S, W = PT.W, Qc = PT.Q, R = PT.R, E = PT.E, J = v => ({ Jaw: [0, v, 0] }), pd = [[PDUCK, 1]], sta = [[PDUCK, 0.2], [J(-0.16), 1]],
       kr = [[PDUCK, 1.28], [PKROK, 1], [J(-0.24), 1]], ser = [[PDUCK, 0.08], [{ Head: [0, 0, -0.05] }, 1]], ses = [[PDUCK, 0.2], [J(-0.16), 1], [{ Head: [0, 0, -0.04] }, 1]], sen = [[PDUCK, 0.2], [{ Neck1: [0, 0, -0.03] }, 1]], pb = k => [[PDUCK, 0.2], [PBROL, k]], pv = k => [[PDUCK, 0.2], [PBROL, k], [PVRI, 1]], ende = [[PDUCK, 0.2], [PBROL, 0.7], [PVRI, 1], [J(-0.048), 1]];
     /* Retting etter kontrollen 25.11: brølet kom 0,2–0,45 s etter cymbalslaget (kjeven halvåpen først 10,22, armene ute først 10,5). Nå: krøket er forvarselet, og alt
-       slippes på slaget med korte nøkler og stivere fjærer: kjeven halvåpen rundt 10,05, brystet, nakken og armene halvveis rundt 10,08–10,1, hodet 10,12, klørne sist;
-       toppen 0,05–0,15 s senere enn den gamle back(), og overskuddet fra fjærene. Reisingen fikk et lite dykk før (8 %, 0,28 s) og går litt forbi når han er oppe. */
+       slippes på slaget med korte nøkler og stivere fjærer: kjeven åpner seg fra 9,88 og er halvåpen rundt 10,03, brystet halvveis 10,06, armene 10,07, nakken 10,09, hodet 10,11, klørne sist;
+       toppen 0,05–0,15 s senere enn den gamle back(), og overskuddet fra fjærene. Reisingen fikk et lite dykk før (10 %, 0,27 s) og går litt forbi når han er oppe. */
     const kn = [[PDUCK, 1], [{ '*Hand': [-0.16, 0, 0] }, 1]], ko = [[PDUCK, 0.2], [{ '*Hand': [0.07, 0, 0] }, 1]], dd = [[PDUCK, 1.1]], up = k => [[PDUCK, k], [J(-0.16), 1]], upn = k => [[PDUCK, k], [{ Neck1: [0, 0, -0.03] }, 1]];
     const G = fjaerer(BENP, {
       ch: [[S + 0.1, pd], [S + 0.13, pd], [S + 0.4, dd], [W - 0.4, up(0.13), opp2], [W - 0.05, sta], [Qc, sta], [R - 0.34, kr, dyk], [R - 0.06, kr], [R + 0.07, pb(1)], [R + 0.32, pv(1)], [R + 1.3, pv(1.04)], [R + 2.6, pv(1)], [E, ende]],
