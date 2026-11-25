@@ -608,7 +608,11 @@ function fresh() {
     /* diff: vanskelighetsgrad (0 Easy, 1 Normal, 2 Hard). hfx/hty: vis effektivitet på angrepene og typer i kamp. */
     diff: 1, hfx: 1, hty: 1,
     /* isn: introene spilleren har sett helt ut, per art ({ 493: 1 }): en intro med noskip (Arceus) kan hoppes over hele veien fra andre gang (legendIntro i bui.js). */
-    isn: {}
+    isn: {},
+    /* sndc: lyden er avgjort (v95, Jazz 25.11: «Lyden skal være på som standard for nye spillere etter sync er skrudd på»). 0 = ikke ennå: lyden står som den
+       er (av for en ny spiller), og første gang Sync kobles til, slås den på (ghLink). 1 = spilleren har slått den av eller på selv (Settings, eller knappen
+       på hodetelefonkortet), 2 = slått på da Sync ble koblet til. */
+    sndc: 0
   };
 }
 let S = fresh();
@@ -643,6 +647,9 @@ const LNO = {
   'Headphones recommended': 'Hodetelefoner anbefales',
   'A lot of time and planning has gone into developing and designing the intros. Headphones give the best experience.': 'Det er brukt mye tid og planlegging på å utvikle og designe introene. Hodetelefoner gir den beste opplevelsen.',
   'Take your time. The intro starts when you tap Continue.': 'Ta den tiden du trenger. Introen starter når du trykker på Continue.',
+  'Sound is off.': 'Lyden er av.',
+  'Turn on sound': 'Slå på lyden',
+  'Sound is on.': 'Lyden er på.',
   // v86: Electivire som kom tilbake (backSheet i ui.js)
   'Your Electivire is back': 'Electivire-en din er tilbake',
   'A trade took your shiny Electivire by mistake. Here it is again: shiny, Lv {lv}, with full IVs like every shiny.': 'Et bytte tok den shiny Electivire-en din ved et uhell. Her er den igjen: shiny, nivå {lv}, med full IV som alle shiny.',
@@ -1875,6 +1882,9 @@ async function ghLink(use, o) {
   if (use === 'remote' && o) { const p = S; try { localStorage.setItem(KEY + '.bak', JSON.stringify(S)); } catch (_) {} adopt(o); carry(p); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (_) {} }
   else if (o) S.rev = Math.max(S.rev, o.rev || 0) + 1;
   GH.ok = 1; ghStore(); ghState = 'ok';
+  /* LYDEN PÅ VED FØRSTE SYNK (v95, Jazz 25.11): første gang denne lagringen kobles til, og spilleren ikke selv har valgt lyd av eller på (S.sndc), slås lyden
+     på. En lagring som hentes fra GitHub (remote), har vært synket før og står som den er. */
+  if (use !== 'remote' && !S.sndc) { S.sndc = 2; S.sound = 1; save(true); }
   if (use !== 'remote') await ghPush();
 }
 async function ghPull() {

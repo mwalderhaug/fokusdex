@@ -1881,11 +1881,12 @@ function meet(e) {
   sfx.appear(); cry(E.e.id, 650);
   setTimeout(() => { E.busy = false; aim(); }, MEETQ[encQ(E.e) ? 0 : 1]);
 }
-/* Hvem den legendariske er, vises først her: filmen dens spilles (den samme som i et raid), og så står den i gresset. */
+/* Hvem den legendariske er, vises først her: hodetelefonkortet, filmen dens (den samme som i et raid), og så står den i gresset. */
 async function mystIntro(e) {
   const B = { tr: legTr(e.id), foe: [{ id: e.id, lv: e.lv }], b: 0, mode: 'myst', lap: 0, over: '' };
   BT.B = B; E.mus = 1;
-  try { PACK.unlock(); await legendIntro(B); } catch (_) {}
+  /* Hodetelefonkortet først, som før et raid (hpCard i bui.js; Jazz 25.11: «Ja på hver legendary»), så filmen. */
+  try { PACK.unlock(); if (hpOn(B)) { await hpCard(B); if (BT.B !== B) return; } await legendIntro(B); } catch (_) {}
   if (BT.B !== B) { return; }
   BT.B = null;
   if (E.e !== e || !S.pend.includes(e)) return;
@@ -2147,7 +2148,8 @@ const A = {
   pkraid: el => { pkStop(U.pk); U.pk = null; praidScreen(+el.dataset.k); },
   /* Fang nå (v92): de store fra pakkene står først i gresset, så de møtes før det som ventet der fra før. */
   pkhunt: () => { const X = U.pk; pkStop(X); if (X && !X.demo) { const w = X.packs.reduce((a, p) => a.concat(p), []).filter(e => S.pend.includes(e)); if (w.length) { S.pend = w.concat(S.pend.filter(e => !w.includes(e))); save(true); } } U.pk = null; hunt(); },
-  sound: () => { S.sound = S.sound ? 0 : 1; save(); sfx.chip(); render(); setRe(); },
+  /* S.sndc = 1: spilleren har valgt lyden selv, så Sync slår den ikke på (ghLink i game.js). */
+  sound: () => { S.sound = S.sound ? 0 : 1; S.sndc = 1; save(); sfx.chip(); render(); setRe(); },
   /* Lyden når et møte dukker opp under en økt (S.fsnd = 0: av). Bjella på timeren og knappen under Settings. */
   fsnd: () => { S.fsnd = S.fsnd === 0 ? 1 : 0; save(); const b = $('#t-snd'); if (b) { b.innerHTML = bellSvg(S.fsnd !== 0); b.setAttribute('aria-pressed', S.fsnd !== 0); } else { render(); setRe(); } toast(S.fsnd === 0 ? 'Encounter sound off' : 'Encounter sound on'); },
   lang: el => { S.lang = el.dataset.k === 'no' ? 'no' : 'en'; save(true); if (!S.started) intro(); else { render(); setRe(); } },

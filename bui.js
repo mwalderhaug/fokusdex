@@ -532,18 +532,27 @@ async function bossFilm(B) {
   root.classList.add('d'); await T(240);
   return true;
 }
-/* HODETELEFONKORTET (Jazz 25.11): rett før introen i et raid og et pakke-raid (startBattle), etter raidvarselet, så spilleren rekker å finne AirPods eller
-   headset. Ingen tidsfrist: Continue starter introen. Bare når introen har lyd og film: lyden er på (uten pakken spilles den innebygde oppbyggingen), og ikke
-   med redusert bevegelse (calm: bare et stillbilde). Ikke i sandkassa, demoen, showcase eller møtene i gresset (de kaller legendIntro selv), og ikke når
-   Dark Mewtwo reiser seg midt i raidet (B.rise, darkRise). Bildet er en egen strektegning i currentColor; kortet følger utseendet (lys eller mørk, fargesettet). */
-const hpOn = B => B.mode === 'raid' && !B.rise && !!S.sound && !calm() && typeof CINE !== 'undefined' && !!CINE.info(B.tr.dk ? 'dk' + B.tr.leg : B.tr.leg);
+/* HODETELEFONKORTET (Jazz 25.11): rett før introen til hver legendarisk, så spilleren rekker å finne AirPods eller headset: et raid og et pakke-raid
+   (startBattle, etter raidvarselet) og en mystisk legendarisk i gresset (mystIntro i ui.js; v95: «Ja på hver legendary»). Ingen tidsfrist: Continue starter
+   introen. Bare når introen har film, og ikke med redusert bevegelse (calm: bare et stillbilde). Er lyden av, vises kortet likevel, med en rolig linje og en
+   knapp som slår den på (v95: «Veldig gjerne hint om å skru på lyden»). Ikke i sandkassa, Films, showcase eller traileren (de kaller legendIntro selv, med
+   mode 'lab'), og ikke når Dark Mewtwo reiser seg midt i raidet (B.rise, darkRise). Bildet er en egen strektegning i currentColor; kortet følger utseendet
+   (lys eller mørk, fargesettet). Lydbølgene i bildet står stille og svake mens lyden er av. */
+const hpOn = B => (B.mode === 'raid' || B.mode === 'myst') && !B.rise && !calm() && typeof CINE !== 'undefined' && !!CINE.info(B.tr.dk ? 'dk' + B.tr.leg : B.tr.leg);
 const HPSVG = '<svg viewBox="0 0 96 72" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M27 41v-1a21 21 0 0 1 42 0v1"/><rect x="20" y="41" width="14" height="24" rx="7"/><rect x="62" y="41" width="14" height="24" rx="7"/><path class="w1" d="M13.5 47q-3.2 6 0 12M82.5 47q3.2 6 0 12"/><path class="w2" d="M7.5 43q-5.5 10 0 20M88.5 43q5.5 10 0 20"/></svg>';
 function hpCard(B) {
-  ov(`<div class="mid hpc"><span class="hpc-ic" aria-hidden="true">${HPSVG}</span><h1 class="big hpc-h">${tl('Headphones recommended')}</h1>
+  const off = !S.sound;
+  ov(`<div class="mid hpc${off ? ' off' : ''}"><span class="hpc-ic" aria-hidden="true">${HPSVG}</span><h1 class="big hpc-h">${tl('Headphones recommended')}</h1>
       <p class="mut hpc-p">${tl('A lot of time and planning has gone into developing and designing the intros. Headphones give the best experience.')}</p>
-      <p class="sm hpc-s">${tl('Take your time. The intro starts when you tap Continue.')}</p></div>
+      <p class="sm hpc-s">${tl('Take your time. The intro starts when you tap Continue.')}</p>${off ? `
+      <div class="hpc-snd" id="hpsnd" role="status"><span>${tl('Sound is off.')}</span><button type="button" class="btn sm2" id="hpson">${tl('Turn on sound')}</button></div>` : ''}</div>
     <div class="acts"><button type="button" class="btn gold" id="hpgo">Continue</button></div>`, 'tint hpov', 'var(--gold)');
-  const go = $('#hpgo'); try { go.focus({ preventScroll: true }); } catch (_) {}
+  const go = $('#hpgo'), on = $('#hpson'); try { go.focus({ preventScroll: true }); } catch (_) {}
+  /* LYDEN AV: knappen slår den på. Det er spillerens eget valg (S.sndc = 1, som i Settings, så Sync ikke rører den senere). Trykket låser opp lyden i selve
+     trykket og henter kamplåta mens kortet står; linja sier at lyden er på, og bølgene i bildet begynner å puste. Continue går videre uansett. */
+  if (on) on.addEventListener('click', () => { if (S.sound || !on.isConnected) return; PACK.unlock(); S.sound = 1; S.sndc = 1; save(); sfx.chip();
+    try { const tk = PACK.trackFor(B); if (tk) PACK.cue(tk); } catch (_) {}
+    const c = on.closest('.hpc'), s = $('#hpsnd'); if (c) c.classList.remove('off'); if (s) s.innerHTML = `<span>${tl('Sound is on.')}</span>`; try { go.focus({ preventScroll: true }); } catch (_) {} });
   return new Promise(res => {
     let done = false; const fin = () => { if (done) return; done = true; clearInterval(w); res(); };
     const w = setInterval(() => { if (BT.B !== B || !go.isConnected) fin(); }, 300);

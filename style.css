@@ -2066,6 +2066,10 @@ button.pkm{cursor:pointer}
 .hpc-ic .w2{animation-delay:.45s}
 @keyframes hpw{0%,100%{opacity:.18}50%{opacity:.8}}
 @media (prefers-reduced-motion:reduce){.hpc-ic .w1,.hpc-ic .w2{animation:none;opacity:.55}}
+/* Lyden av (v95): en rolig linje med en liten knapp under teksten, og bølgene står stille og svake til lyden slås på (samme styrke som pustens bunn, så de
+   glir rett inn i den). Linja holder høyden når knappen forsvinner, så ingenting hopper. */
+.hpc-snd{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px 12px;min-height:36px;margin-top:2px;font-size:13.5px;color:var(--ink2)}
+.hpc.off .hpc-ic .w1,.hpc.off .hpc-ic .w2{animation:none;opacity:.18}
 /* Demoen: hvem vil du møte. */
 .labtr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:4px}
 .labtr button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 6px;border-radius:16px;background:var(--card);box-shadow:0 0 0 1px var(--line);min-width:0;text-align:center}
