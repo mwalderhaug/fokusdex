@@ -1175,7 +1175,7 @@ function packSheet(k) {
     <p>${P.d}</p>
     <div class="pkod" id="pkod"><div class="lab" style="margin:0">${tl('Your odds in one pack right now')}</div><div class="pkod-r">${[['r2', 'Rare or better', od.rare], ['r3', 'Epic', od.epic], ['r4', 'Legendary', od.leg], ['sh', 'Shiny', od.shiny]].map(([c, n, v]) => `<span class="pkod-c ${c}"><b class="tn">${pkPct(v)}</b><small>${n}</small></span>`).join('')}</div>
       ${pt ? `<div class="pkpity"><div class="lab" style="margin:0">${tl('Bad luck has a limit')}</div><div class="pkod-r two">${[['r4', pt.leg, 'packs at most to a legendary'], ['sh', pt.sh, 'packs at most to a shiny']].map(([c, v, n]) => `<span class="pkod-c ${c}"><b class="tn">${v}</b><small>${tl(n)}</small></span>`).join('')}</div></div>` : ''}</div>
-    <p class="sm">${tl('The cards lie in a pile, from the most common to the rarest: tap or swipe for the next one, or open them all at once. Every Pokémon goes straight into your collection, and a legendary is a raid of its own, with one attempt. Ten at once always hold at least one rare or better, and now and then a pack shines gold: every card in it is rare or better. Pokémon from packs sell for less than wild ones, and the greatest legendaries are rare in packs: they are mostly met in raids.')}</p>
+    <p class="sm">${tl('The cards lie in a pile, from the most common to the rarest: tap or swipe for the next one, or open them all at once. Every Pokémon goes straight into your collection, and a legendary is a raid of its own, with one attempt. Ten at once always hold at least one rare or better, and now and then a pack is golden: every card in it is rare or better. Pokémon from packs sell for less than wild ones, and the greatest legendaries are rare in packs: they are mostly met in raids.')}</p>
     ${lock ? `<p class="sm au">Opens at trainer level ${P.lv}. You are level ${tlv()}.</p>` : full ? '<p class="sm au">Catch some of the encounters that are waiting before you open more packs.</p>' : ''}
     <div class="acts pka"><button type="button" class="btn gold" data-a="pack" data-k="${k}"${can ? '' : ' disabled'}>${free ? 'Open · free' : `Open · ${nb(P.p)}`}</button><button type="button" class="btn" data-a="pack" data-k="${k}" data-n="10"${can10 ? '' : ' disabled'}>Open 10 · ${nb(p10)}</button><button type="button" class="btn nf" data-a="close">Close</button></div>`);
 }
@@ -1489,9 +1489,10 @@ const pkPct = x => x >= 0.9995 ? '100 %' : x >= 0.995 ? '99 %' : x >= 0.1 ? Math
    gang»; EN BUNKE I HÅNDA i pk6, Jazz 25.11 etter videoen: «Nei, skal ikke se skyggen. Og kortene skal være stablet i en bunke akkurat som man åpner en
    vanlig pokemon kort pakke. Så skal de sjeldneste være til slutt.» Researchen bak: work/raids3d/research/pakker.md) ----------
    Én pakke eller flere (ti fra Shop). PAKKEN står og venter, og jo dyrere den er, jo mer lever den (t0–t3): Great har et glimt over seg, Ultra folie som
-   skifter, og Master folie i alle farger og lys som dreier bak seg. En pakke som holder noe stort (epic, legendarisk, shiny: pkHot), er urolig alt før
-   den åpnes, og en GULLPAKKE (alle kortene rare eller bedre: pkGold; game.js gir den av og til med vilje) skinner i gull. Trykk, og den RIVES OPP: større
-   jo dyrere (lyset, strålene og lyden; PKRIP er pausen før kortene kommer).
+   skifter, og Master folie i alle farger og lys som dreier bak seg. Den ser lik ut uansett hva den holder, som en ekte pakke (pk7: før var den urolig
+   når den holdt noe stort, og en gullpakke skinnet i gull før den ble åpnet). En GULLPAKKE (alle kortene rare eller bedre: pkGold; game.js gir den av og
+   til med vilje) merkes først når den er åpnet (pkPackDone). Trykk, og den RIVES OPP: større jo dyrere (lyset, strålene og lyden; PKRIP er pausen før kortene
+   kommer), likt for alle pakker av samme slag.
    KORTENE LIGGER I ÉN BUNKE midt på skjermen med forsiden opp, som en ekte pakke i hånda (pk6, pkPile): det øverste synes, og under ligger kantene av resten,
    uten noe som røper hva de er. Rekkefølgen er spenningen: fra det vanligste til det sjeldneste (pkQ), så det sjeldneste kommer sist: legendarisk aller sist,
    shiny og epic like før. ETT TRYKK ELLER ET SVEIP tar det øverste bort (pkTake; sveipet: pkSwipe), og det neste kommer fram under det; det som er sett,
@@ -1510,7 +1511,7 @@ const pkPct = x => x >= 0.9995 ? '100 %' : x >= 0.995 ? '99 %' : x >= 0.1 ? Math
    som slippes, fin = ferdig valgt, pick, tm = tidtakerne, lk = trykk venter til dette tidspunktet, sw = tidspunktet for et sveip (klikket etter det telles
    ikke), ph = hvor pakken framme er: pack (uåpnet), pile (bunken venter på trykk eller sveip), up (et stort kort bygger seg opp), turn («Open all»), done }. */
 const pkIv = e => e.iv ? e.iv.reduce((a, b) => a + b, 0) : 0;
-/* Det som gjør pakken urolig: en legendarisk (et pakke-raid), epic eller shiny. */
+/* Et stort kort: en legendarisk (et pakke-raid), epic eller shiny (med Giant og fem stjerner: pkBig). Før pk7 gjorde det også pakken urolig før den ble åpnet. */
 const pkHot = e => !!(e.myst || e.t >= 3 || e.sh);
 /* Kortet er fortsatt ditt: i samlingen (e.u = Pokémonen det ble), som pakke-raid (e.pr) eller i gresset (en legendarisk uten raid). */
 const pkMine = e => S.pend.includes(e) || !!(e.u && monBy(e.u)) || !!(e.pr && praidBy(e.pr));
@@ -1560,14 +1561,13 @@ function packShow(k, packs, demo) {
 }
 /* Tidtakerne i åpningen stoppes (neste pakke, «Open all», «Skip to the end», ut av åpningen), og lyden som bygger seg opp, tones ut. */
 function pkStop(X) { if (X && X.tm) { X.tm.forEach(clearTimeout); X.tm = []; } pkRiseOff(0.12); }
-/* Pakken som står framme, uåpnet: den lever mer jo dyrere den er. Holder den noe stort, er den urolig, og en gullpakke skinner. */
+/* Pakken som står framme, uåpnet: den lever mer jo dyrere den er, og ser lik ut uansett hva den holder (pk7: ingen uro og ingen gullglans før den åpnes). */
 function pkStage() {
-  const X = U.pk, st = $('#pkst'); if (!X || !st) return; const P = PACKS[X.k], n = X.packs.length, p = X.packs[X.i], hot = p.some(pkHot), gold = pkGold(p), t = pkTier(X), o = $('#pko');
+  const X = U.pk, st = $('#pkst'); if (!X || !st) return; const P = PACKS[X.k], n = X.packs.length, p = X.packs[X.i], t = pkTier(X), o = $('#pko');
   if (n > 1) $('#pkn').textContent = `Pack ${X.i + 1} of ${n}`;
   pkStop(X); X.ph = 'pack'; X.j = 0; if (o) o.classList.remove('chg');
-  st.className = 'pk-stage'; st.innerHTML = `<button type="button" class="pk-pack t${t}${hot ? ' hot' : ''}${gold ? ' gold' : ''}" data-a="pkopen" aria-label="Open the ${gold ? 'golden ' : ''}pack"><span class="pk-ic big"><i></i><s class="pk-foil" aria-hidden="true"></s></span><b>${P.n}</b>${gold ? '<small class="pk-gt">Golden pack</small>' : ''}</button>`;
-  $('#pkt').textContent = gold ? 'It shines gold: every card inside is rare or better.' : hot ? 'This one is restless. Tap it.' : 'Tap the pack to open it'; $('#pka').innerHTML = '';
-  if (gold) { sfx.pkgold(); buzz([20, 50, 20, 50, 20, 50, 60]); } else if (hot) buzz([20, 70, 20]);
+  st.className = 'pk-stage'; st.innerHTML = `<button type="button" class="pk-pack t${t}" data-a="pkopen" aria-label="Open the pack"><span class="pk-ic big"><i></i><s class="pk-foil" aria-hidden="true"></s></span><b>${P.n}</b></button>`;
+  $('#pkt').textContent = 'Tap the pack to open it'; $('#pka').innerHTML = '';
   p.forEach(e => { if (!e.myst) preSpr(e.id, { ani: 1, sh: e.sh, mega: defForm(e.id) }); });   /* bildene hentes mens pakken venter (pk6: bare det øverste kortet står i bunken) */
 }
 /* Et kort i bunken, med forsiden opp. dl = det første, som kommer ut av pakken. */
@@ -1578,7 +1578,7 @@ const pkUnder = (left, dl) => Array.from({ length: Math.min(4, Math.max(0, left)
 /* Bunken ut av pakken: det vanligste øverst, det sjeldneste nederst (det kommer sist). */
 function pkPile(X) {
   const p = X.packs[X.i], n = p.length;
-  return `<div class="pk-pile${pkGold(p) ? ' gold' : ''}" id="pkpile">${pkUnder(n - 1, 1)}${pkCardEl(p[0], 0, 1)}</div>`;
+  return `<div class="pk-pile" id="pkpile">${pkUnder(n - 1, 1)}${pkCardEl(p[0], 0, 1)}</div>`;
 }
 /* Et kort som er sett, legger seg i raden øverst (plassen etter pakkene før). */
 function pkSeen(X, j) {
@@ -1669,12 +1669,13 @@ function pkHero(el, e, w) {
   clearTimeout(pkHero.t); pkHero.t = setTimeout(() => { const q = $('#pko'); if (q) q.classList.remove('bigr'); el.classList.remove('hero'); }, 1700);
 }
 /* Alle kortene i pakken er sett (det sjeldneste ligger øverst i bunken): neste pakke, eller slutten (big = det siste kortet fikk sitt øyeblikk, som får
-   stå ferdig). */
+   stå ferdig). En gullpakke merkes her, når alle kortene er sett (pk7): lyden etter øyeblikket, og linjen under bunken (med én pakke: først i ordet, pkEnd). */
 function pkPackDone(big) {
-  const X = U.pk, last = X.i >= X.packs.length - 1;
+  const X = U.pk, last = X.i >= X.packs.length - 1, gold = pkGold(X.packs[X.i]);
   if (!X.demo) save(true);
+  if (gold) X.tm.push(setTimeout(() => { if (U.pk === X) { sfx.pkgold(); buzz([20, 50, 20, 50, 60]); } }, big ? 900 : 250));
   if (last) { clearTimeout(pkPackDone.t); if (X.packs.length > 1) pkPackDone.t = setTimeout(() => { if (U.pk === X) pkEnd(); }, big ? 1900 : 800); else pkEnd(); return; }
-  $('#pkt').textContent = 'Tap for the next pack'; $('#pka').innerHTML = '<button type="button" class="btn gold" data-a="pknext">Next pack</button>';
+  $('#pkt').textContent = gold ? 'A golden pack: every card was rare or better. Tap for the next pack.' : 'Tap for the next pack'; $('#pka').innerHTML = '<button type="button" class="btn gold" data-a="pknext">Next pack</button>';
 }
 /* Slutten. Én pakke: kortene blir stående. Flere: sammendraget med det beste først. X.rel = de som slippes (forslaget følger reglene for duplikater).
    v92 (Valg B) og pk4: kortene er alt i samlingen, og bare en legendarisk uten raid venter i gresset. live = kortene som fortsatt er dine (i samlingen, i gresset
@@ -1687,7 +1688,7 @@ function pkEnd() {
   if (sum && !pkPickOn()) X.fin = 1;
   if (!X.rel) { const keep = X.demo || !sum ? null : packKeepers(all); X.rel = new Set(keep ? all.filter(e => !keep.has(e)) : []); }
   const best = all.reduce((a, x) => Math.max(a, x.t + (x.sh ? 2 : 0)), 0), nw = new Set(all.filter(pkNew).map(e => e.id)).size, cnt = f => live.filter(f).length;
-  const lead = best >= 4 ? 'What a pull!' : best >= 3 ? 'A great pack.' : '';
+  const lead = n === 1 && pkGold(X.packs[0]) ? 'A golden pack: every card was rare or better.' : best >= 4 ? 'What a pull!' : best >= 3 ? 'A great pack.' : '';
   const word = X.demo ? lead || 'An ordinary pack.'
     : [lead, rd.length === 1 ? 'A legendary waits for you in a pack raid: one attempt.' : rd.length ? `${rd.length} legendaries wait for you in pack raids, one attempt each.` : '', wild.length === 1 ? 'One waits in the grass for you to catch it.' : wild.length ? `${wild.length} wait in the grass for you to catch them.` : rd.length ? '' : live.length === 1 ? 'It is in your collection.' : 'They are in your collection.'].filter(Boolean).join(' ');
   if (sum) {
@@ -2139,13 +2140,13 @@ const A = {
   sinfo: el => itemSheet(el.dataset.k),
   pinfo: el => packSheet(el.dataset.k),
   pack: el => { closeSheet(); const k = el.dataset.k, out = openPacks(k, Math.max(1, +el.dataset.n || 1)); if (!out) return toast(S.pend.length > PACKMAX ? 'Catch some of your waiting encounters first.' : 'Not enough coins.'); sfx.coin(); packShow(k, out); },
-  /* Pakken rives opp (pa3): større jo dyrere (lyden, ristingen, blinket og pausen før kortene kommer, PKRIP). */
+  /* Pakken rives opp (pa3): større jo dyrere (lyden, ristingen, blinket og pausen før kortene kommer, PKRIP); pk7: aldri etter hva den holder. */
   pkopen: () => {
     const X = U.pk, st = $('#pkst'), pk = st && st.querySelector('.pk-pack'); if (!X || !pk || pk.classList.contains('rip')) return;
-    const p = X.packs[X.i], t = pkTier(X), gold = pkGold(p), hot = p.some(pkHot), cm = calm();
-    pk.classList.add('rip'); sfx.pkrip(t + (gold ? 1 : 0)); buzz(hot || gold ? [40, 40, 40, 40, 140] : t >= 2 ? [30, 40, 30, 40, 50] : [30, 40, 30]);
-    if (!cm && (t >= 2 || gold)) pkFlash(gold ? 'var(--gold)' : 'var(--pc)');
-    X.tm.push(setTimeout(() => { const s2 = $('#pkst'); if (!s2 || U.pk !== X) return; s2.classList.add('open'); s2.innerHTML = pkPile(X); X.j = 0; X.ph = 'pile'; X.lk = 0; $('#pkt').textContent = 'Tap or swipe for the next card'; $('#pka').innerHTML = '<button type="button" class="btn nf" data-a="pkall">Open all</button>'; const p = X.packs[X.i], el = s2.querySelector('.pk-card.top'); if (el) pkShow(el, p[0], p.length === 1); }, cm ? 220 : PKRIP[t] + (gold ? 140 : 0)));
+    const t = pkTier(X), cm = calm();   /* pk7: likt for alle pakker av samme slag, uansett hva de holder */
+    pk.classList.add('rip'); sfx.pkrip(t); buzz(t >= 2 ? [30, 40, 30, 40, 50] : [30, 40, 30]);
+    if (!cm && t >= 2) pkFlash('var(--pc)');
+    X.tm.push(setTimeout(() => { const s2 = $('#pkst'); if (!s2 || U.pk !== X) return; s2.classList.add('open'); s2.innerHTML = pkPile(X); X.j = 0; X.ph = 'pile'; X.lk = 0; $('#pkt').textContent = 'Tap or swipe for the next card'; $('#pka').innerHTML = '<button type="button" class="btn nf" data-a="pkall">Open all</button>'; const p = X.packs[X.i], el = s2.querySelector('.pk-card.top'); if (el) pkShow(el, p[0], p.length === 1); }, cm ? 220 : PKRIP[t]));
   },
   /* Et trykk på bunken (pk6): det øverste kortet går, og det neste kommer fram. Når pakken er ferdig: neste pakke. X.lk = en kort sperre etter et stort
      kort; X.sw = klikket etter et sveip telles ikke (sveipet har alt tatt kortet). */

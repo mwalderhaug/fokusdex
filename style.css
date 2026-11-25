@@ -1654,7 +1654,7 @@ button.pill{font:inherit;font-size:11.5px;font-weight:600;color:var(--ink2)}butt
 .pk-ic.big{width:120px;height:160px;border-radius:16px}
 .pk-ic.big i{width:44px;height:44px;box-shadow:0 0 0 4px #1b1b1f}
 /* ---------- PAKKEÅPNINGEN (steg 1.7, ønske 13) ----------
-   Rekkefølgen i spenningen: pakken (en som holder noe stort, er urolig) · bunken med forsiden opp, fra det vanligste til det sjeldneste (pk6; ingenting
+   Rekkefølgen i spenningen: pakken (lik uansett hva den holder, pk7; .pk-pack.hot og .gold under brukes ikke lenger) · bunken med forsiden opp, fra det vanligste til det sjeldneste (pk6; ingenting
    varsler før et kort er framme) · et stort kort bygger seg opp når det kommer fram og får lyset og ordet · raden øverst fylles kort for kort ·
    sammendraget. Vifta, baksidene og det siste kortet for seg (.pk-fan, .pk-back, .pk-hitw) er fra v93 og brukes ikke i bunken. */
 .ov.packov .ovin{display:flex;flex-direction:column;justify-content:center;min-height:100%}
