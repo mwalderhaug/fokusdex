@@ -1913,6 +1913,23 @@ function drawEnc(reveal) {
   /* En shiny synes med en gang (steg 1c.6): stjernene og lyden i det den dukker opp. */
   if (reveal && e.sh === 1) setTimeout(() => { if (E.e === e && $('#e-stage')) shinyFx($('#e-stage')); }, 520);
 }
+/* «LET IT GO» SPØR FØRST (Jazz 25.11: «Lett for å bare trykke og da miste streaken»). Arket sier det som går tapt: rekka (S.cst, fra 3, der den gir
+   mynter), kjeden (et møte fra kjedetua), og om den er shiny eller ny for samlingen. Ellers bare at møtet blir borte. «Keep trying» står først og
+   lukker arket (møtet står urørt); «Let it go» i arket er skip med data-ok. Den står på samme sted som knappen i møtet, så et trykk i arket før
+   LGWAIT ms er gått, teller ikke (et dobbelttrykk slapp den ellers). En toast som står (som «Your chain of N ended.» fra den forrige), tas bort,
+   så den ikke dekker teksten. U.lg = { e: møtet arket gjelder, t: da arket kom opp }. */
+const LGWAIT = 400;
+function letGoAsk() {
+  const e = E.e, l = [], k = [e.sh === 2 ? 'Dark' : e.sh ? 'shiny' : '', S.caught[e.id] ? '' : 'new to your collection'].filter(Boolean).join(' and ');
+  if ((S.cst || 0) >= 3) l.push(`Your streak of ${S.cst} catches will end.`);
+  if (e.ch != null && S.chain) l.push(`Your chain of ${S.chain.n} will end.`);
+  if (k) l.push(`This one is ${k}.`);
+  U.lg = { e, t: performance.now() }; const tt = $('#toast'); if (tt) tt.hidden = true;
+  openSheet(`<h2 class="h" style="margin-top:0">Let it go?</h2><p class="sm">${l.length ? l.join('<br>') : 'This encounter will be gone.'}</p>
+    <div class="acts"><button type="button" class="btn gold" data-a="close">Keep trying</button><button type="button" class="btn nf" data-a="skip" data-ok="1">Let it go</button></div>`);
+}
+/* Slipper møtet som står (det «Let it go» gjorde før advarselen): rekka nullstilles, og en kjede fra kjedetua ender. */
+function letGo() { cancelAnimationFrame(E.raf); if (E.e && E.e.ch != null && S.chain) { toast(`Your chain of ${S.chain.n} ended.`); S.chain = null; } dropPend(E.e); S.cst = 0; save(); hunt(); }
 /* Hvor god sjansen er med ballen som er valgt (i den grønne sonen). */
 const oddsEl = e => { const o = oddsOf(e, E.ball); return `Catch odds: <b class="od${o}">${['tough', 'even', 'good'][o]}</b>`; };
 /* Det du ser når fangsten sitter: potensialet avsløres stjerne for stjerne, og så det fangsten ga. */
@@ -2014,7 +2031,10 @@ const A = {
   hunt: () => { if (jOn() && (S.jx || {}).sh === 1 && $('#sheet').hidden) { snd('ok'); closeOv(); render(); jAfter(); return; } closeSheet(); hunt(); },
   jok: () => { closeSheet(); if (jAfter() || incSheet()) return; const d = U.jfrom === 'dn'; U.jfrom = ''; if (d && has('battles') && S.party.length && openNeed() <= 0 && (!S.lad.day || (dayOld() && dayDone()))) BA.bdone(); else if (typeof raidArrive === 'function' && raidGo()) raidArrive(); },
   later: () => { cancelAnimationFrame(E.raf); encQuiet(); closeOv(); render(); },
-  skip: () => { if (E.busy) return; cancelAnimationFrame(E.raf); if (E.e && E.e.ch != null && S.chain) { toast(`Your chain of ${S.chain.n} ended.`); S.chain = null; } dropPend(E.e); S.cst = 0; save(); hunt(); },
+  /* Knappen i møtet spør først (letGoAsk); knappen i arket (data-ok) slipper den, men ikke før LGWAIT ms etter at arket kom opp.
+     A.skip() uten knapp (testene) slipper den med en gang, som før. */
+  skip: el => { if (E.busy || !E.e) return; if (!el) return letGo(); if (el.dataset.ok !== '1') { snd('warn'); return letGoAsk(); }
+    const G = U.lg; if (G && performance.now() - G.t < LGWAIT) return snd(''); U.lg = null; closeSheet(); if (G && G.e === E.e) letGo(); },
   rad: el => { const Q = U.rad, it = Q && Q.items[+el.dataset.i]; U.rad = null; if (!it) return hunt();
     if (it.k === 'chain') { const e = chainEnter(); return e ? meet(e) : hunt(); }
     if (!S.pend.includes(it.e)) return hunt();
@@ -2223,7 +2243,7 @@ document.addEventListener('input', ev => { const t = ev.target; if (t.dataset &&
 document.addEventListener('change', ev => { if (ev.target.dataset && ev.target.dataset.c === 'cap') { S.cap = +ev.target.value; save(); render(); setRe(); } });
 document.addEventListener('keydown', ev => {
   if (ev.key === 'Escape' && !$('#sheet').hidden) return closeSheet();
-  if ((ev.key === ' ' || ev.key === 'Enter') && E.e && !$('#ov').hidden && $('#e-m') && ev.target.tagName !== 'BUTTON') { ev.preventDefault(); doThrow(); }
+  if ((ev.key === ' ' || ev.key === 'Enter') && E.e && !$('#ov').hidden && $('#sheet').hidden && $('#e-m') && ev.target.tagName !== 'BUTTON') { ev.preventDefault(); doThrow(); }
 });
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
