@@ -282,8 +282,9 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
     f.root.traverse(q => { if (!q.isMesh) return; const mp = q.material.uniforms && q.material.uniforms.map ? q.material.uniforms.map.value : null; q.material = K.shader(REFL_V, REFL_F, Object.assign({ map: K.uv(mp) }, un), { side: T.DoubleSide }); q.layers.set(0); q.frustumCulled = false; (S.rfM = S.rfM || []).push([/Eye/.test(q.userData.mn || '') ? 1 : 0, q.material]); });
     S.mirG.add(f.root); S.figs.push(f); S.rrg = X.rig(f);
     g.clear(); g.apply(); g.root.updateMatrixWorld(true); const bb = new T.Box3().setFromObject(g.root, true); S.fy = -bb.min.y; S.hgt = bb.max.y - bb.min.y; };
-  /* Stillingene. Hals, rygg og hale i figurens egne akser (X.rig; målt: pluss om X løfter hodet bakover og opp, minus bøyer det fram og ned), forbeinet i benets egne
-     (LArm x− løfter det fram, LForeArm y+ bøyer det; høyre side har x speilet: målt med views.js). P = { bow: bøyd (statuen i gull), up: hodet mot himmelen (brølet),
+  /* Stillingene. Hals, rygg og hale i figurens egne akser (X.rig; målt på nytt 25.11: pluss om X dreier halsen og hodet FRAM og ned, minus bakover og opp, så «bow» står med
+     blikket mot himmelen, og «up» bøyer hodet fram og ned med manen opp; den nye bevegelsen er poseN under), forbeinet i benets egne
+     (LArm x− løfter det fram, LForeArm y+ bøyer det; høyre side har x speilet: målt med views.js). P = { bow: statuen i gull (se over), up: brølet (se over),
      dip: forvarselet, hoof: høyre hov løftet, br: hvor levende (pust og hale), yaw: hodet dreid (minus = mot kampens kamera), t }. */
   const pose = (S, f, R, P) => { R.reset(); const ax = S.ax, b = P.bow || 0, u = P.up || 0, lv = P.br || 0, br = lv * sin(P.t * 1.25) * 0.012, d = P.dip || 0;
     R.rot('Spine1', ax.x, -0.04 * b + 0.09 * u + br); R.rot('Neck1', ax.x, -0.16 * b + 0.12 * u - 0.03 * d); R.rot('Neck2', ax.x, -0.2 * b + 0.14 * u - 0.04 * d); R.rot('Neck3', ax.x, -0.2 * b + 0.15 * u - 0.05 * d);
@@ -404,6 +405,71 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
         { t0: DROP, g: 14, drag: 0.4, add: 1, px: 40, c: ['#ffffff', '#ffe9a8', '#e0a030'], fade: 0.5, a: 1, near: 2, floor: 0 })); }
     return S; };
 
+  /* ---------- BEVEGELSEN (Opus 25.11, «Bevegelse etter Fable»; reglene: work/RAIDS3D.md, «Bevegelse»; posene: work/raids3d/arceus/bevegelse/poser.jpg) ----------
+     Posene er nøkler (målene under), og motoren lager bevegelsen mellom dem: målene glir mellom posene (io), og fjærene (X.follow) gir tyngden, etterslepet og
+     overskuddet. Hodet leder (raskere fjær enn halsen); når halsen reiser seg, leder roten av den (raskere fjær nederst enn øverst); manen og halen henger etter
+     (X.chain); og forbeina står i glasset mens brystet beveger seg (IK med to ledd: skulderen flyttes med brystet, og overarmen og underarmen dreies så hoven står).
+     Stampen er kinematisk: hoven løftes med et lite overskudd, akselererer ned og stanser i glasset på slaget, og figuren står i tre bilder i nedslaget (X.freeze).
+     Kanalene, i figurens akser (målt 25.11 med X.rig: + om X dreier halsen og hodet FRAM og ned, − bakover og opp):
+       b   statuen (1: halsen og hodet bakover, blikket mot himmelen; Fables pose, uendret), sluppet for halsen (b) og hodet (bh) hver for seg
+       n   halsen (+ fram, − bakover: brystet fram og halsen høy) · h hodet mot halsen (+ nesa ned, − nesa opp) · y blikket (− mot kampens kamera)
+       c   brystet om Spine1 (− opp og bakover: vekten på bakbeina, + ned og fram), med pusten oppå · f høyre hov løftet (0–1)
+     Bryteren: G3D.alt[493] = 'stiv' gir bevegelsen og kameraene slik de var (Fable 25.11) i introen og løftet (live: &gammel=stiv). Den gamle slutten ('gammel',
+     'slutt') har alltid sin gamle bevegelse. G3D.dbgKey = 1: posene uten fjærene (posearket, work/g3d/scripts/poser.js; aldri satt i appen). */
+  const STIV = () => /stiv/.test(altv());
+  const W_BOW = [0.04, 0.16, 0.2, 0.2, 0.18, 0.22], W_N = [0.06, 0.2, 0.25, 0.25, 0.24], MANE = ['Feeler1', 'Feeler2', 'Feeler3'], TAIL = ['Tail1', 'Tail2', 'Tail3'];   /* per ledd: Spine1, Neck1–4, (Head) */
+  /* Pusten: 0 → 1 (inn, 42 % av perioden) → 0 (ut), myk i begge ender, med perioden P fra t0. */
+  const brW = (t, t0, P) => { if (t < t0) return 0; const u = ((t - t0) / P) % 1, a = 0.42; return u < a ? io(u / a) : 1 - io((u - a) / (1 - a)); };
+  /* Forbeinet står i glasset (IK med to ledd i planet y–z): L = { s, e, h } (skulder, albue, hov i hvile), P = Spine1 i hvile, th = brystets dreining nå, th0 = dreiningen
+     hoven står med (statuen). Gir dreiningene om X i figurens ramme for overarmen (utenom brystets), underarmen og hoven (som står like flatt som i statuen). */
+  const ik2 = (L, P, th, th0) => { const rot = (v, a) => { const dy = v.y - P.y, dz = v.z - P.z, c = cos(a), s = sin(a); return [P.y + dy * c - dz * s, P.z + dy * s + dz * c]; };
+    const ang = (a, b) => Math.atan2(b[1] - a[1], b[0] - a[0]), wr = x => Math.atan2(sin(x), cos(x)), S0 = [L.s.y, L.s.z], E0 = [L.e.y, L.e.z], H0 = [L.h.y, L.h.z], Sn = rot(L.s, th), H = rot(L.h, th0);
+    const l1 = hyp(E0[0] - S0[0], E0[1] - S0[1]), l2 = hyp(H0[0] - E0[0], H0[1] - E0[1]), d = min(l1 + l2 - 1e-5, hyp(H[0] - Sn[0], H[1] - Sn[1]));
+    const g = Math.acos(max(-1, min(1, (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d)))), sg = Math.sign((E0[0] - S0[0]) * (H0[1] - S0[1]) - (E0[1] - S0[1]) * (H0[0] - S0[0])) || 1;
+    const al = ang(Sn, H) - sg * g, En = [Sn[0] + l1 * cos(al), Sn[1] + l1 * sin(al)], da = wr(al - ang(S0, E0)), db = wr(ang(En, H) - ang(E0, H0));
+    return [da - th, db - da, th0 - db]; };
+  /* Stillingen i den nye bevegelsen: A = kanalene akkurat nå (fra mover under). Benene som riggen dreier, skrives etter posene (X.rig). */
+  const poseN = (S, f, R, A) => { R.reset(); const ax = S.ax, L = S.leg || (S.leg = [['L', 'R'].map(s => ({ s: S.rg.pos(s + 'Arm'), e: S.rg.pos(s + 'ForeArm'), h: S.rg.pos(s + 'Hand') })), S.rg.pos('Spine1')]);
+    const th = -W_BOW[0] * A.bB + W_N[0] * A.nB + A.c;
+    R.rot('Spine1', ax.x, th); R.rot('Neck1', ax.x, -W_BOW[1] * A.bB + W_N[1] * A.nB); R.rot('Neck2', ax.x, -W_BOW[2] * A.bB + W_N[2] * A.nB);
+    R.rot('Neck3', ax.x, -W_BOW[3] * A.bT + W_N[3] * A.nT); R.rot('Neck4', ax.x, -W_BOW[4] * A.bT + W_N[4] * A.nT); R.rot('Head', ax.x, -W_BOW[5] * A.bH + A.h);
+    R.rot('Neck2', ax.y, 0.3 * A.yN); R.rot('Neck4', ax.y, 0.3 * A.yN); R.rot('Head', ax.y, 0.4 * A.yH);
+    A.mane.forEach((r, i) => { R.rot(MANE[i], ax.x, r[0]); R.rot(MANE[i], ax.y, r[1]); }); A.tail.forEach((r, i) => { R.rot(TAIL[i], ax.x, r[0]); R.rot(TAIL[i], ax.y, r[1]); });
+    L[0].forEach((l, k) => { const q = ik2(l, L[1], th, -W_BOW[0]), s = k ? 'R' : 'L', fl = k ? A.f : 0; R.rot(s + 'Arm', ax.x, q[0] - 0.62 * fl); R.rot(s + 'ForeArm', ax.x, q[1] + 1.15 * fl); R.rot(s + 'Hand', ax.x, q[2] + 0.35 * fl); }); };
+  /* Motoren for én film: Q(t) gir målene { b, bh, n, h, y, c } (posen akkurat nå, uten fjærene); o = { t0 (fjærene starter), hits (nedslag: tre frosne bilder),
+     hoof(t), tail(t) → [løft, sving] (halens egen pose), jolt(t) (rykket i kroppen i nedslaget, som halen henger etter), mane og tail0 (når de er fri) }. at(t) → kanalene. */
+  const mover = (Q, o) => { const t0 = o.t0, ZZ = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+    const sB = X.follow(t => { const q = Q(t); return [q.b, q.n]; }, { f: 1.0, z: 0.42, t0 }), sT = X.follow(t => { const q = Q(t); return [q.b, q.n]; }, { f: 0.78, z: 0.42, t0 });
+    const sH = X.follow(t => { const q = Q(t); return [q.bh, q.h]; }, { f: 1.45, z: 0.48, t0 }), sY = X.follow(t => Q(t).y, { f: 1.35, z: 0.55, t0 }), sYN = X.follow(t => Q(t).y, { f: 0.8, z: 0.6, t0 });
+    const sC = X.follow(t => Q(t).c, { f: 0.85, z: 0.5, t0 });
+    const pitch = t => { const b = sB(t), u = sT(t), h = sH(t); return -(W_BOW[0] + W_BOW[1] + W_BOW[2]) * b[0] + (W_N[0] + W_N[1] + W_N[2]) * b[1] - (W_BOW[3] + W_BOW[4]) * u[0] + (W_N[3] + W_N[4]) * u[1] - W_BOW[5] * h[0] + h[1] + sC(t); };   /* hodets dreining i rommet: det manen henger etter */
+    const mane = X.chain({ bones: MANE, drive: t => [pitch(t), 0.6 * sYN(t) + 0.4 * sY(t), 0], f: 1.2, fo: 0.85, z: 0.6, lim: 0.3, t0: o.mane });
+    const tail = X.chain({ bones: TAIL, drive: t => [o.jolt(t), 0, 0], pose: (t, i) => i ? null : o.tail(t), f: 0.9, fo: 0.85, z: 0.5, lim: 0.4, t0: o.tail0 });
+    return { at(t) { if (G3D.dbgKey) { const q = Q(t), tp = o.tail(t); return { bB: q.b, nB: q.n, bT: q.b, nT: q.n, bH: q.bh, h: q.h, yH: q.y, yN: q.y, c: q.c, f: o.hoof(t), mane: ZZ, tail: [[tp[0], tp[1], 0], [0, 0, 0], [0, 0, 0]] }; }
+      const tf = o.hits ? X.freeze(t, o.hits, 3, 0.3) : t, b = sB(tf), u = sT(tf), h = sH(tf), tp = o.tail(tf);
+      return { bB: b[0], nB: b[1], bT: u[0], nT: u[1], bH: h[0], h: h[1], yH: sY(tf), yN: sYN(tf), c: sC(tf), f: o.hoof(tf), mane: mane.at(tf), tail: tail.at(tf).map((r, i) => i ? r : [r[0] + tp[0], r[1] + tp[1], 0]) }; } }; };
+  /* Liv i holdeposene: et hode som aldri står helt stille (svak, langsom støy i blikket og nesa) og en pust som er litt ujevn (fasen glir med støyen). */
+  const liveH = (t, s) => [0.016 * X.noise(t, s, 0.33), 0.03 * X.noise(t, s + 7, 0.27)];
+  const brV = (t, t0, P, s) => t < t0 ? 0 : brW(t + 0.35 * P * X.noise(t, s, 0.12), t0, P);
+  /* INTROEN: posene (nøklene) på filmens tider. HIT[4] kroppen er fri (første pust), HIT[5] halsen, HIT[6] hodet; BRE pusten før droppet; DROP slaget; NAME navnet.
+     A1 statuen · A2 første pust · A3 oppspill (halsen litt lenger bak) · A4 halsen fram · A5 oppspill (blikket litt høyere) · A6 blikket ned mot oss ·
+     B1 han samler seg (hoven opp, brystet bakover, hodet ned) · B2 slaget (hoven i glasset, brystet fram) · B3 mot himmelen (rundt 15°: ansiktet synes fra det lave
+     kameraet) · B4 lyset regner · B5 kampstillingen (blikket snur først, så senkes hodet). */
+  const AQ = t => { const lv = seg(t, HIT[6] + 0.8, HIT[6] + 1.4) * (1 - 0.8 * seg(t, BRE, BRE + 0.3) * (1 - seg(t, DROP + 0.8, DROP + 1.4))), L = liveH(t, 41);
+    return {
+    b: kf(t, [[HIT[5] - 0.02, 1], [HIT[5] + 0.28, 1.15], [HIT[5] + 0.9, 0]]),
+    bh: kf(t, [[HIT[6] - 0.02, 1], [HIT[6] + 0.25, 1.18], [HIT[6] + 0.8, 0]]),
+    n: kf(t, [[BRE - 0.1, 0], [BRE + 0.35, 0.07], [DROP - 0.2, 0.07], [DROP - 0.04, 0.11], [DROP + 0.1, 0.11], [DROP + 0.5, -0.14], [NAME + 0.3, -0.09], [NAME + 0.5, -0.09], [NAME + 1.3, 0.03]]),
+    h: kf(t, [[HIT[6] + 0.25, 0], [HIT[6] + 0.8, 0.07], [BRE - 0.1, 0.07], [BRE + 0.35, 0.16], [DROP - 0.2, 0.16], [DROP - 0.04, 0.19], [DROP + 0.1, 0.19], [DROP + 0.42, -0.08], [NAME + 0.3, -0.02], [NAME + 0.5, -0.02], [NAME + 1.25, 0.06]]) + 1.3 * L[0] * lv,
+    y: kf(t, [[HIT[6] + 0.2, 0], [HIT[6] + 0.85, -0.55], [NAME + 0.1, -0.5], [NAME + 0.8, -0.3], [NAME + 1.5, -0.4]]) + L[1] * lv,
+    c: kf(t, [[BRE - 0.15, 0], [BRE + 0.3, -0.04], [DROP - 0.2, -0.04], [DROP, 0.03, ei], [DROP + 0.1, 0.03], [DROP + 0.5, -0.02], [NAME + 0.2, -0.015], [NAME + 1.2, 0]])
+      - mix(0.028, 0.009, seg(t, HIT[4] + 2.2, HIT[4] + 3.4)) * (1 + 0.5 * seg(t, DROP + 0.4, DROP + 1.2)) * brV(t, HIT[4], 3.3, 51) }; };
+  const MVA = mover(AQ, { t0: HIT[4] - 0.1, hits: [DROP], mane: HIT[6] - 0.05, tail0: HIT[5] - 0.05,
+    hoof: t => kf(t, [[BRE - 0.3, 0], [BRE + 0.3, 1.07], [BRE + 0.55, 1], [DROP - 0.21, 1], [DROP, 0, ei]]),   /* løftes med et lite overskudd på toppen, og akselererer ned i glasset på slaget */
+    tail: t => { const w = seg(t, HIT[5], HIT[5] + 1.5); return [kf(t, [[HIT[5], 0], [HIT[5] + 1.6, 0.06], [BRE, 0.06], [BRE + 0.5, -0.03], [DROP + 0.1, -0.03], [DROP + 0.6, 0.14], [NAME + 0.2, 0.12], [NAME + 1.6, 0.04]]) + 0.025 * X.noise(t, 33, 0.4) * w,
+      0.07 * X.noise(t, 31, 0.45) * w + kf(t, [[DROP + 0.1, 0], [DROP + 0.6, 0.07], [NAME + 0.5, 0.03], [NAME + 1.6, 0]])]; },
+    jolt: t => { const a = t - DROP; return a < 0 || a > 0.26 ? 0 : -0.09 * Math.pow(sin(PI * a / 0.26), 2); } });
+
   /* ---------- STORT SPRANG: den nye slutten ---------- */
   /* PLATENE: suget drar banen inn mot egget (orbN), smellet slynger dem ut i hallen, der de blir hengende og tumler sakte (HANG; tre av dem i veien kameraet raser inn),
      og under hvert av de to neste sugene slår de inn i hjulet på rekke og rad (TA: ni med den siste på smellet 52,87, åtte med den siste på 55,67).
@@ -477,6 +543,18 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
   const shot7 = (S, t) => { const v = pathAt(t, K7); let rc = 0; [3, 4, 5, 6].forEach((k, i) => { rc += kick(t, HIT[k], 11, 6) * (0.55 + 0.12 * i); });
     const dx = v[0] - v[3], dy = v[1] - v[4], dz = v[2] - v[5], dl = hyp(dx, dy, dz); cam(v[0] + dx / dl * rc, v[1] + dy / dl * rc + 0.25 * rc, v[2] + dz / dl * rc, v[3], v[4], v[5], v[6] + 2.5 * rc);
     S.post.sh = [3, 4, 5, 6].reduce((s, k, i) => s + (1.0 + 0.25 * i) * hit(t, HIT[k], 0.45), 0); S.post.fl = [3, 4, 5, 6].reduce((s, k) => max(s, 0.1 * hit(t, HIT[k], 0.08)), 0); S.post.flc = '#ffe9b0'; };   /* nesten ikke noe blink over hele bildet (det ble et grått slør): figuren blinker selv, og ringen og gløden gjør resten */
+  /* Kameraet med litt liv (Bevegelse, Opus 25.11): banen følges med en fjær (etterslep) og får svak støy, som X.handheld, men støyen tones inn fra tIn og ut mot tEnd,
+     der bildet må stå nøyaktig (kampens bilde: arenaen tar over der filmen slutter). Ett per klipp; src(t) gir [px, py, pz, tx, ty, tz, fov]. */
+  const camLive = (src, o) => { const lag = X.follow(t => src(t).slice(0, 6), { f: o.f || 2, z: o.z || 0.85, t0: o.t0 }), A = o.amp || [0.04, 0.025];
+    return t => { const v = src(t), c = lag(t), w = (o.tIn != null ? io(seg(t, o.tIn, o.tIn + 0.6)) : 1) * (o.tEnd != null ? 1 - io(seg(t, o.tEnd - 1, o.tEnd)) : 1);
+      for (let i = 0; i < 6; i++) c[i] += X.noise(t, (o.seed || 1) + i * 17, o.hz || 0.6) * A[i < 3 ? 0 : 1] * w; c.push(v[6]); return c; }; };
+  /* 7 med liv: banen K7 med etterslep og støy (tett på ansiktet til slutt: små utslag), og støtene på slagene som før. */
+  const cam7 = camLive(t => pathAt(t, K7), { t0: HIT[3] - 0.7, f: 2.2, z: 0.85, amp: [0.03, 0.016], hz: 0.55, seed: 7 });
+  const shot7n = (S, t) => { const v = cam7(t); let rc = 0; [3, 4, 5, 6].forEach((k, i) => { rc += kick(t, HIT[k], 11, 6) * (0.55 + 0.12 * i); });
+    const dx = v[0] - v[3], dy = v[1] - v[4], dz = v[2] - v[5], dl = hyp(dx, dy, dz); cam(v[0] + dx / dl * rc, v[1] + dy / dl * rc + 0.25 * rc, v[2] + dz / dl * rc, v[3], v[4], v[5], v[6] + 2.5 * rc);
+    S.post.sh = [3, 4, 5, 6].reduce((s, k, i) => s + (1.0 + 0.25 * i) * hit(t, HIT[k], 0.45), 0); S.post.fl = [3, 4, 5, 6].reduce((s, k) => max(s, 0.1 * hit(t, HIT[k], 0.08)), 0); S.post.flc = '#ffe9b0'; };
+  /* 8 med liv: fra droppet til kampens bilde, med etterslep og støy som er borte når navnet står (kampen tar over i nøyaktig samme bilde). Lages første gang (camEnd). */
+  let cam8 = null; const K8 = () => { const tg = camEnd(), cp = CAMB.cp; return [[DROP, -5.5, 0.9, 11.5, 0, 7.2, 0, 54], [DROP + 0.6, -6.3, 1.2, 14, 0, 9.5, 0, 56], [NAME + 0.6, cp[0], cp[1], cp[2], tg[0], tg[1], tg[2], CAMB.fv]]; };
   /* 4 Søylene: lavt i gangen like utenfor porten. Ringen slås ned og kommer mot oss; den indre ringen av søyler skyter opp samlet rundt egget, og så rygger kameraet
      nedover gangen foran fronten (32 m/s, nær den høyre raden), mens parene skyter opp tett på linsa. Det stanser ytterst i gangen, og på løft 4 ser det opp. Kameraet
      holdes av en hånd (X.handheld), og hvert utbrudd rister det etter avstanden. */
@@ -578,7 +656,7 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
       const bow = ne ? bowF(t) : t < HIT[5] ? 1 : kf(t, [[HIT[5], 1], [HIT[5] + 1.0, 0.45, eo], [HIT[6], 0.45], [HIT[6] + 0.8, 0, eo]]);
       const yaw = ne && t < BRE + 0.55 ? yawF(t) : kf(t, [[HIT[6], 0], [HIT[6] + 0.9, -0.55, io], [BRE + 0.55, -0.55], [DROP + 0.25, 0, io], [NAME + 0.3, 0], [NAME + 1.8, -0.4, io]]);
       const P = { t, bow, up: roar, yaw, hoof: kf(t, [[BRE - 0.6, 0], [BRE + 0.4, 1, io], [DROP - 0.03, 1], [DROP + 0.09, 0, ei]]), dip: seg(t, BRE - 0.2, DROP - 0.1) * (1 - seg(t, DROP - 0.04, DROP + 0.12)), br: seg(t, HIT[4], HIT[4] + 1.2) };
-      pose(S, g, S.rg, P); pose(S, S.rf, S.rrg, P);
+      if (ne && !STIV()) { const A = MVA.at(t); poseN(S, g, S.rg, A); poseN(S, S.rf, S.rrg, A); } else { pose(S, g, S.rg, P); pose(S, S.rf, S.rrg, P); }   /* den nye bevegelsen (Opus 25.11); den gamle bak bryteren 'stiv' og i den gamle slutten */
       /* Stort sprang: gullet SPRENGES av på slaget (kanten spretter opp på 0,17 s, og figuren blinker hvitt i tre bilder), i stedet for å slippe over et halvt sekund. */
       const gy = ne ? kf(t, [[HIT[3] - 0.03, -2], [HIT[3] + 0.14, Z[0], eo], [HIT[4] - 0.03, Z[0]], [HIT[4] + 0.14, Z[1], eo], [HIT[5] - 0.03, Z[1]], [HIT[5] + 0.14, Z[2], eo], [HIT[6] - 0.03, Z[2]], [HIT[6] + 0.14, Z[3], eo]])
         : kf(t, [[HIT[3] - 0.05, -2], [HIT[3] + 0.5, Z[0], eo], [HIT[4], Z[0]], [HIT[4] + 0.5, Z[1], eo], [HIT[5], Z[1]], [HIT[5] + 0.5, Z[2], eo], [HIT[6], Z[2]], [HIT[6] + 0.5, Z[3], eo]]);
@@ -626,10 +704,11 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
       [K0, (S, u, a, t) => { if (!OLDE()) return endCam(S, t); camK(t, [[K0, -9.5, 2.2, 27, 0, 5.4, 0, 40], [HIT[2], -7.5, 2.6, 22.5, 0, 5.2, 0, 40], [HIT[3] - 0.7, -6.8, 2.7, 21, 0, 5.2, 0, 40]]); S.post.sub = t < HIT[0] ? S.sub : 0; S.post.subf = 0.01; S.post.subc = '#ffffff';
         S.post.sh = 1.2 * hit(t, HIT[0], 0.7) + 0.6 * hit(t, HIT[1], 0.4) + 0.6 * hit(t, HIT[2], 0.4); S.post.fl = max(0.5 * hit(t, HIT[0], 0.12), 0.16 * hit(t, HIT[1], 0.08), 0.16 * hit(t, HIT[2], 0.08)); S.post.flc = '#fff2cf'; }],
       /* 7 Gullet slipper, én del per takt: kameraet stiger med kanten, fra hovene til ansiktet. Så pusten, tett på, helt stille. */
-      [HIT[3] - 0.7, (S, u, a, t) => { if (!OLDE()) return shot7(S, t); camK(t, [[HIT[3] - 0.7, -6.5, 1.0, 14.5, 0, 1.7, 0.6, 44], [HIT[3] + 0.6, -6.2, 1.5, 14, 0, 2.0, 0.6, 43], [HIT[4] + 0.6, -5.6, 3.6, 13.4, 0, 3.9, 0.2, 42], [HIT[5] + 0.6, -4.6, 5.9, 12.2, 0, 5.7, 1.5, 38], [HIT[6] + 0.75, -3.0, 7.25, 10.2, 0, 6.95, 1.9, 27], [DROP, -2.8, 7.25, 9.8, 0, 6.95, 1.9, 25]]);
+      [HIT[3] - 0.7, (S, u, a, t) => { if (!OLDE()) return STIV() ? shot7(S, t) : shot7n(S, t); camK(t, [[HIT[3] - 0.7, -6.5, 1.0, 14.5, 0, 1.7, 0.6, 44], [HIT[3] + 0.6, -6.2, 1.5, 14, 0, 2.0, 0.6, 43], [HIT[4] + 0.6, -5.6, 3.6, 13.4, 0, 3.9, 0.2, 42], [HIT[5] + 0.6, -4.6, 5.9, 12.2, 0, 5.7, 1.5, 38], [HIT[6] + 0.75, -3.0, 7.25, 10.2, 0, 6.95, 1.9, 27], [DROP, -2.8, 7.25, 9.8, 0, 6.95, 1.9, 25]]);
         S.post.sh = 0.5 * [3, 4, 5, 6].reduce((s, k) => s + hit(t, HIT[k], 0.35), 0); }],
       /* 8 Droppet: Judgment. Hoven i glasset, hodet mot himmelen, kula til himmels og regnet av lys over hallen; kameraet glir til kampens bilde, og navnet. */
-      [DROP, (S, u, a, t) => { const tg = camEnd(), cp = CAMB.cp; camK(t, [[DROP, -5.5, 0.9, 11.5, 0, 7.2, 0, 54], [DROP + 0.6, -6.3, 1.2, 14, 0, 9.5, 0, 56], [NAME + 0.6, cp[0], cp[1], cp[2], tg[0], tg[1], tg[2], CAMB.fv]]); mouth(S, DROP, t);
+      [DROP, (S, u, a, t) => { const tg = camEnd(), cp = CAMB.cp; if (OLDE() || STIV()) camK(t, [[DROP, -5.5, 0.9, 11.5, 0, 7.2, 0, 54], [DROP + 0.6, -6.3, 1.2, 14, 0, 9.5, 0, 56], [NAME + 0.6, cp[0], cp[1], cp[2], tg[0], tg[1], tg[2], CAMB.fv]]);
+        else { const v = (cam8 = cam8 || camLive(t => pathAt(t, K8()), { t0: DROP, f: 2.0, z: 0.85, amp: [0.05, 0.03], hz: 0.6, seed: 8, tEnd: NAME + 0.6 }))(t); cam(v[0], v[1], v[2], v[3], v[4], v[5], v[6]); } mouth(S, DROP, t);
         const hd = S.hd || 0, nh = NEAR.reduce((q, h) => q + hit(t, h[2], 0.4), 0), nf = NEAR.reduce((q, h) => max(q, hit(t, h[2], 0.1)), 0);   /* uten Hold blender og rister lyset som slår ned ved oss; med Hold tar kuppelen det */
         S.post.sh = (2 * hit(t, DROP, 0.9) + 1.3 * hit(t, DROP + JB, 0.8) + 0.5 * seg(t, DROP + 0.7, DROP + 1.4) * (1 - seg(t, DROP + 2.4, DROP + 3.4))) * (1 - 0.45 * hd) + nh * mix(1.7, 0.5, hd);
         S.post.fl = max(0.3 * hit(t, DROP, 0.08), 0.45 * hit(t, DROP + JB, 0.12), 0.3 * nf * (1 - hd)); S.post.flc = '#fff2c8'; }],
@@ -709,6 +788,26 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
   const tySet = (S, a) => { if (!a || S.texOn === a) return; S.texOn = a; S.tm[0].uniforms.map.value = a[0]; S.tm[1].uniforms.map.value = a[1]; for (const [eye, m] of S.rfM || []) m.uniforms.map.value = a[eye]; };
   const tySkin = ty => { const c = tyC(ty), d = mixHex(c, '#000000', 0.55), l = mixHex(c, '#ffffff', 0.6), h = v => '#' + v.map(q => Math.round(c01(q) * 255).toString(16).padStart(2, '0')).join('');
     return { bg: h(mixHex(c, '#000000', 0.9)), top: c, bot: h(d), cap: h(l), grad: ['#ffffff', h(mixHex(c, '#ffffff', 0.25)), h(mixHex(c, '#000000', 0.25))], lv: h(l), ink: mixHex(c, '#000000', 0.88).map(q => Math.round(q * 255)) }; };
+  /* LØFTET, bevegelsen (Opus 25.11): han står som i kampen, senker hodet mens hallen avskapes, løfter blikket mot platen i pusten (og hoven), slår i glasset på løftet med
+     tre frosne bilder, kaster hodet mot himmelen og står som i kampen igjen. Posene: L1 kampstillingen · L2 hodet senket · L3 mot platen, hoven opp · L4 slaget ·
+     L5 mot himmelen · L6 kampstillingen. Kameraene får liv som i introen (inn fra kampens bilde og ut igjen til det). Bryteren 'stiv' gir det som var. */
+  const LQ = t => { const L = liveH(t, 47), lv = 1 - 0.85 * seg(t, PL - 1.1, PL - 0.8) * (1 - seg(t, PL + 0.8, PL + 1.4));
+    return { b: 0, bh: 0,
+    n: kf(t, [[0.4, 0.03], [2.6, 0.18], [PL - 1.05, 0.23], [PL - 0.5, 0.05], [PL - 0.2, 0.08], [PL - 0.04, 0.11], [PL + 0.1, 0.11], [PL + 0.5, -0.14], [PL + 1.4, -0.09], [PL + 1.6, -0.09], [PL + 2.4, 0.03]]),
+    h: kf(t, [[0.4, 0.06], [2.6, 0.24], [PL - 1.05, 0.28], [PL - 0.5, 0.3], [PL - 0.2, 0.22], [PL - 0.04, 0.24], [PL + 0.1, 0.24], [PL + 0.42, -0.08], [PL + 1.4, -0.02], [PL + 1.6, -0.02], [PL + 2.35, 0.06]]) + 1.3 * L[0] * lv,
+    y: kf(t, [[0.4, -0.4], [2.6, -0.15], [PL - 1.05, 0.12], [PL - 0.5, 0], [PL + 0.1, 0], [PL + 0.5, -0.45], [PL + 1.4, -0.45], [PL + 2.0, -0.3], [PL + 2.6, -0.4]]) + L[1] * lv,   /* i holdet følger blikket platene rundt ham */
+    c: kf(t, [[PL - 1.0, 0], [PL - 0.45, -0.04], [PL - 0.2, -0.04], [PL, 0.03, ei], [PL + 0.1, 0.03], [PL + 0.5, -0.02], [PL + 2.4, 0]]) - 0.013 * brV(t, 0.3, 3.0, 53) }; };
+  const MVL = mover(LQ, { t0: 0, hits: [PL], mane: 0, tail0: 0,
+    hoof: t => kf(t, [[PL - 1.0, 0], [PL - 0.45, 1.07], [PL - 0.3, 1], [PL - 0.21, 1], [PL, 0, ei]]),
+    tail: t => [kf(t, [[0.4, 0.04], [2.6, -0.02], [PL - 0.4, -0.03], [PL + 0.1, -0.03], [PL + 0.6, 0.14], [PL + 1.5, 0.12], [PL + 2.7, 0.04]]) + 0.025 * X.noise(t, 39, 0.4),
+      0.07 * X.noise(t, 37, 0.45) + kf(t, [[PL + 0.1, 0], [PL + 0.6, 0.07], [PL + 1.6, 0.03], [PL + 2.7, 0]])],
+    jolt: t => { const a = t - PL; return a < 0 || a > 0.26 ? 0 : -0.09 * Math.pow(sin(PI * a / 0.26), 2); } });
+  let camL = null; const KL = () => { const tg = camEnd(), cp = CAMB.cp; return [[[0, cp[0], cp[1], cp[2], tg[0], tg[1], tg[2], CAMB.fv], [2.6, -8.6, 3.6, 28, -2, 5.4, 0, 36], [PL - 0.75, -6.4, 3.2, 20, 0, 5.2, 0, 38]],
+    [[PL, -6.2, 1.1, 14, 0, 7.5, 0, 56], [PL + 0.7, -7, 1.5, 17, 0, 9, 0, 56], [PL + 2.3, cp[0], cp[1], cp[2], tg[0], tg[1], tg[2], CAMB.fv]]]; };
+  const camLift = (k, t) => { if (!camL) camL = [camLive(t => pathAt(t, KL()[0]), { t0: 0, f: 1.8, amp: [0.05, 0.03], seed: 11, tIn: 0 }),
+      camLive(t => { const u = seg(t, PL - 0.75, PL); return [mix(-3.4, -3.1, u), 5.5, mix(12.2, 11.4, u), 0, 5.3, 1.6, 34]; }, { t0: PL - 0.75, f: 2.4, amp: [0.025, 0.015], seed: 12 }),
+      camLive(t => pathAt(t, KL()[1]), { t0: PL, f: 2.0, amp: [0.05, 0.03], seed: 13, tEnd: PL + 2.3 })];
+    const v = camL[k](t); cam(v[0], v[1], v[2], v[3], v[4], v[5], v[6]); };
   G3D.def('c3:493p', {
     len: PEND, R: PL, at: 78.5, mus: { bed: 'sfx/natur/arceus_loft.mp3' },   /* lydsengen følger låtas klokke (work/raids3d/arceus/lyd/loft.py) */ fig: 2, models: ['arceus'], edge: null, env: { rim: '#ffe2a0', glow: '#bfe9ff', fog: '#04050b', glowH: 6, ink: '#191430' },
     make(K, T) { const S = { scene: new T.Scene(), figs: [], tex: {} }; place(K, T, S, { all: 1 }); const add = (m, ro) => { m.frustumCulled = false; if (ro != null) m.renderOrder = ro; S.scene.add(m); return m; };
@@ -747,7 +846,7 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
       for (const f of [g, S.rf]) { f.root.visible = true; f.root.scale.setScalar(1); f.root.position.set(0, S.fy, 0); f.root.rotation.set(0, 0, 0); }
       const roar = !re ? 0 : kf(t, [[PL, 0], [PL + 0.3, 1, eo], [PL + 1.5, 1], [PL + 2.8, 0.1, io]]); S.rw = roar;
       const P = { t, bow: 0.55 * io(seg(t, 0.4, 2.4)) * (1 - seg(t, PL - 0.9, PL - 0.3)), up: roar, yaw: 0, hoof: kf(t, [[PL - 1.1, 0], [PL - 0.35, 1, io], [PL - 0.03, 1], [PL + 0.09, 0, ei]]), dip: 0, br: 1 };
-      pose(S, g, S.rg, P); pose(S, S.rf, S.rrg, P); setCoat(S, 0, -99); g.set('uStone', 0); g.eye(0, 0, 0.4);
+      if (!STIV()) { const A = MVL.at(t); poseN(S, g, S.rg, A); poseN(S, S.rf, S.rrg, A); } else { pose(S, g, S.rg, P); pose(S, S.rf, S.rrg, P); } setCoat(S, 0, -99); g.set('uStone', 0); g.eye(0, 0, 0.4);
       if (re) tySet(S, tex); else if (S.texOn) tySet(S, S.tex0);
       g.set('uFlK', max(0.85 * hit(t, PL, 0.16), 0.3 * hit(t, PL, 0.5))); g.set('uFlC', t < PL + 0.1 ? '#ffffff' : tc);
       lu.uWv.value[0].set(-1.5, 2.6, PL + 0.05, t >= PL + 0.05 ? 1.6 : 0);
@@ -755,11 +854,11 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
     },
     shots: [
       /* 1 Fra kampens bilde og inn mot ham, mens hallen blir borte rundt ham. */
-      [0, (S, u, a, t) => { const tg = camEnd(), cp = CAMB.cp; camK(t, [[0, cp[0], cp[1], cp[2], tg[0], tg[1], tg[2], CAMB.fv], [2.6, -8.6, 3.6, 28, -2, 5.4, 0, 36], [PL - 0.75, -6.4, 3.2, 20, 0, 5.2, 0, 38]]); S.post.sh = 0.5 * seg(t, 1.6, 5) ; }],
+      [0, (S, u, a, t) => { const tg = camEnd(), cp = CAMB.cp; if (STIV()) camK(t, [[0, cp[0], cp[1], cp[2], tg[0], tg[1], tg[2], CAMB.fv], [2.6, -8.6, 3.6, 28, -2, 5.4, 0, 36], [PL - 0.75, -6.4, 3.2, 20, 0, 5.2, 0, 38]]); else camLift(0, t); S.post.sh = 0.5 * seg(t, 1.6, 5) ; }],
       /* 2 Pusten: tett på ham og den ene platen. Alt annet er tomrom. */
-      [PL - 0.75, (S, u, a, t) => { cam(mix(-3.4, -3.1, u), 5.5, mix(12.2, 11.4, u), 0, 5.3, 1.6, 34); }],
+      [PL - 0.75, (S, u, a, t) => { if (STIV()) cam(mix(-3.4, -3.1, u), 5.5, mix(12.2, 11.4, u), 0, 5.3, 1.6, 34); else camLift(1, t); }],
       /* 3 Løftet: lavt og vidt. Hoven i glasset, og hallen skapes på nytt i platens farge; kameraet glir til kampens bilde, og typen står på skiltet. */
-      [PL, (S, u, a, t) => { const tg = camEnd(), cp = CAMB.cp; camK(t, [[PL, -6.2, 1.1, 14, 0, 7.5, 0, 56], [PL + 0.7, -7, 1.5, 17, 0, 9, 0, 56], [PL + 2.3, cp[0], cp[1], cp[2], tg[0], tg[1], tg[2], CAMB.fv]]); mouth(S, PL, t);
+      [PL, (S, u, a, t) => { const tg = camEnd(), cp = CAMB.cp; if (STIV()) camK(t, [[PL, -6.2, 1.1, 14, 0, 7.5, 0, 56], [PL + 0.7, -7, 1.5, 17, 0, 9, 0, 56], [PL + 2.3, cp[0], cp[1], cp[2], tg[0], tg[1], tg[2], CAMB.fv]]); else camLift(2, t); mouth(S, PL, t);
         S.post.sh = 2.4 * hit(t, PL, 1) + 0.8 * seg(t, PL + 0.1, PL + 0.5) * (1 - seg(t, PL + 0.9, PL + 1.8)); S.post.fl = max(0.5 * hit(t, PL, 0.12), seg(t, PEND - 0.32, PEND - 0.06)); S.post.flc = t < PL + 1 ? S.ty != null ? tyC(S.ty) : '#ffffff' : '#ffffff'; }],
     ],
   });
