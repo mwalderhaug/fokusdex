@@ -10,13 +10,24 @@
      65,27    DROPPET: Judgment (kula til himmels, regn av lys over hallen) og brølet; navnet 66,67
    STEDET er Hall of Origin slik han skaper den: et glassgulv som speiler kosmos (alt over gulvet speiles: søylene, egget, ham selv), lyslinjene i gulvet med de 18
    typemerkene i ring, søyler av marmor og gull som stiger opp gjennom glasset, og kosmos rundt. Hallen han skaper, er arenaen (X.arena nederst).
-   1 enhet = 1 m. Han står i origo og ser mot +z (dit kameraet og din Pokémon står), og er rundt 9 m til toppen. */
+   1 enhet = 1 m. Han står i origo og ser mot +z (dit kameraet og din Pokémon står), og er rundt 9 m til toppen.
+   STORT SPRANG (Fable 25.11): en NY slutt (suget 49,24, eksplosjonen på smellet 49,67, kameraet som raser inn, platene som slår inn og hjulet som smeller 52,87 og 55,67,
+   lunta rundt typemerkene, gullet som sprenges av, og Judgment løftet) og NYE søyler (de skyter opp mens kameraet rygger nedover gangen) ligger ved siden av filmen over
+   bak en bryter (G3D.alt[493], se under tidene). Tidslinja over er den gamle; den nye står ved SW og BOOM. */
 (() => {
   const K = G3D.K, C = CINE.kit, X = G3C, { sin, cos, PI, TAU, abs, max, min, floor, c01, mix, seg, io, eo, ei, back, hit, rnd, hex } = K, kf = C.kf, hyp = Math.hypot;
   /* ---------- Tidene (filmens tid) ---------- */
   const H0 = 19.0, HBASS = H0 + 4.0, LIFT = [7.08, 12.19, 17.30, 22.41, 27.52].map(x => H0 + x), HFADE = H0 + 29.0, HEND = H0 + 29.8;   /* Hall of Origin: løftene hvert 5,11 s */
   const K0 = 49.3, HIT = [0.25, 3.17, 6.37, 9.57, 11.17, 12.77, 14.37].map(x => K0 + x), BRE = K0 + 15.2, DROP = K0 + 15.97, NAME = DROP + 1.4, LEN = NAME + 3.2;   /* kamplåtas åpning */
   const FLN = [0.08, 0.43, 1.36, 2.15, 5.85, 7.40, 7.97, 9.05, 9.70, 10.65, 11.30, 11.97, 14.02];   /* fløytas 13 toner (målt i skissen) */
+  /* STORT SPRANG (Fable 25.11, Jazz 24.11 kveld: «mer action og mer WOW faktor og eksplosjon» når han kommer ut av egget, og søylene «mer intens»).
+     Kamplåtas tre første slag er hvert et SUG og et SMELL (målt i lydfila 25.11): suget 0,00–0,43, 3,21–3,63 og 6,01–6,42 i låta, smellene på 0,43, 3,63 og 6,43.
+     SW og BOOM er filmens tider med samme forskyvning som de andre slagene (bildet to bilder før lyden). 49,55 (HIT[0]) lå midt i det første suget, 0,2 s før smellet,
+     og 52,47 (HIT[1]) er starten på det andre suget: den nye slutten legger eksplosjonen PÅ smellet 49,67 og lar platene slå inn under sugene og hjulet smelle på 52,87 og 55,67.
+     BRYTEREN: G3D.alt[493] = 'gammel' gir filmen slik den var (egget åpner seg til glorier, søylene stiger mykt), 'slutt' bare den gamle slutten, 'soyler' bare de gamle
+     søylene. Leses for hvert bilde, så verktøyene bytter uten å bygge scenen på nytt (work/pw/live.html: &gammel=1; t_cine.js og t_film.js: PRE='G3D.alt={493:"gammel"}'). */
+  const SW = [K0 - 0.06, K0 + 3.17, K0 + 5.95], BOOM = [K0 + 0.37, K0 + 3.57, K0 + 6.37], BANG = BOOM[0]; const L2 = LIFT[2], L3 = LIFT[3], L4 = LIFT[4];
+  const altv = () => String((G3D.alt && G3D.alt[493]) || ''), OLDE = () => /gammel|slutt/.test(altv()), OLDP = () => /gammel|soyler/.test(altv());
   /* De 18 typene i appens rekkefølge (TYN): Normal er ham selv, de 17 andre er platene. Lysende utgaver av typefargene. */
   const TY = ['#fff1c8', '#e0503a', '#9db4ff', '#b65ad6', '#e2b45a', '#c9a850', '#b4d42c', '#7a62d0', '#b9c4dc', '#ff7a2e', '#4f96ff', '#62d86a', '#ffd92e', '#ff5f9e', '#8fe6ee', '#6f4cff', '#8a6f66', '#ff9ed0'];
   const GOLD = '#ffcf5c', GOLDW = '#fff3c8', EC = [0, 5.6, 0], ER = 4.4, EY = 1.3;   /* eggets sentrum, radius og høydeforhold */
@@ -95,12 +106,12 @@ void main(){ vec2 p = vW.xz; float r = length(p), a = atan(p.y, p.x);
   gl_FragColor = vec4(col * dim * uA * (1. - fogK(vW) * .85), 0.); }`;
   /* SØYLENE: marmor med riller og gull i fot og kapitél. De stiger opp GJENNOM glasset (kapitélet først), tent av ringen som går forbi (aI: når, hvor lenge, høyden, frø).
      uMir = −1 for speilbildet under gulvet (lyset regnes da som for den ekte søylen), uRef = hvor sterkt speilbildet er. Lyset kommer fra scenen (uEgg) og kaldt fra kosmos. */
-  const PIL_V = `attribute vec4 aI; varying vec3 vW, vN; varying float vG, vK, vA; uniform float uTime, uHv; uniform vec3 uGw;
-void main(){ vec4 c0 = instanceMatrix * vec4(0., 0., 0., 1.); float dd = min(length(c0.xz), 72.), k = uGw.x > .5 ? clamp((uGw.y - dd) / uGw.z, 0., 1.) : clamp((uTime - aI.x) / aI.y, 0., 1.), q = k - 1., e = 1. + 2.2 * q * q * q + 1.2 * q * q; vK = k;
+  const PIL_V = `attribute vec4 aI, aI2; varying vec3 vW, vN; varying float vG, vK, vA, vS; uniform float uTime, uHv, uPn; uniform vec3 uGw;
+void main(){ vec4 c0 = instanceMatrix * vec4(0., 0., 0., 1.), I = uPn > .5 ? aI2 : aI; float dd = min(length(c0.xz), 72.), k = uGw.x > .5 ? clamp((uGw.y - dd) / uGw.z, 0., 1.) : clamp((uTime - I.x) / I.y, 0., 1.), q = k - 1., e = 1. + 2.2 * q * q * q + 1.2 * q * q; vK = k; vS = uGw.x > .5 ? 99. : uTime - I.x - I.y;
   float y = position.y, H = aI.z, Y = y < 1.6 ? y : y < 2.6 ? mix(1.6, H - 1.95, y - 1.6) : H - 1.95 + (y - 2.6);
   vG = max(step(.45, y) * step(y, 1.15), step(2.9, y)); vA = atan(position.z, position.x);
   vec4 w = modelMatrix * instanceMatrix * vec4(position.x, Y - H * (1. - e) + uHv * (.55 + .45 * sin(uTime * .5 + aI.w * 6.283)), position.z, 1.); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * viewMatrix * w; }`;
-  const PIL_F = `varying vec3 vW, vN; varying float vG, vK, vA; uniform float uMir, uLit, uRef; uniform vec3 uTc; uniform vec4 uEgg;
+  const PIL_F = `varying vec3 vW, vN; varying float vG, vK, vA, vS; uniform float uMir, uLit, uRef; uniform vec3 uTc, uHot, uBl; uniform vec4 uEgg;
 ${CM}
 void main(){ if (vW.y * uMir < 0. || vK < .001) discard;
   vec3 W = vec3(vW.x, vW.y * uMir, vW.z), Cp = vec3(cameraPosition.x, cameraPosition.y * uMir, cameraPosition.z), N = normalize(vN * vec3(1., uMir, 1.)), V = normalize(Cp - W);
@@ -111,7 +122,9 @@ void main(){ if (vW.y * uMir < 0. || vK < .001) discard;
   vec3 c = base * (uShC * (.34 + .3 * max(N.y, 0.) + .2 * wrap) + uKeyC * dl * uEgg.w * (34. / (30. + dist)));
   c += uTc * (1. - smoothstep(0., 8., W.y)) * .16 * uLit;
   float f = pow(1. - max(dot(N, V), 0.), 3.); c += mix(vec3(.4, .46, .9), gold, vG) * f * .26 + gold * vG * (.05 + .12 * uLit) * (.6 + .4 * wrap);
-  c += vec3(1., .9, .6) * (1. - smoothstep(0., 1., vK)) * (.3 + .6 * vG);
+  float hot = 1. - smoothstep(0., 1., vK); c += vec3(1., .9, .6) * hot * (.3 + .6 * vG) * uHot.x; c = mix(c, vec3(1.3, 1.12, .78), hot * hot * uHot.y);   /* uHot = (gløden mens den stiger, hvitglødende, glimtet når den stanser) */
+  c += vec3(1., .86, .5) * uHot.z * (.25 + .75 * vG) * exp(-max(vS, 0.) * 3.2) * step(0., vS) * step(vS, 3.);
+  c += vec3(1., .93, .74) * uBl.y * exp(-abs(length(W.xz) - uBl.x) / max(uBl.z, .01)) * (.6 + .4 * wrap);   /* uBl = (trykkfrontens radius, styrke, bredde): søylene blinker når den går forbi */
   gl_FragColor = vec4(mix(c, uFogC, fogK(W)) * uRef, 1.); }`;
   /* EGGET: en perle av lys med kaoset inni (de 18 fargene driver sakte som skyer i perlemoren), gull i kanten. Den er tett (det bak den synes ikke gjennom),
      så skikkelsen inni ligger BAK lyset og skimtes gjennom det (etterpassets uSub). uGh = 1: skallet som lys lagt oppå (idet det åpner seg og blir borte). */
@@ -166,17 +179,44 @@ void main(){ float x = 1. - vV * vV, fl = .55 + .45 * sin(vU * 46. - uTime * 2.6
      opp til himmelen; i treffet blir den bredere et øyeblikk og blekner. Og ringene der de treffer glasset. */
   const JY = 130., JV = 150., JB = 0.34;   /* JB: kula brister i senit 0,34 s etter droppet (lyden «arceus_judgment» er klippet slik) */
   const LAN_V = `attribute vec3 aJ; varying vec2 vQ; varying float vF, vH; uniform float uTime;
+uniform float uJw;
 void main(){ float age = uTime - aJ.z + ${(JY / JV).toFixed(4)}, hitA = uTime - aJ.z, y0 = max(${JY.toFixed(1)} - age * ${JV.toFixed(1)}, 0.);
-  float w = mix(.7, 1.9, clamp(hitA * 5., 0., 1.)) * (1. - .6 * smoothstep(.08, .6, hitA)); vF = step(0., age) * (1. - smoothstep(0., .6, hitA));
+  float w = mix(.7, 1.9, clamp(hitA * 5., 0., 1.)) * (1. - .6 * smoothstep(.08, .6, hitA)) * (1. + uJw); vF = step(0., age) * (1. - smoothstep(0., .6, hitA));   /* uJw: stort sprang, bredere søyler av lys (0 = som før) */
   vec3 base = vec3(aJ.x, 0., aJ.y), toC = cameraPosition - (modelMatrix * vec4(base, 1.)).xyz, rt = normalize(vec3(toC.z, 0., -toC.x)); float y = mix(y0, ${(JY + 40).toFixed(1)}, position.y);
   vQ = vec2(position.x * 2., position.y); vH = y - y0; gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(base + rt * position.x * w + vec3(0., y, 0.), 1.); }`;
   const LAN_F = `varying vec2 vQ; varying float vF, vH; void main(){ if (vF < .01) discard; float x = 1. - abs(vQ.x), hd = exp(-vH * .1);
   gl_FragColor = vec4((vec3(1., .97, .88) * pow(x, 6.) * (1. + 2.2 * hd) + vec3(1., .78, .4) * x * x * (.22 + .5 * hd)) * vF, 0.); }`;
   const IMP_V = `attribute vec3 aJ; varying float vF; varying vec2 vQ; uniform float uTime;
-void main(){ float age = uTime - aJ.z, r = 5. * (1. - exp(-age * 3.6)); vF = step(0., age) * (1. - smoothstep(.1, 1.1, age)); vQ = position.xz;
+uniform float uJw;
+void main(){ float age = uTime - aJ.z, r = 5. * (1. - exp(-age * 3.6)) * (1. + .7 * uJw); vF = step(0., age) * (1. - smoothstep(.1, 1.1, age)); vQ = position.xz;
   gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(aJ.x + position.x * r, .04, aJ.y + position.z * r, 1.); }`;
   const IMP_F = `varying float vF; varying vec2 vQ; void main(){ if (vF < .01) discard; float l = length(vQ), k = (1. - smoothstep(0., .14, abs(l - .85))) + exp(-l * l * 9.) * 1.5 * vF;
   gl_FragColor = vec4(vec3(1., .88, .55) * k * vF * 1.8, 0.); }`;
+  /* SØYLENE SKYTER OPP (stort sprang): en stripe av lys går foran kapitélet til himmels og blekner mens søylen fyller den (aJ: x, z, når, høyden; aD: hvor lenge den stiger).
+     Stripa vender alltid mot kameraet; søylen selv dekker midten av den, så det som synes, er lyset rundt skaftet og over kapitélet. */
+  const PJ_V = `attribute vec4 aJ; attribute float aD; varying vec2 vQ; varying float vF; uniform float uTime;
+void main(){ float age = uTime - aJ.z, k = clamp(age / aD, 0., 1.), q = k - 1., e = 1. + 2.2 * q * q * q + 1.2 * q * q, top = aJ.w * e + mix(38., 2., k);
+  vF = step(0., age) * pow(1. - k, 1.3);
+  vec3 base = vec3(aJ.x, 0., aJ.y), toC = cameraPosition - (modelMatrix * vec4(base, 1.)).xyz, rt = normalize(vec3(toC.z, 0., -toC.x)); float w = mix(4.4, 2.6, position.y);
+  vF *= .35 + .65 * smoothstep(10., 46., length(toC.xz));   /* dempet nær kameraet: ellers en hvit flate rett foran linsa */
+  vQ = vec2(position.x * 2., position.y); gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(base + rt * position.x * w + vec3(0., top * position.y, 0.), 1.); }`;
+  const PJ_F = `varying vec2 vQ; varying float vF; void main(){ if (vF < .01) discard; float x = 1. - abs(vQ.x), y = vQ.y;
+  gl_FragColor = vec4((vec3(1., .97, .88) * pow(x, 5.) * 1.3 + vec3(1., .8, .42) * x * x * .42) * (1. - y * y * .6) * smoothstep(0., .03, y) * vF, 0.); }`;
+  /* DET SOM SLYNGES UT OG BLIR HENGENDE (stort sprang): lyspunkter som kastes fra et sted til et annet på et øyeblikk (aD: hvor langt og hvor; uLam: hvor fort farten dør),
+     og så henger i lufta, glitrer og synker sakte (uSink) til de slukner. Partiklene i motoren (K.pts) bremser jevnt og egner seg ikke til et smell.
+     aB = (når, levetid, størrelse, frø). uTw = hvor mye de blinker. */
+  const BV_V = `attribute vec3 aD; attribute vec4 aB; varying float vK, vA; uniform float uTime, uT0, uLam, uSink, uPx, uPs, uA, uNear, uTw;
+void main(){ float tau = uTime - uT0 - aB.x, k = tau / aB.y; vK = k; float e = 1. - exp(-max(tau, 0.) * uLam * (.6 + .8 * aB.w));
+  vec3 p = position + aD * e; p.y -= uSink * max(tau - .4, 0.) * (.4 + aB.w); p.x += sin(tau * .9 + aB.w * 40.) * .35 * e; p.z += cos(tau * .7 + aB.w * 23.) * .35 * e; p.y = max(p.y, .06);
+  vec4 mv = viewMatrix * modelMatrix * vec4(p, 1.); gl_Position = projectionMatrix * mv; float d = -mv.z;
+  gl_PointSize = max(aB.z * uPx / max(d, .1), 1.5) * uPs;
+  vA = uA * smoothstep(0., .03, tau) * (1. - smoothstep(.55, 1., k)) * smoothstep(uNear, uNear * 1.8, d) * mix(1., .55 + .45 * sin(uTime * (3. + 6. * aB.w) + aB.w * 50.), uTw);
+  if (k < 0. || k > 1.) { gl_Position = vec4(2., 2., 2., 1.); gl_PointSize = 0.; } }`;
+  const BV_F = `varying float vK, vA; uniform vec3 uC0, uC1, uC2; void main(){ vec2 q = gl_PointCoord * 2. - 1.; float r2 = dot(q, q); if (r2 > 1.) discard; float a = (1. - r2) * (1. - r2) * vA;
+  gl_FragColor = vec4(mix(mix(uC0, uC1, smoothstep(0., .25, vK)), uC2, smoothstep(.4, 1., vK)) * a, 0.); }`;
+  /* TRYKKBØLGEN (stort sprang): et skall av lys som brer seg ut fra egget på smellet, lysest i kanten (en boble, ikke en ball), og sterkest nede ved gulvet. */
+  const SHL_F = `varying vec3 vW, vN; uniform float uA; void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float f = 1. - abs(dot(N, V));
+  gl_FragColor = vec4(vec3(1., .9, .66) * (pow(f, 4.) * 1.1 + pow(f, 14.) * 2.2) * (.3 + .7 * exp(-abs(vW.y) * .07)) * (vW.y < 0. ? .4 : 1.) * uA, 0.); }`;
   /* Speilbildet av ham i glasset: samme skjelett og tekstur, myk og dempet, med gullet (uCo: styrke og kanten). */
   const REFL_V = `#include <common>
 #include <skinning_pars_vertex>
@@ -195,10 +235,13 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
   const PIL = (() => { const L = []; for (let i = 0; i < 16; i++) { if (i === 3 || i === 4) continue;   /* porten mot gangen (og kampens kamera) */ const a = (i + 0.5) / 16 * TAU; L.push([cos(a) * 34, sin(a) * 34, 26]); }
     for (let i = 0; i < 7; i++) for (const sx of [-1, 1]) L.push([sx * 15, 48 + i * 11, 22]);
     for (let i = 0; i < 24; i++) { const a = (i + 0.5) / 24 * TAU; L.push([cos(a) * 62.5, sin(a) * 62.5, 36]); } return L; })();
+  /* Stort sprang: ringen jager utover gulvet i VP m/s fra 0,30 s etter løftet, og hver søyle SKYTER opp idet den går forbi (PT2: [når, hvor lenge]). Tiden den bruker,
+     følger målestokken (√høyden: 22 m på 1,4 s, 36 m på 1,8 s). Den indre ringen (34 m) skyter opp samlet, så parene i gangen ett og ett utover, og den ytre ringen samlet. */
+  const VP = 32, PT2 = PIL.map(q => [LIFT[2] + 0.30 + hyp(q[0], q[1]) / VP, 0.3 * Math.sqrt(q[2])]);
   const pillarGeo = T => new T.LatheGeometry([[0.001, 0], [2.1, 0], [2.1, 0.45], [1.78, 0.6], [1.9, 0.8], [1.78, 1.0], [1.5, 1.15], [1.42, 1.6], [1.2, 2.6], [1.3, 2.9], [1.3, 3.08], [1.5, 3.3], [1.74, 3.7], [1.84, 4.05], [1.98, 4.15], [1.98, 4.55], [0.001, 4.55]].map(q => new T.Vector2(q[0], q[1])), 28);
   const place = (K, T, S, o) => { o = o || {}; const add = (m, ro) => { m.frustumCulled = false; if (ro != null) m.renderOrder = ro; S.scene.add(m); return m; }, pal = TY.map(c => K.u3(c));
     S.T = T; S.mirs = []; S.pal = pal; S.ax = { x: new T.Vector3(1, 0, 0), y: new T.Vector3(0, 1, 0), z: new T.Vector3(0, 0, 1) };
-    const us = S.us = { uSky: K.uv(new T.Vector4(0, 0, 1, 0)), uJd: K.uv(new T.Vector4(0, 0, 0, 0)), uSkyT: K.uv(K.u3('#ffffff')), uSkyTk: K.uv(0), uEgg: K.uv(new T.Vector4(EC[0], EC[1], EC[2], 0)), uHv: K.uv(0), uGw: K.uv(new T.Vector3(0, 0, 14)) };
+    const us = S.us = { uJw: K.uv(0), uSky: K.uv(new T.Vector4(0, 0, 1, 0)), uJd: K.uv(new T.Vector4(0, 0, 0, 0)), uSkyT: K.uv(K.u3('#ffffff')), uSkyTk: K.uv(0), uEgg: K.uv(new T.Vector4(EC[0], EC[1], EC[2], 0)), uHv: K.uv(0), uGw: K.uv(new T.Vector3(0, 0, 14)), uPn: K.uv(0), uHot: K.uv(new T.Vector3(1, 0, 0)), uBl: K.uv(new T.Vector3(0, 0, 1)) };
     S.dome = add(new T.Mesh(new T.SphereGeometry(1, 40, 24), K.shader(DOME_V, DOME_F, Object.assign({}, us), { side: T.BackSide, depthWrite: false, depthTest: false })), -20); S.dome.scale.setScalar(880);   /* innenfor kameraets vanlige grense (900): arenaens kamera settes av verktøykassa */
     { const n = 6400, P = new Float32Array(n * 3), A = new Float32Array(n * 4), GN = [0.7368, 0.6754, 0.0286];
       for (let i = 0; i < n; i++) { let u = rnd(i, 1) * 2 - 1, a = rnd(i, 2) * TAU, s = Math.sqrt(1 - u * u), b = rnd(i, 3), d = [cos(a) * s, u, sin(a) * s];
@@ -212,8 +255,8 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
     S.lines = add(new T.Mesh(disc, K.shader(FLV, LINE_F, Object.assign({ uR1: K.uv(o.all ? 400 : 0), uR2: K.uv(o.all ? 400 : 0), uA: K.uv(1), uLit: K.uv(0), uMk: K.uv(new Array(18).fill(0)), uC1: K.uv(K.u3('#ffdf9a')), uC2: K.uv(K.u3('#8fe9ff')), uPal: K.uv(pal),
       uWv: K.uv(Array.from({ length: 6 }, () => new T.Vector4(0, 0, -99, 0))), uFr: K.uv([0, 1].map(() => new T.Vector4(0, 0, 1, 0))), uTp: K.uv(new T.Vector4(1, 1, 1, 0)), uMr: K.uv(0) }, { uEgg: us.uEgg }), K.blend.add())), -5); S.lines.position.y = 0.02;
     /* Søylene og speilbildene deres. grow(q, i) → [når, hvor lenge]; i arenaen står de alt. */
-    { const geo = pillarGeo(T), n = PIL.length, mk = (mir) => { const ig = geo.clone(), aI = new Float32Array(n * 4); PIL.forEach((q, i) => { const g = o.grow ? o.grow(q, i) : [-99, 1]; aI.set([g[0], g[1], q[2], rnd(i, 9)], i * 4); }); ig.setAttribute('aI', new T.InstancedBufferAttribute(aI, 4));
-        const m = new T.InstancedMesh(ig, K.shader(PIL_V, PIL_F, Object.assign({ uMir: K.uv(mir ? -1 : 1), uLit: K.uv(0), uRef: K.uv(mir ? 0.5 : 1), uTc: K.uv(K.u3('#9fe6ff')), uHv: S.us.uHv, uGw: S.us.uGw }, { uEgg: us.uEgg }), { side: T.DoubleSide }), n), ob = new T.Object3D();
+    { const geo = pillarGeo(T), n = PIL.length, mk = (mir) => { const ig = geo.clone(), aI = new Float32Array(n * 4); const aI2 = new Float32Array(n * 4); PIL.forEach((q, i) => { const g = o.grow ? o.grow(q, i) : [-99, 1], g2 = o.grow2 ? o.grow2(q, i) : g; aI.set([g[0], g[1], q[2], rnd(i, 9)], i * 4); aI2.set([g2[0], g2[1], q[2], rnd(i, 9)], i * 4); }); ig.setAttribute('aI', new T.InstancedBufferAttribute(aI, 4)); ig.setAttribute('aI2', new T.InstancedBufferAttribute(aI2, 4));
+        const m = new T.InstancedMesh(ig, K.shader(PIL_V, PIL_F, Object.assign({ uMir: K.uv(mir ? -1 : 1), uLit: K.uv(0), uRef: K.uv(mir ? 0.5 : 1), uTc: K.uv(K.u3('#9fe6ff')), uHv: S.us.uHv, uGw: S.us.uGw, uPn: S.us.uPn, uHot: S.us.uHot, uBl: S.us.uBl }, { uEgg: us.uEgg }), { side: T.DoubleSide }), n), ob = new T.Object3D();
         PIL.forEach((q, i) => { ob.position.set(q[0], 0, q[1]); ob.updateMatrix(); m.setMatrixAt(i, ob.matrix); }); m.frustumCulled = false; return m; };
       S.pil = mk(0); S.scene.add(S.pil); S.pilM = mk(1); S.mirG.add(S.pilM); }
     /* Støv av lys som driver i hallen (tennes med stjernene). */
@@ -280,6 +323,7 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
     const eg = new T.SphereGeometry(ER, 56, 36), eggM = (gh) => K.shader(EGG_V, EGG_F, { uA: K.uv(0), uIn: K.uv(1), uGh: K.uv(gh), uPal: K.uv(pal) }, gh ? K.blend.add() : {});
     S.egg = mir(S, add(new T.Mesh(eg, eggM(0)), 1), -9); S.egg.position.set(...EC);
     S.eggX = mir(S, add(new T.Mesh(eg, eggM(1)), 2)); S.eggX.position.set(...EC);
+    S.shock = add(new T.Mesh(eg, K.shader(EGG_V, SHL_F, { uA: K.uv(0) }, Object.assign(K.blend.add(), { side: T.DoubleSide }))), 5); S.shock.position.set(...EC); S.shock.visible = false;
     S.seed = add(K.pts(3, i => ({ p: [0, 0, 0], v: [0, 0, 0], b: 0, l: 1e9, z: [3.4, 1.5, 0.6][i] }), { add: 1, px: 150, c: ['#fff6dc', '#fff6dc', '#ffffff'], fade: 0.99, a: 0 }), 3); S.seed.position.set(...EC);
     /* De fem ringene rundt egget (én per løft), gloriene egget åpner seg til, ringen som løfter gullet av ham, og kula i Judgment. */
     S.rings = [0, 1, 2, 3, 4].map(i => mir(S, add(ring(T, 6.5 + 0.42 * i), 4)));
@@ -308,14 +352,140 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
     /* Idet egget åpner seg: skallet blir til lys som stiger. */
     S.open = add(K.pts(420, i => { const u = rnd(i, 61) * 2 - 1, a = rnd(i, 62) * TAU, s = Math.sqrt(1 - u * u), sp = 2 + 5 * rnd(i, 63); return { p: [EC[0] + cos(a) * s * ER, EC[1] + u * ER * EY, EC[2] + sin(a) * s * ER], v: [cos(a) * s * sp, 1.5 + u * sp * 0.6 + 2.5 * rnd(i, 64), sin(a) * s * sp], b: rnd(i, 65) * 0.18, l: 1.6 + rnd(i, 66) * 1.8, z: 0.4 + rnd(i, 67) * 0.8 }; },
       { t0: HIT[0], g: -0.6, drag: 1.1, add: 1, px: 40, sway: 0.3, c: ['#ffffff', '#ffe9a8', '#e0a030'], fade: 0.4, a: 1, near: 2 }));
+    /* SØYLENE SKYTER OPP (stort sprang): lyssprut fra glasset rundt foten (stiger med kapitélet og regner ned igjen langs skaftet), stripa av lys foran kapitélet,
+       en ring i glasset ved foten, og lysdryss fra kapitélet når søylen stanser. Og ringen selv, som en bølge av lys over gulvet (S.wr[0]). */
+    { const n = PIL.length, G = 30, D = 8;
+      S.gey = mir(S, add(K.pts(n * G, i => { const j = floor(i / G), q = PIL[j], a = rnd(i, 201) * TAU, rr = 2.0 + 0.9 * rnd(i, 202), sp = 1.5 + 5 * rnd(i, 203), up = (9 + 25 * rnd(i, 204) * rnd(i, 205)) * Math.sqrt(q[2] / 26);
+          return { p: [q[0] + cos(a) * rr, 0.05, q[1] + sin(a) * rr], v: [cos(a) * sp, up, sin(a) * sp], b: PT2[j][0] + 0.02 + 0.16 * rnd(i, 206), l: 1.3 + 1.5 * rnd(i, 207), z: 0.3 + 0.7 * rnd(i, 208) }; },
+        { t0: 0, g: 15, drag: 0.25, add: 1, px: 66, c: ['#ffffff', '#ffe9a8', '#e0a030'], fade: 0.45, a: 1, near: 2, floor: 0 }), 6));
+      S.pdust = add(K.pts(n * D, i => { const j = floor(i / D), q = PIL[j], a = rnd(i, 211) * TAU, sp = 0.4 + 1.3 * rnd(i, 212);
+          return { p: [q[0] + cos(a) * 1.9, q[2] - 0.4 * rnd(i, 213), q[1] + sin(a) * 1.9], v: [cos(a) * sp, 0.6 * (rnd(i, 214) - 0.3), sin(a) * sp], b: PT2[j][0] + PT2[j][1] * (0.62 + 0.3 * rnd(i, 215)), l: 1.9 + 1.4 * rnd(i, 216), z: 0.25 + 0.5 * rnd(i, 217) }; },
+        { t0: 0, g: 5, drag: 0.5, add: 1, px: 30, sway: 0.25, c: ['#fff6d8', '#ffd66a', '#c88a2a'], fade: 0.4, a: 0.9, near: 2, floor: 0 }), 6);
+      const pl = new T.PlaneGeometry(1, 1); pl.translate(0, 0.5, 0); const ig = new T.InstancedBufferGeometry().copy(pl); ig.instanceCount = n; const aJ = new Float32Array(n * 4), aD = new Float32Array(n), aB = new Float32Array(n * 3);
+      PIL.forEach((q, i) => { aJ.set([q[0], q[1], PT2[i][0], q[2]], i * 4); aD[i] = PT2[i][1]; aB.set([q[0], q[1], PT2[i][0]], i * 3); }); ig.setAttribute('aJ', new T.InstancedBufferAttribute(aJ, 4)); ig.setAttribute('aD', new T.InstancedBufferAttribute(aD, 1));
+      S.pjet = mir(S, add(new T.Mesh(ig, K.shader(PJ_V, PJ_F, {}, Object.assign(K.blend.add(), { side: T.DoubleSide }))), 5));
+      const pr = new T.PlaneGeometry(2, 2); pr.rotateX(-PI / 2); const rg = new T.InstancedBufferGeometry().copy(pr); rg.instanceCount = n; rg.setAttribute('aJ', new T.InstancedBufferAttribute(aB, 3));
+      S.pimp = add(new T.Mesh(rg, K.shader(IMP_V.replace('5. * (1. - exp(-age * 3.6))', '11. * (1. - exp(-age * 3.))'), `varying float vF; varying vec2 vQ; void main(){ if (vF < .01) discard; float l = length(vQ), k = 1. - smoothstep(0., .07, abs(l - .88));
+  gl_FragColor = vec4(vec3(1., .88, .55) * k * vF * vF * .8, 0.); }`, {}, Object.assign(K.blend.add(), { side: T.DoubleSide }))), 6); }   /* bare en tynn ring: en fylt glød ble en hvit flate sett fra det lave kameraet */
+    /* DEN NYE SLUTTEN (stort sprang). burst(n, init, o): lyspunkter som slynges ut og blir hengende (BV); init(i) gir { p, d, b, l, z }. */
+    const burst = (n, init, o) => { const P = new Float32Array(n * 3), Dd = new Float32Array(n * 3), B = new Float32Array(n * 4), geo = new T.BufferGeometry(), c = o.c;
+      for (let i = 0; i < n; i++) { const q = init(i); P.set(q.p, i * 3); Dd.set(q.d, i * 3); B.set([q.b || 0, q.l || 4, q.z || 1, rnd(i, 97)], i * 4); }
+      geo.setAttribute('position', new T.BufferAttribute(P, 3)); geo.setAttribute('aD', new T.BufferAttribute(Dd, 3)); geo.setAttribute('aB', new T.BufferAttribute(B, 4));
+      const m = new T.Points(geo, K.shader(BV_V, BV_F, { uT0: K.uv(o.t0), uLam: K.uv(o.lam || 3.4), uSink: K.uv(o.sink || 0), uPx: K.uv(o.px || 60), uA: K.uv(o.a == null ? 1 : o.a), uNear: K.uv(o.near || 2), uTw: K.uv(o.tw == null ? 1 : o.tw), uC0: K.uv(K.u3(c[0])), uC1: K.uv(K.u3(c[1])), uC2: K.uv(K.u3(c[2])) }, Object.assign(K.blend.add(), { depthTest: o.depth !== false })));
+      m.frustumCulled = false; return m; };
+    const sph = (i, sd) => { const u = rnd(i, sd) * 2 - 1, a = rnd(i, sd + 1) * TAU, q = Math.sqrt(1 - u * u); return [cos(a) * q, u, sin(a) * q]; };
+    /* Suget: lys fra hele hallen trekkes inn i egget, fortere og fortere, og er framme på smellet. */
+    S.inhp = add(K.pts(260, i => { const d = sph(i, 301), R = 14 + 34 * rnd(i, 303), p = [EC[0] + d[0] * R, max(0.4, EC[1] + d[1] * R * 0.7), EC[2] + d[2] * R], du = 0.26 + 0.16 * rnd(i, 304);
+        return { p, v: [(EC[0] - p[0]) / (1.45 * du), (EC[1] - p[1]) / (1.45 * du), (EC[2] - p[2]) / (1.45 * du)], b: BANG - du - 0.04 * rnd(i, 305), l: du, z: 0.5 + 0.9 * rnd(i, 306) }; },
+      { t0: 0, drag: -0.9, add: 1, px: 50, sz0: 1, sz1: 0.35, c: ['#ffd98a', '#fff1c8', '#ffffff'], fade: 0.9, a: 0.9, near: 2 }), 5);
+    /* Smellet: en stjerne av lysstråler ut fra midten (kort), og skallet som blir til glitter: slynges ut i hele hallen og blir hengende i lufta. */
+    S.star = mir(S, add(K.beams(46, i => { const d = sph(i, 311); return { p: EC, d: [d[0], d[1] * 0.8 + 0.12, d[2]], l: 24 + 70 * rnd(i, 313) * rnd(i, 314), w: 0.22, w1: 2.2 + 2.6 * rnd(i, 315), b: 0.04 * rnd(i, 316) }; }, { t0: BANG, rise: 0.07, a: 0, core: 0.85, c: '#ffe2a0' }), 5));
+    S.shell = mir(S, add(burst(1500, i => { const d = sph(i, 321), far = rnd(i, 323), R = 5 + 50 * far * far + (i % 7 === 0 ? 30 * rnd(i, 324) : 0);
+        return { p: [EC[0] + d[0] * 2.4, EC[1] + d[1] * 3.2, EC[2] + d[2] * 2.4], d: [d[0] * R, (d[1] * 0.75 + 0.2) * R, d[2] * R + (i % 5 === 0 ? 18 * rnd(i, 327) : 0)], b: 0.03 * rnd(i, 325), l: 4.2 + 5 * rnd(i, 326), z: 0.35 + 1.1 * rnd(i, 328) * rnd(i, 329) }; },
+      { t0: BANG, lam: 3.6, sink: 0.55, px: 150, c: ['#ffffff', '#ffe9a8', '#c88a2a'], near: 2.2 }), 6));
+    /* Platene slår inn i hjulet: gnister fra der hver treffer, og et glimt i platens farge. */
+    S.spk = add(K.pts(NP * 14, i => { const j = floor(i / 14), ga = j * 2.4, sp = 3 + 6 * rnd(i, 331); return { p: [WHEEL[0] + cos(ga) * 2.2, WHEEL[1] + sin(ga) * 2.2, WHEEL[2] + 0.2], v: [cos(ga) * sp + (rnd(i, 332) - 0.5) * 4, sin(ga) * sp + 1.5 + (rnd(i, 333) - 0.5) * 4, 1 + 4 * rnd(i, 334)], b: TA(j) + 0.02 * rnd(i, 335), l: 0.45 + 0.6 * rnd(i, 336), z: 0.3 + 0.5 * rnd(i, 337) }; },
+      { t0: 0, g: 9, drag: 0.5, add: 1, px: 36, c: ['#ffffff', '#ffe9a8', '#e0a030'], fade: 0.4, a: 1, near: 2 }), 6);
+    S.pglow = add(K.pts(2, i => ({ p: [0, 0, 0], v: [0, 0, 0], b: 0, l: 1e9, z: [2.6, 1][i] }), { add: 1, px: 150, c: ['#ffffff', '#ffffff', '#ffffff'], fade: 0.99, a: 0 }), 6);
+    /* Gullet SPRENGES av: bladgull som slynges ut til alle kanter (fire slag: beina, kroppen, halsen, hodet; flere og fortere for hvert), og en sky av gullstøv som blir hengende. */
+    S.flakeN = [0, 1, 2, 3].map(k => { const m = K.shards(120 + 24 * k, i => { const q = spot(k, i), sp = 2.4 + (5 + 1.2 * k) * rnd(i, k * 9 + 104), up = 1 + (4.5 + k) * rnd(i, k * 9 + 105);
+        return { p: [q[0], q[1], q[2]], v: [cos(q[3]) * sp, up, sin(q[3]) * sp + 1.2 * rnd(i, k * 9 + 112)], r: [(rnd(i, k * 9 + 106) - 0.5) * 16, (rnd(i, k * 9 + 107) - 0.5) * 16, (rnd(i, k * 9 + 108) - 0.5) * 16], s: rnd(i, k * 9 + 109), b: rnd(i, k * 9 + 110) * 0.07, l: 3.2, z: 0.05 + 0.1 * rnd(i, k * 9 + 111) * rnd(i, k * 9 + 113) }; },
+        { c: '#f2c14a', grey: 0, em: 0.55, sy: 0.22, seed: 31 + k }); S.scene.add(m); return m; });
+    S.puff = [0, 1, 2, 3].map(k => add(burst(170 + 30 * k, i => { const q = spot(k, i + 900), R = 1.5 + (4 + k) * rnd(i, k * 5 + 341); return { p: [q[0], q[1], q[2]], d: [cos(q[3]) * R, 0.4 + 1.6 * rnd(i, k * 5 + 342), sin(q[3]) * R], b: 0.03 * rnd(i, k * 5 + 343), l: 1.6 + 2.2 * rnd(i, k * 5 + 344), z: 0.25 + 0.6 * rnd(i, k * 5 + 345) }; },
+      { t0: HIT[3 + k], lam: 4.2, sink: 0.7, px: 130, c: ['#ffffff', '#ffd66a', '#c88a2a'], near: 1.6, a: 0.9 }), 6));
+    /* Bølgene av lys (stort sprang): ringer med radius 1 som skaleres opp (ring 3 over gulvet, og eksplosjonens ringer). */
+    S.wr = [0, 1, 2, 3, 4].map(() => { const g = new T.Group(); g.add(torus(T, 1, 0.0035, GOLDW, 1.6)); g.add(torus(T, 1, 0.016, GOLD, 0.2)); g.add(torus(T, 1, 0.05, '#c88a2a', 0.04)); g.visible = false; return mir(S, add(g, 4)); });
     /* Judgment. */
     { const cyl = new T.PlaneGeometry(1, 1); cyl.translate(0, 0.5, 0); const ig = new T.InstancedBufferGeometry().copy(cyl); ig.instanceCount = NJ; const aJ = new Float32Array(NJ * 3); JT.forEach((q, i) => aJ.set(q, i * 3)); ig.setAttribute('aJ', new T.InstancedBufferAttribute(aJ, 3));
-      S.lan = mir(S, add(new T.Mesh(ig, K.shader(LAN_V, LAN_F, {}, Object.assign(K.blend.add(), { side: T.DoubleSide }))), 6));
+      S.lan = mir(S, add(new T.Mesh(ig, K.shader(LAN_V, LAN_F, { uJw: S.us.uJw }, Object.assign(K.blend.add(), { side: T.DoubleSide }))), 6));
       const pl = new T.PlaneGeometry(2, 2); pl.rotateX(-PI / 2); const rg = new T.InstancedBufferGeometry().copy(pl); rg.instanceCount = NJ; rg.setAttribute('aJ', new T.InstancedBufferAttribute(aJ.slice(), 3));
-      S.imp = add(new T.Mesh(rg, K.shader(IMP_V, IMP_F, {}, Object.assign(K.blend.add(), { side: T.DoubleSide }))), 6);
+      S.imp = add(new T.Mesh(rg, K.shader(IMP_V, IMP_F, { uJw: S.us.uJw }, Object.assign(K.blend.add(), { side: T.DoubleSide }))), 6);
       S.spark = add(K.pts(NJ * 5, i => { const q = JT[floor(i / 5)], a = rnd(i, 71) * TAU, sp = 2 + 6 * rnd(i, 72); return { p: [q[0], 0.1, q[1]], v: [cos(a) * sp, 3 + 7 * rnd(i, 73), sin(a) * sp], b: q[2] - DROP + rnd(i, 74) * 0.05, l: 0.7 + rnd(i, 75) * 0.9, z: 0.3 + rnd(i, 76) * 0.5 }; },
         { t0: DROP, g: 14, drag: 0.4, add: 1, px: 40, c: ['#ffffff', '#ffe9a8', '#e0a030'], fade: 0.5, a: 1, near: 2, floor: 0 })); }
     return S; };
+
+  /* ---------- STORT SPRANG: den nye slutten ---------- */
+  /* PLATENE: suget drar banen inn mot egget (orbN), smellet slynger dem ut i hallen, der de blir hengende og tumler sakte (HANG; tre av dem i veien kameraet raser inn),
+     og under hvert av de to neste sugene slår de inn i hjulet på rekke og rad (TA: ni med den siste på smellet 52,87, åtte med den siste på 55,67).
+     LUNTA (FU): når hjulet er helt, tennes de 18 typemerkene rundt ringen ett for ett, fortere og fortere, til sirkelen er sluttet (58,02) og gullet sprenges av. */
+  const TA = i => i < 9 ? SW[1] + i * 0.05 : BOOM[2] - (16 - i) * 0.06, FU = j => BOOM[2] + 0.35 + 2.0 * Math.pow(j / 17, 0.75);
+  const orbN = (i, t, q) => { const a = PI / 2 + (i + 1) / 18 * TAU + (t - LIFT[4]) * 0.2 + 1.8 * q, Rr = mix(12, 7.4, q); return [cos(a) * Rr, mix(7.2, 6.2, q) + 1.1 * sin(a * 2 + 0.7 + t * 0.3) * (1 - 0.6 * q), sin(a) * Rr, a]; };
+  const HANG = Array.from({ length: NP }, (_, i) => { const a = PI / 2 + (i + 1) / 18 * TAU + 2.7 + (rnd(i, 51) - 0.5) * 0.5, R = 17 + 14 * rnd(i, 52); return i === 4 ? [4.4, 3.2, 45] : i === 12 ? [-6.4, 4.4, 31] : i === 7 ? [-0.6, 7.2, 23] : [cos(a) * R, 4.5 + 13 * rnd(i, 53), sin(a) * R]; });
+  const PB = Array.from({ length: NP }, (_, i) => orbN(i, BANG, 1));
+  /* VIRVELEN: når de ni første har slått inn (52,87), slipper de åtte siste plassene sine og går i ÉN skrå ring rundt ham, fortere og fortere (opp mot 48 m/s ved det
+     tredje suget), og slår inn derfra. Så står det aldri stille mellom de to platesmellene. Ringen heller mot kameraet: lavt foran ham (ved hovene, så platene aldri
+     dekker kroppen og ansiktet) og høyt bak ham (over hodet). */
+  const cyc = (i, t) => { const u = t - BOOM[1], ph = (i - 9) / 8 * TAU + 1.1 * u + 0.95 * u * u, R = mix(11.5, 8.8, c01(u / 2.4)); return [cos(ph) * R, 4.9 - 3.7 * sin(ph) + 0.25 * sin(t * 1.7 + i), sin(ph) * R, ph]; };
+  const markN = (j, t) => { const ta = j ? TA(j - 1) : BANG, f = FU(j); let v = t < ta ? 0 : j ? 0.35 + 0.9 * Math.exp(-(t - ta) * 2.2) : 0.5; if (t >= f) v = max(v, 0.95 + 0.6 * Math.exp(-(t - f) * 5)); return mix(v, j ? 0.12 : 0.85, io(seg(t, DROP + 0.6, NAME + 1.2))); };   /* til slutt som arenaen: bare hans eget merke lyser */
+  /* Halsen og hodet når gullet slipper dem (fjærer: myk start, et lite oppspill motsatt vei, og et overskudd før de faller på plass). */
+  const bowF = X.follow(t => t < HIT[5] ? 1 : t < HIT[5] + 0.09 ? 1.14 : t < HIT[6] ? 0.4 : t < HIT[6] + 0.08 ? 0.5 : 0, { f: 1.15, z: 0.5, t0: HIT[5] - 0.2 });
+  const yawF = X.follow(t => t < HIT[6] + 0.1 ? 0 : -0.55, { f: 1.0, z: 0.65, t0: HIT[6] - 0.2 });
+  /* Det den nye slutten har i tillegg (kalles sist i act): suget, smellet, platene som slår inn, hjulet som smeller, lunta, gullet som sprenges av, og Judgment løftet. */
+  const kick = (t, t0, f, d) => { const a = t - t0; return a < 0 ? 0 : Math.exp(-d * a) * sin(f * a); };   /* et støt: starter i null, slår ut og faller til ro (kameraets rekyl) */
+  const endFx = (S, t, q) => { const { tb, inh, lu, us, oa } = q;
+    /* SUGET (49,24–49,67): lyset i hallen trekkes inn i egget, og en ring av lys løper innover gulvet. */
+    S.inhp.visible = t > SW[0] - 0.3 && t < BANG; if (tb < 0 && inh > 0) lu.uFr.value[0].set(mix(64, 4, inh), 1.5 * inh * (1 - seg(inh, 0.9, 1)), 1.3, 0);
+    /* SMELLET (49,67): stjernen av stråler, glitteret, tre store ringer ut i kosmos i glorienes plan, fronten over gulvet (150 m/s) og søylene som blinker idet den går forbi. */
+    S.star.visible = tb >= 0 && tb < 1.1; if (S.star.visible) { const u = S.star.material.uniforms; u.uLen.value = 0.22 + 1.0 * eo(c01(tb / 0.32)); u.uA.value = 1.15 * Math.pow(1 - c01(tb / 1.1), 2); u.uWd.value = 1 + 0.8 * c01(tb / 1.1); }
+    S.shell.visible = tb >= 0 && tb < 9.4;
+    S.shock.visible = tb >= 0 && tb < 0.8; if (S.shock.visible) { const R = (5 + 150 * tb) / ER; S.shock.scale.set(R, R, R); S.shock.material.uniforms.uA.value = 1.5 * seg(tb, -0.02, 0.1) * (1 - seg(tb, 0.3, 0.8)); }   /* trykkbølgen: samme radius som fronten over gulvet */
+    if (tb >= 0 && tb < 2.4) { const R = 5 + 150 * tb, f = 1 - seg(tb, 0.8, 1.6);
+      lu.uFr.value[0].set(R, 1.5 * f, 2.0, 0); us.uBl.value.set(R, 2.6 * (1 - seg(tb, 0.5, 1.3)), 6); setv(S.wr[4], [0, 0.25, 0], [PI / 2, 0, 0], R); ringA(S.wr[4], 0.3 * f * (26 / max(26, R)));
+      for (let i = 0; i < 3; i++) { const Rg = 5 + 250 * (1 - Math.exp(-tb * 1.5)) * [1, 0.86, 1.12][i]; setv(S.wr[1 + i], EC, [PI / 2 + [0.48, -0.67, 0.19][i], [0.4, -0.9, 2.1][i], [0.16, -0.22, 0.4][i]], Rg); ringA(S.wr[1 + i], 1.25 * (1 - seg(tb, 0.3, 1.5)) * Math.sqrt(14 / max(14, Rg))); } }
+    /* PLATENE SLÅR INN: gnistene, og et glimt i fargen til den som traff sist. */
+    S.spk.visible = t > SW[1] - 0.1 && t < BOOM[2] + 1.2; S.pglow.visible = q.flash >= 0;
+    if (q.flash >= 0) { const ga = (q.flash - 1) * 2.4, c = hex(TY[q.flash]), u = S.pglow.material.uniforms; S.pglow.position.set(WHEEL[0] + cos(ga) * 2.2, WHEEL[1] + sin(ga) * 2.2, WHEEL[2] + 0.3); u.uA.value = 1.3 * q.fk; for (const k of ['uC0', 'uC1']) u[k].value.setRGB(c[0], c[1], c[2]); }
+    /* HJULET SMELLER (52,87 og 55,67): en ring ut fra hjulet i hjulets plan; på det andre er hjulet helt, og en front går over gulvet og tenner søylene. */
+    [BOOM[1], BOOM[2]].forEach((b, n) => { const a = t - b; if (a < 0 || a >= 0.8) return; setv(S.wr[1], WHEEL, [0, 0, 0], 2.4 + (15 + 9 * n) * eo(a / 0.8)); ringA(S.wr[1], 1.4 * (1 - a / 0.8));
+      if (n && a > 0.07) { setv(S.wr[2], WHEEL, [0, 0, 0], 2.4 + 34 * eo((a - 0.07) / 0.73)); ringA(S.wr[2], 1.0 * (1 - a / 0.8)); } });
+    { const a = t - BOOM[2]; if (a >= 0 && a < 1.6) { const R = 4 + 85 * a; lu.uFr.value[0].set(R, 1.7 * (1 - a / 1.6), 1.8, 0); us.uBl.value.set(R, 1.1 * (1 - seg(a, 0.3, 1.1)), 5); }
+      /* LUNTA: mens merkene tennes rundt ringen (markN), løper tre bølger av lys innover gulvet mot ham. */
+      for (const s0 of [0.55, 1.2, 1.75]) { const b = a - s0; if (b >= 0 && b < 0.75) lu.uFr.value[1].set(mix(44, 3, io(b / 0.75)), 1.1 * sin(PI * b / 0.75), 1.2, 0); } }
+    /* GULLET SPRENGES AV (58,87 · 60,47 · 62,07 · 63,67): gullstøvet, en ring ut fra kroppen i høyden der gullet slapp, og en bølge i glasset. */
+    for (let k = 0; k < 4; k++) { const a = t - HIT[3 + k]; S.puff[k].visible = a >= 0 && a < 4;
+      if (a >= 0 && a < 0.5) { setv(S.wr[3], [0, [1.6, 4.0, 5.6, 7.4][k], [0, -0.3, 1.6, 1.4][k]], [PI / 2, 0, 0], 1.6 + (11 + 2 * k) * eo(a / 0.5)); ringA(S.wr[3], 1.3 * (1 - a / 0.5)); } }
+    if (t < DROP + 1) for (let k = 0; k < 4; k++) lu.uWv.value[2 + k].set(0, 0, HIT[3 + k] + 0.02, t >= HIT[3 + k] + 0.02 ? 0.9 + 0.2 * k : 0);
+    else NEAR.slice(0, 4).forEach((h, i) => lu.uWv.value[2 + i].set(h[0], h[1], h[2], t >= h[2] ? 1.2 : 0));   /* Judgment: lyset som slår ned ved oss, sender ringer over glasset */
+    /* JUDGMENT løftet: hoven i glasset sender en front over gulvet, og søylene blinker. */
+    if (oa >= 0 && oa < 1.5) { const R = 3 + 90 * oa; lu.uFr.value[0].set(R, 2 * (1 - oa / 1.5), 2, 0); us.uBl.value.set(R, 1.6 * (1 - seg(oa, 0.3, 1.2)), 5); }
+    if (oa >= JB) { const b = Math.exp(-(oa - JB) * 1.5), fl2 = Math.exp(-(oa - JB) * 5);   /* kula brister i senit: lyset flommer ned over hallen (kosmos blusser opp, seglet lyser, søylene lyses ovenfra) */
+      us.uSky.value.z += 1.6 * b; us.uSky.value.x += 1.2 * b; lu.uA.value += 0.5 * b; lu.uLit.value += 0.6 * b; us.uEgg.value.set(0, mix(60, 7.5, 1 - b), 2, us.uEgg.value.w + 3.2 * fl2 + 0.5 * b); }
+  };
+  /* ---------- STORT SPRANG: kameraene til de nye bildene ---------- */
+  /* 5–6 Slutten. 5: som før til suget, så skyves kameraet inn mens linsa vides ut (egget står like stort, og hallen trekkes vekk bak det).
+     6 (K6, ett klipp fra smellet 49,67 til hjulet er helt 55,67): KLIPP PÅ SMELLET til gangen langt unna, lavt og vidt: egget detonerer i enden av søylerekkene, fronten
+     kommer mot oss og treffer linsa (0,47 s etter), og så raser kameraet lavt inn over glasset gjennom glitteret til han står stor i gull over oss (52,2). Det blir
+     stående under ham mens de ni første platene slår inn, og glir så i en bue foran ham og opp mens de åtte siste slår inn.
+     6M (55,67–58,17): KLIPP PÅ SMELLET rett opp: seglet ovenfra, lunta rundt ringen av typemerker, gloriene som samles ved hovene. Dreier sakte og synker. */
+  const K5 = [[L4, -9, 6.5, 19, 0, 5.8, 0, 46], [SW[0], -6.05, 6.2, 16.55, 0, 5.8, 0, 44], [BANG, -4.4, 5.95, 12.0, 0, 5.7, 0, 58]];
+  const K6 = [[BANG, 2.0, 1.5, 76, 0, 8, 0, 50], [BANG + 0.45, 2.2, 1.6, 78.5, 0, 8.5, 0, 52], [BANG + 1.5, 0.5, 1.7, 52, 0, 7, 0, 56], [BANG + 2.55, -4.2, 1.9, 17, 0, 5.6, 0, 44], [BOOM[1], -4.8, 2.1, 14.6, 0, 5.5, 0, 42],
+    [BOOM[1] + 1.3, -1, 3.2, 15.5, 0, 5.4, 0, 41], [BOOM[2] - 0.4, 5.2, 4.6, 14.2, 0, 5.2, 0, 40], [BOOM[2], 6, 4.9, 13.6, 0, 5.2, 0, 40]];
+  const hh6 = X.handheld(t => pathAt(t, K6).slice(0, 6), { t0: BANG, f: 3, z: 0.9, amp: [0.04, 0.03], hz: 0.7, seed: 6 });
+  const endCam = (S, t) => {
+    if (t < BANG) { const iq = Math.pow(seg(t, SW[0], BANG), 2); camK(t, K5); S.post.sub = S.sub; S.post.subf = 0.01; S.post.subc = '#ffffff'; S.post.sh = 0.6 * iq; return; }
+    if (t < BOOM[2]) { const c = hh6(t), fv = pathAt(t, K6)[6], tb = t - BANG; cam(c[0], c[1], c[2], c[3], c[4], c[5], fv);
+      let vt = 0; for (let i = 0; i < NP; i++) vt += 0.5 * hit(t, TA(i), 0.12);   /* hvert slag i hjulet */
+      S.post.sh = 2.6 * hit(t, BANG, 1.0) + 1.7 * hit(t, BANG + 0.46, 0.6) + vt + 1.6 * hit(t, BOOM[1], 0.6);
+      S.post.fl = max(0.95 * hit(t, BANG, 0.1), 0.8 * hit(t, BANG + 0.44, 0.13), 0.32 * hit(t, BOOM[1], 0.08), 0.5 * seg(t, BOOM[2] - 0.07, BOOM[2])); S.post.flc = '#fff4d8';
+      const q = K.proj(0, 6, 0); S.post.spx = q.x / 2; S.post.spy = q.y / 2; S.post.spr = 0.1; S.post.spd = max(0.9 * hit(t, BANG, 0.45), 0.55 * seg(tb, 0.6, 1.1) * (1 - seg(tb, 1.9, 2.5))); S.post.spc = '#fff0b0'; return; }
+    const a = t - BOOM[2], k = io(c01(a / 2.5)), ph = 0.5 + 0.28 * a, R = mix(8, 5.5, k); cam(sin(ph) * R, mix(52, 42, k), cos(ph) * R, 0, 0.5, 0, 40);
+    let ft = 0; for (let j = 0; j < 18; j++) ft += 0.16 * hit(t, FU(j), 0.1);
+    S.post.sh = 1.9 * hit(t, BOOM[2], 0.7) + ft; S.post.fl = max(0.5 * hit(t, BOOM[2], 0.1), 0.4 * seg(t, HIT[3] - 0.76, HIT[3] - 0.7)); S.post.flc = '#fff4d8'; };
+  /* 7 Gullet sprenges av: helt nede ved hovene og tett på med vid linse, så beina står som søyler over oss og gullet slynges mot linsa; så opp med kanten til ansiktet,
+     som før. Hvert slag gir kameraet et støt bakover (kick: starter i null, slår ut og faller til ro). */
+  const K7 = [[HIT[3] - 0.7, -3.3, 0.5, 7.6, 0, 1.7, 0.8, 52], [HIT[3] + 0.5, -3.7, 0.75, 8.2, 0, 2.1, 0.7, 52], [HIT[4] + 0.5, -5.8, 3.3, 12.6, 0, 4.0, 0, 46], [HIT[5] + 0.5, -4.8, 5.7, 12.0, 0, 5.9, 1.2, 38], [HIT[6] + 0.75, -3.0, 7.25, 10.2, 0, 6.95, 1.9, 27], [DROP, -2.8, 7.25, 9.8, 0, 6.95, 1.9, 25]];
+  const shot7 = (S, t) => { const v = pathAt(t, K7); let rc = 0; [3, 4, 5, 6].forEach((k, i) => { rc += kick(t, HIT[k], 11, 6) * (0.55 + 0.12 * i); });
+    const dx = v[0] - v[3], dy = v[1] - v[4], dz = v[2] - v[5], dl = hyp(dx, dy, dz); cam(v[0] + dx / dl * rc, v[1] + dy / dl * rc + 0.25 * rc, v[2] + dz / dl * rc, v[3], v[4], v[5], v[6] + 2.5 * rc);
+    S.post.sh = [3, 4, 5, 6].reduce((s, k, i) => s + (1.0 + 0.25 * i) * hit(t, HIT[k], 0.45), 0); S.post.fl = [3, 4, 5, 6].reduce((s, k) => max(s, 0.1 * hit(t, HIT[k], 0.08)), 0); S.post.flc = '#ffe9b0'; };   /* nesten ikke noe blink over hele bildet (det ble et grått slør): figuren blinker selv, og ringen og gløden gjør resten */
+  /* 4 Søylene: lavt i gangen like utenfor porten. Ringen slås ned og kommer mot oss; den indre ringen av søyler skyter opp samlet rundt egget, og så rygger kameraet
+     nedover gangen foran fronten (32 m/s, nær den høyre raden), mens parene skyter opp tett på linsa. Det stanser ytterst i gangen, og på løft 4 ser det opp. Kameraet
+     holdes av en hånd (X.handheld), og hvert utbrudd rister det etter avstanden. */
+  const K4 = [[L2, 2.0, 1.7, 49, 0, 6, 0, 50], [L2 + 1.25, 2.6, 1.6, 53, 0, 9, 0, 52], [L2 + 1.87, 5.5, 1.6, 66, 0, 12, 0, 55], [L2 + 3.55, 7.0, 1.9, 120, 0, 15, 0, 56], [L2 + 4.5, 6.4, 2.1, 129, 0, 14, 0, 54], [L3, 6.0, 2.2, 130.5, 0, 16, 0, 54],
+    [L3 + 1.9, 5.4, 2.0, 127, 0, 105, -10, 58], [L3 + 3.7, 5, 2.0, 118, 0, 60, -6, 56], [L4, 4.5, 2.2, 104, 0, 14, 0, 52]];
+  const hh4 = X.handheld(t => pathAt(t, K4).slice(0, 6), { t0: L2, f: 2.4, z: 0.9, amp: [0.05, 0.04], hz: 0.7, seed: 4 });
+  const shot4 = (S, t) => { const c = hh4(t), fv = pathAt(t, K4)[6]; cam(c[0], c[1], c[2], c[3], c[4], c[5], fv);
+    let sh = 0; PIL.forEach((q, i) => { const a = t - PT2[i][0]; if (a < 0 || a > 0.7) return; sh += 0.9 * min(1, 16 / hyp(q[0] - c[0], q[1] - c[2])) * (1 - a / 0.7); });
+    S.post.sh = min(1.9, sh) + 0.5 * hit(t, L2 + 0.28, 0.4); };   /* ingen blink: over den svarte himmelen ble det et grått slør, og utbruddene lyser selv */
 
   G3D.def('c3:493', {
     len: LEN, hold: 1, R: DROP, at: -K0,   /* kamplåta kommer inn 49,3 s ut i filmen (en kald start), og filmens klokke er dens */
@@ -323,9 +493,12 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
       bed: 'sfx/natur/arceus_intro.mp3', hold: ['sfx/natur/arceus_hold.mp3', 0.2, DROP] },   /* lydsengen på filmens klokke (work/raids3d/arceus/lyd/bed.py), og sløyfa mens fingeren holdes fra droppet */
     fig: 2, models: ['arceus'], edge: null, env: { rim: '#ffe2a0', glow: '#bfe9ff', fog: '#04050b', glowH: 6, ink: '#191430' },
     make(K, T) { const S = { scene: new T.Scene(), figs: [] };
-      place(K, T, S, { grow: (q, i) => [LIFT[2] + 0.45 + min(hyp(q[0], q[1]), 72) / 62 * 2.5 + rnd(i, 3) * 0.1, 2.2] });   /* ringen går 24,8 m/s utover gulvet, og søylene stiger der den går forbi */
+      place(K, T, S, { grow: (q, i) => [LIFT[2] + 0.45 + min(hyp(q[0], q[1]), 72) / 62 * 2.5 + rnd(i, 3) * 0.1, 2.2], grow2: (q, i) => PT2[i] });   /* gammel: ringen går 24,8 m/s utover gulvet, og søylene stiger der den går forbi; ny (PT2): de skyter opp */
       return build(K, T, S); },
     act(S, t, o) { CS = S; const U = K.U(), us = S.us, lu = S.lines.material.uniforms;
+      /* Stort sprang: np = de nye søylene, ne = den nye slutten. TB = øyeblikket han kommer ut av egget (smellet 49,67; i den gamle åpnet egget seg 49,55),
+         inh = suget før smellet (0–1; inq = kvadratet: det tar av mot slutten), tb = sekunder siden smellet. */
+      const np = !OLDP(), ne = !OLDE(), TB = ne ? BANG : HIT[0], inh = ne && t < BANG ? seg(t, SW[0], BANG) : 0, inq = inh * inh, tb = ne ? t - BANG : -1;
       { const hv = t >= DROP && G3D.hold ? 1 : 0; S.hd = S.hd == null ? hv : S.hd + (hv - S.hd) * 0.2; }   /* Hold: fingeren mot skjermen (bui.js setter G3D.hold); glattet, så kuppelen reiser seg og synker */
       U.uKey.value.set(-0.4, 0.7, 0.6).normalize(); U.uKeyC.value.setRGB(1.0, 0.97, 0.9); U.uShC.value.setRGB(0.42, 0.4, 0.62); U.uRim.value.set(0.1, 0.35, -1).normalize(); U.uRimK.value = 0.85; U.uGlow.value = 0.3;
       U.uFog.value.set(160, 1100, 0.9); U.uFogC.value.setRGB(0.012, 0.014, 0.04);
@@ -337,14 +510,19 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
       const ord = 0.1 + 0.9 * io(seg(t, 5.8, 13.5)), ca = (0.07 + 0.25 * seg(t, 5.6, 9) + 0.6 * min(1, fl) + 0.5 * seg(t, 15, 19.5)) * (1 - seg(t, 20.35, 20.9)), con = t < 21;
       for (const m of [S.gas, S.mote, S.rib]) { const u = m.material.uniforms, gas = m === S.gas; u.uK.value = kk; u.uSpin.value = spin; u.uOrd.value = ord; u.uA.value = m === S.rib ? (0.09 + 0.36 * ca) * (1 - seg(t, 20.3, 20.7)) : gas ? ca * 0.16 : (0.3 + ca) * (1 - seg(t, 20.5, 21)); for (let i = 0; i < 18; i++) u.uNt.value[i] = min(1.5, nt[i]); m.visible = con; }
       /* EGGET: punktet (20,4), perlen svulmer fram (20,5–22,3), pulserer på bassen og på hvert løft, og dempes når Hall of Origin toner ut. */
-      const open = seg(t, HIT[0], HIT[0] + 0.5), pul = 0.5 * hit(t, HBASS, 1.3) + LIFT.reduce((s, L) => s + 0.4 * hit(t, L, 0.9), 0), grow = back(seg(t, 20.5, 22.3), 1.4), eo1 = 1 + 0.55 * eo(open);
-      const ea = (0.86 + 0.5 * pul) * (1 - 0.5 * seg(t, HFADE, K0 + 0.1));
-      S.egg.visible = t > 20.5 && t < HIT[0]; S.egg.scale.set(grow, EY * grow, grow); S.egg.material.uniforms.uA.value = ea;
-      S.eggX.visible = t >= HIT[0] && open < 1; S.eggX.scale.set(eo1, EY * eo1, eo1); S.eggX.material.uniforms.uA.value = 0.9 * (1 - eo(open));
-      S.seed.material.uniforms.uA.value = seg(t, 19.4, 20.5) * (1 - seg(t, 20.9, 22.4)) + 1.5 * hit(t, HIT[0], 0.3); S.seed.scale.setScalar(1 + 2.4 * hit(t, HIT[0], 0.3));
-      if (t < HIT[0]) us.uEgg.value.set(EC[0], EC[1], EC[2], 0.25 + 0.62 * ea * grow); else us.uEgg.value.set(0, 7.5, 2, mix(1.05, 0.85, seg(t, HIT[0], HIT[0] + 2)));
+      /* Stort sprang: i suget (49,24–49,67) trekker egget seg sammen til litt over halv størrelse og blir hvitglødende, mens lyset i hallen trekkes inn i det.
+         På smellet er det borte i ett bilde: kjernen av lys (S.seed) blender og brer seg, og hallen lyses hardt fra midten et øyeblikk (uEgg). */
+      const open = seg(t, TB, TB + 0.5), pul = 0.5 * hit(t, HBASS, 1.3) + LIFT.reduce((s, L) => s + 0.4 * hit(t, L, 0.9), 0), grow = back(seg(t, 20.5, 22.3), 1.4) * (1 - 0.42 * inq), eo1 = 1 + 0.55 * eo(open);
+      const ea = (0.86 + 0.5 * pul) * (1 - 0.5 * seg(t, HFADE, K0 + 0.1)) * (1 + 1.6 * inq);
+      S.egg.visible = t > 20.5 && t < TB; S.egg.scale.set(grow, EY * grow, grow); S.egg.material.uniforms.uA.value = ea;
+      S.eggX.visible = !ne && t >= HIT[0] && open < 1; S.eggX.scale.set(eo1, EY * eo1, eo1); S.eggX.material.uniforms.uA.value = 0.9 * (1 - eo(open));
+      S.seed.material.uniforms.uA.value = seg(t, 19.4, 20.5) * (1 - seg(t, 20.9, 22.4)) + (ne ? 0.7 * inq * (tb < 0 ? 1 : 0) + (tb >= 0 ? 2.6 * Math.exp(-tb * 10) : 0) : 1.5 * hit(t, HIT[0], 0.3));
+      S.seed.scale.setScalar(ne ? (tb >= 0 ? 1.6 + 2.6 * eo(c01(tb / 0.4)) : 1) : 1 + 2.4 * hit(t, HIT[0], 0.3));
+      if (t < TB) us.uEgg.value.set(EC[0], EC[1], EC[2], (0.25 + 0.62 * ea * grow) * (1 - 0.78 * inq)); else us.uEgg.value.set(0, 7.5, 2, ne ? mix(1.05, 0.85, seg(tb, 0, 2)) + 4.5 * Math.exp(-tb * 4.2) : mix(1.05, 0.85, seg(t, HIT[0], HIT[0] + 2)));
       /* DE FEM RINGENE: tennes rundt egget (fra 22,5), og hver løsner på sitt løft og blir en ting i verden. */
       let r1 = 0, gl = 0, r2 = 0, skyF = 0, skyK = 0; lu.uFr.value[0].set(0, 0, 1, 0); lu.uFr.value[1].set(0, 0, 1, 0);
+      us.uPn.value = np ? 1 : 0; us.uHot.value.set(np ? 1.3 : 1, np ? 0.6 : 0, np ? 1 : 0); us.uBl.value.set(0, 0, 1); for (const w of S.wr) w.visible = false;
+      S.gey.visible = S.pjet.visible = S.pimp.visible = S.pdust.visible = np && t > LIFT[2] && t < LIFT[2] + 9;
       S.rings.forEach((g, i) => { const L = LIFT[i], app = eo(seg(t, 22.5 + i * 0.32, 23.6 + i * 0.32)), a = t - L, dir = i % 2 ? 1 : -1;
         let p = [...EC], rot = [[0.35, 0.2, 0], [-0.55, 0.9, 0.3], [1.15, -0.4, 0.2], [0.1, 1.45, -0.6], [-1.0, 0.3, 1.1]][i].map((q, j) => q + (j === 0 ? 0.22 * t * dir : j === 1 ? 0.17 * t : 0)), sc = 0.4 + 0.6 * app, al = app * (1 + 0.5 * hit(t, 22.5 + i * 0.32, 0.5));
         const flat = k => { rot = [mix(rot[0] % TAU, PI / 2, k), mix(rot[1] % TAU, 0, k), mix(rot[2], 0, k)]; };
@@ -352,6 +530,8 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
           if (i === 0) { const k = io(c01(a / 1.0)), e = c01((a - 0.9) / 3.7), rf = 8 + 400 * e * e; flat(k); p = [0, mix(EC[1], 0.05, k), 0]; sc = mix(1, 1.22, k); al = 1 - seg(a, 0.9, 1.5);   /* 1: legges ned, og glasset støpes utover fra den */
             if (a > 0.9) { gl = r1 = rf; lu.uFr.value[0].set(rf, 1 - seg(a, 3.2, 4.6), 1.3, 0); } }
           else if (i === 1) { const k = io(c01(a / 0.7)); flat(k); p = [0, mix(EC[1], 0.08, k), 0]; sc = mix(1, 0.2, k); al = 1 - seg(a, 0.55, 0.9); r2 = a < 0.6 ? 0 : 3 + 150 * Math.pow(c01((a - 0.6) / 4.2), 1.5); }   /* 2: trekkes inn i seglet, og linjene tegnes utover */
+          else if (i === 2 && np) { const k = io(c01(a / 0.3)); flat(k); p = [0, mix(EC[1], 0.1, k), 0]; sc = mix(1, 0.75, k); al = 1 - seg(a, 0.26, 0.42);   /* 3 (stort sprang): slås ned i gulvet og JAGER utover, og søylene skyter opp der den går forbi */
+            if (a > 0.3) { const rr = (a - 0.3) * VP, fa = 1 - seg(a, 4.1, 4.9); lu.uFr.value[1].set(rr, 0.9 * fa, 1.0, 0); setv(S.wr[0], [0, 0.22, 0], [PI / 2, 0, 0], max(4, rr)); ringA(S.wr[0], 0.75 * fa * seg(a, 0.3, 0.5) * (22 / max(22, rr))); } }
           else if (i === 2) { const k = io(c01(a / 0.45)); flat(k); p = [0, mix(EC[1], 0.1, k), 0]; sc = mix(1, 0.75, k); al = 1 - seg(a, 0.4, 0.7);   /* 3: går utover gulvet, og søylene stiger der den går forbi */
             if (a > 0.45) lu.uFr.value[1].set((a - 0.45) / 2.5 * 62, 1.2 * (1 - seg(a, 3.0, 4.0)), 1.0, 0); }
           else if (i === 3) { const k = io(c01(a / 0.45)), e = Math.pow(c01((a - 0.3) / 1.5), 1.6); flat(k); p = [0, EC[1] + 240 * e, 0]; sc = mix(1, 5, e); al = 1 - seg(a, 1.5, 1.85); skyF = a < 1.75 ? 0 : 0.03 + 1.75 * eo(c01((a - 1.75) / 3.0)); skyK = a < 1.75 ? 0 : 1; }   /* 4: til himmels; kosmos tennes fra senit og ned */
@@ -363,47 +543,71 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
       lu.uR1.value = fdone ? 400 : r1; lu.uR2.value = t > LIFT[1] + 4.9 ? 400 : r2; S.lines.visible = S.glass.visible; S.mirG.visible = t > LIFT[0] + 0.95;
       lu.uLit.value = seg(t, LIFT[1], LIFT[1] + 3) * (1 - 0.3 * seg(t, HFADE, K0)); lu.uA.value = 1 - 0.3 * seg(t, HFADE, K0) + 0.3 * seg(t, HIT[0], HIT[0] + 0.4);
       us.uSky.value.set(skyK, skyF, 1, 0.25 * seg(t, LIFT[0] + 1, LIFT[0] + 4) + 0.75 * seg(t, LIFT[3] + 2, LIFT[3] + 4.5));
+      if (ne) { const bl = tb >= 0 ? Math.exp(-tb * 2.4) : 0;   /* suget slukker hallen (linjene, stjernene), og smellet tenner alt sterkere enn før: tåkene i kosmos blusser opp og blir stående litt lysere */
+        lu.uLit.value = seg(t, LIFT[1], LIFT[1] + 3) * (1 - 0.3 * seg(t, HFADE, K0)) * (1 - 0.9 * inq) + 0.7 * bl; lu.uA.value = (1 - 0.3 * seg(t, HFADE, K0)) * (1 - 0.6 * inq) + (tb >= 0 ? 0.3 + 0.9 * bl : 0);
+        us.uSky.value.x = skyK * (1 - 0.6 * inq) + 1.5 * bl; us.uSky.value.z = 1 + (tb >= 0 ? 0.22 * (1 - io(seg(t, DROP + 1.6, NAME + 2.6))) + 0.9 * Math.exp(-tb * 1.8) : 0); }   /* til slutt som arenaen (kampen står slik filmen sluttet) */
       S.pil.visible = S.pilM.visible = t > LIFT[2]; S.pil.material.uniforms.uLit.value = S.pilM.material.uniforms.uLit.value = lu.uLit.value;
       S.motes.material.uniforms.uA.value = 0.5 * seg(t, LIFT[3] + 2, LIFT[3] + 5);
       /* PLATENE: den femte ringen brister i 17 tavler som glir ut i bane (46,52); på 52,47 og 55,67 låser de seg i hjulet, hver med et blink i sin farge. */
       let flash = -1, fk = 0;
-      S.pl.forEach((m, i) => { const out = c01((t - LIFT[4] - i * 0.02) / 1.5), grp = i < 9 ? 1 : 2, tl = HIT[grp] + (i - (grp === 1 ? 0 : 9)) * 0.05, dv = c01((t - tl + 0.5) / 0.5);
+      if (ne) { for (let j = 0; j < 18; j++) lu.uMk.value[j] = markN(j, t);
+        S.pl.forEach((m, i) => { const out = c01((t - LIFT[4] - i * 0.02) / 1.5), ta = TA(i), dv = c01((t - ta + 0.3) / 0.3);
+          m.visible = t > LIFT[4] && dv < 1; if (t >= ta && t < ta + 0.18) { flash = i + 1; fk = 1 - (t - ta) / 0.18; } if (!m.visible) return;
+          const a0 = PI / 2 + (i + 1) / 18 * TAU, st = [EC[0] + cos(a0) * 7.9, EC[1] + 0.6 * sin(a0 * 3), EC[2] + sin(a0) * 7.9], q = orbN(i, t, inq), e = back(out, 1.2), bl = tb >= 0 ? 1 - Math.exp(-tb * 3.4) : 0;
+          let p = [mix(st[0], q[0], e), mix(st[1], q[1], e), mix(st[2], q[2], e)];
+          if (tb >= 0) { const h = HANG[i], b = PB[i]; p = [mix(b[0], h[0], bl), mix(b[1], h[1], bl) + 0.5 * sin(t * 0.6 + i * 1.7) * bl, mix(b[2], h[2], bl)]; }   /* slynget ut av smellet, så hengende */
+          const cy = i >= 9 && t > BOOM[1] ? io(seg(t, BOOM[1] + 0.05, BOOM[1] + 1.25)) : 0; if (cy > 0) { const c = cyc(i, t); p = [mix(p[0], c[0], cy), mix(p[1], c[1], cy), mix(p[2], c[2], cy)]; q[3] = mix(q[3], c[3], cy); }   /* virvelen */
+          if (dv > 0) { const k = dv * dv * dv, ga = i * 2.4; p = [mix(p[0], WHEEL[0] + cos(ga) * 2.2, k), mix(p[1], WHEEL[1] + sin(ga) * 2.2, k), mix(p[2], WHEEL[2], k)]; }
+          const tum = (tb >= 0 ? 6 * bl + 0.3 * tb : 0) * (1 - cy), s = mix(0.25, 1, eo(out)) * (1 - 0.6 * dv) * (1 + 0.6 * bl * (1 - 0.75 * cy));
+          m.position.set(p[0], p[1], p[2]); m.rotation.set(0.14 * sin(t * 0.9 + i) + tum * (0.5 + 0.5 * rnd(i, 55)), -q[3] + PI / 2 + tum * (rnd(i, 56) - 0.5) * 2, 0.1 * cos(t * 0.7 + i * 2) + tum * 0.6 * rnd(i, 57));
+          m.scale.set(s * mix(2.4, 1, eo(out)), s * mix(0.3, 1, eo(out)), s); m.material.uniforms.uGo.value = min(1, 1 - seg(out, 0.15, 0.7) + 0.8 * dv + 0.4 * inq + (tb >= 0 ? Math.exp(-tb * 3.5) : 0)); }); }
+      else S.pl.forEach((m, i) => { const out = c01((t - LIFT[4] - i * 0.02) / 1.5), grp = i < 9 ? 1 : 2, tl = HIT[grp] + (i - (grp === 1 ? 0 : 9)) * 0.05, dv = c01((t - tl + 0.5) / 0.5);
         m.visible = t > LIFT[4] && dv < 1; if (t >= tl && t < tl + 0.18) { flash = i + 1; fk = 1 - (t - tl) / 0.18; lu.uMk.value[i + 1] = 1.2; } else lu.uMk.value[i + 1] = t >= tl ? 0.3 + 0.9 * Math.exp(-(t - tl) * 1.6) : 0; if (!m.visible) return;
         const a0 = PI / 2 + (i + 1) / 18 * TAU, st = [EC[0] + cos(a0) * 7.9, EC[1] + 0.6 * sin(a0 * 3), EC[2] + sin(a0) * 7.9], q = orbitAt(i, t, 12, 7.2), e = back(out, 1.2);
         let p = [mix(st[0], q[0], e), mix(st[1], q[1], e), mix(st[2], q[2], e)]; if (dv > 0) { const k = dv * dv * dv, ga = i * 2.4; p = [mix(p[0], WHEEL[0] + cos(ga) * 2.2, k), mix(p[1], WHEEL[1] + sin(ga) * 2.2, k), mix(p[2], WHEEL[2], k)]; }
         m.position.set(p[0], p[1], p[2]); m.rotation.set(0.14 * sin(t * 0.9 + i), -q[3] + PI / 2, 0.1 * cos(t * 0.7 + i * 2)); const s = mix(0.25, 1, eo(out)) * (1 - 0.6 * dv); m.scale.set(s * mix(2.4, 1, eo(out)), s * mix(0.3, 1, eo(out)), s);
         m.material.uniforms.uGo.value = 1 - seg(out, 0.15, 0.7) + 0.8 * dv; });
-      lu.uMk.value[0] = t >= HIT[0] ? 0.5 : 0;
+      if (!ne) lu.uMk.value[0] = t >= HIT[0] ? 0.5 : 0;
       /* ARCEUS: en skikkelse inni egget (skimtes når lyset dempes), så i gull fra egget åpner seg, bøyd og helt stiv; gullet slipper nedenfra takt for takt, og
          det som er fritt, lever: kroppen puster (60,47), halsen reiser seg (62,07), hodet løftes og ser på oss (63,67). */
       const on = t >= LIFT[4] - 0.2, g = S.gr, Z = S.zone; g.root.visible = on; S.rf.root.visible = t >= HIT[0];
-      const fsc = mix(0.72, 1, eo(seg(t, HIT[0], HIT[0] + 0.25)));   /* inni egget er han mindre og svever; idet det åpner seg, folder han seg ut og står på glasset */
-      for (const f of [g, S.rf]) { f.root.scale.setScalar(fsc); f.root.position.set(0, S.fy * fsc + mix(1.5, 0, (fsc - 0.72) / 0.28), mix(-0.4, 0, (fsc - 0.72) / 0.28)); f.root.rotation.set(0, 0, 0); }
+      const fsc = mix(0.72, 1, eo(seg(t, TB, TB + (ne ? 0.12 : 0.25))));   /* inni egget er han mindre og svever; idet det åpner seg, folder han seg ut og står på glasset */
+      { const fs2 = fsc * (1 - 0.4 * inq), up = (fsc - 0.72) / 0.28;   /* i suget krymper han med egget (skikkelsen holder seg inni det), og på smellet folder han seg ut til full størrelse */
+        for (const f of [g, S.rf]) { f.root.scale.setScalar(fs2); f.root.position.set(0, S.fy * fs2 + mix(1.5 + 1.75 * inq, 0, up), mix(-0.4, 0, up)); f.root.rotation.set(0, 0, 0); } }
       const roar = t < DROP ? 0 : kf(t, [[DROP, 0], [DROP + 0.3, 1, eo], [NAME + 0.1, 1], [NAME + 1.6, 0.1, io]]); S.rw = roar;
-      const bow = t < HIT[5] ? 1 : kf(t, [[HIT[5], 1], [HIT[5] + 1.0, 0.45, eo], [HIT[6], 0.45], [HIT[6] + 0.8, 0, eo]]);
-      const yaw = kf(t, [[HIT[6], 0], [HIT[6] + 0.9, -0.55, io], [BRE + 0.55, -0.55], [DROP + 0.25, 0, io], [NAME + 0.3, 0], [NAME + 1.8, -0.4, io]]);
+      const bow = ne ? bowF(t) : t < HIT[5] ? 1 : kf(t, [[HIT[5], 1], [HIT[5] + 1.0, 0.45, eo], [HIT[6], 0.45], [HIT[6] + 0.8, 0, eo]]);
+      const yaw = ne && t < BRE + 0.55 ? yawF(t) : kf(t, [[HIT[6], 0], [HIT[6] + 0.9, -0.55, io], [BRE + 0.55, -0.55], [DROP + 0.25, 0, io], [NAME + 0.3, 0], [NAME + 1.8, -0.4, io]]);
       const P = { t, bow, up: roar, yaw, hoof: kf(t, [[BRE - 0.6, 0], [BRE + 0.4, 1, io], [DROP - 0.03, 1], [DROP + 0.09, 0, ei]]), dip: seg(t, BRE - 0.2, DROP - 0.1) * (1 - seg(t, DROP - 0.04, DROP + 0.12)), br: seg(t, HIT[4], HIT[4] + 1.2) };
       pose(S, g, S.rg, P); pose(S, S.rf, S.rrg, P);
-      const gy = kf(t, [[HIT[3] - 0.05, -2], [HIT[3] + 0.5, Z[0], eo], [HIT[4], Z[0]], [HIT[4] + 0.5, Z[1], eo], [HIT[5], Z[1]], [HIT[5] + 0.5, Z[2], eo], [HIT[6], Z[2]], [HIT[6] + 0.5, Z[3], eo]]);
-      const born = c01((t - HIT[0]) / 0.5), inEgg = t < HIT[0], sheen = [HIT[1], HIT[2]].reduce((s, h) => t >= h && t < h + 0.9 ? mix(-1, S.hgt + 1, eo((t - h) / 0.9)) : s, -1e4);
-      setCoat(S, inEgg ? 0 : 1, gy, sheen); g.set('uFlK', inEgg ? 1 : max(1 - born, 0.5 * fk)); g.set('uFlC', inEgg ? '#2a1804' : flash >= 0 && born >= 1 ? TY[flash] : '#ffffff'); g.set('uStone', 0);
-      g.set('uCoatC', flash >= 0 ? TY[flash] : '#ffe69a'); g.eye(0, 0, t < HIT[6] + 0.3 ? 0.5 : 0.35); S.sub = inEgg ? 0.5 * seg(t, LIFT[4] + 0.6, HFADE) + 0.4 * seg(t, HFADE, HEND) : 0;
-      S.open.visible = t > HIT[0] - 0.1 && t < HIT[0] + 4;
+      /* Stort sprang: gullet SPRENGES av på slaget (kanten spretter opp på 0,17 s, og figuren blinker hvitt i tre bilder), i stedet for å slippe over et halvt sekund. */
+      const gy = ne ? kf(t, [[HIT[3] - 0.03, -2], [HIT[3] + 0.14, Z[0], eo], [HIT[4] - 0.03, Z[0]], [HIT[4] + 0.14, Z[1], eo], [HIT[5] - 0.03, Z[1]], [HIT[5] + 0.14, Z[2], eo], [HIT[6] - 0.03, Z[2]], [HIT[6] + 0.14, Z[3], eo]])
+        : kf(t, [[HIT[3] - 0.05, -2], [HIT[3] + 0.5, Z[0], eo], [HIT[4], Z[0]], [HIT[4] + 0.5, Z[1], eo], [HIT[5], Z[1]], [HIT[5] + 0.5, Z[2], eo], [HIT[6], Z[2]], [HIT[6] + 0.5, Z[3], eo]]);
+      const born = ne ? 1 - Math.pow(1 - c01((t - TB) / 2.3), 2.2) : c01((t - TB) / 0.5), inEgg = t < TB,   /* den nye: han står hvitglødende i lyset etter smellet og kjølner til gull mens kameraet raser inn */ sheen = (ne ? [BOOM[1], BOOM[2]] : [HIT[1], HIT[2]]).reduce((s, h) => t >= h && t < h + 0.9 ? mix(-1, S.hgt + 1, eo((t - h) / 0.9)) : s, -1e4);
+      const gfl = ne ? 0.7 * [3, 4, 5, 6].reduce((q, k) => max(q, hit(t, HIT[k], 0.1)), 0) : 0;
+      setCoat(S, inEgg ? 0 : 1, gy, sheen); g.set('uFlK', inEgg ? 1 : max(1 - born, (ne ? 0.2 : 0.5) * fk, gfl)); g.set('uFlC', inEgg ? '#2a1804' : flash >= 0 && born >= 1 && gfl <= 0 ? TY[flash] : '#ffffff'); g.set('uStone', 0);
+      g.set('uCoatC', flash >= 0 ? (ne ? mixHex('#ffe69a', TY[flash], 0.25 + 0.4 * fk) : TY[flash]) : '#ffe69a');   /* den nye: fargen blandes inn i gullet (han fyller bildet, og ni rene farger på et halvt sekund ble et hardt flimmer) */ g.eye(0, 0, t < HIT[6] + 0.3 ? 0.5 : 0.35); S.sub = inEgg ? 0.5 * seg(t, LIFT[4] + 0.6, HFADE) + 0.4 * seg(t, HFADE, HEND) + 0.3 * inq : 0;
+      S.open.visible = !ne && t > HIT[0] - 0.1 && t < HIT[0] + 4;
       /* GLORIENE: egget åpner seg til tre ringer rundt ham (49,55). I pusten trekker de seg sammen over ham, og på droppet er de kula som skytes til himmels. */
-      const gather = io(seg(t, HIT[6] + 0.55, BRE + 0.5)), oa = t - DROP, sink = io(seg(t, HIT[3] - 1.3, HIT[3] - 0.3));   /* sink: gloriene legger seg rundt hovene mens gullet slipper, så kroppen og ansiktet står fritt */
-      S.halo.forEach((h, i) => { const a = t - HIT[0] - i * 0.07, e = (a < 0 ? 0 : back(c01(a / 0.8), 1.5)) * (1 - sink), R0 = [6.2, 7.5, 8.9][i];
-        const cy = mix(mix(EC[1] + (i - 1) * 2.4, 4.6 + (i - 1) * 1.2, a < 0 ? 0 : back(c01(a / 0.8), 1.5)), 0.35 + 0.3 * i, sink), sc = mix(ER * [0.8, 1, 0.8][i] / R0, 1, e) * mix(1, 0.9 / R0, gather) * (1 + 0.03 * sin(t * 2 + i)), pulse = 1 + 0.5 * hit(t, HIT[1], 0.35) + 0.5 * hit(t, HIT[2], 0.35);
-        setv(h, [mix(0, ORB[0], gather), mix(cy, ORB[1], gather), mix(-0.3, ORB[2], gather)], [PI / 2 + ([0.3, -0.42, 0.12][i] * e + 0.05 * sin(t * 0.7 + i)) * (1 - gather), t * [0.2, -0.14, 0.09][i], [0.16, -0.22, 0.4][i] * e * (1 - gather)], sc);
-        ringA(h, a < 0 || oa > 0 ? 0 : eo(c01(a / 0.3)) * pulse * mix(mix(0.7, 0.5, sink), 1.6, gather)); });
+      /* Stort sprang: i suget tennes de tett rundt egget og vinder seg opp som et gyroskop som strammes; på smellet slår de ut til full størrelse (0,5 s, med overskudd).
+         De synker til hovene mens lunta går (55,9–57,9), og blir der til ringen som løfter gullet. */
+      const gather = io(seg(t, HIT[6] + 0.55, BRE + 0.5)), oa = t - DROP, sink = ne ? io(seg(t, BOOM[2] + 0.2, BOOM[2] + 2.2)) : io(seg(t, HIT[3] - 1.3, HIT[3] - 0.3));   /* sink: gloriene legger seg rundt hovene mens gullet slipper, så kroppen og ansiktet står fritt */
+      S.halo.forEach((h, i) => { const a = t - TB - i * (ne ? 0.03 : 0.07), ex = a < 0 ? 0 : back(c01(a / (ne ? 0.5 : 0.8)), 1.5), e = ex * (1 - sink), R0 = [6.2, 7.5, 8.9][i], BM = ne ? BOOM : HIT, wd = a < 0 ? inq : 0;
+        const cy = mix(mix(EC[1] + (i - 1) * 2.4 * (1 - 0.42 * wd), 4.6 + (i - 1) * 1.2, ex), 0.35 + 0.3 * i, sink), sc = mix(ER * [0.8, 1, 0.8][i] / R0, 1, e) * mix(1, 0.9 / R0, gather) * (1 + 0.03 * sin(t * 2 + i)) * (a < 0 ? (1.5 - 0.6 * wd) * (1 - 0.42 * wd) : 1), pulse = 1 + 0.5 * hit(t, BM[1], 0.35) + 0.5 * hit(t, BM[2], 0.35);
+        setv(h, [mix(0, ORB[0], gather), mix(cy, ORB[1], gather), mix(-0.3, ORB[2], gather)], [PI / 2 + ([0.3, -0.42, 0.12][i] * e + 0.05 * sin(t * 0.7 + i)) * (1 - gather) + 0.8 * wd * [1, -1.2, 0.7][i], t * [0.2, -0.14, 0.09][i] + 13 * wd * (i % 2 ? -1 : 1), [0.16, -0.22, 0.4][i] * e * (1 - gather)], sc);
+        ringA(h, oa > 0 ? 0 : a < 0 ? (ne ? 0.9 * inh : 0) : eo(c01(a / 0.3)) * pulse * mix(mix(ne ? mix(0.9, 0.5, seg(a, 0.5, 2.6)) : 0.7, ne ? 0.14 : 0.5, sink), 1.6, gather)); });
       /* Ringen som løfter gullet av ham: den står ved kanten, og tar ett steg opp på hver takt. */
-      { const a = seg(t, HIT[3] - 0.3, HIT[3]) * (1 - seg(t, HIT[6] + 0.5, HIT[6] + 0.9)), w = 1 + 1.2 * [3, 4, 5, 6].reduce((s, k) => s + hit(t, HIT[k], 0.35), 0), zc = kf(t, [[HIT[4] + 0.5, 0], [HIT[5] + 0.5, 1.6, io], [HIT[6] + 0.5, 1.2, io]]), rr = kf(t, [[HIT[4] + 0.5, 3.4], [HIT[5] + 0.5, 1.9, io], [HIT[6] + 0.5, 2.4, io]]);
+      { const a = (ne ? seg(t, BOOM[2] + 1.5, BOOM[2] + 2.3) : seg(t, HIT[3] - 0.3, HIT[3])) * (1 - seg(t, HIT[6] + 0.5, HIT[6] + 0.9)), w = 1 + (ne ? 2.2 : 1.2) * [3, 4, 5, 6].reduce((s, k) => s + hit(t, HIT[k], 0.35), 0), zc = kf(t, [[HIT[4] + 0.5, 0], [HIT[5] + 0.5, 1.6, io], [HIT[6] + 0.5, 1.2, io]]), rr = kf(t, [[HIT[4] + 0.5, 3.4], [HIT[5] + 0.5, 1.9, io], [HIT[6] + 0.5, 2.4, io]]);
         setv(S.tide, [0, max(0.1, gy) + 0.05, zc], [PI / 2, 0, 0], rr / 3.4); ringA(S.tide, a * w * 0.8); }
-      S.flake.forEach((m, k) => m.at(t, HIT[3 + k], { g: 5.5, floor: 0.02 }));
+      if (ne) { S.flakeN.forEach((m, k) => m.at(t, HIT[3 + k], { g: 9, floor: 0.02 })); for (const m of S.flake) m.visible = false; }
+      else { S.flake.forEach((m, k) => m.at(t, HIT[3 + k], { g: 5.5, floor: 0.02 })); for (const m of S.flakeN) m.visible = false; }
       /* JUDGMENT (65,27): hoven i glasset, kula til himmels på 0,4 s, den brister i senit, og lyset regner over hele hallen. */
       const ok = c01(oa / JB), oy = mix(ORB[1], 250, ok * ok); S.orb.visible = t > BRE && oa < JB + 0.02; S.orb.position.set(ORB[0], oa < 0 ? ORB[1] : oy, ORB[2]); S.orb.material.uniforms.uA.value = oa < 0 ? 0.8 * seg(t, BRE, DROP - 0.1) : 1.6;
       S.trail.visible = oa > 0 && oa < 1.1; if (S.trail.visible) { S.trail.position.set(ORB[0], ORB[1], ORB[2]); S.trail.material.uniforms.uTr.value.set(3.2 + 4 * c01(oa / 1.1), max(0.01, oy - ORB[1]), 0); S.trail.material.uniforms.uA.value = 2.6 * (1 - c01(oa / 1.1)); }
-      us.uJd.value.set(max(0, oa - JB), oa > JB ? 1 : 0, 0, 0); S.lan.visible = S.imp.visible = S.spark.visible = oa > JB;
-      lu.uWv.value[0].set(0, 0, HIT[0], t >= HIT[0] ? 1.3 : 0); lu.uWv.value[1].set(-1.5, 2.6, DROP + 0.05, t >= DROP + 0.05 ? 1.6 : 0);
+      us.uJd.value.set(max(0, oa - JB), oa > JB ? (ne ? 1.8 : 1) : 0, 0, 0); S.lan.visible = S.imp.visible = S.spark.visible = oa > JB; us.uJw.value = ne ? 1.5 : 0;
+      lu.uWv.value[0].set(0, 0, TB, t >= TB ? (ne ? 1.6 : 1.3) : 0); lu.uWv.value[1].set(-1.5, 2.6, DROP + 0.05, t >= DROP + 0.05 ? (ne ? 2.2 : 1.6) : 0);
+      for (let i = 2; i < 6; i++) lu.uWv.value[i].w = 0;
+      for (const k of ['inhp', 'star', 'shell', 'spk', 'pglow', 'shock']) S[k].visible = false; for (const m of S.puff) m.visible = false;
+      if (ne) endFx(S, t, { tb, inh, lu, us, flash, fk, oa });
       mirSync(S);
     },
     shots: [
@@ -413,15 +617,16 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
       [H0, (S, u, a, t) => { camK(t, [[H0, 6, 12, 28, 0, 5.6, 0, 42], [22.6, 4, 8.6, 21.5, 0, 5.9, 0, 42], [LIFT[0], 2.2, 7.4, 18, 0, 6, 0, 42]]); S.post.fl = 0.25 * hit(t, 20.5, 0.1); S.post.flc = '#fff2cf'; }],
       /* 3 Løft 1 og 2: høyt over. Ringen legges ned og glasset støpes utover; så tegnes lyslinjene. */
       [LIFT[0], (S, u, a, t) => { camK(t, [[LIFT[0], 18, 15, 26, 0, 3.5, 0, 46], [LIFT[0] + 2.6, 25, 25, 33, 0, 1, 0, 47], [LIFT[1], 30, 36, 39, 0, 0, 2, 48], [LIFT[2], 24, 54, 46, 0, 0, 6, 50]]); S.post.sh = 0.5 * hit(t, LIFT[0] + 0.9, 0.5) + 0.4 * hit(t, LIFT[1] + 0.6, 0.4); }],
-      /* 4 Løft 3 og 4: lavt i gangen. Søylene stiger opp gjennom glasset rundt oss; så skytes ringen til himmels, og kosmos tennes fra senit og ned. */
-      [LIFT[2], (S, u, a, t) => { camK(t, [[LIFT[2], 8, 4.2, 66, 0, 8, 0, 50], [LIFT[3], 6, 2.4, 56, 0, 12, 0, 52], [LIFT[3] + 1.9, 5.4, 1.8, 54, 0, 48, -8, 56], [LIFT[3] + 3.7, 5, 1.9, 52.5, 0, 30, -4, 54], [LIFT[4], 4.5, 2, 51, 0, 10, 0, 50]]); S.post.sh = 0.6 * seg(t, LIFT[2] + 0.6, LIFT[2] + 1.4) * (1 - seg(t, LIFT[2] + 2.6, LIFT[2] + 3.6)); }],
+      /* 4 Løft 3 og 4: lavt i gangen. Søylene stiger opp gjennom glasset rundt oss; så skytes ringen til himmels, og kosmos tennes fra senit og ned.
+         STORT SPRANG (shot4): ringen jager nedover gangen mot oss, og kameraet rygger foran den i samme fart, så parene skyter opp tett på linsa ett etter ett. */
+      [LIFT[2], (S, u, a, t) => { if (!OLDP()) return shot4(S, t); camK(t, [[LIFT[2], 8, 4.2, 66, 0, 8, 0, 50], [LIFT[3], 6, 2.4, 56, 0, 12, 0, 52], [LIFT[3] + 1.9, 5.4, 1.8, 54, 0, 48, -8, 56], [LIFT[3] + 3.7, 5, 1.9, 52.5, 0, 30, -4, 54], [LIFT[4], 4.5, 2, 51, 0, 10, 0, 50]]); S.post.sh = 0.6 * seg(t, LIFT[2] + 0.6, LIFT[2] + 1.4) * (1 - seg(t, LIFT[2] + 2.6, LIFT[2] + 3.6)); }],
       /* 5 Løft 5: ringen brister i de 17 platene. Musikken toner ut, lyset dempes, og en skikkelse skimtes inni egget. */
-      [LIFT[4], (S, u, a, t) => { camK(t, [[LIFT[4], -9, 6.5, 19, 0, 5.8, 0, 46], [K0, -6, 6.2, 16.5, 0, 5.8, 0, 44]]); S.post.sub = S.sub; S.post.subf = 0.01; S.post.subc = '#ffffff'; }],
+      [LIFT[4], (S, u, a, t) => { if (!OLDE()) return endCam(S, t); camK(t, [[LIFT[4], -9, 6.5, 19, 0, 5.8, 0, 46], [K0, -6, 6.2, 16.5, 0, 5.8, 0, 44]]); S.post.sub = S.sub; S.post.subf = 0.01; S.post.subc = '#ffffff'; }],
       /* 6 Kamplåta: egget åpner seg til glorier rundt en skikkelse av gull (49,55). Platene låser seg i hjulet (52,47 og 55,67). */
-      [K0, (S, u, a, t) => { camK(t, [[K0, -9.5, 2.2, 27, 0, 5.4, 0, 40], [HIT[2], -7.5, 2.6, 22.5, 0, 5.2, 0, 40], [HIT[3] - 0.7, -6.8, 2.7, 21, 0, 5.2, 0, 40]]); S.post.sub = t < HIT[0] ? S.sub : 0; S.post.subf = 0.01; S.post.subc = '#ffffff';
+      [K0, (S, u, a, t) => { if (!OLDE()) return endCam(S, t); camK(t, [[K0, -9.5, 2.2, 27, 0, 5.4, 0, 40], [HIT[2], -7.5, 2.6, 22.5, 0, 5.2, 0, 40], [HIT[3] - 0.7, -6.8, 2.7, 21, 0, 5.2, 0, 40]]); S.post.sub = t < HIT[0] ? S.sub : 0; S.post.subf = 0.01; S.post.subc = '#ffffff';
         S.post.sh = 1.2 * hit(t, HIT[0], 0.7) + 0.6 * hit(t, HIT[1], 0.4) + 0.6 * hit(t, HIT[2], 0.4); S.post.fl = max(0.5 * hit(t, HIT[0], 0.12), 0.16 * hit(t, HIT[1], 0.08), 0.16 * hit(t, HIT[2], 0.08)); S.post.flc = '#fff2cf'; }],
       /* 7 Gullet slipper, én del per takt: kameraet stiger med kanten, fra hovene til ansiktet. Så pusten, tett på, helt stille. */
-      [HIT[3] - 0.7, (S, u, a, t) => { camK(t, [[HIT[3] - 0.7, -6.5, 1.0, 14.5, 0, 1.7, 0.6, 44], [HIT[3] + 0.6, -6.2, 1.5, 14, 0, 2.0, 0.6, 43], [HIT[4] + 0.6, -5.6, 3.6, 13.4, 0, 3.9, 0.2, 42], [HIT[5] + 0.6, -4.6, 5.9, 12.2, 0, 5.7, 1.5, 38], [HIT[6] + 0.75, -3.0, 7.25, 10.2, 0, 6.95, 1.9, 27], [DROP, -2.8, 7.25, 9.8, 0, 6.95, 1.9, 25]]);
+      [HIT[3] - 0.7, (S, u, a, t) => { if (!OLDE()) return shot7(S, t); camK(t, [[HIT[3] - 0.7, -6.5, 1.0, 14.5, 0, 1.7, 0.6, 44], [HIT[3] + 0.6, -6.2, 1.5, 14, 0, 2.0, 0.6, 43], [HIT[4] + 0.6, -5.6, 3.6, 13.4, 0, 3.9, 0.2, 42], [HIT[5] + 0.6, -4.6, 5.9, 12.2, 0, 5.7, 1.5, 38], [HIT[6] + 0.75, -3.0, 7.25, 10.2, 0, 6.95, 1.9, 27], [DROP, -2.8, 7.25, 9.8, 0, 6.95, 1.9, 25]]);
         S.post.sh = 0.5 * [3, 4, 5, 6].reduce((s, k) => s + hit(t, HIT[k], 0.35), 0); }],
       /* 8 Droppet: Judgment. Hoven i glasset, hodet mot himmelen, kula til himmels og regnet av lys over hallen; kameraet glir til kampens bilde, og navnet. */
       [DROP, (S, u, a, t) => { const tg = camEnd(), cp = CAMB.cp; camK(t, [[DROP, -5.5, 0.9, 11.5, 0, 7.2, 0, 54], [DROP + 0.6, -6.3, 1.2, 14, 0, 9.5, 0, 56], [NAME + 0.6, cp[0], cp[1], cp[2], tg[0], tg[1], tg[2], CAMB.fv]]); mouth(S, DROP, t);
@@ -437,10 +642,16 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
     g.fillStyle = gr; g.fillRect(256 - w, 286, 2 * w, 1.5); g.fillRect(256 - w, 348, 2 * w, 1.5);
     g.font = `${f[1]}20px ${f[0]}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.shadowColor = 'rgba(0,0,0,.9)'; g.shadowBlur = 6; g.fillStyle = '#fff4dc'; g.fillText(l1.slice(0, min(n, l1.length)), 256, 306); if (n > l1.length) g.fillText(l2.slice(0, n - l1.length - 1), 256, 330); g.restore(); };
   /* Punktet alt blir til (20,5), og glimtet idet egget åpner seg: en stjerne med fire tynne stråler, tegnet oppå. */
-  const glint = (S, t) => { const k = seg(t, 19.9, 20.5) * (1 - seg(t, 20.55, 21.6)) + hit(t, HIT[0], 0.35); if (k < 0.01) return; const q = K.proj(EC[0], EC[1], EC[2]); if (q.z >= 1) return; const g = C.g, L = 26 + 150 * k; g.save(); g.globalCompositeOperation = 'lighter';
+  const glint = (S, t) => { const k = seg(t, 19.9, 20.5) * (1 - seg(t, 20.55, 21.6)) + (OLDE() ? hit(t, HIT[0], 0.35) : 1.3 * hit(t, BANG, 0.4)); if (k < 0.01) return; const q = K.proj(EC[0], EC[1], EC[2]); if (q.z >= 1) return; const g = C.g, L = 26 + 150 * k; g.save(); g.globalCompositeOperation = 'lighter';
     for (const [dx, dy, w] of [[1, 0, 1], [0, 1, 0.8], [0.7, 0.7, 0.35], [0.7, -0.7, 0.35]]) { const gr = g.createLinearGradient(q.x - dx * L * w, q.y - dy * L * w, q.x + dx * L * w, q.y + dy * L * w); gr.addColorStop(0, 'rgba(255,236,190,0)'); gr.addColorStop(0.5, `rgba(255,248,226,${0.9 * k})`); gr.addColorStop(1, 'rgba(255,236,190,0)');
       g.strokeStyle = gr; g.lineWidth = 1.6; g.beginPath(); g.moveTo(q.x - dx * L * w, q.y - dy * L * w); g.lineTo(q.x + dx * L * w, q.y + dy * L * w); g.stroke(); }
     g.restore(); };
+  /* Etterbehandlingen i den nye slutten (stort sprang): suget mørkner kantene; smellet er ett bilde i negativ (støtbildet), så fargesplitt og sterk glød som dør ut;
+     hvert slag etterpå (hjulet, gullet, droppet) gir et kort løft i gløden og litt fargesplitt. */
+  const endLook = (S, t, P) => { const tb = t - BANG, iq = Math.pow(seg(t, SW[0], BANG), 2), hits = [BOOM[1], BOOM[2], HIT[3], HIT[4], HIT[5], HIT[6], DROP];
+    P.vig += 0.42 * iq * (tb < 0 ? 1 : 0); if (tb >= 0 && tb < 0.034) { P.inv = 1; P.grade = Object.assign({}, P.grade || {}, { sat: 0.12 }); }
+    const pk = (tb >= 0 ? Math.exp(-tb * 3.2) : 0) + hits.reduce((q, h) => q + 0.45 * hit(t, h, 0.5), 0) + (t >= DROP + JB ? 0.8 * Math.exp(-(t - DROP - JB) * 2.5) : 0);
+    P.bloom += 0.42 * min(1, pk); P.rgb = 2.6 * (tb >= 0 ? Math.exp(-tb * 5) : 0) + 1.2 * hits.reduce((q, h) => q + hit(t, h, 0.22), 0); };
   /* HOLD: «HOLD» vises idet kula går til himmels (før navnet), og mens fingeren holdes, står en kuppel av lyslinjer rundt oss: lyset som slår ned ved oss, brer seg
      som ringer over den i stedet for å blende. Valgfritt, og bare for følelsen: filmen er den samme uten. */
   const holdFx = (S, t) => { const hd = S.hd || 0, g = C.g, f = C.fontN(), pa = seg(t, DROP + 0.22, DROP + 0.45) * (1 - seg(t, DROP + 1.12, DROP + 1.34)) * (1 - hd);
@@ -458,20 +669,26 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
      hvis sengen ikke lot seg hente. Stille der musikken er stille (fløytas pause, mellom låtene, pusten). */
   const bedOn = () => typeof PACK !== 'undefined' && !!PACK.stinging && PACK.stinging(), pks = (n, v, o) => !bedOn() && typeof c3p === 'function' && c3p(n, v, o), hasT = () => !bedOn() && typeof tone === 'function';
   X.snd.aegg = () => { pks('Wish', 0.2, { len: 2.6, fade: 1.4 }); return [20]; };
+  X.snd.apil = v => { if (OLDP()) return [0]; if (hasT()) tone(v ? 58 : 82, 0, v ? 0.7 : 0.35, v ? 0.07 : 0.04, 'sine', v ? 34 : 50); return v ? [70, 20, 110] : [40]; };   /* stort sprang: søylene skyter opp (v = en hel ring samlet) */
   X.snd.aring = k => { if (!bedOn() && typeof swellN === 'function') swellN(0, 1.1, 0.035 + 0.01 * (k || 0), 500, 3200); if (hasT()) tone(220 * Math.pow(1.122, [0, 2, 4, 7, 9][k || 0]), 0.02, 1.4, 0.022, 'sine'); return [15, 30, 15]; };
-  X.snd.aplate = () => { pks('Light Screen', 0.2, { len: 1.1, fade: 0.6 }); return [15, 20, 15, 20, 15]; };
-  X.snd.aopen = () => { pks('Cosmic Power', 0.3, { len: 2.2, fade: 1.2 }); if (hasT()) tone(98, 0, 1.0, 0.07, 'sine', 49); return [60, 40, 120]; };
-  X.snd.agold = k => { pks('Power Gem', 0.13, { off: 0.2, len: 0.9, fade: 0.5, rate: 0.9 + 0.08 * (k || 0) }); return [25]; };
+  /* Stort sprang: den gamle og den nye slutten har hver sine signaler (bryteren leses når signalet går; [0] = ingenting). aplate: v 1 = bare den gamle (55,67),
+     v 2 = bare den nye (det tredje suget 55,25). abang = smellet, aboom = hjulet smeller, afuse = lunta (ett lite tikk per typemerke). */
+  X.snd.aplate = v => { const old = OLDE(); if (v === (old ? 2 : 1)) return [0]; pks('Light Screen', 0.2, { len: 1.1, fade: 0.6 }); return old ? [15, 20, 15, 20, 15] : [14, 36, 14, 36, 14, 36, 14, 36, 14, 36, 14, 36, 14, 36, 14]; };
+  X.snd.aopen = () => { if (!OLDE()) return [0]; pks('Cosmic Power', 0.3, { len: 2.2, fade: 1.2 }); if (hasT()) tone(98, 0, 1.0, 0.07, 'sine', 49); return [60, 40, 120]; };
+  X.snd.abang = () => { if (OLDE()) return [0]; pks('Cosmic Power', 0.34, { len: 2.4, fade: 1.3 }); if (hasT()) tone(72, 0, 1.3, 0.1, 'sine', 36); return [130, 30, 70, 30, 220]; };
+  X.snd.aboom = v => { if (OLDE()) return [0]; if (hasT()) tone(v ? 62 : 70, 0, 0.9, 0.08, 'sine', 34); return v ? [90, 30, 170] : [70, 30, 110]; };
+  X.snd.afuse = j => { if (OLDE()) return [0]; if (hasT()) tone(392 * Math.pow(2, (j || 0) / 12), 0, 0.12, 0.014, 'sine'); return [8]; };
+  X.snd.agold = k => { pks('Power Gem', 0.13, { off: 0.2, len: 0.9, fade: 0.5, rate: 0.9 + 0.08 * (k || 0) }); return OLDE() ? [25] : [45, 20, 70]; };
   X.snd.ajdg = () => { pks('Judgment', 0.55, { len: 3.4, fade: 1.6 }); if (hasT()) tone(55, 0, 0.9, 0.12, 'sine', 30); return [90, 40, 260]; };
   /* Lyset som slår ned ved oss følger fingeren og ligger derfor ikke i sengen. Med Hold: skjoldlyden (tre varianter i fila, 2 s fra hverandre). Uten: et lite dunk. */
   X.snd.ahit = i => { const hd = !!G3D.hold; if (hd && typeof c3p === 'function' && c3p('Arceus Shield', 0.5, { off: (i % 3) * 2, len: 1.4, fade: 0.3 })) return [50, 30, 70];
     if (typeof noise === 'function') noise(0, 0.28, hd ? 0.03 : 0.05, 900, 120); if (typeof tone === 'function') tone(hd ? 392 : 70, 0, hd ? 0.5 : 0.3, hd ? 0.03 : 0.06, 'sine', hd ? 784 : 40); return hd ? [50, 30, 70] : [25]; };
   X.sfx.push('Wish', 'Light Screen', 'Cosmic Power', 'Power Gem', 'Judgment', 'Arceus Shield');
   X.reg('c3:493', { spid: 493, skin: SKIN, roar: () => DROP,
-    cues: [[20.5, 'aegg']].concat(LIFT.map((L, i) => [L, 'aring', i]), [[HIT[0], 'aopen'], [HIT[1], 'aplate'], [HIT[2], 'aplate']], [3, 4, 5, 6].map((k, i) => [HIT[k], 'agold', i]), [[DROP, 'ajdg'], [DROP, 'cry']], NEAR.map((h, i) => [h[2], 'ahit', i])),
+    cues: [[20.5, 'aegg']].concat(LIFT.map((L, i) => [L, 'aring', i]), [34, 62.5].map(r => [L2 + 0.3 + r / VP, 'apil', 1]), [48, 59, 70, 81, 92, 103, 114].map(z => [L2 + 0.3 + hyp(15, z) / VP, 'apil', 0]), [[HIT[0], 'aopen'], [BANG, 'abang'], [HIT[1], 'aplate', 0], [BOOM[1], 'aboom', 0], [SW[2], 'aplate', 2], [HIT[2], 'aplate', 1], [BOOM[2], 'aboom', 1]], Array.from({ length: 18 }, (_, j) => [FU(j), 'afuse', j]), [3, 4, 5, 6].map((k, i) => [HIT[k], 'agold', i]), [[DROP, 'ajdg'], [DROP, 'cry']], NEAR.map((h, i) => [h[2], 'ahit', i])),
     look(S, t, P) { P.bloom = 0.3; P.bloomT = 0.76; P.vig = 0.36; P.vigc = '#04030c'; P.grain = 0.03; },
     over: (x, t, o) => X.plate(x, t - NAME, Object.assign({ name: 'Arceus', lv: 80, cap: 'The Original One' }, o, { skin: SKIN, cap: 'The Original One' })),
-    fx(S, t, P) { omenFx(t); holdFx(S, t); glint(S, t); if (P.shock) for (const q of P.shock) q.a *= 0.3; if (P.bulge) P.bulge.a *= 0.4;   /* lydbølgene bøyde de rette søylene som gummi */ const hd = S.hd || 0; if (hd > 0.01) { P.bloom *= 1 - 0.3 * hd; P.vig += 0.12 * hd; } } });
+    fx(S, t, P) { omenFx(t); holdFx(S, t); glint(S, t); if (!OLDE()) endLook(S, t, P); if (P.shock) for (const q of P.shock) q.a *= 0.3; if (P.bulge) P.bulge.a *= 0.4;   /* lydbølgene bøyde de rette søylene som gummi */ const hd = S.hd || 0; if (hd > 0.01) { P.bloom *= 1 - 0.3 * hd; P.vig += 0.12 * hd; } } });
 
   /* ===================== LØFTET (1:24,77 i kamplåta): 'c3:493p' =====================
      Fase 2 starter på løftet i låta (kartet tl i manifestet, som hos Kyogre og Groudon: låta styrer, og under halv HP hopper den til oppbyggingen). Filmens tid 0 er
