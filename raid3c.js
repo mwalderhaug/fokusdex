@@ -373,9 +373,9 @@ const G3C = (() => {
      kroppen (løft m, stigning grader, rykk fram m), ax = 1: slaget langs kroppen (oppreist). w svakt, c marsj, p kraft, h sveving. Kildene: RAIDS3D «Fugleflukt». */
   X.fly.SETS = {
     w: { el: 10, em: 1, sw: 2, sp: 0.1, tw: 4, fold: 0.12, curl: 3, cb: 1, slot: 2, rv: 0, ds: 0.5, lag: 0.015, hv: 0.05, pt: 0.4, sg: 0.03, ax: 0 },
-    c: { el: 22, em: 2, sw: 8, sp: 0.22, tw: 8, fold: 0.45, curl: 12, cb: 4, slot: 6, rv: 0.25, ds: 0.5, lag: 0.025, hv: 0.15, pt: 1.0, sg: 0.1, ax: 0 },
-    p: { el: 44, em: 6, sw: 16, sp: 0.24, tw: 14, fold: 0.85, curl: 22, cb: 8, slot: 14, rv: 0.45, ds: 0.56, lag: 0.035, hv: 0.34, pt: 2.5, sg: 0.24, ax: 0 },
-    h: { el: 25, em: 0, sw: 8, sp: 0.22, tw: 14, fold: 0.6, curl: 9, cb: 4, slot: 18, rv: 0.3, ds: 0.6, lag: 0.03, hv: 0.22, pt: 3, sg: 0, ax: 1 } };
+    c: { el: 22, em: 2, sw: 8, sp: 0.22, tw: 8, fold: 0.45, curl: 12, cb: 4, slot: 6, rv: 0.15, ds: 0.5, lag: 0.025, hv: 0.15, pt: 1.0, sg: 0.1, ax: 0 },
+    p: { el: 44, em: 6, sw: 16, sp: 0.24, tw: 14, fold: 0.85, curl: 22, cb: 8, slot: 14, rv: 0.25, ds: 0.56, lag: 0.035, hv: 0.34, pt: 2.5, sg: 0.24, ax: 0 },
+    h: { el: 25, em: 0, sw: 8, sp: 0.22, tw: 14, fold: 0.6, curl: 9, cb: 4, slot: 18, rv: 0.1, ds: 0.6, lag: 0.03, hv: 0.22, pt: 3, sg: 0, ax: 1 } };
   X.fly.KEYS = ['el', 'em', 'sw', 'sp', 'tw', 'fold', 'curl', 'cb', 'slot', 'rv', 'ds', 'lag', 'hv', 'pt', 'sg', 'ax'];
   /* Fasen og kroppen uten riggen (rene funksjoner, til skuespillet og effektene som må vite hvor vingene er): phase(st, S) setter st.ds og st.u én gang per bilde. */
   X.fly.phase = (st, S) => { if (st.u == null) { const M = X.fly.mix(st.k || 0, st.hov || 0, S, st.spd); if (st.ds == null) st.ds = M.ds; st.u = X.fly.u((st.v || 0) + st.ds, st.ds); } return st.u; };
@@ -384,9 +384,9 @@ const G3C = (() => {
   X.fly.sets = ch => { const S = {}; for (const k in X.fly.SETS) S[k] = Object.assign({}, X.fly.SETS[k], ch && ch[k] || {}); return S; };
   /* Settene blandet for styrken k (0–1: det svake slaget vokser fra glid; 1–2 svakt → marsj; 2–3 marsj → kraft) og svevingen hov (0–1). spd (m/s): nedslaget litt kortere i fart. */
   X.fly.mix = (k, hov, S, spd) => { S = S || X.fly.SETS; const KY = X.fly.KEYS, M = {}, kk = max(0, min(3, k || 0)), h = c01(hov || 0), MAG = { el: 1, em: 1, sw: 1, tw: 1, fold: 1, curl: 1, cb: 1, slot: 1, hv: 1, pt: 1, sg: 1 };
-    for (const key of KY) { let v;
-      if (kk <= 1) v = MAG[key] ? S.w[key] * kk : S.w[key];
-      else if (kk <= 2) v = mix(S.w[key], S.c[key], kk - 1); else v = mix(S.c[key], S.p[key], kk - 2);
+    const i = min(2, floor(kk)), x = kk - i;   /* en glatt kurve gjennom settene (Catmull–Rom over k = 0, 1, 2, 3): ingen knekk i farten når styrken går gjennom et sett */
+    for (const key of KY) { const Q = [MAG[key] ? 0 : S.w[key], S.w[key], S.c[key], S.p[key]], p0 = Q[i], p1 = Q[i + 1], m0 = i ? (Q[i + 1] - Q[i - 1]) / 2 : Q[1] - Q[0], m1 = i < 2 ? (Q[i + 2] - Q[i]) / 2 : Q[3] - Q[2];
+      const x2 = x * x, x3 = x2 * x, v = (2 * x3 - 3 * x2 + 1) * p0 + (x3 - 2 * x2 + x) * m0 + (3 * x2 - 2 * x3) * p1 + (x3 - x2) * m1;
       M[key] = mix(v, S.h[key] * (MAG[key] && kk < 1 ? kk : 1), h); }
     if (spd != null) M.ds = max(0.45, M.ds - 0.002 * max(0, spd - 20) * (1 - h));
     return M; };
