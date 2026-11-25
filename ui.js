@@ -1883,7 +1883,8 @@ function meet(e) {
 }
 /* Hvem den legendariske er, vises først her: hodetelefonkortet, filmen dens (den samme som i et raid), og så står den i gresset. */
 async function mystIntro(e) {
-  const B = { tr: legTr(e.id), foe: [{ id: e.id, lv: e.lv }], b: 0, mode: 'myst', lap: 0, over: '' };
+  /* me: [] (tomt lag, som i Films): legendIntro leser laget (foePose), og uten det kastet den, så møtet kom uten film (fra 18.11 til v95). */
+  const B = { tr: legTr(e.id), foe: [{ id: e.id, lv: e.lv }], me: [], b: 0, mode: 'myst', lap: 0, over: '' };
   BT.B = B; E.mus = 1;
   /* Hodetelefonkortet først, som før et raid (hpCard i bui.js; Jazz 25.11: «Ja på hver legendary»), så filmen. */
   try { PACK.unlock(); if (hpOn(B)) { await hpCard(B); if (BT.B !== B) return; } await legendIntro(B); } catch (_) {}
