@@ -315,7 +315,7 @@ const G3C = (() => {
           c.copy(v).applyQuaternion(Dc); e.setFromUnitVectors(c, dirs[k]); const Dk = e.clone().multiply(Dc);
           if (tw) { const dt = (tw[k] || 0) - pt; pt = tw[k] || 0; if (dt) Dk.premultiply(tq.setFromAxisAngle(dirs[k], dt)); }   /* vridningen om leddets egen akse (et bånd som vrir seg) */
           B[names[k]].d = Dc.clone().invert().multiply(Dk); Dc.copy(Dk); } return G; },
-      write() { for (const n in B) { const q = B[n]; if (!q.d) continue; q.b.quaternion.copy(q.PRi).multiply(q.d).multiply(q.PR).multiply(q.L); } },
+      write() { for (const n in B) { const q = B[n]; if (!q.d) continue; q.b.quaternion.copy(q.PRi).multiply(q.d).multiply(q.PR).multiply(q.L); } if (G.post) G.post(); },   /* post (valgfri): det som settes etter dreiningene (flyriggens slank, ar35) */
       reset() { for (const n in B) B[n].d = null; return G; } };   /* dreiningene står til reset(), så apply() kan kalles flere ganger i samme bilde */
     f.late = () => G.write(); return G; };
 
@@ -399,7 +399,8 @@ const G3C = (() => {
      så hånda trekkes inn og bakover og spennet blir kortere (D.mf, md, mq: full bøy per ledd); trn (−1…1, + = svinger mot høyre) bøyer den indre vingen mer og strekker den ytre ut og
      litt fram; rol (−1…1, + = ruller mot høyre, som rulleakselerasjonen: X.fly.ail) vrir den ene hånda forkant opp og den andre ned og bøyer den som skal løfte minst. Glatte kurver inn og ut.
      o.fly = { sets: { w, c, p, h } (endringer i slagsettene, i grader), dist: { fordelingene langs vingen }, foldMax, hold: { neck, head, max, lim, g, lag },
-       man: { t, r, f, q } (manøveren: den indre vingens ekstra bøy i en sving, bøyen i en rull, den ytre vingen fram i grader, rullens vridning i grader) }. */
+       man: { t, r, f, q } (manøveren: den indre vingens ekstra bøy i en sving, bøyen i en rull, den ytre vingen fram i grader, rullens vridning i grader),
+       slank: { bryst: { ben, rot, dy, dz, s, c }, ledd: [[ben uten L/R, grader, akse]] } (kroppen slank i flukt: fjærene inntil og beina inne, bd.slank; ar35) }. */
   X.fly = (f, o) => { const B = X.bird(f, o), n = B.n, R = B.rig, DG = PI / 180, F = o.fly || {}, PO = B.poses, L0 = B.L0;
     /* Fordelingen langs vingen (fra skulderen og ut): hvor mye av slaget, feiingen, vridningen, lasten, etterslepet og spalteåpningen hvert ledd tar, og foldingen (grader ved full fold). */
     const D = Object.assign({ el: [0.5, 1, 1, 1, 1, 1], sw: [0.5, 1, 1, 1, 1, 1], tw: [0.1, 0.3, 0.45, 0.6, 0.8, 1], cu: [0, 0, 0.1, 0.3, 0.65, 1], lg: [0, 0, 0.3, 0.55, 0.8, 1], sl: [0, 0, 0, 0.2, 0.6, 1], sx: [0, 0, 0.25, 0.55, 0.9, 1],
@@ -494,6 +495,31 @@ const G3C = (() => {
         let b = elv(vH) - elv(vN); b = Math.atan2(sin(b), cos(b)); const db = soft(b, FM.hb * DG, FM.hbk * DG) - b;
         if (db < -1e-7) { qQ.copy(qP1).invert().multiply(qR.setFromAxisAngle(L0, -db)).multiply(qP1); outer(HB, qQ); B.nlimH = db; } }   /* hodet nikker fram om sitt eget ledd */
       return B; };
+    /* Slank i flukt (ar35, Opus 26.11; Jazz om v3: «Skal magen være sånn til articuno?»). Modellene står oppreist i hvile. Det som henger foran brystet (Articunos
+       brystfjær, FeelerB1–3: en tykk pute 0,35–0,4 m utenpå kroppen) og beina under det, henger som en rund mage under kroppen når den legges vannrett, og nakkens form
+       (neck2) drar det som henger på nakken bakover og ned (Articuno: 0,29 m bak og 0,09 m ned). Ekte fugler i flukt har fjærene glatt inntil kroppen og beina trukket inn
+       eller strukket bak langs halen, så linja er hel fra nebbet til halen (REGLER «Fugler og vinger»: «beina inne, og linja hel fra nesetipp til halespiss»).
+       o.fly.slank = { bryst: { ben, rot, dy, dz, s, c }, ledd: [[ben uten L/R, grader, akse]] }:
+       · bryst: benet (standard det første i o.keep som henger på nakken) med barna holdes fast i kroppen (bindposens plass i figurens ramme, ikke nakkens), dreid rot grader
+         om sitt eget ledd (+ = den bakre enden opp mot ryggen), flyttet dy fram og dz opp mot ryggen (meter) og skalert s likt i alle akser om c ([x, y, z] i figurens ramme;
+         standard leddet). Matrisen settes etter riggens dreininger (R.post) og blandes med k (slerp og lerp), så k = 0 gir det samme som uten.
+       · ledd: dreininger som legges til i flukt (grader; aksen er sideaksen L0 når den mangler, ellers [x, y, z] i figurens ramme for venstre side; høyre side er speilet),
+         med vekten kl: beina trukket opp langs halen og tærne samlet.
+       Bruk (i hvert bilde, etter nlim og legs): bd.slank(k, kl), k = 0 når den står oppreist. */
+    const SL = F.slank || null, SLB = SL && SL.bryst ? Object.assign({ ben: KEEP[0] || ((o.keep || [])[0] || [])[0], rot: 0, dy: 0, dz: 0, s: 1 }, SL.bryst) : null;
+    B.sk = 0; { const b0 = B.begin; B.begin = () => { B.sk = 0; return b0(); }; }   /* k gjelder bildet det er satt i */
+    if (SLB && R.B[SLB.ben]) { const pb = R.B[SLB.ben].b, M4 = G3D.T().Matrix4, mI = new M4(), mP = new M4(), mC = new M4(), mL = new M4();
+      f.root.updateMatrixWorld(true); const MR = new M4().copy(f.root.matrixWorld).invert().multiply(pb.matrixWorld), o0 = new V3().setFromMatrixPosition(MR), s00 = pb.scale.clone();   /* bindposen (riggen har nettopp nullstilt figuren) */
+      const cc = SLB.c ? new V3(SLB.c[0], SLB.c[1], SLB.c[2]) : o0.clone(), mv = B.F0.clone().multiplyScalar(SLB.dy).addScaledVector(B.U0, SLB.dz), ms = SLB.s;
+      const MD = new M4().makeTranslation(mv.x + cc.x, mv.y + cc.y, mv.z + cc.z).multiply(new M4().makeScale(ms, ms, ms)).multiply(new M4().makeTranslation(o0.x - cc.x, o0.y - cc.y, o0.z - cc.z))
+        .multiply(new M4().makeRotationAxis(L0, SLB.rot * DG)).multiply(new M4().makeTranslation(-o0.x, -o0.y, -o0.z)).multiply(MR);   /* flytt · skaler om c · dreid om leddet · bindposen */
+      const p0 = new V3(), p1 = new V3(), q0 = new TQ(), q1 = new TQ(), s0 = new V3(), s1 = new V3(); MD.decompose(p1, q1, s1);
+      R.post = () => { const k = B.sk || 0; pb.scale.copy(s00); if (!(k > 0)) return;
+        pb.parent.updateWorldMatrix(true, false); mI.copy(f.root.matrixWorld).invert(); mP.multiplyMatrices(mI, pb.parent.matrixWorld); pb.updateMatrix(); mC.multiplyMatrices(mP, pb.matrix);
+        mC.decompose(p0, q0, s0); p0.lerp(p1, k); q0.slerp(q1, k); s0.lerp(s1, k); mC.compose(p0, q0, s0); mL.copy(mP).invert().multiply(mC); mL.decompose(pb.position, pb.quaternion, pb.scale); }; }
+    const SLL = (SL && SL.ledd || []).map(([bn, dg, ax]) => { const a = ax ? new V3(ax[0], ax[1], ax[2]).normalize() : L0.clone(); return [bn, dg * DG, a, a.clone().addScaledVector(L0, -2 * a.dot(L0))]; });   /* høyre side: aksen speilet om kroppens midtplan og vinkelen snudd */
+    B.slank = (k, kl) => { B.sk = SLB ? c01(k || 0) : 0; const w = kl == null ? c01(k || 0) : c01(kl);
+      if (w > 0) for (const [bn, an, a, m] of SLL) { R.rot('L' + bn, a, an * w); R.rot('R' + bn, m, -an * w); } return B; };
     return B; };
   /* Slagsettene (grader og meter, for en stor fugl på rundt 10 m): el = slagets halve utslag i skulderen, em = midten (pluss = over ryggen), sw/sp = feiingen fram–bak og hvor
      mye den leder (0 = en strek fram i bunnen, 0,25 = en ring der oppslaget går bak nedslaget), tw = vridningen i skulderen, fold = foldingen i oppslaget, curl/cb = lasten

@@ -112,7 +112,13 @@
     /* Manøveren (ar33; st.man, trn, rol i X.fly): full bøy er Articunos egen M-form (BIRD.poses.tuck over glidet), så man = 1 er hele M-en, med håndleddet litt opp og hånda
        ned (en måkevinge, så bøyen leses også forfra); i en sving bøyes den indre vingen 0,38 mer og den ytre 0,38 mindre og 10° fram, og i rullen vris hendene 12° hver sin vei
        og bøyes 0,2 ulikt. */
-    dist: { mf: [-30, -60, 29, -59, -60, -53], md: [-3, 4, 12, 4, -6, -10], mq: [0, -2, -2, 0, 3, 6] }, man: { t: 0.38, r: 0.2, f: 10, q: 12 } };
+    dist: { mf: [-30, -60, 29, -59, -60, -53], md: [-3, 4, 12, 4, -6, -10], mq: [0, -2, -2, 0, 3, 6] }, man: { t: 0.38, r: 0.2, f: 10, q: 12 },
+    /* Slank i flukt (ar35; X.fly.slank i raid3c.js; Jazz om v3: «Skal magen være sånn til articuno?»): brystfjærene (FeelerB1–3, en tykk pute utenpå brystet) holdes fast i
+       kroppen, dreid 12° (den bakre enden opp mot ryggen) og løftet 0,2 m, så de ligger som et hvitt bryst inntil kroppen og ikke henger som en rund mage (dypest 0,59 m under
+       kroppens akse mot 0,84–0,91 i v3 og 0,82 i dag; kjernen alene 0,57); beina strukket bak under halen: lårene 4° opp og 12° inn mot midten (føttene 0,23 m fra
+       hverandre mot 0,70, og beina 0,3 m høyere, inntil halen; 12° opp la føttene oppå halen sett litt ovenfra), føttene 20° (tærne rett bak, i linje med beinet) og tærne
+       samlet 14° om aksen på tvers av tåplanet (de sprikte 16° hver vei). */
+    slank: { bryst: { ben: 'FeelerB1', rot: 12, dz: 0.2 }, ledd: [['Thigh', 4], ['Thigh', 12, [0, 0, -1]], ['Foot', 20], ['ToeA1', 14, [0, 0.75, -0.66]], ['ToeC1', -14, [0, 0.75, -0.66]]] } };
   const FSETS = X.fly.sets(BIRD.fly.sets);
   /* Styrken (0 glid, 1 svakt, 2 marsj, 3 kraft), lagt etter dagens utslag (AMP): det første slaget etter et glid er sterkest og avtar slag for slag (Berg og Biewener 2010). */
   const KK = X.fly.trk([[-3, 2.1], [-0.45, 2.15], [-0.15, 2.7], [0.45, 2.7], [1.0, 0], [3.9, 0], [4.5, 2.4], [5.6, 2.1], [9.9, 2.05], [10.9, 1.9], [11.45, 0.35], [12.6, 0.35], [13.3, 3.0], [14.15, 3.0],
@@ -138,7 +144,7 @@
      Bryteren: G3D.alt[144] = 'stiv' (eller 'gammel') gir den godkjente filmen, 'del1' gir del 1 (vingeslaget nytt, resten som i dag). Det nye kan slås av del for del
      (dagens utgave av den delen, resten nytt): 'ghale' (halen), 'gkam' (kameraenes liv), 'geff' (tåka, isnålene og ringen rundt sola), 'gblikk' (hodet ser jevnt inn i
      svingene, uten blikkskift), og bare på forsøk '60' (stupet mot kameraet i 60 bilder i sekundet). Live: &gammel=<ord>; gjennomgangssiden: &alt=<ord>; verktøyene:
-     PRE='G3D.alt={144:"<ord>"}' (flere ord: 'gkam ghale'). Reglene og kildene: work/RAIDS3D.md, Articuno
+     PRE='G3D.alt={144:"<ord>"}' (flere ord: 'gkam ghale'). 'gmage' gir magen og beina fra v3 (ar34, uten slank i flukt). Reglene og kildene: work/RAIDS3D.md, Articuno
      «Bevegelse etter Fable, del 2», og «Fugleflukt» (del 1). Det nye i korte trekk:
      · glid er glid: ingen småflaks (styrken 0), men sjeldne rettelser (vingene felles, et vindkast, ett rykk i én vinge; X.fly.gust med faste hendelser, 0,8 s: √størrelse)
      · svingen i rekkefølge: kroppen ruller 0,22 s før banen bøyer av (krengingen fra akselerasjonen litt fram i tid), og hodet ser inn i svingen før kroppen
@@ -365,7 +371,8 @@
         const o0 = k ? q.sR : q.sL, ov = q.s < 27.5 ? { u: q.s < VA1 ? X.bird.warp(VB(q.s) + 0.56, 0.56) : UFZ } : { A: 0, Ah: 0, u: UFZ }, Po = bd.pose(Object.assign({}, o0, ov), k);   /* dagens vinger, med fasen som stanser mykt */
         if (q.wD) q.wD.forEach((w, j) => { const Pd = bd.pose(Object.assign({}, o0, ov, { w }), k); for (const c of ['fw', 'di', 'tw']) for (let i = 2 * j; i < 2 * j + 2; i++) Po[c][i] = Pd[c][i]; });   /* del 2: skuldrene, underarmen og hånda hver sitt bilde */
         for (const c of ['fw', 'di', 'tw']) Pn[c] = Pn[c].map((v, i) => mix(v, Po[c][i], rw)); return life(Pn, k, q); };
-      bd.wings(wg(0), wg(1)); (q.p2 ? bd.neck2(q.np, q.nr, q.ny, q.uf, 1 - q.bw) : bd.neck(q.np, q.nr, q.ny)).hold(b, null, SC, q.uf, pk, px); if (q.p2) bd.nlim(); bd.legs(q.lg); }   /* hodet holder vinkelen mot den vippen kroppen faktisk får; del 2 (ar32): nakkens form og grense */
+      bd.wings(wg(0), wg(1)); (q.p2 ? bd.neck2(q.np, q.nr, q.ny, q.uf, 1 - q.bw) : bd.neck(q.np, q.nr, q.ny)).hold(b, null, SC, q.uf, pk, px); if (q.p2) bd.nlim(); bd.legs(q.lg);   /* hodet holder vinkelen mot den vippen kroppen faktisk får; del 2 (ar32): nakkens form og grense */
+      if (q.p2 && P2('mage')) { const sk = 1 - q.uf; bd.slank(sk, sk * sm5(c01(q.lg))); } }   /* ar35: slank i flukt (brystfjærene inntil, beina langs halen); glir ut når den reiser seg og beina kommer fram i bremsen */
     else { bd.begin().place(q.P, q.f, q.u, SC); bd.q0 = g.root.quaternion.clone(); bd.wings(bd.pose(q.sL, 0), bd.pose(q.sR, 1)).neck(q.np, q.nr, q.ny).legs(q.lg); }
     { const td = q.p2 && P2('hale') ? tailDirs2(q, T, bd, t) : tailDirs(q, T, bd, t); bd.tail(td[0].map(v => bd.local(v)), td[1]); }
     g.add({ Jaw: [0, -q.jaw, 0] }, 1); g.eye(0, q.rr > 0.4 ? 0.75 : (t % 3.7 < 0.1 ? 0.5 : 0)); };
