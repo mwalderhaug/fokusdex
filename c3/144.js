@@ -1,5 +1,6 @@
 'use strict';
-/* Fokusdex – Articuno (144): cutscenen i 3D før raidet ('c3:144') og arenaen i kampen ('c3:144a', Articuno som Gen 5-bilde lyst av stedet).
+/* Fokusdex – Articuno (144): cutscenen i 3D før raidet ('c3:144'). Fila lager ingen arena i 3D ('c3:144a' finnes ikke): i kampen er Articuno Gen 5-bildet i 2D-arenaen
+   (ARENA.def(144) i raid1.js). Stedet kan bygges med alt frosset (o.all, uAll) og kampens kamera er regnet ut (CAMB, camEnd), men X.arena kalles ikke.
    Hentes først når et raid med Articuno viser seg (G3C.load i raid3c.js). Motoren og stilen: raid3d.js. Verktøykassa, riggen og flyriggen: raid3c.js.
    Bygget av Fable 24.11 (steg 2b.4) fra skisse 2 i sparringen (work/raids3d/articuno/): retning A «Frysingen». Det Jazz har låst, står: en kald start på to takter,
    den kommer over trærne på fanfaren 0:00 og stuper mot vannet, flyr lavt og fort mens vannet fryser bak den (0:05,58), sett ovenfra (0:09,75), ett tungt vingeslag
@@ -479,7 +480,7 @@ void main(){ vec2 w = vW.xz; float t = uTime, fw = max(length(dFdx(w)), length(d
      (et ledd som ganges med 0 i samme shader ga avvik på 1–2 nivåer i enkelte piksler: kompilatoren ordner regnestykkene annerledes). Uniformene er de samme. ----------
      · himmelen: en svak 22°-ring rundt sola i den kalde disen (research/is_sno_vind_lyn.md 10), rødlig og skarp innerst, hvitblå og myk utenfor; styrken uSkyK.z
      · innsjøen: nålene først (is_sno_vind_lyn.md 1–3: domenevridd støy leses som blekk, nåler først leses som is): tynne isnåler skyter ut i vannet foran fronten, og fronten bak
-       dem har mindre tunger; styrken uSkyK.w */
+       dem har mindre tunger; styrken uSkyK.w. Hver nål har sin egen tilfeldige plass, retning og lengde (ar34: aldri et rutenett eller faste retninger, det leste som runer). */
   const SKY2 = SKY.replace('  vec3 c = mix(b, a, sw); float sd = max(dot(normalize(d), normalize(uSun)), 0.); return min(c + vec3(1., .72, .55) * (pow(sd, 6.) * .1 + pow(sd, 70.) * .1), vec3(.96, .8, .74)); }',
     `  vec3 c = mix(b, a, sw); float sd = max(dot(normalize(d), normalize(uSun)), 0.), ha = acos(clamp(dot(normalize(d), normalize(uSun)), -1., 1.));
   vec3 hl = uSkyK.z * (vec3(1., .78, .66) * exp(-pow((ha - .382) / .006, 2.)) + vec3(.86, .9, 1.) * .55 * exp(-pow((ha - .395) / .016, 2.))) * smoothstep(-.01, .04, e);
@@ -488,12 +489,21 @@ void main(){ vec2 w = vW.xz; float t = uTime, fw = max(length(dFdx(w)), length(d
   const DOME_F2 = swap(DOME_F, SKY, SKY2);
   const LAKE_F2 = swap(swap(swap(LAKE_F, SKY, SKY2), '   /* rimnålene stikker ut av fronten */', '   /* rimnålene stikker ut av fronten */\n  fd -= .55 * uSkyK.w * nz * clamp((sc - .45) / 5., .02, 1.) * (1. - uAll);   /* del 2: mindre tunger i fronten */'),
     '   /* rimnålene vokser ut i vannet; ingen hvit stripe */', `   /* rimnålene vokser ut i vannet; ingen hvit stripe */
-    /* Del 2 (uSkyK.w; research/is_sno_vind_lyn.md 1–3: domenevridd støy leses som blekk, nåler først leses som is): rette, tynne isnåler skyter ut i vannet foran fronten i
-       tre retninger 60° fra hverandre (hver stripe brutt i nåler med hull imellom, hver nål med sin egen rekkevidde), og fronten bak dem har mindre tunger. 0 = dagens. */
-    if (uSkyK.w > 0.) { float nd = 0.; for (int k = 0; k < 3; k++) { float a = float(k) * 1.0472 + .35 + .6 * vn(w * .02 + float(k)), ca = cos(a), sa = sin(a); vec2 dr = vec2(ca, sa);
-        float p = dot(w, vec2(-sa, ca)) / 1.7, pc = floor(p), r1 = h21(vec2(pc, float(k) * 7.1 + 1.3)), r2 = h21(vec2(pc + 3.3, float(k) * 2.9 + .7)), lp = abs(fract(p) - (.15 + .7 * r1)) * 1.7;
-        float al = dot(w, dr) / (3. + 5. * r2) + r1 * 5., sg = fract(al), on = smoothstep(0., .06, sg) * (1. - smoothstep(.55, .62, sg)), reach = 1.5 + 5.5 * fract(r2 * 7.3 + floor(al) * .37);
-        nd = max(nd, (1. - smoothstep(.025 + fw * .5, .06 + fw, lp)) * on * (1. - smoothstep(reach * .5, reach, -fd))); }
+    /* Del 2 (uSkyK.w; research/is_sno_vind_lyn.md 1–3: domenevridd støy leses som blekk, nåler først leses som is): rette, tynne isnåler skyter ut i vannet foran fronten,
+       og fronten bak dem har mindre tunger. 0 = dagens. ar34 (kontrollen etter Jazz: et rutenett i tre retninger leste som runer eller en flis): hver nål har sin egen
+       tilfeldige plass, retning, lengde, styrke og rekkevidde foran fronten og blir smalere mot spissen; to lag: lange (én per celle på 3,4 m, 1,6–4,6 m, noen med én gren
+       på 22,5°: 45° mellom grenene, ferskvann) og korte og svakere imellom (én per celle på 1,7 m, 0,5–1,7 m). Cellene rundt (3 × 3) dekker hele nåla og grenen (spissen
+       høyst 0,65 · lengden fra midten, midten minst 0,15 · cellen inn i cellen), så ingen nål kuttes i en cellekant. */
+    if (uSkyK.w > 0. && fd > -7.5 && fw < 2.) { float nd = 0., fq = min(fw, .5);
+      for (int lv = 0; lv < 2; lv++) { float cs = lv == 0 ? 3.4 : 1.7, sd = float(lv) * 97.3; vec2 ci = floor(w / cs);
+        for (int iy = -1; iy <= 1; iy++) for (int ix = -1; ix <= 1; ix++) { vec2 cc = ci + vec2(float(ix), float(iy)), c = cc + sd, r = h22(c + 5.3);
+          float an = h21(c + 11.7) * 6.2832, hl = h21(c + 23.9), L = lv == 0 ? 1.6 + 3. * pow(hl, 1.2) : .5 + 1.2 * hl, br = lv == 0 ? .5 + .5 * h21(c + 31.3) : .3 + .4 * h21(c + 31.3);
+          float reach = lv == 0 ? 2. + 5.5 * h21(c + 41.1) : 1. + 3.5 * h21(c + 41.1);
+          vec2 dr = vec2(cos(an), sin(an)), o = (cc + .15 + .7 * r) * cs - dr * L * .5, q = w - o; float h = clamp(dot(q, dr) / L, 0., 1.), tp = (1. - .55 * h) * (lv == 0 ? 1. : .8);
+          float m = (1. - smoothstep(.022 * tp + fq * .5, .055 * tp + fq, length(q - dr * h * L))) * (1. - .35 * h);
+          if (lv == 0 && h21(c + 71.9) < .5) { float hb = .3 + .4 * h21(c + 53.3), ab = an + (h21(c + 61.7) < .5 ? -.3927 : .3927), Lb = L * (.25 + .2 * h21(c + 83.1)); vec2 db = vec2(cos(ab), sin(ab)), qb = q - dr * hb * L;
+            float hh = clamp(dot(qb, db) / Lb, 0., 1.), tb = (1. - .55 * hb) * (1. - .5 * hh); m = max(m, (1. - smoothstep(.018 * tb + fq * .5, .045 * tb + fq, length(qb - db * hh * Lb))) * (1. - .35 * hb) * (1. - .4 * hh)); }
+          nd = max(nd, m * br * (1. - smoothstep(reach * .5, reach, -fd))); } }
       col = mix(col, uFoamC * .92, nd * .65 * uSkyK.w * (1. - smoothstep(.5, 2., fw))); }`);
   const TERR_F = `varying vec3 vW, vN; uniform vec3 uSun;
 ${K.GLSL.COMMON}
