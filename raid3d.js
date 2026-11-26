@@ -782,7 +782,7 @@ void main(){ float x = 1. - abs(vQ.x * 2. - 1.), a = x * x * (1. - vQ.y) * (1. -
   const envSet = e => { e = e || ENV0; U.uRimC.value.setRGB(...hex(e.rim || ENV0.rim)); U.uLavaC.value.setRGB(...hex(e.glow || ENV0.glow)); U.uFogC.value.setRGB(...hex(e.fog || ENV0.fog)); U.uGlowH.value = e.glowH == null ? ENV0.glowH : e.glowH; U.uLavaY.value = e.y || 0; };
   /* Stillingen på tidspunktet t: skuespillet (act), benene, og kameraet i bildet (shots) som gjelder. Gir P (det kameraet ber om). */
   const poseAt = (D, S, t, o) => {
-    const P = S.post = P0(); U.uTime.value = t; envSet(D.env); K.far();
+    const P = S.post = P0(); P.tq = t; U.uTime.value = t; envSet(D.env); K.far();   /* tq: filmbildets tid (ristingen i raid.js går i filmbildets takt) */
     for (const f of S.figs || []) f.clear(); U.uFog.value.set(60, 300, 0.8); U.uKey.value.set(0.4, 0.8, 0.45).normalize(); U.uRim.value.set(0, 0.3, -1).normalize();   /* lysets retning settes tilbake for hvert bilde: en art som flytter det (Articuno), gjør det i act */
     D.act(S, t, o); for (const f of S.figs || []) f.apply();
     let si = 0; for (let i = 0; i < D.shots.length; i++) if (t >= D.shots[i][0] - 1e-6) si = i;

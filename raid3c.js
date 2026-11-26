@@ -85,6 +85,22 @@ const G3C = (() => {
   X.handheld = (src, o) => { o = o || {}; const lag = X.follow(src, { f: o.f || 1.6, z: o.z == null ? 0.8 : o.z, t0: o.t0, dt: o.dt }), A = o.amp || [0.04, 0.025], hz = o.hz || 0.6, sd = o.seed || 1;
     return t => { const c = lag(t); for (let i = 0; i < 6; i++) c[i] += X.noise(t, sd + i * 17, hz) * A[i < 3 ? 0 : 1]; return c; }; };
 
+  /* ---------- Ristingen som hendelser (oppdrag_risting.md, 26.11 natt) ----------
+     Filmene skriver ristingen i S.post.sh som før (dagens tall, som bryteren G3D.alt.rist = 'gammel' bruker), men hvert ledd pakkes inn, så den nye ristingen
+     (raid.js, «Ristingen») vet hva det er. Tallene blir nøyaktig de samme som før, så bryteren gir dagens bilde piksel for piksel.
+       X.hk(S, t, t0, d, a, ty, dir) = a · hit(t, t0, d): et slag på t0 med styrken a (t er tiden leddet bruker, også en forskjøvet tid som Articunos s).
+       X.hks(S, t, [t0, …], d, a, ty, dir) = a · (hit(t, t0, d) + …) · X.rk(S, v, hz) = v: et nivå som varer (rumling på hz, standard 1,8; 'v' = fart).
+       X.ev(S, ty, alder, a, dir, d) og X.rv(S, v, hz): en hendelse og et nivå uten tall i dag · X.tatt(S, v) = v: et tall i dag som hendelsene står for.
+     ty: 's' slag (standard), 'e' eksplosjon, 'f' fotsteg eller søyle, 'b' brøl, 'p' et tog av små støt eller en lang rumling. dir: hvor bildet sparkes, i grader
+     (0 = høyre, 90 = ned); uten den nesten loddrett. Det som ikke er pakket inn, rister som en jevn rumling etter tallet. */
+  const skA = (S, e) => { const p = S.post; (p.sk || (p.sk = [])).push(e); }, skV = (S, v) => { S.post.skv = (S.post.skv || 0) + v; return v; };
+  X.hk = (S, t, t0, d, a, ty, dir) => { skA(S, [ty || 's', t - t0, a, d, dir]); return skV(S, a * hit(t, t0, d)); };
+  X.hks = (S, t, L, d, a, ty, dir) => { let s = 0; for (const t0 of L) { s += hit(t, t0, d); skA(S, [ty || 's', t - t0, a, d, dir]); } return skV(S, a * s); };
+  X.rk = (S, v, hz) => { skA(S, ['r', v, hz]); return skV(S, v); };
+  X.ev = (S, ty, u, a, dir, d) => { skA(S, [ty || 's', u, a, d, dir]); };
+  X.rv = (S, v, hz) => { skA(S, ['r', v, hz]); };
+  X.tatt = (S, v) => skV(S, v);
+
   /* ---------- Brølet ---------- (Jazz 18.11: «ikke tykke streker»): tynne gnister ut fra kjeften, lydbølger som brer seg fra den (forvrengningsringer i fxgl.js) og
      et rykk i bildet. mouth(S, f, t0, t) i kameraet som filmer brølet: f = figuren, t0 = når brølet startet, S.rw = hvor åpent (0–1). Kjeften er rollen 'Jaw'. */
   X.mouth = (S, f, t0, t, len) => { const j = f.at('Jaw'), m = K.proj(j.x, j.y, j.z); S.post.spx = m.x / 2; S.post.spy = m.y / 2; S.post.spr = 0.1; S.post.spd = 0.9 * S.rw * hit(t, t0, len || 2.4); S.mouth = m; if (S.spc) S.post.spc = S.spc; };   /* S.spc: stedets farge på gnistene (standard oransje) */
@@ -136,7 +152,7 @@ const G3C = (() => {
       const S = G3D.S(id), q = G3D.post(id), sn = d.back ? d.back(S, t) : null;
       g.imageSmoothingEnabled = true; g.drawImage(c, 0, 0, 512, 384);
       if (d.over && !(G3D.out > 0.3)) { g.imageSmoothingEnabled = false; g.drawImage(G3D.text(x => d.over(x, t, cur), inf.fig, ink), 0, 0, 512, 384); g.imageSmoothingEnabled = true; }
-      P.sh = q.sh * 2; P.fl = q.fl; P.fc = q.flc; P.fade = q.fade; P.fadec = q.fadec;
+      P.sh = q.sh * 2; P.fl = q.fl; P.fc = q.flc; P.fade = q.fade; P.fadec = q.fadec; P.sk = q.sk || null; P.skv = q.skv || 0; P.tq = q.tq;   /* ristingen: hendelsene og filmbildets tid */
       if (d.look) d.look(S, t, P, q, sn);
       if (d.roar) X.roarFx(S, t, P, d.roar(t));
       if (d.fx) d.fx(S, t, P, q, sn); } }); };

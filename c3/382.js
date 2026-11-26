@@ -184,7 +184,13 @@ void main(){ float th = vUv.x, v = vUv.y, tn = vK; vec2 c = vec2(cos(th), sin(th
   /* Lynene: [når, styrke, retning i verden (radianer fra −Z), frø]. rate = lyn per sekund. Et lyn blinker to–tre ganger (som ekte lyn). */
   const strikes = (t, rate, sd, span) => { const per = 1 / max(0.02, rate), q = floor(t / per), out = []; for (let j = q - 2; j <= q; j++) { if (rnd(j, sd) < 0.18) continue; out.push([j * per + rnd(j, sd + 1) * per * 0.85, 0.55 + 0.45 * rnd(j, sd + 2), (rnd(j, sd + 3) - 0.5) * (span || 2.4), j * 7 + sd]); } return out; };
   const flick = d => d < 0 ? 0 : d < 0.05 ? 1 : d < 0.1 ? 0.3 : d < 0.17 ? 0.9 : d < 0.24 ? 0.25 : max(0, 1 - (d - 0.24) / 0.4) * 0.55;
-  const flashOf = L => L.reduce((s, q) => max(s, flick(q.d) * q.k), 0);
+  /* Blinkene (oppdrag_risting.md, WCAG 2.3.1: høyst tre i sekundet): med den nye ristingen blinker hvert lyn én gang (flick1), og bare et lyn som ikke har et annet
+     under 0,34 s før seg (first), lyser bildet (S.fl: himmelen og havet) og gløden rundt seg fullt; de andre lyser gløden svakt. Bryteren G3D.alt.rist = 'gammel': dagens. */
+  const blOld = () => !!G3D.alt && G3D.alt.rist === 'gammel';
+  const flick1 = d => d < 0 ? 0 : d < 0.05 ? 1 : max(0, 1 - (d - 0.05) / 0.5) * 0.5;
+  const first = (L, q) => !L.some(r => r !== q && r.d > q.d && r.d - q.d < 0.34);
+  const fla = (L, q) => blOld() ? flick(q.d) : flick1(q.d), flg = (L, q) => blOld() ? flick(q.d) : (first(L, q) ? 1 : 0.3) * flick1(q.d);   /* lynet selv, og gløden rundt */
+  const flashOf = L => blOld() ? L.reduce((s, q) => max(s, flick(q.d) * q.k), 0) : L.reduce((s, q) => first(L, q) ? max(s, flick1(q.d) * q.k) : s, 0);
 
   /* ---------- Himmelen ----------
      Himmelen bak 3D-bildet er skyQ (under «Stormen i 3D»): den tegnes i vinkelmål rundt horisonten (UR enheter per radian) og festes til 3D-kameraet (G3D.view).
@@ -198,7 +204,7 @@ void main(){ float th = vUv.x, v = vUv.y, tn = vK; vec2 c = vec2(cos(th), sin(th
   };
   /* Regn foran kameraet (2D, på skrå med vinden) og lynet nær kameraet, oppå 3D-bildet. */
   const rainFx = (S, t, k, a) => { if (a <= 0.01) return; C.parts('rain', { n: floor(40 + 50 * k), seed: 12, cols: ['#a8c4d8', '#dcebf4'], a: 0.55 * a, spd: 1.2 + 0.4 * k, wind: -0.7 - 0.35 * k, z: [0.45, 1] }); };
-  const nearBolt = (x, yTop, x1, y1, a, sd, w) => { if (a <= 0.03) return; C.bolt(x, yTop, x1, y1, { seed: sd, col: '#b8d4ff', core: '#ffffff', w: (w || 3) * 0.8, a, br: 4, depth: 6 }); C.blob(x1, y1, 110, '#c4d8f4', 0.26 * a, 1, 0.1); C.blob(x1, y1 - 2, 20, '#e8f2ff', 0.4 * a, 1, 0.5); };   /* 2b.3: et flatt skjær langs horisonten der det slår ned (før: en hvit ball på 160 px) */
+  const nearBolt = (x, yTop, x1, y1, a, sd, w, ag) => { if (a <= 0.03) return; C.bolt(x, yTop, x1, y1, { seed: sd, col: '#b8d4ff', core: '#ffffff', w: (w || 3) * 0.8, a, br: 4, depth: 6 }); if (ag == null) ag = a; C.blob(x1, y1, 110, '#c4d8f4', 0.26 * ag, 1, 0.1); C.blob(x1, y1 - 2, 20, '#e8f2ff', 0.4 * ag, 1, 0.5); };   /* ag: gløden (blinkene) */   /* 2b.3: et flatt skjær langs horisonten der det slår ned (før: en hvit ball på 160 px) */
 
   const HOME = [0, 0, 0];   /* der Kyogre ligger i havet (roten) */
   const DEEP = [0, -140, -10];   /* lyset langt nede */
@@ -311,10 +317,10 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
       const lt = rnd(i, 706) > 0.45; C.blob(x, y, r, lt ? bl(bl('#7a8793', '#36414b', ov), '#b4c6de', fl * 0.55) : bl('#28313a', '#0e1419', ov), (lt ? 0.3 + 0.2 * fl : 0.4 + 0.12 * fl) + 0.2 * rnd(i, 707), 0, 0.26); }   /* 2b.3: i et lyn lyser de lyse skymassene opp og de mørke står igjen, så himmelen får form */
     g.restore();
     /* 2b.3: lynene i det fjerne (S.fb): fra skybasen ned mot horisonten, bak klipper og stakker, og skyen lyser der det slår ned. Aldri en hvit ball ved foten. */
-    if (S.fb) for (const q of S.L || []) { const a = flick(q.d) * q.k, B = q.big ? 1 : 0; if (a < 0.05 || q.near) continue; const X0 = q.sx != null ? 256 + q.sx : v.x + wrap(q.a - v.yaw) * v.ppr; if (X0 < -60 || X0 > 572) continue;
+    if (S.fb) for (const q of S.L || []) { const a = fla(S.L, q) * q.k, ag = flg(S.L, q) * q.k, B = q.big ? 1 : 0; if (a < 0.05 || q.near) continue; const X0 = q.sx != null ? 256 + q.sx : v.x + wrap(q.a - v.yaw) * v.ppr; if (X0 < -60 || X0 > 572) continue;
       /* big: det store lynet bak ham i brølet. Det tegnes i bakteppet, så kroppen hans og stakkene står foran det (aldri oppå ham), og himmelen lyser opp bak ham. */
-      const top = B ? -14 : v.y - (q.lo ? 0.075 : 0.34) * v.ppr, bot = v.y + 1; C.blob(X0, B ? v.y - 110 : q.lo ? top - 8 : top + 26, B ? 250 : q.lo ? 80 : 130, '#7f9fd8', (B ? 0.26 : 0.22) * a, 1, B ? 0.7 : 0.5);   /* lo: stormen står langt borte, og lynet går bare fra skybasen ned i havet, inne i regnet */
-      C.bolt(X0 + (rnd(q.s, 41) - 0.5) * (B ? 80 : 44), top, X0, bot, { seed: q.s * 3 + (q.d > 0.12 ? 1 : 0), col: '#9fc0ff', core: '#ffffff', w: B ? 3 : 1.5, a, br: B ? 4 : 3, depth: B ? 6 : 5 }); C.blob(X0, bot, B ? 120 : 70, '#c4d8f4', (B ? 0.42 : 0.3) * a, 1, 0.12); }
+      const top = B ? -14 : v.y - (q.lo ? 0.075 : 0.34) * v.ppr, bot = v.y + 1; C.blob(X0, B ? v.y - 110 : q.lo ? top - 8 : top + 26, B ? 250 : q.lo ? 80 : 130, '#7f9fd8', (B ? 0.26 : 0.22) * ag, 1, B ? 0.7 : 0.5);   /* lo: stormen står langt borte, og lynet går bare fra skybasen ned i havet, inne i regnet */
+      C.bolt(X0 + (rnd(q.s, 41) - 0.5) * (B ? 80 : 44), top, X0, bot, { seed: q.s * 3 + (q.d > 0.12 ? 1 : 0), col: '#9fc0ff', core: '#ffffff', w: B ? 3 : 1.5, a, br: B ? 4 : 3, depth: B ? 6 : 5 }); C.blob(X0, bot, B ? 120 : 70, '#c4d8f4', (B ? 0.42 : 0.3) * ag, 1, 0.12); }
     return { hz: v.y }; };
 
   /* ---------- Arenaen i kampen: samme hav som cutscenene ----------
@@ -846,15 +852,15 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         /* 1b (rettelse 3) Bølgen mot klippen: lavt fra siden mot den høyeste stakken; dønningen ruller inn fra venstre i stillheten i låta og knuser mot den på 0:07,66
            med lynet bak, og igjen 0:09,08 og 0:10,73. Kameraet glir sakte nærmere. */
         [QI.CW - 0.04, (S, u, a, t) => { const e = io(u), x = mix(-17, -13, e), z = mix(-88, -91, e), h = K.seaH(S.sea.material.uniforms, x, z, t * TS); if (STIV()) K.cam(x, 11 + 0.2 * h, z, CS[0], mix(8, 9.5, e), CS[1] + 4, 40, 0.015); else camRid(S, CAMI[1](t), t, 0.2, 0);
-          S.post.sh = 1.5 * hit(t, QI.CL, 1.3) + 0.6 * hit(t, QI.CL2, 0.8) + 0.5 * hit(t, QI.CL3, 0.8); S.post.fl = 0.32 * hit(t, QI.CL, 0.12); S.post.flc = '#e8f2ff'; }],
+          S.post.sh = X.hk(S, t, QI.CL, 1.3, 1.5, 'e') + X.hk(S, t, QI.CL2, 0.8, 0.6, 'e') + X.hk(S, t, QI.CL3, 0.8, 0.5, 'e'); S.post.fl = 0.32 * hit(t, QI.CL, 0.12); S.post.flc = '#e8f2ff'; }],
         /* 2 Ovenfra: båten alene; skyggen kommer inn nedenfra på 0:04,57, glir under båten i stillheten, lynet viser hele kroppen, og den er ute før klippet. */
-        [QI.PASS - 0.04, (S, u, a, t) => { if (STIV()) K.cam(...CAM2, 0); else camV(CAMI[2](t)); S.post.fl = 0.35 * hit(t, QI.LY, 0.12); S.post.flc = '#e8f2ff'; S.post.sh = 0.6 * hit(t, QI.W1, 0.8); }],
+        [QI.PASS - 0.04, (S, u, a, t) => { if (STIV()) K.cam(...CAM2, 0); else camV(CAMI[2](t)); S.post.fl = 0.35 * hit(t, QI.LY, 0.12); S.post.flc = '#e8f2ff'; S.post.sh = X.hk(S, t, QI.W1, 0.8, 0.6, 'e'); }],
         /* 3 Noe stort kommer: lavt ved båten mot stakkene; det røde skjæret vokser under den. */
-        [QI.B6, (S, u, a, t) => { const e = io(u), x = mix(6.4, 5.2, e), z = mix(10.8, 9.2, e), h = K.seaH(S.sea.material.uniforms, x, z, t * TS); if (STIV()) K.cam(x, h + 2.5, z, -2.5, 1.4, -10, 48, -0.02); else camRid(S, CAMI[3](t), t, 1, 0);   /* 2b.3: nærmere og lavere (før 14 enheter unna), så tråleren er stor og tung i bildet */ S.post.sh = 0.7 * hit(t, QI.W3, 0.6) + 0.8 * hit(t, QI.W4, 0.6) + 0.25 * seg(t, QI.B6, QI.UP); }],
+        [QI.B6, (S, u, a, t) => { const e = io(u), x = mix(6.4, 5.2, e), z = mix(10.8, 9.2, e), h = K.seaH(S.sea.material.uniforms, x, z, t * TS); if (STIV()) K.cam(x, h + 2.5, z, -2.5, 1.4, -10, 48, -0.02); else camRid(S, CAMI[3](t), t, 1, 0);   /* 2b.3: nærmere og lavere (før 14 enheter unna), så tråleren er stor og tung i bildet */ S.post.sh = X.hk(S, t, QI.W3, 0.6, 0.7, 'e') + X.hk(S, t, QI.W4, 0.6, 0.8, 'e') + X.rk(S, 0.25 * seg(t, QI.B6, QI.UP), 2.0); }],
         /* 4 Finnene først: lavt og rett forfra; båten midt i bildet mellom finnene. Ryggen løfter den, den glir av og velter. */
-        [QI.UP - 0.05, (S, u, a, t) => { const e = io(seg(t, QI.UP, QI.HIT)), e2 = io(seg(t, QI.HIT, QI.S5)), x = mix(5, 6, e), z = 54, h = K.seaH(S.sea.material.uniforms, x, z, t * TS); if (STIV()) K.cam(x, h * 0.2 + mix(11.2, 11.8, e), z, mix(0, 2.2, e) + 1.6 * e2, mix(1.4, 2.6, e), BT[1], mix(23, 26, e), 0.01); else camRid(S, CAMI[4](t), t, 0.2, 0); S.post.sh = 1.6 * hit(t, QI.UP, 1.6) + 0.5 * hit(t, QI.HIT, 1.0) + 1.3 * hit(t, QI.BH, 1.2); }],
+        [QI.UP - 0.05, (S, u, a, t) => { const e = io(seg(t, QI.UP, QI.HIT)), e2 = io(seg(t, QI.HIT, QI.S5)), x = mix(5, 6, e), z = 54, h = K.seaH(S.sea.material.uniforms, x, z, t * TS); if (STIV()) K.cam(x, h * 0.2 + mix(11.2, 11.8, e), z, mix(0, 2.2, e) + 1.6 * e2, mix(1.4, 2.6, e), BT[1], mix(23, 26, e), 0.01); else camRid(S, CAMI[4](t), t, 0.2, 0); S.post.sh = X.hk(S, t, QI.UP, 1.6, 1.6, 'e') + X.hk(S, t, QI.HIT, 1.0, 0.5) + X.hk(S, t, QI.BH, 1.2, 1.3, 'e'); }],
         /* 5 Ringbølgene, litt ovenfra: han ligger høyt i vannet, og ringene ruller ut mot stakkene. */
-        [QI.S5, (S, u, a, t) => { const e = io(u); if (STIV()) K.cam(mix(26, 24, e), mix(12, 11, e), mix(25, 23, e), -2, 1, -4, 46, -0.01); else camV(CAMI[5](t)); S.post.sh = 1.1 * hit(t, QI.SLAM, 1.0); }],   /* rettelse 3: slaget (før ringbølgene 0:27,9) */
+        [QI.S5, (S, u, a, t) => { const e = io(u); if (STIV()) K.cam(mix(26, 24, e), mix(12, 11, e), mix(25, 23, e), -2, 1, -4, 46, -0.01); else camV(CAMI[5](t)); S.post.sh = X.hk(S, t, QI.SLAM, 1.0, 1.1); }],   /* rettelse 3: slaget (før ringbølgene 0:27,9) */
         /* 6 Lavt ved stakken: ringen ruller mot kameraet og knuser mot stakken (0:35,51). */
         /* 7 Vidt og lavt for forvarselet og brølet (som i skisse 1, uten båten); kameraet høyt nok til at ingen bølge skjuler ham. */
         [38.45, (S, u, a, t) => { const k2 = io(seg(t, 38.45, QI.RO)), w = 0.05 * sin(max(0, t - QI.RO) * 0.25), x = mix(8.5, 5.5, k2) + w * 4, z = mix(31, 24.5, k2), h = K.seaH(S.sea.material.uniforms, x, z, t * TS);
@@ -862,13 +868,13 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
              hans; skisse 2: 48°), så hodet, øyet og gapet synes («i brølet synes ansiktet, ikke bare haka»; rett forfra er hodet hans en blank kuppel: prøvd).
              Utsnittet rykker inn i brølet (samme bane, ingen skjøt). */
           if (STIV()) K.cam(x, h * 0.5 + mix(5.4, 4.3, k2), z, -0.9, mix(2.6, 4.1, k2), 0, 50 - 5 * eo(seg(t, QI.RO, QI.RO + 0.3)) + 2 * io(seg(t, QI.NM, QI.NM + 1.5)), -0.03); else camRid(S, CAMI[6](t), t, 0.5, 0);
-          S.post.fl = max(0.3 * hit(t, QI.RO, 0.1), 0.2 * hit(t, QI.RO + 0.35, 0.08)); S.post.flc = '#eef6ff'; S.post.sh = 1.0 * hit(t, 38.53, 0.8) + 4 * hit(t, QI.RO, 1.2) + 0.6 * S.rw; if (t >= QI.RO) X.mouth(S, S.gr, QI.RO, t); }],
+          S.post.fl = max(0.3 * hit(t, QI.RO, 0.1), 0.2 * hit(t, QI.RO + 0.35, 0.08)); S.post.flc = '#eef6ff'; S.post.sh = X.hk(S, t, 38.53, 0.8, 1.0, 'e') + X.hk(S, t, QI.RO, 1.2, 4, 'b') + X.rk(S, 0.6 * S.rw, 2.3); if (t >= QI.RO) X.mouth(S, S.gr, QI.RO, t); }],
       ].map(([t0, f]) => [t0, (S, u, a, t) => { f(S, u, a, t); if (!STIV()) S.lamps.forEach(m => K.face(m)); stormSort(S, t); }]),   /* ny: lysene på båten mot DETTE bildets kamera (før: forrige bildes) */
     });
     X.reg('c3:382', { spid: 382, skin: 'sea', back: skyQ, look: lookS, roar: () => QI.RO, cues: [[QI.RO, 'cry']],   /* naturlydene ligger i lydsengen; brølet er artens eget */
       over: (x, t, o) => X.plate(x, t - QI.NM, Object.assign({ skin: 'sea' }, o)),
       fx(S, t, P) { rainFx(S, t, S.k || 1, 0.4 + 0.6 * seg(t, 0, QI.UP));
-        if (S.shot === 6) { const hz = G3D.view().y; for (const q of S.L || []) if (q.near) { const a = flick(q.d) * q.k; if (a > 0.05) { const x = 256 + q.a * 220; nearBolt(x + (rnd(q.s, 3) - 0.5) * 60, -10, x, hz + 6, a, q.s * 5 + (q.d > 0.12 ? 2 : 0), 3.2); } } } } });   /* lynet i brølet ender i horisonten ved siden av ham, bak ham (Jazz 20.11: aldri på ham) */
+        if (S.shot === 6) { const hz = G3D.view().y; for (const q of S.L || []) if (q.near) { const a = fla(S.L, q) * q.k; if (a > 0.05) { const x = 256 + q.a * 220; nearBolt(x + (rnd(q.s, 3) - 0.5) * 60, -10, x, hz + 6, a, q.s * 5 + (q.d > 0.12 ? 2 : 0), 3.2, flg(S.L, q) * q.k); } } } } });   /* lynet i brølet ender i horisonten ved siden av ham, bak ham (Jazz 20.11: aldri på ham) */
 
     /* ---------- Primal (skisse 4 fra sparringen, på låtas klokke fra 3:15,7; Jazz 20.11, chat 3) ----------
        Endret fra skisse 3 (Jazz: «Han skal være opp på 3:43 akkurat, da er det første slaget», «Forstatt ingen lys ned i vannet», «fortsatt er han synlig hele tiden hvor han
@@ -1046,7 +1052,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         su.uWind.value.set(0.35, 1, 1.05, 0);
         /* Lynene. Ute (1, 2): inne i regnet i stormen (BOLTS, i 3D); inne i stormen: masse, men aldri på ham (Jazz 20.11). De nære står ved kantene og ender i horisonten. */
         const L = [], BL = []; let lit = null;
-        if (!black && outside) for (const [tb, kb, x, zz] of BOLTS) { const d = t - tb; if (d < 0 || d > 0.7) continue; const a = flick(d) * kb; BL.push({ d, k: kb, x, z: S.zf + zz, s: floor(tb * 41) });
+        if (!black && outside) for (const [tb, kb, x, zz] of BOLTS) { const d = t - tb; if (d < 0 || d > 0.7) continue; const a = (blOld() ? flick(d) : flick1(d)) * kb; BL.push({ d, k: kb, x, z: S.zf + zz, s: floor(tb * 41) });
           if (!lit || a > lit.a) lit = { a, x, z: S.zf + zz }; L.push({ d, k: kb * 0.3, a: PI, s: floor(tb * 41) }); }
         if (!black && !outside) { for (const q of strikes(t, t < QP.DEEP ? 0.9 : t < QP.L ? 0.3 : 2.6, 81)) L.push({ d: t - q[0], k: q[1] * 0.8, a: q[2], s: q[3], near: false });
           for (const [tb, kk2, a, nr] of [[QP.DV, 1, -1.35, 0], [QP.DEEP, 0.9, -0.2, 0], [QP.SH, 1, 0.25, 0], [QP.UP + 0.2, 0.8, -0.6, 0],
@@ -1116,25 +1122,25 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         [QP.DR - 0.02, (S, u, a, t) => { const e = io(u), cx = mix(66, 44, e), cy = mix(19, 15.5, e), cz = S.zf - 30; if (STIV()) K.cam(cx, cy, cz, cx - 80, 9, cz + 9, 52, 0.02); else camV(CAMQ[1](t)); }],
         /* 3 Han stuper (3:29,1): lavt bak ham, halefinnen slår en bue over kameraet, og sprut skyller over. */
         [QP.DV - 0.05, (S, u, a, t) => { const e = io(seg(t, QP.DV, QP.DV + 2.2)), ch = K.seaH(S.sea.material.uniforms, -1.6, -13, t * TS);   /* finpuss 2: over dønningene (Jazz: «man kommer under vannet der. kamera må litt opp») */
-          if (STIV()) K.cam(-1.6, 2.6 + ch, -13, 0, mix(2.4, 3.6, e), mix(-2, 2, e), 70, 0.03); else camRid(S, CAMQ[2](t), t, 1, 0); S.post.sh = 2.2 * hit(t, QP.DV + 1.1, 0.8); S.post.fl = 0.35 * hit(t, QP.DV + 1.2, 0.35); S.post.flc = '#dde8ee'; }],
+          if (STIV()) K.cam(-1.6, 2.6 + ch, -13, 0, mix(2.4, 3.6, e), mix(-2, 2, e), 70, 0.03); else camRid(S, CAMQ[2](t), t, 1, 0); S.post.sh = X.hk(S, t, QP.DV + 1.1, 0.8, 2.2); S.post.fl = 0.35 * hit(t, QP.DV + 1.2, 0.35); S.post.flc = '#dde8ee'; }],
         /* 4 Vannet lukker seg over ham. */
         [QP.CL, (S, u, a, t) => { const e = io(u); if (STIV()) K.cam(7, mix(7, 9, e), -14, 0, 0, 3, 50, 0); else camV(CAMQ[3](t)); }],
         /* 5 Lyset langt nede (3:34,9): skrått over havet i stormen, som Godzilla 1:56–2:03; et lite, svakt lys dypt nede som stiger hele tiden. */
-        [QP.DEEP - 0.03, (S, u, a, t) => { const e = io(u); if (STIV()) K.cam(GL[0] + mix(7, 6, e), mix(9, 8.5, e), GL[1] + mix(27, 24, e), GL[0], 0, GL[1] - 5, 46, 0.02); else camV(CAMQ[4](t)); S.post.sh = 0.4 * hit(t, QP.DEEP, 0.8); }],
+        [QP.DEEP - 0.03, (S, u, a, t) => { const e = io(u); if (STIV()) K.cam(GL[0] + mix(7, 6, e), mix(9, 8.5, e), GL[1] + mix(27, 24, e), GL[0], 0, GL[1] - 5, 46, 0.02); else camV(CAMQ[4](t)); S.post.sh = X.hk(S, t, QP.DEEP, 0.8, 0.4, 'e'); }],
         /* 6 Sterkere (3:39,8), og dritfort opp på riseren (3:42,45): nærmere og brattere; flaten buler opp og lyser like før han bryter ut. */
         [QP.SH - 0.03, (S, u, a, t) => { const e = io(seg(t, QP.SH, QP.UP)), e2 = ei(seg(t, QP.UP, QP.C)); if (STIV()) K.cam(GL[0] + mix(4.5, 3.5, e), mix(9.5, 8.5, e) - 1.2 * e2, GL[1] + mix(16, 13, e) - 2 * e2, GL[0], 0, GL[1] - 1, mix(50, 54, e2), 0.02); else camV(CAMQ[5](t));
-          S.post.sh = 0.25 + 0.4 * e + 2.6 * e2; }],
+          S.post.sh = X.rk(S, 0.25 + 0.4 * e + 2.6 * e2, 2.2); }],
         /* 7 Det første slaget (3:42,96), som bildet Jazz sendte fra skisse 1: lavt fra siden; han er alt halvveis ute når bildet kommer, med lyn på begge sider, og stiger videre. */
-        [QP.C - 0.02, (S, u, a, t) => { if (STIV()) K.cam(23, 1.3, 54, 0, mix(7.5, 9.5, io(u)), 4, 48, -0.04); else camV(CAMQ[6](t)); S.post.fl = 0.32 * hit(t, QP.C, 0.12); S.post.flc = '#e8f4ff'; S.post.sh = 5 * hit(t, QP.C, 0.6); }],
+        [QP.C - 0.02, (S, u, a, t) => { if (STIV()) K.cam(23, 1.3, 54, 0, mix(7.5, 9.5, io(u)), 4, 48, -0.04); else camV(CAMQ[6](t)); S.post.fl = 0.32 * hit(t, QP.C, 0.12); S.post.flc = '#e8f4ff'; S.post.sh = X.hk(S, t, QP.C, 0.6, 5, 'e'); }],
         /* Svart i stillheten (3:43,90–3:44,54). */
         [QP.B1, (S, u, a, t) => { K.cam(0, 200, 0, 0, 0, 1, 40); S.post.fade = 1; }],
         /* 8 Pangen (3:44,55): lenger borte; han er i lufta og stuper ned i vannet igjen. */
-        [QP.S - 0.01, (S, u, a, t) => { if (STIV()) K.cam(mix(58, 55, u), 7, mix(104, 100, u), 0, mix(9, 5, u), 4, 27, -0.02); else camV(CAMQ[7](t));   /* 2b.3: utsnittet 32 → 27°, så han ikke er så liten («lenger borte» står) */ S.post.sh = 1.2 * hit(t, QP.S + 0.5, 0.9); S.post.fl = 0.35 * hit(t, QP.S, 0.1); S.post.flc = '#e8f4ff'; }],
+        [QP.S - 0.01, (S, u, a, t) => { if (STIV()) K.cam(mix(58, 55, u), 7, mix(104, 100, u), 0, mix(9, 5, u), 4, 27, -0.02); else camV(CAMQ[7](t));   /* 2b.3: utsnittet 32 → 27°, så han ikke er så liten («lenger borte» står) */ S.post.sh = X.hk(S, t, QP.S + 0.5, 0.9, 1.2, 'e'); S.post.fl = 0.35 * hit(t, QP.S, 0.1); S.post.flc = '#e8f4ff'; }],
         /* Svart og stille (3:45,52–3:46,14). */
         [QP.B2, (S, u, a, t) => { K.cam(0, 200, 0, 0, 0, 1, 40); S.post.fade = 1; }],
         /* 9 Smellet (3:46,15): han er alt oppe foran oss (vannet fosser av ham, en vegg av sprut faller), brøler, lyn rundt ham, kort Primal-tekst; kampen tar til igjen. */
         [QP.L - 0.01, (S, u, a, t) => { const e = io(seg(t, QP.L, QP.E)); if (STIV()) K.cam(mix(15, 12.5, e), mix(5.1, 4.5, e), mix(30, 26, e), -0.5, mix(4.5, 4.1, e), 2, 50, -0.03); else camV(CAMQ[8](t));
-          S.post.fl = max(0.3 * hit(t, QP.L, 0.1), 0.2 * hit(t, QP.L + 0.4, 0.08), seg(t, QP.F, QP.E - 0.04)); S.post.flc = '#f2f8ff'; S.post.sh = 6 * hit(t, QP.L, 1.4) + 0.8 * S.rw; S.spc = '#bfe4ff'; X.mouth(S, S.pg, QP.L, t, 2.2); }],
+          S.post.fl = max(0.3 * hit(t, QP.L, 0.1), 0.2 * hit(t, QP.L + 0.4, 0.08), seg(t, QP.F, QP.E - 0.04)); S.post.flc = '#f2f8ff'; S.post.sh = X.hk(S, t, QP.L, 1.4, 6, 'b') + X.rk(S, 0.8 * S.rw, 2.3); S.spc = '#bfe4ff'; X.mouth(S, S.pg, QP.L, t, 2.2); }],
       ].map(([t0, f]) => [t0, (S, u, a, t) => { f(S, u, a, t); stormSort(S, t); }]),
     });
     X.reg('c3:382p', { spid: 382, swirl: 0, skin: 'sea', back: skyQ, look: lookQ, roar: () => QP.L, cues: [[QP.L, 'cry']],
@@ -1146,14 +1152,14 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
         return X.plate(x, t - QP.N, { name: o.name, cap: 'Primal Reversion', sign: X.alpha, skin: 'sea' }) || on; },
       fx(S, t, P) { if (S.black) return; const outside = t < QP.DV - 0.05, dr = t >= QP.DR - 0.02 && outside;
         /* Lynene inne i stormen (1, 2): fra skybasen ned i havet, inne i regnet. */
-        for (const b of S.BL || []) { const a = flick(b.d) * b.k; if (a < 0.05) continue; const q0 = K.proj(b.x, 27 * (S.sy || 1), b.z), q1 = K.proj(b.x + (rnd(b.s, 5) - 0.5) * 14, 0, b.z - 4); if (q0.z > 1 || q1.z > 1) continue;
+        for (const b of S.BL || []) { const a = (blOld() ? flick(b.d) : flick1(b.d)) * b.k; if (a < 0.05) continue; const q0 = K.proj(b.x, 27 * (S.sy || 1), b.z), q1 = K.proj(b.x + (rnd(b.s, 5) - 0.5) * 14, 0, b.z - 4); if (q0.z > 1 || q1.z > 1) continue;
           C.bolt(q0.x, q0.y, q1.x, q1.y, { seed: b.s * 5 + (b.d > 0.12 ? 2 : 0), col: '#a8c8ff', core: '#ffffff', w: dr ? 2.2 : 1.5, a, br: 4, depth: 6 }); C.blob(q0.x, q0.y, dr ? 80 : 60, '#a8c4f8', 0.24 * a, 1, 0.4); C.blob(q1.x, q1.y, dr ? 40 : 30, '#c8dcff', 0.26 * a, 1, 0.3); }
         deepLight(S, t);
         /* Regn foran kameraet: lite utenfor stormen, høljregn inne i den. */
         if (outside) rainFx(S, t, 0.7, dr ? 0.12 + 0.2 * seg(t, QP.ARR - 1, QP.DV) : 0.1);
         else { rainFx(S, t, (S.k || 1) * 1.3, 1); C.parts('rain', { n: 70, seed: 31, cols: ['#9fb4c6', '#d4e2ee'], a: 0.45, spd: 2.2, wind: -1.1, z: [0.2, 0.6] }); }
         const hz = G3D.view().y;
-        for (const q of S.L || []) if (q.near) { const a = flick(q.d) * q.k; if (a > 0.05) { const x = 256 + q.a * 230; nearBolt(x + (rnd(q.s, 3) - 0.5) * 70, -10, x + (rnd(q.s, 5) - 0.5) * 30, hz + 6, a, q.s * 5 + (q.d > 0.12 ? 2 : 0), 3.4); } }
+        for (const q of S.L || []) if (q.near) { const a = fla(S.L, q) * q.k; if (a > 0.05) { const x = 256 + q.a * 230; nearBolt(x + (rnd(q.s, 3) - 0.5) * 70, -10, x + (rnd(q.s, 5) - 0.5) * 30, hz + 6, a, q.s * 5 + (q.d > 0.12 ? 2 : 0), 3.4, flg(S.L, q) * q.k); } }
         if (t >= QP.DV + 1.1 && t < QP.DV + 3.2) { const d = C.lensDrops({ n: 22, a: 14, size: 10, wet: 0.9 * (1 - seg(t, QP.DV + 2.2, QP.DV + 3.2)), run: 0.6 }); C.lensShine(d, { a: 0.8 }); }
         if (t >= QP.L) { const d = C.lensDrops({ n: 18, a: 14, size: 9, wet: 0.8 * seg(t, QP.L, QP.L + 0.5), run: 0.5 }); C.lensShine(d, { a: 0.8 }); } } });
   }

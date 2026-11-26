@@ -216,12 +216,49 @@ const CINE = (() => {
      mat { k, g, c, t, u } materialet under bildet (lava, hav, is). */
   const newP = () => ({ sh: 0, z: 1, zx: W / 2, zy: H / 2, rot: 0, fl: 0, fc: '#fff', inv: 0, gl: 0, rgb: 0, wav: 0, bars: 0, fade: 0, fadec: '#000', scan: 0,
     heat: 0, heatY: 150, heatUp: 90, heatDn: 120, heatMask: null, shock: null, bulge: null, warp: null, bloom: 0, bloomT: 0.62, rays: null, grade: null, mono: 0, monoT: 0.42, vig: 0, vigc: '#000', grain: 0, melt: 0, film: 0, mat: null });
+  /* ---------- Ristingen (oppdrag_risting.md, 26.11 natt) ----------
+     Dagens ligger bak bryteren G3D.alt.rist = 'gammel': bildet flyttes til en ny tilfeldig plass hvert 1/60 s, høyst P.sh piksler hver vei (flimmer, ulikt i 30 og 60
+     bilder i sekundet, og det står ikke stille i sakte film eller når bildet står). Den nye er en ren funksjon av filmens tid i filmbildets takt (P.tq: 3D-filmenes
+     bilde, ellers T), så den spoles, går i sakte film og står når bildet står: glatt støy i egne kanaler (x, y og en liten rull, uCam.w), traume² × støy med krum
+     nedtoning (eksponentiell, lengden ∝ √styrken), og slag med retning (et spark i første bilde som svinger tilbake som en dempet fjær). Alt under 10 Hz, og det som
+     varer, under 5 Hz. P.sk: det filmen sier hvert ledd er (X.hk, X.hks, X.ev, X.rk og X.rv i raid3c.js): [type, alder, styrke, lengde, retning°] og ['r', nivå, Hz];
+     styrken og nivået i samme tall som S.post.sh (P.sh / 2). Det som ikke er pakket inn (P.sh − 2 · P.skv), og 2D-filmene, rister som en jevn rumling etter tallet:
+     svakt er lavt og rolig (1,8 Hz), sterkt raskere (4,4 Hz), og en fast grunnristing blir nesten borte (traume²). Typene: s slag og treff (spark 3,5–7 Hz og støy
+     4,4 Hz), e eksplosjon (spark 2,2–6 Hz med to dempede svingninger, lengden ∝ E^(1/3)), f fotsteg og søyler (ett lavt bump), b brøl (rumling 2,3 Hz som tones inn
+     og ut, og et lite rykk), p et tog av små støt eller en lang rumling (2,2 Hz, ingen spark). Nivåene: hz = 'v' er fart (et lag på 1 Hz og et lite på 3,6 Hz).
+     Retningen er hvor bildet sparkes (0 = høyre, 90 = ned); uten den nesten loddrett, litt ulik for hvert slag. Kildene: work/raids3d/research/risting.md. */
+  const nz1 = (x, s) => { const i = floor(x), f = x - i, u = f * f * f * (f * (f * 6 - 15) + 10); return mix(rnd(i, s), rnd(i + 1, s), u) * 2 - 1; };
+  const nzs = (t, s, hz) => { const x = t * hz; return 0.72 * nz1(x, s) + 0.28 * nz1(x * 2.17 + 3.1, s + 11); };   /* som X.noise: laget på 2,17 × er under 10 Hz når hz ≤ 4,6 */
+  const fjr = (u, f, z) => Math.exp(-z * TAU * f * u) * cos(TAU * f * Math.sqrt(1 - z * z) * u);   /* fullt i første bilde, så tilbake som en dempet fjær */
+  /* Per type: [sparket: Hz, demping, del; støyen: Hz, del; lengden (s, til 1 %); toppen (s); slingringen etterpå (del)] */
+  const SKT = { s: [5.5, 0.45, 1.0, 4.4, 0.7, 0.8, 0.2, 0.22], e: [4.5, 0.22, 1.15, 3.2, 0.65, 1.2, 0.15, 0.3], f: [3.0, 0.65, 1.0, 0, 0, 0.5, 0, 0],
+    b: [4.0, 0.5, 0.55, 2.3, 0.9, 1.0, 0.4, 0.15], p: [0, 0, 0, 2.2, 0.8, 0.4, 0, 0] };
+  const RR = 0.00074;   /* rull i radianer per piksel: 46° på 384 px, og rullen rundt 0,35 × dreiningen (den er mest kvalmende) */
+  const ristOld = () => typeof G3D !== 'undefined' && !!G3D.alt && G3D.alt.rist === 'gammel';
+  const shkNew = () => {
+    const t = P.tq != null ? P.tq : T; let x = 0, y = 0, r = 0;
+    const nz = (A, hz, sd, kx) => { x += A * kx * nzs(t, sd, hz); y += A * nzs(t, sd + 1, hz * 0.93); r += A * RR * 0.45 * nzs(t, sd + 2, hz * 0.7); };
+    for (const e of P.sk || []) {
+      if (e[0] === 'r') { const A = 2 * e[1]; if (!(A > 0.02)) continue; const am = 1.1 * A * A / (A + 1.5); if (e[2] === 'v') { nz(0.8 * am, 1.0, 61, 0.8); nz(0.35 * am, 3.6, 67, 0.6); } else nz(am, e[2] || 1.8, 41, 0.7); continue; }
+      const ty = SKT[e[0]] ? e[0] : 's', k = SKT[ty], u = e[1], a = e[2]; if (!(a > 0) || !(u >= 0) || u > 6) continue;
+      const A = 2 * a, S = min(2, max(0.5, Math.sqrt(a / 2))), E3 = min(1.6, max(0.6, Math.cbrt(a / 2))), sd = 7 + floor(rnd(floor((t - u) * 30 + 0.5), 3) * 90), d = e[3] || 0.5;
+      const L = ty === 'b' ? max(0.8, d) : ty === 'p' ? max(0.4, 0.7 * d) : ty === 'f' ? k[5] : k[5] * (ty === 'e' ? E3 : S), h = ty === 'b' ? 0.4 * d : ty === 'p' ? 0.25 * d : k[6] * (ty === 'e' ? E3 : S);
+      if (k[2]) { const f = ty === 'f' ? k[0] : ty === 'e' ? min(6, max(2.2, k[0] / E3)) : min(7, max(3.5, k[0] / Math.sqrt(S))), q = A * k[2] * fjr(u, f, k[1]);
+        const dg = (e[4] == null ? 90 + 50 * (rnd(sd, 9) - 0.5) : e[4]) * PI / 180; x += q * cos(dg); y += q * sin(dg); r += q * RR * 0.35 * (rnd(sd, 5) < 0.5 ? -1 : 1); }
+      if (k[4]) { const env = (u < h ? 1 : Math.exp(-4.6 * (u - h) / L)) * (ty === 'b' ? c01(u / 0.06) : ty === 'p' ? c01(u / 0.1) : 1); if (env > 0.004) nz(A * k[4] * env, k[3], sd, 0.75); }
+      if (k[7]) { const w = k[7] * Math.exp(-u / (0.35 * max(1, S))); if (w > 0.004) nz(A * w, 1.1, sd + 50, 0.8); } }
+    const res = (P.sh || 0) - 2 * (P.skv || 0);
+    if (res > 0.02) { const am = res * res / (res + 2), w = c01((am - 1) / 5); if (w < 1) nz(1.4 * am * (1 - w), 1.8, 23, 0.75); if (w > 0) nz(1.4 * am * w, 4.4, 29, 0.75); }
+    return [x, y, r]; };
+  const Z3 = [0, 0, 0];
+  /* [x, y, rull] for bildet som tegnes nå (C.shkLast: til verktøyene). */
+  const shk = () => { const s = ristOld() ? (P.sh ? [(rnd(frameNo, 1) - 0.5) * 2 * P.sh, (rnd(frameNo, 2) - 0.5) * 2 * P.sh, 0] : Z3) : shkNew(); C.shkLast = s; return s; };
   let tmpA = null, tmpB = null;
   function present(out, B) {
     if (out.width !== W && out.dataset && out.dataset.rs) { out.width = W; out.height = H; delete out.dataset.rs; out.style.imageRendering = ''; }
     const o = out.getContext('2d'); o.setTransform(1, 0, 0, 1, 0, 0); o.globalAlpha = 1; o.globalCompositeOperation = 'source-over'; o.imageSmoothingEnabled = false; o.fillStyle = '#000'; o.fillRect(0, 0, W, H);
-    const sx = P.sh ? (rnd(frameNo, 1) - 0.5) * 2 * P.sh : 0, sy = P.sh ? (rnd(frameNo, 2) - 0.5) * 2 * P.sh : 0;
-    const cam = () => { o.translate(P.zx + sx, P.zy + sy); if (P.rot) o.rotate(P.rot); o.scale(P.z, P.z); o.translate(-P.zx, -P.zy); };
+    const [sx, sy, rr] = shk();
+    const cam = () => { o.translate(P.zx + sx, P.zy + sy); const rt = rr ? (P.rot || 0) + rr : P.rot; if (rt) o.rotate(rt); o.scale(P.z, P.z); o.translate(-P.zx, -P.zy); };
     const blit = (src, dx) => { o.save(); cam(); if (P.wav) { for (let y = 0; y < H; y += 3) o.drawImage(src, 0, y, W, 3, (dx || 0) + sin(y * 0.045 + T * 7) * P.wav, y, W, 3); } else o.drawImage(src, dx || 0, 0); o.restore(); };
     if (P.rgb > 0.3) {
       /* Fargesplitt: det røde bildet forskyves én vei og det blågrønne den andre. */
@@ -286,9 +323,10 @@ const CINE = (() => {
   }
   /* Bildet B gjennom WebGL (fxgl.js) og ut på lerretet out. Gir false når WebGL ikke er der (da tegnes reserven). */
   C.gpu = (out, B2) => {
-    if (typeof FXGL === 'undefined' || !FXGL.ok()) return false; const sx = P.sh ? (rnd(frameNo, 1) - 0.5) * 2 * P.sh : 0, sy = P.sh ? (rnd(frameNo, 2) - 0.5) * 2 * P.sh : 0;
+    if (typeof FXGL === 'undefined' || !FXGL.ok()) return false; const [sx, sy, rr] = shk();
     if (out.width !== B2.width) { out.width = B2.width; out.height = B2.height; if (out.dataset) out.dataset.rs = 1; } if (out.style && out.style.imageRendering !== 'auto') out.style.imageRendering = 'auto';
-    return FXGL.draw(out, B2, P, T, frameNo, sx, sy);
+    if (!rr) return FXGL.draw(out, B2, P, T, frameNo, sx, sy);
+    const r0 = P.rot; P.rot = (r0 || 0) + rr; try { return FXGL.draw(out, B2, P, T, frameNo, sx, sy); } finally { P.rot = r0; }   /* rullen (den nye ristingen) går gjennom uCam.w */
   };
   /* Oppløsningen filmer og arenaer med WebGL tegnes i, som et tall ganger 512 × 384 (se arena.js for hvordan den velges). rsNow = den som gjelder i bildet som tegnes nå. */
   C.RS = 1; let rsNow = 1, fpsLow = 0;

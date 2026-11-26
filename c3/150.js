@@ -426,17 +426,17 @@ void main(){ float x = abs(vQ.x), v = vQ.y, a = vQ.z, st = .7 + .3 * vn(vec2(v *
       [0, (S, u, a, t) => J2D() ? CU5(S, c01((t - WIN) / (T5.WIDE - WIN))) : BCAM(S, u, a, t)],
       [T5.CU, (S, u, a, t) => CU5(S, J2D() ? c01((t - WIN) / (T5.WIDE - WIN)) : u)],
       [T5.WIDE, (S, u, a, t) => { const k = io(c01((t - T5.WIDE) / (S5 - T5.WIDE))); K.cam(mix(-8.5, -7.2, k), mix(5.8, 4.9, k), mix(13.5, 11.2, k), -0.9, 0.3, 0, 40);
-        S.post.sh = 2.2 * hit(t, S5, 0.9); S.post.fl = 0.5 * hit(t, S5, 0.1); S.post.flc = '#ffb070'; }],
+        S.post.sh = X.hk(S, t, S5, 0.9, 2.2); S.post.fl = 0.5 * hit(t, S5, 0.1); S.post.flc = '#ffb070'; }],
       /* 4 Rommet bak ham: svart, teksten, stjernene, hullet; han kneler og synes bare i ladningene (målet litt lavere enn i skisse 5: han er lavere). */
       [COS5, (S, u, a, t) => { const k = io(c01((t - COS5) / (PUSH5 - COS5))); K.cam(mix(0.9, 0.6, k), mix(0.8, 0.9, k), mix(9.0, 8.0, k), 0, 2.05, 0, 42);
-        S.post.sh = NOVA5.reduce((s, q) => s + 0.45 * q.app * (1 - q.di) * hit(t, q.t, 0.5), 0); }],
+        S.post.sh = NOVA5.reduce((s, q) => s + X.hk(S, t, q.t, 0.5, 0.45 * q.app * (1 - q.di), 'e'), 0); }],
       /* 5 Skyv inn til ansiktet; han løfter hodet og ser på deg. */
       [PUSH5, (S, u, a, t) => { const k = io(c01((t - PUSH5) / (EXP5 - PUSH5))), h = S.D.at('Head');
-        K.cam(mix(0.6, 0.14, k), mix(0.9, h.y + 0.05, k), mix(8.0, 2.5, k), 0, mix(2.05, h.y + 0.12, k), 0, mix(42, 34, k)); S.post.sh = NOVA5.reduce((s, q) => s + 0.45 * q.app * (1 - q.di) * hit(t, q.t, 0.5), 0) + 0.6 * seg(t, EXP5 - 0.5, EXP5); }],
+        K.cam(mix(0.6, 0.14, k), mix(0.9, h.y + 0.05, k), mix(8.0, 2.5, k), 0, mix(2.05, h.y + 0.12, k), 0, mix(42, 34, k)); S.post.sh = NOVA5.reduce((s, q) => s + X.hk(S, t, q.t, 0.5, 0.45 * q.app * (1 - q.di), 'e'), 0) + X.rk(S, 0.6 * seg(t, EXP5 - 0.5, EXP5), 2.2); }],
       /* 6 Full styrke: han reiser seg i eksplosjonen (lavere og nærmere enn i skisse 5, så han er større enn smellet og vi ser ham reise seg; kameraet følger ham opp);
          krystallene tennes oransje; liket ved føttene; hullet bak; brølet og navnet. */
       [EXP5, (S, u, a, t) => { const r = eo(seg(t, UP6[0], UP6[1] + 0.3)); K.cam(mix(0.6, 0.4, u), mix(0.55, 0.85, r), mix(6.0, 5.4, io(u)), -0.1, mix(1.25, 1.95, r), 0, 50);
-        S.post.sh = 2.8 * hit(t, EXP5, 1.2); S.post.fl = 0.85 * hit(t, EXP5, 0.1); S.post.flc = '#ffc890'; }],
+        S.post.sh = X.hk(S, t, EXP5, 1.2, 2.8, 'e'); S.post.fl = 0.85 * hit(t, EXP5, 0.1); S.post.flc = '#ffc890'; }],
     ]),
   });
   X.reg('c3:dk150', { spid: 150, skin: SKIN, back: backBlk, cues: [[EXP5 + 0.1, 'cry']], roar: () => EXP5 + 0.1,
@@ -528,20 +528,20 @@ void main(){ float x = abs(vQ.x), v = vQ.y, a = vQ.z, st = .7 + .3 * vn(vec2(v *
     },
     shots: late(lateP)([
       /* 1 Kampens vinkel: han står i den revne hula med hullet bak; «Something is happening…»; 0:20,53 eksploderer alle stjernene; det rosa støvet går i spiral inn i hullet. */
-      [0, (S, u, a, t) => { K.cam(mix(-2.6, -3.4, u), mix(1.4, 1.1, u), mix(10.5, 11.8, u), mix(-0.6, -1.2, u), mix(2.6, 3.6, u), -4, mix(46, 54, u)); S.post.sh = 1.6 * hit(t, SX6, 0.9); S.post.fl = 0.45 * hit(t, SX6, 0.12); S.post.flc = '#ffe0f0'; }],
+      [0, (S, u, a, t) => { K.cam(mix(-2.6, -3.4, u), mix(1.4, 1.1, u), mix(10.5, 11.8, u), mix(-0.6, -1.2, u), mix(2.6, 3.6, u), -4, mix(46, 54, u)); S.post.sh = X.hk(S, t, SX6, 0.9, 1.6); S.post.fl = 0.45 * hit(t, SX6, 0.12); S.post.flc = '#ffe0f0'; }],
       /* 2 Vidt og lavt mot hullet: det eksploderer på 0:23,97, svart og oransje støv. */
-      [C6.HOLE, (S, u, a, t) => { K.cam(mix(4.5, 3.8, u), 0.6, mix(13, 12.2, u), -1.5, 6, -10, 58); S.post.sh = 2.2 * hit(t, HX6, 1.0); S.post.fl = 0.4 * hit(t, HX6, 0.1); S.post.flc = '#ffd0a0'; }],
+      [C6.HOLE, (S, u, a, t) => { K.cam(mix(4.5, 3.8, u), 0.6, mix(13, 12.2, u), -1.5, 6, -10, 58); S.post.sh = X.hk(S, t, HX6, 1.0, 2.2); S.post.fl = 0.4 * hit(t, HX6, 0.1); S.post.flc = '#ffd0a0'; }],
       /* 3 Langt ute, ved siden av veien: skya samler seg til en stråle (0:27,50) som peker mot ham, og så raser den av gårde (0:28,4). */
       [C6.FAR, (S, u, a, t) => { const F = beamFr6(S), A = onBeam6(F, 0.17, 0, 0), B = onBeam6(F, 0.11 + 0.08 * io(u), 0, 0); K.cam(A[0] - F.u1[0] * 150 + 18 * u, A[1] + 26, A[2] - F.u1[2] * 150, B[0], B[1], B[2], 50); }],
       /* 4 Fra siden, midt på veien: strålen raser mot og forbi oss. */
-      [C6.SIDE, (S, u, a, t) => { const F = beamFr6(S), A = onBeam6(F, 0.34, 0, 0), B = onBeam6(F, 0.12, 0, 0); S.post.spd = 0.55 * seg(u, 0.25, 0.8); S.post.spx = 128; S.post.spy = 96; S.post.spc = '#ffb070'; K.cam(A[0] - F.u1[0] * 16 + F.u2[0] * 5, A[1] - F.u1[1] * 16 + 5, A[2] - F.u1[2] * 16, B[0], B[1], B[2], 58); S.post.sh = 0.8 * seg(t, C6.SIDE + 0.9, C6.SIDE + 1.4); }],
+      [C6.SIDE, (S, u, a, t) => { const F = beamFr6(S), A = onBeam6(F, 0.34, 0, 0), B = onBeam6(F, 0.12, 0, 0); S.post.spd = 0.55 * seg(u, 0.25, 0.8); S.post.spx = 128; S.post.spy = 96; S.post.spc = '#ffb070'; K.cam(A[0] - F.u1[0] * 16 + F.u2[0] * 5, A[1] - F.u1[1] * 16 + 5, A[2] - F.u1[2] * 16, B[0], B[1], B[2], 58); S.post.sh = X.rk(S, 0.8 * seg(t, C6.SIDE + 0.9, C6.SIDE + 1.4), 2.2); }],
       /* 5 Forfra og lavt: han stiger med armene ut, bakken brekker i flak; bak ham kommer strålen. */
-      [C6.BACK, (S, u, a, t) => { K.cam(mix(5.4, 4.8, u), 0.9, mix(9.8, 8.9, u), -3.2, 4.6, -8, 56); S.post.sh = 0.3 * u; }],
+      [C6.BACK, (S, u, a, t) => { K.cam(mix(5.4, 4.8, u), 0.9, mix(9.8, 8.9, u), -3.2, 4.6, -8, 56); S.post.sh = X.rk(S, 0.3 * u, 2.0); }],
       /* 6 Nært forfra: øynene tennes for første gang (0:32,4); lyset bak ham vokser. */
       [C6.FACE, (S, u, a, t) => { const h = S.D.at('Head'), F = beamFr6(S), d = mix(3.9, 3.1, io(u)); K.cam(F.T[0] + F.u[0] * d, F.T[1] + F.u[1] * d + 0.35, F.T[2] + F.u[2] * d, h.x, h.y - 0.05, h.z, 40);
-        S.post.sh = 0.4 * u + 1.0 * seg(t, HIT6 - 0.5, HIT6); }],
+        S.post.sh = X.rk(S, 0.4 * u + 1.0 * seg(t, HIT6 - 0.5, HIT6), 2.2); }],
       /* 7 0:34,26: strålen treffer ham i ryggen; blinket fra brystet; brølet; glasspisser; skjermen knuses og skårene blir hengende. */
-      [HIT6 - 0.02, (S, u, a, t) => { K.cam(mix(5.0, 4.4, u), mix(1.3, 1.5, u), mix(7.6, 6.8, io(u)), -0.6, 2.7, -1, 50); S.camP = [mix(5.0, 4.4, u), 1.4, mix(7.6, 6.8, io(u))]; S.post.sh = 3.0 * hit(t, HIT6, 1.4); S.post.fl = 0.8 * hit(t, HIT6, 0.1); S.post.flc = '#ffd8b0'; }],
+      [HIT6 - 0.02, (S, u, a, t) => { K.cam(mix(5.0, 4.4, u), mix(1.3, 1.5, u), mix(7.6, 6.8, io(u)), -0.6, 2.7, -1, 50); S.camP = [mix(5.0, 4.4, u), 1.4, mix(7.6, 6.8, io(u))]; S.post.sh = X.hk(S, t, HIT6, 1.4, 3.0, 'e'); S.post.fl = 0.8 * hit(t, HIT6, 0.1); S.post.flc = '#ffd8b0'; }],
     ]),
   });
   X.reg('c3:dk150p', { spid: 150, skin: SKIN, back: backBlk, cues: [[HIT6 + 0.1, 'cry']], roar: () => HIT6 + 0.1, swirl: 0,

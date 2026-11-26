@@ -470,24 +470,24 @@ void main(){ float y = vUv.y, x = vUv.x * 6.2832; vec2 c = vec2(cos(x), sin(x));
     },
     shots: [
       /* 1 Lyset samler seg om ham (lavt, forfra); kameraet siger inn, og bildet rykker på trommeslagene. */
-      [0, (S, u, a, t) => { const e = io(u), pul = PT.H.reduce((s, h) => max(s, hit(t, h, 0.2)), 0); if (STIV()) K.cam(mix(4.4, 3.4, e), 1.7, mix(22, 19, e), -0.4, 5, 2.6, 46, -0.03); else camV(CAMP[0](t)); S.post.fl = max(1 - seg(t, 0, 0.35), 0.85 * seg(t, PT.G1 - 0.14, PT.G1)); S.post.flc = t < 1 ? '#ffffff' : '#ffd6f2'; S.post.sh = 1.2 * seg(t, 0, 0.6) + 1.6 * pul;  pdbg(S); }],
+      [0, (S, u, a, t) => { const e = io(u), pul = PT.H.reduce((s, h) => max(s, hit(t, h, 0.2)), 0); if (STIV()) K.cam(mix(4.4, 3.4, e), 1.7, mix(22, 19, e), -0.4, 5, 2.6, 46, -0.03); else camV(CAMP[0](t)); S.post.fl = max(1 - seg(t, 0, 0.35), 0.85 * seg(t, PT.G1 - 0.14, PT.G1)); S.post.flc = t < 1 ? '#ffffff' : '#ffd6f2'; S.post.sh = X.rk(S, 1.2 * seg(t, 0, 0.6), 1.6) + X.tatt(S, 1.6 * pul); PT.H.forEach(h => X.ev(S, 'f', t - h, 1.4));  pdbg(S); }],
       /* 2 Krystallen: fra siden, med vulkanen bak. Kameraet glir sakte inn mens lyset i den dør på virvelen. */
       [PT.G1 - 0.03, (S, u, a, t) => { const e = io(u); if (STIV()) K.cam(mix(-6, -5.2, e), mix(2, 2.35, e), mix(23.5, 21, e), mix(-2.3, -1.6, e), mix(6.6, 6.4, e), mix(3.8, 1.3, e), 46, 0.03); else camV(CAMP[1](t));   /* krystallen og vulkanen ligger begge innenfor x 64–448 (smal skjerm) */
-        S.post.fl = max(t < PT.G1 ? 0.85 : 0.85 * hit(t, PT.G1, 0.3), 0.28 * hit(t, PT.GL, 0.14)); S.post.flc = '#ffd6f2'; S.post.sh = 1.4 * hit(t, PT.G1, 0.5) + 0.9 * hit(t, PT.GL, 0.3) + PT.D.reduce((s, h) => s + 0.7 * hit(t, h, 0.1), 0); S.post.heat = 0.6;  pdbg(S); }],
+        S.post.fl = max(t < PT.G1 ? 0.85 : 0.85 * hit(t, PT.G1, 0.3), 0.28 * hit(t, PT.GL, 0.14)); S.post.flc = '#ffd6f2'; S.post.sh = X.hk(S, t, PT.G1, 0.5, 1.4) + X.hk(S, t, PT.GL, 0.3, 0.9) + PT.D.reduce((s, h) => s + X.hk(S, t, h, 0.1, 0.7, 'p'), 0); S.post.heat = 0.6;  pdbg(S); }],
       /* 3 STILLHETEN: klipp rett forfra idet musikken faller ut. Den svarte krystallen fyller bildet, og kameraet siger nesten umerkelig inn. Ω tennes, sprekkene brer
          seg, og på smellet knuses den mot oss. Primal Groudon står der i lyset. */
       [PT.C, (S, u, a, t) => { const e = io(seg(t, PT.C, PT.S)), d = mix(25.5, 23.6, e); if (STIV()) K.cam(GEM[0] + sin(CYAW) * d, mix(3.1, 3.3, e), GEM[2] + cos(CYAW) * d, GEM[0], mix(5.9, 5.7, e), GEM[2], 46); else camV(CAMP[2](t));
         S.post.fl = max(0.45 * hit(t, PT.O, 0.2), t < PT.S ? ei(seg(t, PT.S - 0.2, PT.S)) * 0.8 : 0.9 * hit(t, PT.S, 0.1)); S.post.flc = '#fff2b8';
-        S.post.sh = 1.2 * hit(t, PT.O, 0.4) + 2.4 * ei(seg(t, PT.K, PT.S)) * (t < PT.S ? 1 : 0) + 6 * hit(t, PT.S, 0.6); S.post.heat = 0.3; S.post.vig = 0.5 + 0.3 * (S.dk || 0);  pdbg(S); }],
+        S.post.sh = X.hk(S, t, PT.O, 0.4, 1.2) + X.rk(S, 2.4 * ei(seg(t, PT.K, PT.S)) * (t < PT.S ? 1 : 0), 2.3) + X.hk(S, t, PT.S, 0.6, 6, 'e'); S.post.heat = 0.3; S.post.vig = 0.5 + 0.3 * (S.dk || 0);  pdbg(S); }],
       /* 4 Primal Groudon i ett langt nærbilde: fra kneet med Ω-merket og oppover kroppen til ansiktet, mens årene gløder og han reiser seg. */
-      [PT.CU, (S, u, a, t) => { const e = io(u); if (STIV()) K.cam(mix(8.4, 4.4, e), mix(1.3, 4.9, e), mix(10.8, 16.5, e), mix(3.3, 0.2, e), mix(1.9, 8.4, e), mix(2.6, 6.4, e), mix(40, 42, e), -0.05); else camV(CAMP[3](t)); S.post.sh = 0.8; S.post.heat = 1; S.post.vig = 0.7;  pdbg(S); }],
+      [PT.CU, (S, u, a, t) => { const e = io(u); if (STIV()) K.cam(mix(8.4, 4.4, e), mix(1.3, 4.9, e), mix(10.8, 16.5, e), mix(3.3, 0.2, e), mix(1.9, 8.4, e), mix(2.6, 6.4, e), mix(40, 42, e), -0.05); else camV(CAMP[3](t)); S.post.sh = X.rk(S, 0.8, 1.6); S.post.heat = 1; S.post.vig = 0.7;  pdbg(S); }],
       /* 5 Oppladningen og brølet, vidt og lavt (runde 9: oppladningen går i dette bildet): han til venstre, fjellet til høyre. Han synker sammen og skjelver, og så
          brølet med armene ut: toppen av fjellet sprenges bak ham, taket av aske brer seg inn over oss, trykket når fram og lavasjøen bryter ut i fontener rundt ham,
          lavabomber slår ned, og bildet går i hvitt på taktslaget. Horisonten ligger over navneskiltet, så sjøen synes hele veien. Én jevn bevegelse, ingen skjøt. */
       [PT.W, (S, u, a, t) => { const e = io(u), k = seg(t, PT.R + 0.1, PT.R + 2.9), e2 = k * k * k * (k * (k * 6 - 15) + 10), w = 0.04 * sin(t * 0.5);
         if (STIV()) K.cam(10 + 0.1 * e + 0.4 * e2 + w * 3, 1.45 + 0.15 * e, 19.3 + 0.5 * e + 3 * e2, 1.7 + 0.3 * e + 0.9 * e2, 5.35 - 0.15 * e2, 0.2, 58 + 3 * e + 9 * e2, -0.045); else camV(CAMP[4](t));   /* alt går samme vei hele bildet (ut og litt til høyre), så farten aldri snur */
         S.post.fl = max(0.5 * hit(t, PT.R, 0.16), seg(t, PT.F, PT.WH)); S.post.flc = '#fff6dc';
-        S.post.sh = 7 * hit(t, PT.R, 1.2) + 5 * hit(t, PT.B2, 1) + 2.2 * hit(t, PT.R + 0.3, 2.4) + 0.8 * S.rw + 1.6 * (S.chg || 0) * (S.chg || 0) + 3.2 * hit(t, PT.FN, 0.7) + PBOMB.reduce((q, b) => q + 1.8 * b[4] * hit(t, PT.R + b[0] + b[1], 0.4), 0);
+        S.post.sh = X.hk(S, t, PT.R, 1.2, 7, 'b') + X.hk(S, t, PT.B2, 1, 5, 'e') + X.hk(S, t, PT.R + 0.3, 2.4, 2.2, 'p') + X.rk(S, 0.8 * S.rw, 2.3) + X.rk(S, 1.6 * (S.chg || 0) * (S.chg || 0), 2.3) + X.hk(S, t, PT.FN, 0.7, 3.2, 'e') + PBOMB.reduce((q, b) => q + X.hk(S, t, PT.R + b[0] + b[1], 0.4, 1.8 * b[4], 'e'), 0);
         X.mouth(S, S.pg, PT.R, t, 2.6); S.post.heat = 0.8 + 0.6 * S.rw;  pdbg(S); }],
     ],
   }, S => { K.face(S.aura); K.face(S.burst); for (const f of S.fnt) K.face(f.lt); K.face(S.vflash); }));
@@ -1330,49 +1330,49 @@ void main(){
         /* 1 FLYTUREN (0:01–0:21,3; låst: «At den flyr over vulkanen er tøft»): ut av svart høyt over askelandet, mot fjellet, over kraterkanten når takten kommer inn
            (0:12,86), ned den andre siden og i en bue rundt ham som bremser og stopper lavt foran det bøyde hodet. Kameraet krenger i svingene. */
         [0, (S, u, a, t) => { K.far(1600); const [P, M, fv] = flyAt(t); K.cam(P[0], P[1], P[2], M[0], M[1], M[2], fv, bankAt(t));
-          S.post.fade = 1 - seg(t, Q.B0, Q.B0 + 1.4); S.post.sh = 0.8 * hit(t, Q.TK, 0.6); S.post.vig = 0.62; dbg(); }],
+          S.post.fade = 1 - seg(t, Q.B0, Q.B0 + 1.4); S.post.sh = X.hk(S, t, Q.TK, 0.6, 0.8); S.post.vig = 0.62; dbg(); }],
         /* 2 UNDER DEN LILLE BROA (0:21,56, bass-slaget): lavt i bekkeleiet like sør for buen. Gjennom buen: stien, toriien og han, grå og enorm bak alt som er i
            menneskestørrelse. Støv drysser fra buen på slagene, og kameraet siger sakte inn. */
         [Q.UB - 0.03, (S, u, a, t) => { const e = io(u); K.cam(-2.5, 0.22, mix(25.4, 24.9, e), mix(-0.3, -0.1, e), mix(3.75, 3.95, e), 2.8, mix(44, 46, e), 0.012);
-          S.post.sh = 2.4 * hit(t, Q.UB, 0.7) + 2.4 * hit(t, Q.R2, 0.7) + 0.6 * (hit(t, 23.07, 0.4) + hit(t, 24.04, 0.4)); S.post.vig = 0.7; dbg(); }],
+          S.post.sh = X.hk(S, t, Q.UB, 0.7, 2.4) + X.hk(S, t, Q.R2, 0.7, 2.4) + X.hks(S, t, [23.07, 24.04], 0.4, 0.6); S.post.vig = 0.7; dbg(); }],
         /* 3 DET KOMMER (0:26,96–0:35,4): fra stien vest for broa, mellom steinlyktene, mot fjellet. Gløden stiger i krateret, røyken pulserer, bakken rister på
            slagene, og en lykt velter (0:32,6). Kameraet zoomer sakte inn. */
         [Q.S3, (S, u, a, t) => { K.far(1200); const e = io(u); K.cam(mix(-7.2, -7.0, e), 0.7, mix(26.4, 26.0, e), -40, mix(58, 70, e), -330, mix(36, 27, e));
-          S.post.sh = 0.4 * seg(t, Q.S3, Q.OV) + 1.5 * (hit(t, 29.78, 0.5) + hit(t, 32.6, 0.5) + hit(t, 34.54, 0.5)); S.post.vig = 0.6; dbg(); }],
+          S.post.sh = X.rk(S, 0.4 * seg(t, Q.S3, Q.OV), 2.0) + X.hks(S, t, [29.78, 32.6, 34.54], 0.5, 1.5, 'e'); S.post.vig = 0.6; dbg(); }],
         /* 4 ILDFONTENENE (0:35,42–0:49,5): fjellet tett på med lang linse. Gardinet av ildfontener sprekker opp på slaget, lava spruter ned sidene og elvene raser,
            lyn i askeskyen (0:39,64), og så sakte ut til han står som en svart silhuett foran fjellet (0:46,7; «Tøft med vulkanen»). */
         [Q.OV, (S, u, a, t) => { K.far(1400); const z = io(seg(t, 40.4, 48.6)), fov = 15 * Math.pow(50 / 15, z), M = [mix(-40, -1.0, z), mix(150, 9, z * z * 0.4 + z * 0.6), mix(-330, -20, z)];
-          K.cam(mix(11, 1.45, z), mix(1.8, 0.9, z), mix(24, 16.0, z), M[0], M[1], M[2], fov, -0.03 * z); S.post.sh = 1.6 * hit(t, Q.OV, 1.0) + 1.2 * hit(t, Q.LY, 0.6) + 1.0 * hit(t, 40.75, 0.5); S.post.fl = 0.25 * hit(t, Q.OV, 0.15); S.post.flc = '#ffd890'; dbg(); }],
+          K.cam(mix(11, 1.45, z), mix(1.8, 0.9, z), mix(24, 16.0, z), M[0], M[1], M[2], fov, -0.03 * z); S.post.sh = X.hk(S, t, Q.OV, 1.0, 1.6, 'e') + X.hk(S, t, Q.LY, 0.6, 1.2, 'e') + X.hk(S, t, 40.75, 0.5, 1.0, 'e'); S.post.fl = 0.25 * hit(t, Q.OV, 0.15); S.post.flc = '#ffd890'; dbg(); }],
         /* 5 FLOMMEN, kilden først (Jazz 20.11: «det føles ut som det kommer fra ingen plass»): dronen følger fronten på den midterste elva ned fjellsiden mot
            krateret hans (0:49,52), og så et nærbilde der fronten velter forbi (0:53,77). */
         [Q.S5, (S, u, a, t) => { K.far(1100); const P = rivFront(5, t), dx = P[0] - VOL.x, dz = P[2] - VOL.z, dl = Math.hypot(dx, dz), fx = dx / dl, fz = dz / dl, k = io(seg(t, Q.S5, 53.77));
           K.cam(P[0] - fx * mix(26, 15, k) - fz * 7, P[1] + mix(19, 9, k), P[2] - fz * mix(26, 15, k) + fx * 7, P[0] + fx * 40, P[1] - mix(8, 6, k), P[2] + fz * 40, 52, 0.05 * sin(t * 0.7));
-          S.post.sh = 0.5 * hit(t, Q.S5, 0.6) + 0.9 * hit(t, Q.FALL, 0.5) + 0.25; dbg(); }],
+          S.post.sh = X.hk(S, t, Q.S5, 0.6, 0.5) + X.hk(S, t, Q.FALL, 0.5, 0.9, 'e') + X.rk(S, 0.25); dbg(); }],
         [53.77, (S, u, a, t) => { const P0 = rivFront(5, Q.WALL + 0.2), P = rivFront(5, t), dx = P0[0] - VOL.x, dz = P0[2] - VOL.z, dl = Math.hypot(dx, dz), fx = dx / dl, fz = dz / dl;
-          K.cam(P0[0] + fx * 9 + fz * 4.5, P0[1] + 2.2, P0[2] + fz * 9 - fx * 4.5, P[0], P[1] + 0.6, P[2], 46); S.post.sh = 0.6 * hit(t, 53.77, 0.5) + 0.35; dbg(); }],
+          K.cam(P0[0] + fx * 9 + fz * 4.5, P0[1] + 2.2, P0[2] + fz * 9 - fx * 4.5, P[0], P[1] + 0.6, P[2], 46); S.post.sh = X.hk(S, t, 53.77, 0.5, 0.6, 'e') + X.rk(S, 0.35); dbg(); }],
         /* Det vide bildet (0:55,16): høyt over krateret. Lavafallet står over den høye veggen til venstre, lunta raser ned bekkeleiet, og veggen av lava kommer ut
            under fjellets skjørt bak ham. */
-        [Q.WALL - 0.03, (S, u, a, t) => { const e = io(seg(t, Q.WALL, 57.4)); K.cam(mix(15, 11, e), mix(11, 8.5, e), mix(46, 41, e), mix(-16, -11, e), mix(2, 1.5, e), mix(-10, -6, e), 52); S.post.sh = 1.4 * hit(t, Q.WALL, 0.8) + 0.3; dbg(); }],
+        [Q.WALL - 0.03, (S, u, a, t) => { const e = io(seg(t, Q.WALL, 57.4)); K.cam(mix(15, 11, e), mix(11, 8.5, e), mix(46, 41, e), mix(-16, -11, e), mix(2, 1.5, e), mix(-10, -6, e), 52); S.post.sh = X.hk(S, t, Q.WALL, 0.8, 1.4, 'e') + X.rk(S, 0.3); dbg(); }],
         /* Broa (0:57,3): samme sted som bilde 2, lavt i bekken. Lunta kommer mot oss gjennom buen og knuser den på slaget (0:57,98); steinene kastes mot kameraet. */
-        [57.3, (S, u, a, t) => { const e = seg(t, 57.3, 59.0); K.cam(-2.6, mix(0.3, 0.7, e), mix(25.2, 26.4, e), -2.3, mix(1.4, 1.7, e), 16, 46, -0.02); S.post.sh = 0.5 + 3.4 * hit(t, Q.BRO, 0.9); S.post.fl = 0.3 * hit(t, Q.BRO, 0.12); S.post.flc = '#ffd890'; dbg(); }],
+        [57.3, (S, u, a, t) => { const e = seg(t, 57.3, 59.0); K.cam(-2.6, mix(0.3, 0.7, e), mix(25.2, 26.4, e), -2.3, mix(1.4, 1.7, e), 16, 46, -0.02); S.post.sh = X.rk(S, 0.5, 2.0) + X.hk(S, t, Q.BRO, 0.9, 3.4); S.post.fl = 0.3 * hit(t, Q.BRO, 0.12); S.post.flc = '#ffd890'; dbg(); }],
         /* Krystallene (0:59,0): lavt foran veggen av lava der den ruller over sletta. Krystallene i veien velter, lyser opp og går under. */
-        [59.0, (S, u, a, t) => { const zf = wallZ(16.5, t), e = seg(t, 59.0, Q.S6); K.cam(16.2, mix(0.7, 0.95, e), zf + mix(7.6, 6.2, e), 16.9, mix(2.4, 2.0, e), zf - 3, 58, 0.03); S.post.sh = 1.0 + 0.8 * e; dbg(); }],
+        [59.0, (S, u, a, t) => { const zf = wallZ(16.5, t), e = seg(t, 59.0, Q.S6); K.cam(16.2, mix(0.7, 0.95, e), zf + mix(7.6, 6.2, e), 16.9, mix(2.4, 2.0, e), zf - 3, 58, 0.03); S.post.sh = X.rk(S, 1.0 + 0.8 * e, 2.0); dbg(); }],
         /* 6 VEGGEN MOT HÆLENE (1:00,8–1:03,6): lavt foran veggen ved hans venstre side; den slår inn i hælene og halen på 1:03,62, der låta går ned et hakk. */
-        [Q.S6, (S, u, a, t) => { const zf = wallZ(3, t), k = seg(t, Q.S6, Q.HIT); K.cam(mix(11, 9.5, k), mix(1.2, 0.9, k), min(zf + 9, 4.0), mix(2, 2.6, k), mix(1.2, 0.9, k), mix(zf - 6, 0.6, io(k)), 50); S.post.sh = 0.6 + 1.2 * k; dbg(); }],
+        [Q.S6, (S, u, a, t) => { const zf = wallZ(3, t), k = seg(t, Q.S6, Q.HIT); K.cam(mix(11, 9.5, k), mix(1.2, 0.9, k), min(zf + 9, 4.0), mix(2, 2.6, k), mix(1.2, 0.9, k), mix(zf - 6, 0.6, io(k)), 50); S.post.sh = X.rk(S, 0.6 + 1.2 * k, 2.2); dbg(); }],
         /* 7 LYSET, del 1 (1:03,62–1:12,08): bak ham, lavt ved hælen der lavaen traff. Lyset tennes i lavalinja og klatrer jevnt opp beinet, halen og ryggen. */
-        [Q.HIT, (S, u, a, t) => { const e = io(u); K.cam(mix(6.6, 5.4, e), mix(0.7, 3.8, e), mix(-3.2, -5.4, e), mix(2.6, 0.6, e), mix(0.9, 4.2, e), mix(1.0, 0.2, e), 48); S.post.sh = 1.4 * hit(t, Q.HIT, 0.5); dbg(); }],
+        [Q.HIT, (S, u, a, t) => { const e = io(u); K.cam(mix(6.6, 5.4, e), mix(0.7, 3.8, e), mix(-3.2, -5.4, e), mix(2.6, 0.6, e), mix(0.9, 4.2, e), mix(1.0, 0.2, e), 48); S.post.sh = X.hk(S, t, Q.HIT, 0.5, 1.4); dbg(); }],
         /* 8 LYSET, del 2 (1:12,08–1:21,0): vidt bakfra i det mørke rommet, så hele ryggen står og gløder; fra løftet (1:17,72) går kameraet rundt og opp over
            skulderen mens lyset når toppen av hodet. */
         [Q.QUIET, (S, u, a, t) => { const P = crs([[Q.QUIET, [9.5, 3.0, -9.5]], [Q.LIFT, [11, 3.6, -5.5]], [79.8, [10.4, 5.2, 3.2]], [81.0, [9.6, 5.6, 6.4]], [82, [9, 5.8, 8]]], t), M = crs([[Q.QUIET, [0, 4.0, 0.8]], [Q.LIFT, [0, 4.4, 1.4]], [79.8, [0.3, 4.9, 4.2]], [81.0, [0.4, 5.0, 5.4]], [82, [0.4, 5, 5.6]]], t);
-          K.cam(P[0], P[1], P[2], M[0], M[1], M[2], 46); S.post.vig = 0.6 + 0.2 * seg(t, Q.LIFT, 81); S.post.sh = 0.3 * (hit(t, 72.11, 0.4) + hit(t, Q.LIFT, 0.5)); dbg(); }],
+          K.cam(P[0], P[1], P[2], M[0], M[1], M[2], 46); S.post.vig = 0.6 + 0.2 * seg(t, Q.LIFT, 81); S.post.sh = X.tatt(S, 0.3 * (hit(t, 72.11, 0.4) + hit(t, Q.LIFT, 0.5))); X.ev(S, 's', t - 72.11, 0.3); X.ev(S, 's', t - Q.LIFT, 0.3); dbg(); }],
         /* 8b ØYET (1:21,0–1:24,47): helt nært. Det åpner seg på bass-slaget 1:21,89 med et blaff, og holdes. De siste 0,35 s står alt stille: bare låta. */
         [81.0, (S, u, a, t) => { const e = S.W('Head', S.A.eye), c = S.W('Head', S.A.eyeCam), k = io(seg(t, 81.0, Q.CLX)); K.cam(mix(c.x, e.x, 0.16 * k), c.y, mix(c.z, e.z, 0.16 * k), e.x, e.y, e.z, 26);
-          S.post.vig = 0.9; S.post.fl = 0.55 * hit(t, Q.EYE, 0.2); S.post.flc = '#ffe890'; S.post.sh = t < Q.STILL ? 3.2 * hit(t, Q.EYE, 0.6) + 1.1 * seg(t, Q.EYE + 0.5, Q.STILL) : 0; dbg(); }],
+          S.post.vig = 0.9; S.post.fl = 0.55 * hit(t, Q.EYE, 0.2); S.post.flc = '#ffe890'; S.post.sh = t < Q.STILL ? X.hk(S, t, Q.EYE, 0.6, 3.2) + X.rk(S, 1.1 * seg(t, Q.EYE + 0.5, Q.STILL), 2.2) : 0; dbg(); }],
         /* 9 HAN EKSPLODERER PÅ SLAGET (1:24,47): klipp til det lave, vide bildet forfra. Alt knuses på slaget, han er rød med en gang, brølet kommer 0,1 s etter
            med lyn i askeskyen, navnet på 1:25,9, og scenen lever videre til Continue eller 1:48. */
         [Q.CLX - 0.035, (S, u, a, t) => { const k = io(seg(t, Q.CLX + 0.7, Q.CLX + 5.2)), w = 0.04 * sin(max(0, t - Q.CLX - 5.2) * 0.23);   /* tett og lavt på slaget, så i en bue ut til bildet kampen starter fra */
           if (STIV()) K.cam(mix(3.4, -6.2, k) + sin(w) * 1.6, mix(0.85, 1.65, k), mix(13.6, 19.9, k), mix(-0.6, -3.5, k), mix(5.9, 4.6, k), mix(2.5, 2.8, k), mix(58, 52, k), -0.04 * (1 - k)); else camV(CAM9(t));
-          S.post.fl = t < Q.CLX ? 0.7 : hit(t, Q.CLX, 0.09) * 0.9; S.post.flc = '#fff0b8'; S.post.sh = 5 * hit(t, Q.CLX, 1.0) + 2.5 * hit(t, Q.ROAR, 0.6) + 0.7 * S.rw; X.mouth(S, S.gr, Q.ROAR, t); S.post.heat = 0.6 + 0.6 * S.rw; dbg(); }],
+          S.post.fl = t < Q.CLX ? 0.7 : hit(t, Q.CLX, 0.09) * 0.9; S.post.flc = '#fff0b8'; S.post.sh = X.hk(S, t, Q.CLX, 1.0, 5) + X.hk(S, t, Q.ROAR, 0.6, 2.5, 'b') + X.rk(S, 0.7 * S.rw, 2.3); X.mouth(S, S.gr, Q.ROAR, t); S.post.heat = 0.6 + 0.6 * S.rw; dbg(); }],
       ],
     }, (S, t) => { if (t < Q.CLX) return; const ch = S.gr.at('Spine2'); S.aura.position.set(ch.x, ch.y + 0.4, ch.z - 0.6); K.face(S.aura); K.face(S.vflash); }));   /* fra knuset: lyset ved brystet etter dette bildets stilling og kamera */
     /* Lyn inne i askeskyen (vulkansk, fiolett-rødlig, uten regn): på de sterke slagene i bilde 4 og noen flere, tegnet over 3D-bildet der søylen står. */

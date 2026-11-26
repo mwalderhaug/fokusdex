@@ -503,15 +503,15 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
     [BOOM[1] + 1.3, -1, 3.2, 15.5, 0, 5.4, 0, 41], [BOOM[2] - 0.4, 5.2, 4.6, 14.2, 0, 5.2, 0, 40], [BOOM[2], 6, 4.9, 13.6, 0, 5.2, 0, 40]];
   const hh6 = X.handheld(t => pathAt(t, K6).slice(0, 6), { t0: BANG, f: 3, z: 0.9, amp: [0.04, 0.03], hz: 0.7, seed: 6 });
   const endCam = (S, t) => {
-    if (t < BANG) { const iq = Math.pow(seg(t, SW[0], BANG), 2); camK(t, K5); S.post.sub = S.sub; S.post.subf = 0.01; S.post.subc = '#ffffff'; S.post.sh = 0.6 * iq; return; }
+    if (t < BANG) { const iq = Math.pow(seg(t, SW[0], BANG), 2); camK(t, K5); S.post.sub = S.sub; S.post.subf = 0.01; S.post.subc = '#ffffff'; S.post.sh = X.rk(S, 0.6 * iq, 2.2); return; }
     if (t < BOOM[2]) { const c = hh6(t), fv = pathAt(t, K6)[6], tb = t - BANG; cam(c[0], c[1], c[2], c[3], c[4], c[5], fv);
-      let vt = 0; for (let i = 0; i < NP; i++) vt += 0.5 * hit(t, TA(i), 0.12);   /* hvert slag i hjulet */
-      S.post.sh = 2.6 * hit(t, BANG, 1.0) + 1.7 * hit(t, BANG + 0.46, 0.6) + vt + 1.6 * hit(t, BOOM[1], 0.6);
+      let vt = 0; for (let i = 0; i < NP; i++) vt += X.hk(S, t, TA(i), 0.12, 0.5, 'p');   /* hvert slag i hjulet */
+      S.post.sh = X.hk(S, t, BANG, 1.0, 2.6, 'e') + X.hk(S, t, BANG + 0.46, 0.6, 1.7, 'e') + vt + X.hk(S, t, BOOM[1], 0.6, 1.6, 'e');
       S.post.fl = max(0.95 * hit(t, BANG, 0.1), 0.8 * hit(t, BANG + 0.44, 0.13), 0.32 * hit(t, BOOM[1], 0.08), 0.5 * seg(t, BOOM[2] - 0.07, BOOM[2])); S.post.flc = '#fff4d8';
       const q = K.proj(0, 6, 0); S.post.spx = q.x / 2; S.post.spy = q.y / 2; S.post.spr = 0.1; S.post.spd = max(0.9 * hit(t, BANG, 0.45), 0.55 * seg(tb, 0.6, 1.1) * (1 - seg(tb, 1.9, 2.5))); S.post.spc = '#fff0b0'; return; }
     const a = t - BOOM[2], k = io(c01(a / 2.5)), ph = 0.5 + 0.28 * a, R = mix(8, 5.5, k); cam(sin(ph) * R, mix(52, 42, k), cos(ph) * R, 0, 0.5, 0, 40);
-    let ft = 0; for (let j = 0; j < 18; j++) ft += 0.16 * hit(t, FU(j), 0.1);
-    S.post.sh = 1.9 * hit(t, BOOM[2], 0.7) + ft; S.post.fl = max(0.5 * hit(t, BOOM[2], 0.1), 0.4 * seg(t, HIT[3] - 0.76, HIT[3] - 0.7)); S.post.flc = '#fff4d8'; };
+    let ft = 0; for (let j = 0; j < 18; j++) ft += X.hk(S, t, FU(j), 0.1, 0.16, 'p');
+    S.post.sh = X.hk(S, t, BOOM[2], 0.7, 1.9, 'e') + ft; S.post.fl = max(0.5 * hit(t, BOOM[2], 0.1), 0.4 * seg(t, HIT[3] - 0.76, HIT[3] - 0.7)); S.post.flc = '#fff4d8'; };
   /* 7 Gullet sprenges av: helt nede ved hovene og tett på med vid linse, så beina står som søyler over oss og gullet slynges mot linsa; så opp med kanten til ansiktet,
      som før. Hvert slag gir kameraet et støt bakover (kick: starter i null, slår ut og faller til ro). */
   const K7 = [[HIT[3] - 0.7, -3.3, 0.5, 7.6, 0, 1.7, 0.8, 52], [HIT[3] + 0.5, -3.7, 0.75, 8.2, 0, 2.1, 0.7, 52], [HIT[4] + 0.5, -5.8, 3.3, 12.6, 0, 4.0, 0, 46], [HIT[5] + 0.5, -4.8, 5.7, 12.0, 0, 5.9, 1.2, 38], [HIT[6] + 0.75, -3.0, 7.25, 10.2, 0, 6.95, 1.9, 27], [DROP, -2.8, 7.25, 9.8, 0, 6.95, 1.9, 25]];
@@ -524,7 +524,7 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
   const cam7 = camLive(t => pathAt(t, K7), { t0: HIT[3] - 0.7, f: 2.2, z: 0.85, amp: [0.03, 0.016], hz: 0.55, seed: 7 });
   const shot7n = (S, t) => { const v = cam7(t); let rc = 0; [3, 4, 5, 6].forEach((k, i) => { rc += kick(t, HIT[k], 11, 6) * (0.55 + 0.12 * i); });
     const dx = v[0] - v[3], dy = v[1] - v[4], dz = v[2] - v[5], dl = hyp(dx, dy, dz); cam(v[0] + dx / dl * rc, v[1] + dy / dl * rc + 0.25 * rc, v[2] + dz / dl * rc, v[3], v[4], v[5], v[6] + 2.5 * rc);
-    S.post.sh = [3, 4, 5, 6].reduce((s, k, i) => s + (1.0 + 0.25 * i) * hit(t, HIT[k], 0.45), 0); S.post.fl = [3, 4, 5, 6].reduce((s, k) => max(s, 0.1 * hit(t, HIT[k], 0.08)), 0); S.post.flc = '#ffe9b0'; };
+    S.post.sh = [3, 4, 5, 6].reduce((s, k, i) => s + X.hk(S, t, HIT[k], 0.45, 1.0 + 0.25 * i), 0); S.post.fl = [3, 4, 5, 6].reduce((s, k) => max(s, 0.1 * hit(t, HIT[k], 0.08)), 0); S.post.flc = '#ffe9b0'; };
   /* 8 med liv: fra droppet til kampens bilde, med etterslep og støy som er borte når navnet står (kampen tar over i nøyaktig samme bilde). Lages første gang (camEnd). */
   let cam8 = null; const K8 = () => { const tg = camEnd(), cp = CAMB.cp; return [[DROP, -5.5, 0.9, 11.5, 0, 7.2, 0, 54], [DROP + 0.6, -6.3, 1.2, 14, 0, 9.5, 0, 56], [NAME + 0.6, cp[0], cp[1], cp[2], tg[0], tg[1], tg[2], CAMB.fv]]; };
   /* 4 Søylene: lavt i gangen like utenfor porten. Ringen slås ned og kommer mot oss; den indre ringen av søyler skyter opp samlet rundt egget, og så rygger kameraet
@@ -534,8 +534,8 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
     [L3 + 1.9, 5.4, 2.0, 127, 0, 105, -10, 58], [L3 + 3.7, 5, 2.0, 118, 0, 60, -6, 56], [L4, 4.5, 2.2, 104, 0, 14, 0, 52]];
   const hh4 = X.handheld(t => pathAt(t, K4).slice(0, 6), { t0: L2, f: 2.4, z: 0.9, amp: [0.05, 0.04], hz: 0.7, seed: 4 });
   const shot4 = (S, t) => { const c = hh4(t), fv = pathAt(t, K4)[6]; cam(c[0], c[1], c[2], c[3], c[4], c[5], fv);
-    let sh = 0; PIL.forEach((q, i) => { const a = t - PT2[i][0]; if (a < 0 || a > 0.7) return; sh += 0.9 * min(1, 16 / hyp(q[0] - c[0], q[1] - c[2])) * (1 - a / 0.7); });
-    S.post.sh = min(1.9, sh) + 0.5 * hit(t, L2 + 0.28, 0.4); };   /* ingen blink: over den svarte himmelen ble det et grått slør, og utbruddene lyser selv */
+    let sh = 0; PIL.forEach((q, i) => { const a = t - PT2[i][0]; if (a < 0 || a > 0.7) return; const w = 0.9 * min(1, 16 / hyp(q[0] - c[0], q[1] - c[2])); X.ev(S, 'f', a, w); sh += w * (1 - a / 0.7); });
+    S.post.sh = X.tatt(S, min(1.9, sh)) + X.hk(S, t, L2 + 0.28, 0.4, 0.5); };   /* ingen blink: over den svarte himmelen ble det et grått slør, og utbruddene lyser selv */
 
   G3D.def('c3:493', {
     len: LEN, hold: 1, R: DROP, at: -K0,   /* kamplåta kommer inn 49,3 s ut i filmen (en kald start), og filmens klokke er dens */
@@ -649,7 +649,7 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
       /* 2 Hall of Origin: det siste av kaoset går i spiral inn i punktet, og egget av lys står der med de fem ringene. Det første bildet av ham: stort, og i ro. */
       [H0, (S, u, a, t) => { camK(t, [[H0, 6, 12, 28, 0, 5.6, 0, 42], [22.6, 4, 8.6, 21.5, 0, 5.9, 0, 42], [LIFT[0], 2.2, 7.4, 18, 0, 6, 0, 42]]); S.post.fl = 0.25 * hit(t, 20.5, 0.1); S.post.flc = '#fff2cf'; }],
       /* 3 Løft 1 og 2: høyt over. Ringen legges ned og glasset støpes utover; så tegnes lyslinjene. */
-      [LIFT[0], (S, u, a, t) => { camK(t, [[LIFT[0], 18, 15, 26, 0, 3.5, 0, 46], [LIFT[0] + 2.6, 25, 25, 33, 0, 1, 0, 47], [LIFT[1], 30, 36, 39, 0, 0, 2, 48], [LIFT[2], 24, 54, 46, 0, 0, 6, 50]]); S.post.sh = 0.5 * hit(t, LIFT[0] + 0.9, 0.5) + 0.4 * hit(t, LIFT[1] + 0.6, 0.4); }],
+      [LIFT[0], (S, u, a, t) => { camK(t, [[LIFT[0], 18, 15, 26, 0, 3.5, 0, 46], [LIFT[0] + 2.6, 25, 25, 33, 0, 1, 0, 47], [LIFT[1], 30, 36, 39, 0, 0, 2, 48], [LIFT[2], 24, 54, 46, 0, 0, 6, 50]]); S.post.sh = X.hk(S, t, LIFT[0] + 0.9, 0.5, 0.5) + X.hk(S, t, LIFT[1] + 0.6, 0.4, 0.4); }],
       /* 4 Løft 3 og 4: lavt i gangen. Søylene stiger opp gjennom glasset rundt oss; så skytes ringen til himmels, og kosmos tennes fra senit og ned.
          STORT SPRANG (shot4): ringen jager nedover gangen mot oss, og kameraet rygger foran den i samme fart, så parene skyter opp tett på linsa ett etter ett. */
       [LIFT[2], (S, u, a, t) => shot4(S, t)],
@@ -662,7 +662,8 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
       /* 8 Droppet: Judgment. Hoven i glasset, hodet mot himmelen, kula til himmels og regnet av lys over hallen; kameraet glir til kampens bilde, og navnet. */
       [DROP, (S, u, a, t) => { const v = (cam8 = cam8 || camLive(t => pathAt(t, K8()), { t0: DROP, f: 2.0, z: 0.85, amp: [0.05, 0.03], hz: 0.6, seed: 8, tEnd: NAME + 0.6 }))(t); cam(v[0], v[1], v[2], v[3], v[4], v[5], v[6]); mouth(S, DROP, t);
         const hd = S.hd || 0, nh = NEAR.reduce((q, h) => q + hit(t, h[2], 0.4), 0), nf = NEAR.reduce((q, h) => max(q, hit(t, h[2], 0.1)), 0);   /* uten Hold blender og rister lyset som slår ned ved oss; med Hold tar kuppelen det */
-        S.post.sh = (2 * hit(t, DROP, 0.9) + 1.3 * hit(t, DROP + JB, 0.8) + 0.5 * seg(t, DROP + 0.7, DROP + 1.4) * (1 - seg(t, DROP + 2.4, DROP + 3.4))) * (1 - 0.45 * hd) + nh * mix(1.7, 0.5, hd);
+        S.post.sh = X.tatt(S, (2 * hit(t, DROP, 0.9) + 1.3 * hit(t, DROP + JB, 0.8) + 0.5 * seg(t, DROP + 0.7, DROP + 1.4) * (1 - seg(t, DROP + 2.4, DROP + 3.4))) * (1 - 0.45 * hd) + nh * mix(1.7, 0.5, hd));
+        { const kh = 1 - 0.45 * hd; X.ev(S, 'e', t - DROP, 2 * kh, null, 0.9); X.ev(S, 's', t - DROP - JB, 1.3 * kh); X.rv(S, 0.5 * seg(t, DROP + 0.7, DROP + 1.4) * (1 - seg(t, DROP + 2.4, DROP + 3.4)) * kh, 2.0); NEAR.forEach(h => X.ev(S, 's', t - h[2], mix(1.7, 0.5, hd))); }   /* ristingen: Judgment, lyset som slår ned ved oss */
         S.post.fl = max(0.3 * hit(t, DROP, 0.08), 0.45 * hit(t, DROP + JB, 0.12), 0.3 * nf * (1 - hd)); S.post.flc = '#fff2c8'; }],
     ],
   });
@@ -803,12 +804,12 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
     },
     shots: [
       /* 1 Fra kampens bilde og inn mot ham, mens hallen blir borte rundt ham. */
-      [0, (S, u, a, t) => { camLift(0, t); S.post.sh = 0.5 * seg(t, 1.6, 5) ; }],
+      [0, (S, u, a, t) => { camLift(0, t); S.post.sh = X.rk(S, 0.5 * seg(t, 1.6, 5), 2.0); }],
       /* 2 Pusten: tett på ham og den ene platen. Alt annet er tomrom. */
       [PL - 0.75, (S, u, a, t) => camLift(1, t)],
       /* 3 Løftet: lavt og vidt. Hoven i glasset, og hallen skapes på nytt i platens farge; kameraet glir til kampens bilde, og typen står på skiltet. */
       [PL, (S, u, a, t) => { camLift(2, t); mouth(S, PL, t);
-        S.post.sh = 2.4 * hit(t, PL, 1) + 0.8 * seg(t, PL + 0.1, PL + 0.5) * (1 - seg(t, PL + 0.9, PL + 1.8)); S.post.fl = max(0.5 * hit(t, PL, 0.12), seg(t, PEND - 0.32, PEND - 0.06)); S.post.flc = t < PL + 1 ? S.ty != null ? tyC(S.ty) : '#ffffff' : '#ffffff'; }],
+        S.post.sh = X.hk(S, t, PL, 1, 2.4, 'e') + X.rk(S, 0.8 * seg(t, PL + 0.1, PL + 0.5) * (1 - seg(t, PL + 0.9, PL + 1.8)), 2.2); S.post.fl = max(0.5 * hit(t, PL, 0.12), seg(t, PEND - 0.32, PEND - 0.06)); S.post.flc = t < PL + 1 ? S.ty != null ? tyC(S.ty) : '#ffffff' : '#ffffff'; }],
     ],
   });
   X.reg('c3:493p', { spid: 493, swirl: 0, skin: SKIN, roar: () => PL, cues: [[0.3, 'aplate'], [PL - 0.8, 'aring', 4], [PL, 'ajdg'], [PL, 'cry']],
