@@ -145,8 +145,9 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float f
     for (let i = 0; i < 15; i++) for (let j = 0; j < 4; j++) { const a0 = A[i], a1 = A[(i + 1) % 15] + (i === 14 ? TAU : 0), r0 = R[j], r1 = R[j + 1], q = [];
       q.push([cos(a0) * r0, sin(a0) * r0]); if (r0 > 0) q.push([cos(a1) * r0, sin(a1) * r0]); q.push([cos(a1) * r1, sin(a1) * r1]); q.push([cos(a0) * r1, sin(a0) * r1]);
       const am = (a0 + a1) / 2, rm = (r0 + r1) / 2; L.push({ q, c: [cos(am) * rm, sin(am) * rm], j, d: 0.025 * j + 0.05 * rnd(i * 4 + j, 91), w: (rnd(i * 4 + j, 92) - 0.5) * 5, z: rnd(i * 4 + j, 93) > 0.7 ? 1.1 : 0.12, v: 60 + 160 * rnd(i * 4 + j, 94) }); } return L; })();
-  const drawCell = (g, p, dx, dy, rot, sc, glass, a, edge) => { g.save(); g.globalAlpha = a == null ? 1 : a; g.translate(SHC[0] + p.c[0] + dx, SHC[1] + p.c[1] + dy); g.rotate(rot); g.scale(sc, sc); g.translate(-p.c[0], -p.c[1]);
+  const drawCell = (g, p, dx, dy, rot, sc, glass, a, edge, tw) => { g.save(); g.globalAlpha = a == null ? 1 : a; g.translate(SHC[0] + p.c[0] + dx, SHC[1] + p.c[1] + dy); g.rotate(rot); if (tw) { const ax = p.w * 1.3; g.rotate(ax); g.scale(1, max(0.06, abs(cos(tw)))); g.rotate(-ax); } g.scale(sc, sc); g.translate(-p.c[0], -p.c[1]);
     g.beginPath(); p.q.forEach((v, i) => i ? g.lineTo(v[0], v[1]) : g.moveTo(v[0], v[1])); g.closePath(); g.save(); g.clip(); g.translate(-SHC[0], -SHC[1]); glass(g); g.restore();
+    if (tw) { const sh = max(0, 1 - abs(cos(tw)) * 3.2); if (sh > 0) { g.fillStyle = `rgba(255,214,170,${0.7 * sh})`; g.fill(); } g.strokeStyle = 'rgba(8,5,4,.9)'; g.lineWidth = 3.2; g.stroke(); }
     g.strokeStyle = edge || 'rgba(255,255,255,.75)'; g.lineWidth = 1.4; g.stroke(); g.restore(); };
   const lightCave = (U, q) => { U.uKeyC.value.setRGB(...hx(q.key || '#d8ecff')); U.uShC.value.setRGB(...hx(q.sh || '#16243a')); U.uRimK.value = q.rim == null ? 0.7 : q.rim; U.uGlow.value = q.glow == null ? 0.35 : q.glow;
     U.uFog.value.set(40, 110, q.fogK == null ? 0.75 : q.fogK); U.uFogC.value.setRGB(...hx(q.fog || '#030710')); if (q.rimc) U.uRimC.value.setRGB(...hx(q.rimc)); if (q.glowc) U.uLavaC.value.setRGB(...hx(q.glowc)); };
@@ -218,7 +219,7 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float f
     const glass = gg => gg.drawImage(off, 0, 0, 512, 384);
     for (const p of SH) { const age = s - p.d; if (age < 0) { drawCell(g, p, 0, 0, 0, 1, glass); continue; }
       const L = Math.hypot(p.c[0], p.c[1]) || 1, dx = p.c[0] / L * p.v * age, dy = p.c[1] / L * p.v * age + 520 * age * age, sc = 1 + p.z * age * 1.4, a = 1 - seg(age, 0.55, 1.15);
-      if (a > 0) drawCell(g, p, dx, dy, p.w * age, sc, glass, a, 'rgba(255,150,60,.85)'); } };
+      if (a > 0) drawCell(g, p, dx, dy, p.w * age, sc, glass, a, 'rgba(255,150,60,.85)', age * (3 + 2.2 * abs(p.w))); } };
   const label5 = (x, t, o) => X.plate(x, t - NAME5, Object.assign({ lv: 75 }, o, { name: 'Shadow Mewtwo', cap: 'Shadow Pokémon', skin: SKIN }));   /* navnet er Shadow Mewtwo (appen sier fortsatt Dark Mewtwo i DARK.n) */
   /* =====================================================================================================================================================
      ROMMET I 3D (Fable, 26.11): himmelen er en kule rundt kameraet i filmens fulle oppløsning (stjernene, tåken, det svarte hullet med linse og skive, og
@@ -335,7 +336,7 @@ void main(){ float x = abs(vQ.x), v = vQ.y, a = vQ.z, st = .7 + .3 * vn(vec2(v *
   const feed5 = t => { let f = 0, rg = 0; for (const q of NOVA5) { if (t < q.a) continue; const s = t - q.a; f += (0.35 + 0.8 * q.app) * Math.exp(-s / 0.55); rg += (0.4 + q.app) * Math.exp(-s * 5); } return [min(1.1, f + 0.25 * seg(t, ARR0, EXP5)), min(1.5, rg)]; };
   const cosmos5 = (S, t) => { const u = S.su, on = t >= COS5, ex = t >= EXP5; S.sky.visible = on; if (!on) { S.pS.end(); S.pW.end(); S.pK.end(); S.rb.m.visible = false; return; }
     const R = holeAng5(t), fd = feed5(t); u.uOn.value.set(U5(4.81), U5(6.61), U5(8.41)); u.uR.value = R; u.uHa.value = seg(t, U5(4.75), U5(6.0));
-    u.uFeed.value = ex ? 0.75 + 0.6 * hit(t, EXP5, 1.6) : 0.12 * seg(t, U5(4.75), U5(7.5)) + fd[0]; u.uRing.value = ex ? 0.5 + hit(t, EXP5, 1.2) : fd[1]; u.uNeb.value = 0.7 * seg(t, U5(4.75), U5(10)); u.uLit.value = 1;
+    u.uFeed.value = ex ? 1.0 + 0.5 * hit(t, EXP5, 1.6) : 0.12 * seg(t, U5(4.75), U5(7.5)) + fd[0]; u.uRing.value = ex ? 0.5 + hit(t, EXP5, 1.2) : fd[1]; u.uNeb.value = 0.7 * seg(t, U5(4.75), U5(10)); u.uLit.value = 1;
     const ps = S.pS; for (const q of NOVA5) { const s = t - q.t; if (s < 0 || s > q.ti + 0.1) continue; const s0 = min(0.6, q.ti * 0.25), n = floor(40 + 150 * q.app), P = tan2(q.p), a0 = Math.atan2(P[1], P[0]), d0 = Math.hypot(P[0], P[1]), hc = HUEC[NHUE(q.i)];
       for (let i = 0; i < n; i++) { const st = s0 + (q.ti - s0) * 0.4 * rnd(i, 220 + q.i), c = hc[rnd(i, 223) > 0.5 ? 0 : 1], big = rnd(i, 224) > 0.72 && q.app > 0.5;
         for (let j = 0; j < 3; j++) { const uu = (s - 0.035 * j - st) / (q.ti - st); if (uu <= 0 || uu >= 1) continue; const e = uu * uu, an = a0 + (rnd(i, 221) - 0.5) * 0.6 + e * 2.4 * (q.i % 2 ? -1 : 1), d = mix(d0 * (0.85 + 0.35 * rnd(i, 222)), R * 1.12, e);
@@ -362,6 +363,12 @@ void main(){ float x = abs(vQ.x), v = vQ.y, a = vQ.z, st = .7 + .3 * vn(vec2(v *
     const lh = headL6(t), lt = tailL6(t), on = seg(t, BM6, RUN6) * (1 - seg(t, HIT6 + 0.4, HIT6 + 0.75)); S.rb.m.visible = false;
     { const hp = onBeam6(F, lh, 0, 0), hd = V3n([hp[0] - cam.x, hp[1] - cam.y, hp[2] - cam.z]); S.su.uBh.value.set(hd[0], hd[1], hd[2], t >= BM6 - 0.05 && t < HIT6 + 0.4 ? on * (0.35 + 2.2 * lh * lh) * (1 - seg(t, HIT6, HIT6 + 0.4)) : 0); }
     if (t >= BM6 - 0.05 && t < HIT6 + 0.75 && lh > lt && on > 0.01) S.rb.set(cam, i => onBeam6(F, mix(lt, lh, i / 40), 0, 0), i => 8 * (1 + 0.7 * io(seg(i / 40, 0.86, 1))) * (1 - 0.6 * seg(i / 40, 0.97, 1)) * (0.92 + 0.08 * sin(t * 23)), i => on * min(1, i / 3)); };
+
+  const burst = (S, t0, y) => { const dir = i => { const a = rnd(i, 701) * TAU, e = -0.25 + 1.3 * rnd(i, 702), c = cos(e); return [cos(a) * c, sin(e), sin(a) * c]; };
+    S.scene.add(K.pts(170, i => { const d = dir(i), v = 4 + 13 * rnd(i, 703) ** 1.5; return { p: [d[0] * 0.3, y + d[1] * 0.3, d[2] * 0.3], v: [d[0] * v, d[1] * v + 2, d[2] * v], b: 0.1 * rnd(i, 704), l: 0.8 + 1.8 * rnd(i, 705), z: 0.09 + 0.2 * rnd(i, 706) ** 2 }; },
+      { t0, add: 1, g: 5, drag: 1.3, px: 70, c: ['#fff2d8', '#ff9a3c', '#b02a08'], fade: 0.7 }));
+    S.scene.add(K.pts(16, i => { const d = dir(i + 400), v = 1.5 + 4 * rnd(i, 707); return { p: [d[0] * 0.5, y + d[1] * 0.4, d[2] * 0.5], v: [d[0] * v, abs(d[1]) * v * 0.6 + 0.6, d[2] * v], b: 0.05 + 0.25 * rnd(i, 708), l: 1.6 + 1.6 * rnd(i, 709), z: 0.5 + 0.7 * rnd(i, 710) }; },
+      { t0, g: -0.6, drag: 1.5, px: 220, sz0: 0.5, sz1: 2.2, c: ['#4a2210', '#201008', '#0a0504'], fade: 0.5, a: 0.4 })); };
   const late = fn => L => L.map(([t0, f]) => [t0, (S, u, a, t) => { f(S, u, a, t); fn(S, t); }]);
   const backBlk = (S, t) => { const g = C.g; g.fillStyle = '#000'; g.fillRect(0, 0, 512, 384); return { hz: 192 }; };
   /* Gløden i brystet på hver ladning (2D oppå figuren: figuren ligger over omgivelsene i sammensettingen). */
@@ -376,8 +383,11 @@ void main(){ float x = abs(vQ.x), v = vQ.y, a = vQ.z, st = .7 + .3 * vn(vec2(v *
       for (const [w, col] of [[3.2, `rgba(255,110,30,${0.35 * k})`], [1.1, `rgba(255,205,150,${0.9 * k})`]]) { g.strokeStyle = col; g.lineWidth = w; g.beginPath(); P.forEach((q, i) => i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)); g.stroke(); } }
     g.restore(); };
   G3D.def('c3:dk150', {
-    len: LEN5, hold: 1, R: EXP5 + 0.1, at: 0, fig: 2, models: ['mewtwo', 'mewtwo_dark'], edge: null, env: { rim: '#9ad8ff', glow: '#3a8fd8', fog: '#030710', glowH: 6 },
-    make(K, T) { const S = { scene: new T.Scene(), figs: [] }; S.T = T; cave(T, S); makeFigs(T, S); cosmosMake(T, S, 0);
+    len: LEN5, hold: 1, R: EXP5 + 0.1, at: 0,
+    /* Villain's Ascent på filmens klokke (bui.js, legendIntro): låta fra knuset, takten 0:07,22–0:09,62 to ganger ekstra (pre: [filmens tid, hvor i låta, slutt]),
+       og låta selv kaldt inn 22,02 s ut, 9,62 s inn i seg selv (cold). Lydsengen (bed) følger samme klokke. */
+    mus: { cold: [S5 + 14.42, 9.62], pre: [[S5, 0, S5 + 9.62], [S5 + 9.62, 7.22, S5 + 12.02], [S5 + 12.02, 7.22, S5 + 14.42]], bed: 'sfx/natur/smewtwo_intro.mp3' }, fig: 2, models: ['mewtwo', 'mewtwo_dark'], edge: null, env: { rim: '#9ad8ff', glow: '#3a8fd8', fog: '#030710', glowH: 6 },
+    make(K, T) { const S = { scene: new T.Scene(), figs: [] }; S.T = T; cave(T, S); makeFigs(T, S); cosmosMake(T, S, 0); burst(S, EXP5, 1.5);
       const tw = new T.Mesh(new T.CylinderGeometry(42, 46, 40, 48, 4, true, PI + PI / 3, PI * 4 / 3), S.cv.wall.material); tw.position.y = 14; tw.visible = false; S.scene.add(tw); S.tw = tw;
       const aI = S.cv.cr.geometry.attributes.aI; CRY.forEach((q, i) => { aI.array[i * 4 + 1] = S5 + 1.1; aI.array[i * 4 + 2] = EXP5 + 0.07 * q.ring + q.s * 0.06; }); aI.needsUpdate = true;
       return S; },
@@ -421,7 +431,7 @@ void main(){ float x = abs(vQ.x), v = vQ.y, a = vQ.z, st = .7 + .3 * vn(vec2(v *
         S.post.sh = 2.8 * hit(t, EXP5, 1.2); S.post.fl = 0.85 * hit(t, EXP5, 0.1); S.post.flc = '#ffc890'; }],
     ]),
   });
-  X.reg('c3:dk150', { spid: 150, skin: SKIN, back: backBlk, cues: [], roar: () => EXP5 + 0.1,
+  X.reg('c3:dk150', { spid: 150, skin: SKIN, back: backBlk, cues: [[EXP5 + 0.1, 'cry']], roar: () => EXP5 + 0.1,
     look(S, t, P) { P.bloom = t >= COS5 ? 0.4 : 0.32; P.bloomT = 0.66; P.vig = 0.45; P.grain = 0.035; P.ink = t >= S5 && t < EXP5 ? 0 : 1; },
     over: label5, fx(S, t, P) { const g = C.g; hud(g, t); textBox(g, t); aura(g, S, t);
       if (t >= WIN && t < S5 + SH5) card(g, 256, cardY(t), t > DIE ? 0.25 + 0.75 * hit(t, DIE, 1.2) : 0, t);
@@ -481,8 +491,8 @@ void main(){ float x = abs(vQ.x), v = vQ.y, a = vQ.z, st = .7 + .3 * vn(vec2(v *
     g.restore(); };
 
   G3D.def('c3:dk150p', {
-    len: LEN6, hold: 0, R: HIT6 + 0.1, at: 0, fig: 2, models: ['mewtwo', 'mewtwo_dark'], edge: null, env: { rim: '#ffd0a0', glow: '#ff7a2a', fog: '#0a0402', glowH: 6 },
-    make(K, T) { const S = { scene: new T.Scene(), figs: [] }; S.T = T; cave(T, S); makeFigs(T, S); cosmosMake(T, S, 1);
+    len: LEN6, hold: 0, R: HIT6 + 0.1, at: 0, mus: { bed: 'sfx/natur/smewtwo_fase2.mp3' }, fig: 2, models: ['mewtwo', 'mewtwo_dark'], edge: null, env: { rim: '#ffd0a0', glow: '#ff7a2a', fog: '#0a0402', glowH: 6 },
+    make(K, T) { const S = { scene: new T.Scene(), figs: [] }; S.T = T; cave(T, S); makeFigs(T, S); cosmosMake(T, S, 1); burst(S, HIT6, 3.0);
       const tw = new T.Mesh(new T.CylinderGeometry(42, 46, 40, 48, 4, true, PI + PI / 3, PI * 4 / 3), S.cv.wall.material); tw.position.y = 14; S.scene.add(tw); S.tw = tw;
       const aI = S.cv.cr.geometry.attributes.aI; CRY.forEach((q, i) => { aI.array[i * 4 + 1] = -10; aI.array[i * 4 + 2] = -10 + q.s; }); aI.needsUpdate = true;
       /* Flakene av bakken (samme stein som øya). */
@@ -526,7 +536,7 @@ void main(){ float x = abs(vQ.x), v = vQ.y, a = vQ.z, st = .7 + .3 * vn(vec2(v *
       [HIT6 - 0.02, (S, u, a, t) => { K.cam(mix(5.0, 4.4, u), mix(1.3, 1.5, u), mix(7.6, 6.8, io(u)), -0.6, 2.7, -1, 50); S.camP = [mix(5.0, 4.4, u), 1.4, mix(7.6, 6.8, io(u))]; S.post.sh = 3.0 * hit(t, HIT6, 1.4); S.post.fl = 0.8 * hit(t, HIT6, 0.1); S.post.flc = '#ffd8b0'; }],
     ]),
   });
-  X.reg('c3:dk150p', { spid: 150, skin: SKIN, back: backBlk, cues: [], roar: () => HIT6 + 0.1, swirl: 0,
+  X.reg('c3:dk150p', { spid: 150, skin: SKIN, back: backBlk, cues: [[HIT6 + 0.1, 'cry']], roar: () => HIT6 + 0.1, swirl: 0,
     look(S, t, P) { P.bloom = 0.42; P.bloomT = 0.62; P.vig = 0.45; P.grain = 0.035; P.ink = 1; },
     fx(S, t, P) { const g = C.g;
       if (t < 1.6) { const a = 1 - seg(t, 1.2, 1.6); g.save(); g.globalAlpha = a; rr(g, 10, 306, 492, 66, 8); g.fillStyle = 'rgba(14,14,20,.9)'; g.fill(); font(g, 17, '600 '); g.fillStyle = '#fff'; g.textBaseline = 'middle'; g.textAlign = 'left';

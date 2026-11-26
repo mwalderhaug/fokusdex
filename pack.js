@@ -230,8 +230,8 @@ const PACK = (() => {
       s.connect(g2); g2.connect((typeof master === 'function' && master()) || a.destination);
       if (o.fade) { g2.gain.setValueAtTime(Math.max(0.0001, v * (o.from || 0)), t); g2.gain.linearRampToValueAtTime(v, t + o.fade); } else g2.gain.setValueAtTime(v, t);
       /* Negativ at = en kald start: så mange sekunder stillhet før lyden starter fra 0 (Articunos intro). Klokka går fra nå, og pos er negativ til lyden er i gang. */
-      const lead = o.at < 0 ? -o.at : 0, at = Math.max(0, Math.min(d.duration - 0.2, o.at || 0)); s.start(lead ? t + lead : 0, at);
-      return { s, g: g2, t0: t, at: lead ? -lead : at, d, v };
+      const lead = o.at < 0 ? -o.at : 0, at = Math.max(0, Math.min(d.duration - 0.2, o.at || 0)), sk = lead && o.skip > 0 ? Math.min(d.duration - 0.2, o.skip) : 0; s.start(lead ? t + lead : 0, lead ? sk : at);   /* skip: en kald start som begynner så langt inne i lyden (Shadow Mewtwo: låta kommer inn midt i seg selv) */
+      return { s, g: g2, t0: t, at: lead ? -lead : at, d, v, off: sk ? lead - sk : 0 };
     } catch (_) { return null; }
   }
   /* En lang uttoning (etter en kamp) dukker først raskt, så seierslyden slipper til, og klinger så ut. */
@@ -282,7 +282,8 @@ const PACK = (() => {
     try { const a = AC, t0 = node.t0, out = (typeof master === 'function' && master()) || a.destination;
       list.forEach((q, i) => { const d = ds[i]; if (!d) return; const s = a.createBufferSource(), g = a.createGain(), v = Math.min(1, mvol() * tgain(q.f)), w = t0 + q.at; s.buffer = d; s.connect(g); g.connect(out);
         g.gain.setValueAtTime(v, a.currentTime); if (q.out) { g.gain.setValueAtTime(v, t0 + q.out[0]); g.gain.linearRampToValueAtTime(0.0001, t0 + q.out[1]); }
-        s.start(Math.max(w, 0), Math.max(0, a.currentTime - w)); if (q.out) s.stop(t0 + q.out[1] + 0.05); seqH.push({ s, g }); }); } catch (_) {}
+        if (q.end) { g.gain.setValueAtTime(v, t0 + q.end - 0.008); g.gain.linearRampToValueAtTime(0.0001, t0 + q.end); }   /* o: hvor i lyden biten starter, end: når den slutter (filmens tid) */
+        s.start(Math.max(w, 0), (q.o || 0) + Math.max(0, a.currentTime - w)); if (q.out) s.stop(t0 + q.out[1] + 0.05); else if (q.end) s.stop(t0 + q.end + 0.01); seqH.push({ s, g }); }); } catch (_) {}
     return ok; };
   P.stingOut = sec => { if (sting) { fadeOut(sting, sec == null ? 1.2 : sec); sting = null; } };
   /* EN SLØYFE VED SIDEN AV SENGEN (Arceus, 3.1: Hold, mens fingeren holdes mot lyset): spilles på musikkens nivå, som sengen, til den stoppes. P.loopWarm henter den på
@@ -303,6 +304,7 @@ const PACK = (() => {
   /* Musikkskyveren flyttes mens en låt spiller. */
   P.vol = () => { try { if (node && mode === 'wa') { node.v = Math.min(1, mvol() * tgain(cur)); node.g.gain.setTargetAtTime(node.v, AC.currentTime, 0.05); } else if (au && mode === 'el') au.volume = Math.min(1, mvol() * tgain(cur)); } catch (_) {} };
   /* Sekunder siden låta som spiller nå ble startet (til å holde raid-filmene i takt med den), justert for forsinkelsen ut til høyttaleren. −1 hvis ingen låt spiller. */
+  P.off = () => (node && node.off) || 0;   /* hvor mye klokka ligger foran låtas egen tid (en kald start med skip) */
   P.clock = () => { try { return node && mode === 'wa' && AC.state === 'running' ? AC.currentTime - node.t0 - (AC.outputLatency || AC.baseLatency || 0) : -1; } catch (_) { return -1; } };
   /* LÅTA STYRER (Kyogre, Jazz 19.11). pos = hvor i låta vi er (sekunder i fila), med sløyfa regnet inn. Uten raw er forsinkelsen ut til høyttaleren trukket fra
      (det man hører nå: til bildene); med raw er det lydklokka (til å planlegge hopp). −1 hvis ingen låt spiller gjennom WebAudio. */
