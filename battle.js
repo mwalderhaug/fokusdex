@@ -1141,8 +1141,11 @@ const moveOk = (B, k) => { const b = B.me[B.a], V = b.v, x = b.mv[k]; const f = 
    hp = hvor mye som helbredes, cure = fjerner status, rev = vekker en som har besvimt (andel av HP). */
 /* all = vekker alle som har besvimt (Sacred Ash, bare i raid): andelen av HP de står opp med. */
 const BAG = { potion: { hp: 20 }, super: { hp: 60 }, hyper: { hp: 120 }, maxp: { hp: 9999 }, heal: { cure: 1 }, revive: { rev: 0.5 }, maxrev: { rev: 1 }, ash: { all: 0.5 } };
+/* MAX REVIVE I RAID (v98, Jazz 26.11: «Gjerne ta en cap på antall max revives også eller på alle legendary raids?»): høyst MRCAP i hver kamp mot en legendarisk
+   (B.raid). B.mr = hvor mange som er brukt i kampen (lagres med den). Veska ellers (B.bag), Revive og Sacred Ash er som før. */
+const MRCAP = 1, mrCap = (B, k) => k === 'maxrev' && !!B.raid && (B.mr || 0) >= MRCAP;
 function itemOk(B, k, i) {
-  const d = BAG[k], b = B.me[i]; if (!d || !b || B.mroom || (i === B.a && b.v.embargo)) return false;
+  const d = BAG[k], b = B.me[i]; if (!d || !b || B.mroom || (i === B.a && b.v.embargo) || mrCap(B, k)) return false;
   if (d.all) return !!B.raid && B.me.some(x => x.hp <= 0);
   if (d.rev) return b.hp <= 0;
   if (b.hp <= 0) return false;
@@ -1155,6 +1158,7 @@ function useItem(B, k, i, ev) {
   if (d.rev) { b.hp = Math.max(1, Math.floor(b.max * d.rev)); b.out = 0; b.status = ''; b.tox = 0; b.slp = 0; b.sg = Z8(); b.v = {}; say(`${b.name} is back on its feet!`); }
   else if (d.cure) { b.status = ''; b.tox = 0; b.slp = 0; b.v.conf = 0; if (on) ev.push({ t: 'status', side: 'me', st: '' }); say(`${b.name} is healthy again.`); }
   else { const h = Math.min(b.max - b.hp, d.hp); b.hp += h; if (on) ev.push({ t: 'heal', side: 'me', hp: b.hp }); say(`${b.name} recovered ${h} HP.`); }
+  if (k === 'maxrev' && B.raid) B.mr = (B.mr || 0) + 1;
   B.bag = Math.max(0, (B.bag || 0) - 1);
 }
 /* Resten av runden etter at angrepene i køen q er gjort. Bytter spilleren ut midt i runden (U-turn, Volt Switch, Baton Pass),

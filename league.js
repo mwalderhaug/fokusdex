@@ -1534,13 +1534,38 @@ function raidCatch(id, dk, res, sh) {
   if (res) { res.cau = { u: m.u, isNew }; if (isNew) { res.cau.c = NEWCOIN[tierOf(id)] || 0; S.coins += res.cau.c; } }
   return m;
 }
+/* KYOGRE, GROUDON ELLER ARTICUNO SOM ET AV DE NESTE RAIDENE (v98, Jazz 26.11: «Kan ta at en av de neste raidene til spillerne er enten Kyogre, Groudon eller
+   Articuno (tilfeldig), så de får sett det … Husk at det skal være vanskelig på disse også»): de tre med nye introer i 3D. Første gang appen lastes etter v98
+   (migrate19 i game.js) velges én for hver spiller (r3dPick) og lagres i S.r3d. raidSpawn bruker den én gang (r3dTake): det neste raidet som viser seg, er den
+   arten, og S.r3d blir −arten (brukt; carry holder det slik når en annen enhets lagring tas inn). Det er et vanlig raid: samme nivå, gulv, HP, shiny-sjanse og
+   forsøk som ellers, og vanlig fart (rf1). Det første møtet med Mewtwo eller Arceus (S.humb) kommer fortsatt først. Kyogre og Groudon er i klasse 2 og viser seg
+   som ellers bare for lag fra RAIDGATE[1]: er laget lavere når raidet viser seg, venter valget til et senere raid. Eieren (isAdmin) får det ikke: raidene hans
+   trekkes som før. Valget er tilfeldig per spiller, men det samme ved hver lasting og på hver enhet (som størrelsene i migrate17): et fast tall fra den første
+   Pokémonen og den første dagen i loggen. Rekkefølgen: en spilleren aldri har fanget (og ikke har i gresset) og laget kan møte nå, så en av de tre laget kan
+   møte nå, så en spilleren ikke har fanget (den venter på laget). */
+const R3D = [382, 383, 144];
+const r3dOk = (id, lv) => !!LEG[id] && !(LEG[id].t === 2 && lv < RAIDGATE[1]);
+function r3dPick() {
+  if (typeof LEG === 'undefined' || !S.started || !(S.mons || []).length) return 0;
+  const m0 = S.mons.reduce((a, m) => (m.u < a.u ? m : a)), seed = `${m0.id}|${m0.at || 0}|${Object.keys(S.log || {}).sort()[0] || ''}`;
+  let h = 2166136261; for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619) >>> 0;
+  const lv = leagueLv(), nw = R3D.filter(id => LEG[id] && !legOwn(id) && !(S.caught || {})[id]), l = [nw.filter(id => r3dOk(id, lv)), R3D.filter(id => r3dOk(id, lv)), nw].find(x => x.length) || [];
+  return l.length ? l[h % l.length] : 0;
+}
+function r3dTake(lv) {
+  const id = S.r3d;
+  if (!(id > 0) || !r3dOk(id, lv) || (typeof isAdmin === 'function' && isAdmin())) return 0;
+  S.r3d = -id; return id;
+}
 function raidSpawn(res) {
   if (S.raid) return false;
   const lv = leagueLv();
   /* Mewtwo har sin egen trekning (MEWP) helt til du eier Dark Mewtwo, også om du alt har den vanlige: det er bare gjennom den du kan møte den mørke. */
   let first = 0;
   if (!S.humb) { S.humb = 1; const two = HUMB.filter(x => !legOwn(x)); if (!(S.st && S.st.rw > 0) && two.length) first = two[rnd(two.length)]; }
-  const mew = !first && !hasDark() && lv >= RAIDGATE[3] && Math.random() < MEWP + (MEWP1 - MEWP) * raidFar(), id = first || (mew ? 150 : raidPick()), t = LEG[id].t;
+  /* v98: Kyogre, Groudon eller Articuno (S.r3d), én gang, i det første raidet etter det første møtet (r3dTake). */
+  const r3 = first ? 0 : r3dTake(lv);
+  const mew = !first && !r3 && !hasDark() && lv >= RAIDGATE[3] && Math.random() < MEWP + (MEWP1 - MEWP) * raidFar(), id = first || r3 || (mew ? 150 : raidPick()), t = LEG[id].t;
   /* Ventetiden for klasse 4 nullstilles når klassen selv blir trukket (og ved det første møtet), ikke av Mewtwo sin egen trekning: ellers ville
      hver Mewtwo holdt Arceus borte. */
   S.rpity = t >= 4 && !mew ? 0 : (S.rpity || 0) + 1;

@@ -167,7 +167,7 @@ const HELP = [
     ${hH('What to buy')}
     ${hRow(ballEl('great', '30px'), 'Balls', 'You always need some. Better balls for rarer Pokémon, and a Dusk Ball for a legendary.')}
     ${hRow(hSym('❋', 'var(--sage)'), 'For the hunt', 'Lures give more or rarer encounters for three sessions. Incense raises the shiny odds for one to three days, for new encounters from sessions, packs and eggs while it burns. The ones already waiting in the grass keep their odds, and they wait as long as you like.')}
-    ${hRow(hSym('+', 'var(--violet)'), 'Potions and Revives', 'Used from the Bag in League battles and raids.')}
+    ${hRow(hSym('+', 'var(--violet)'), 'Potions and Revives', 'Used from the Bag in League battles and raids. One Max Revive per raid battle.')}
     ${hRow(hSym('▲', 'var(--red)'), 'Training', 'The big one. It is what makes the hardest bosses possible.')}
     ${hH('Encounter packs')}
     ${hP('A pack is three to six Pokémon, more in the dearer packs, opened like a pack of cards: they lie in a pile, and one tap or swipe takes the top card away, so the next one comes forward. They come from the most common to the rarest, so the best is last. An epic, a shiny or a legendary builds up when it comes forward, and now and then a pack is golden: every card in it is rare or better. Open all takes the rest of the pile at once. Every Pokémon goes straight into your collection, and a legendary is a pack raid of its own, with one attempt. Your own odds stand on each pack in the Shop.')}
