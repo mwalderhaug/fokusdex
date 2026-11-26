@@ -167,11 +167,77 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float f
     const gm = K.model('mewtwo'); const M = S.M = K.figure(gm, { hide: /_lod[12]/, map: { Head: 'head', Neck: 'neck', Spine1: 'spine_01' } }); fit(T, M, MPOSE); S.scene.add(M.root); S.figs.push(M);
     const D = S.D = K.figure(K.model('mewtwo_dark'), { rules: [[/expressions/, { cut: 0.5 }], [/smewtwo_eye/, { eye: 1, mul: '#ffb36a' }]] }); fit(T, D); S.scene.add(D.root); S.figs.push(D); setMouth(D, 'normal_');
     /* Øynene ligger som utklipp i teksturen: alfatest i skyggeleggeren til akkurat disse materialene (motoren er urørt). */
-    for (const n in D.mats) { const m = D.mats[n], k = 'vec4 tx = texture2D(map, vUv);'; if (/expressions/.test(n) && m.fragmentShader && m.fragmentShader.indexOf(k) >= 0) { m.fragmentShader = m.fragmentShader.replace(k, k + ' if (tx.a < .5) discard;'); m.needsUpdate = true; } } };
+    for (const n in D.mats) { const m = D.mats[n], k = 'vec4 tx = texture2D(map, vUv);'; if (/expressions/.test(n) && m.fragmentShader && m.fragmentShader.indexOf(k) >= 0) { m.fragmentShader = m.fragmentShader.replace(k, k + ' if (tx.a < .5) discard;'); m.needsUpdate = true; } }
+    S.eyN = eyeMake(T, S, D); };   /* de nye øynene (sm4; under) */
   /* Fargene på Shadow Mewtwo per del: kroppen (body, farge), krystallen (stone: hvor sterkt den gløder oransje; stoneC gir en annen farge), øynene (eye: 1 = svarte). */
   const dMats = (S, q) => { for (const n in S.D.mats) { const u = S.D.mats[n].uniforms;
     if (/stone/.test(n)) { u.uFlK.value = min(1, q.stoneC ? 1 : q.stone || 0); u.uFlC.value.setRGB(...hx(q.stoneC || '#ff9a3c')); u.uEmis.value = q.stoneC ? 0 : min(1, q.stone || 0); }
     else if (/eye|expression/.test(n)) { u.uFlK.value = q.eye || 0; u.uFlC.value.setRGB(0, 0, 0); } else { u.uFlK.value = q.body || 0; u.uFlC.value.setRGB(...hx(q.bodyC || '#000000')); } } };
+  /* ---------- ØYNENE (sm4, 26.11 morgen; Jazz: «Lyset i øynene til Shadow mewtwo er også feil. De ser rare ut og gløder rart») ----------
+     Før: lokkene og øyeeplet ble svarte (store, tomme hull i ansiktet), og tent fikk øyeeplet lys forbi 1 (den hvite senehinnen ble en rosa-hvit flik, lokket et grått felt), mens
+     gløden var en rund 2D-flekk på et fast sted ved hodebenet (satt ved siden av øynene, var like stor i det vide bildet, flimret og lyste gjennom hodet).
+     Nå (research/mork_energi.md 2, 3, 5): lokkene får et eget materiale ved siden av det gamle (KORT: «ALLE brytere i en shader»), med huden som kroppen. Åpningen i lokkets
+     maske (alfa under 0,5) er øyet, tegnet i lokket selv, så det sitter i øyet fra alle vinkler: masken er lavest midt i øyet, og tre harde toner går innenfra (kjernen nesten
+     hvit, gul, oransje), med en smal lys rand på lokket langs kanten (1 piksel) og en liten, tett glød i 2D utenfor. Øyeeplet bak (smewtwo_eye) skjules.
+     Før 0:32,4 er øyet mørkt (låst), også i introen. På 0:32,4 (sub-pulsen i sengen) tennes det med vilje: en mørk rød glo i øyet de siste 0,4 s (forvarselet, KORT: forvarsel,
+     slag og etter), så lyset fra kjernen og ut på fire bilder med et lite overskudd, og gløden etter. Ingen flimmer.
+     Bryteren G3D.alt[150] = 'goyne' gir øynene slik Fable laget dem (live: &gammel=goyne; verktøyene: PRE='G3D.alt={150:"goyne"}'). */
+  const OEY = () => /goyne/.test(String((G3D.alt && G3D.alt[150]) || ''));
+  const EYF = ` { float ea = tx.a, ee = 1. - 2. * ea, ew = max(fwidth(ea), .04);
+    vec3 eL = (ee > uEyT.x ? uEyC0 : ee > uEyT.y ? uEyC1 : uEyC2) * uEyB, eD = mix(uEyD, uEyE, uEyE2 * (.4 + .6 * step(uEyT.y, ee)));
+    col = ea < .5 ? mix(eD, eL, step(1.001 - uEyL, ee)) : mix(col, uEyR, uEyRk * step(ea, .5 + uEyW * ew)); }`;
+  /* Åpningen i et lokk (i flatens eget rom, hvilestillingen): punkter der masken er under 0,5, vektet med trekantens areal. Gir midtpunktet, enden av den lange og den korte
+     halvaksen (2 σ) og et punkt langs normalen ut av ansiktet. Måles én gang (samme modell i begge filmene). */
+  let EYG = null;
+  const eyeOpen = q => { const g = q.geometry, P = g.attributes.position, UV = g.attributes.uv, I = g.index && g.index.array, img = q.material.uniforms.map.value && q.material.uniforms.map.value.image;
+    if (!UV || !I || !img || !img.width) return null; const fr = x => x - floor(x); let u0 = 9, u1 = -9, v0 = 9, v1 = -9;
+    for (let i = 0; i < UV.count; i++) { const u = fr(UV.getX(i)), v = fr(UV.getY(i)); u0 = min(u0, u); u1 = max(u1, u); v0 = min(v0, v); v1 = max(v1, v); }
+    const Wd = img.width, Hd = img.height, x0 = floor(u0 * Wd), y0 = floor(v0 * Hd), w = Math.ceil(u1 * Wd) - x0 + 1, h = Math.ceil(v1 * Hd) - y0 + 1, cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    let A; try { const cx = cv.getContext('2d', { willReadFrequently: true }); cx.drawImage(img, x0, y0, w, h, 0, 0, w, h); A = cx.getImageData(0, 0, w, h).data; } catch (e) { return null; }   /* uten masken: øynene tegnes, men uten gløden */
+    const al = (u, v) => { const X = floor(fr(u) * Wd) - x0, Y = floor(fr(v) * Hd) - y0; return X < 0 || Y < 0 || X >= w || Y >= h ? 255 : A[(Y * w + X) * 4 + 3]; };
+    const N = 8, ns = (N + 1) * (N + 2) / 2, pts = [], s = [0, 0, 0], nr = [0, 0, 0]; let sw = 0;
+    for (let k = 0; k < I.length; k += 3) { const a = I[k], b = I[k + 1], c = I[k + 2], pa = [P.getX(a), P.getY(a), P.getZ(a)], pb = [P.getX(b), P.getY(b), P.getZ(b)], pc = [P.getX(c), P.getY(c), P.getZ(c)];
+      const cr = crs([pb[0] - pa[0], pb[1] - pa[1], pb[2] - pa[2]], [pc[0] - pa[0], pc[1] - pa[1], pc[2] - pa[2]]), ar = Math.hypot(...cr) / 2, wt = ar / ns; let on = 0;
+      for (let i = 0; i <= N; i++) for (let j = 0; j <= N - i; j++) { const l1 = i / N, l2 = j / N, l0 = 1 - l1 - l2;
+        if (al(UV.getX(a) * l0 + UV.getX(b) * l1 + UV.getX(c) * l2, UV.getY(a) * l0 + UV.getY(b) * l1 + UV.getY(c) * l2) >= 128) continue;
+        const p = [0, 1, 2].map(m => pa[m] * l0 + pb[m] * l1 + pc[m] * l2); pts.push([p, wt]); for (let m = 0; m < 3; m++) s[m] += p[m] * wt; sw += wt; on++; }
+      for (let m = 0; m < 3; m++) nr[m] += cr[m] * on; }
+    if (sw <= 0) return null; const c = s.map(v => v / sw); let n = V3n(nr); if (n[2] < 0) n = n.map(v => -v);
+    const ex = V3n(crs([0, 1, 0], n)), ey = crs(n, ex); let Su = 0, Sv = 0, Suv = 0;
+    for (const [p, wt] of pts) { const d = [p[0] - c[0], p[1] - c[1], p[2] - c[2]], u = dot3(d, ex), v = dot3(d, ey); Su += u * u * wt; Sv += v * v * wt; Suv += u * v * wt; }
+    Su /= sw; Sv /= sw; Suv /= sw; const th = 0.5 * Math.atan2(2 * Suv, Su - Sv), m0 = (Su + Sv) / 2, dd = Math.sqrt(((Su - Sv) / 2) ** 2 + Suv * Suv), L1 = 2 * Math.sqrt(m0 + dd), L2 = 2 * Math.sqrt(max(0, m0 - dd));
+    const a1 = [0, 1, 2].map(m => ex[m] * cos(th) + ey[m] * sin(th)), a2 = [0, 1, 2].map(m => -ex[m] * sin(th) + ey[m] * cos(th)), at = (v, k) => [0, 1, 2].map(m => c[m] + v[m] * k);
+    return [c, at(a1, L1), at(a2, L2), at(n, L1)]; };
+  /* Lokkene og øyeeplene, det gamle og det nye lokkmaterialet, og åpningene (S.eyN). */
+  const eyeMake = (T, S, D) => { const Lm = [], B = []; D.root.traverse(q => { if (!q.isMesh) return; if (q.userData.mn === 'smewtwo_eye') B.push(q); else if (q.userData.mn === 'smewtwo_expressions') Lm.push(q); });
+    if (!Lm.length) return null; const old = Lm[0].material, k0 = 'col = mix(col, uFlC, uFlK);', nw = K.figMat(old.uniforms.map.value, { id: 255 }); if (nw.fragmentShader.indexOf(k0) < 0) return null;
+    nw.fragmentShader = 'uniform vec2 uEyT; uniform vec3 uEyC0, uEyC1, uEyC2, uEyD, uEyE, uEyR; uniform float uEyB, uEyL, uEyE2, uEyRk, uEyW;\n' + nw.fragmentShader.replace(k0, k0 + EYF);
+    Object.assign(nw.uniforms, { uEyT: K.uv(new T.Vector2(0.935, 0.79)), uEyC0: K.uv(K.u3('#fff6e2')), uEyC1: K.uv(K.u3('#ffcd66')), uEyC2: K.uv(K.u3('#ff8a2c')), uEyD: K.uv(K.u3('#07080c')),
+      uEyE: K.uv(K.u3('#8a1c08')), uEyR: K.uv(K.u3('#e0501a')), uEyB: K.uv(1), uEyL: K.uv(0), uEyE2: K.uv(0), uEyRk: K.uv(0), uEyW: K.uv(1.2) });
+    nw.uniforms.uOm.value.copy(old.uniforms.uOm.value); nw.uniforms.uOo.value.copy(old.uniforms.uOo.value);
+    if (!EYG || EYG.length !== Lm.length || EYG.some(x => !x)) EYG = Lm.map(eyeOpen);
+    const L = Lm.map((q, i) => { const g = EYG[i], si = q.geometry.attributes.skinIndex, sw = q.geometry.attributes.skinWeight; if (!g || !si || !sw || !q.skeleton) return null; let bi = si.getX(0), bw = sw.getX(0);
+      for (let k = 1; k < 4; k++) if (sw.getComponent(0, k) > bw) { bw = sw.getComponent(0, k); bi = si.getComponent(0, k); } return { m: q, bi, p: g.map(v => new T.Vector3(v[0], v[1], v[2])), M: new T.Matrix4() }; }).filter(Boolean);
+    return { old, nw, Lm, B, L, V: new T.Vector3() }; };
+  /* Øynene i dette bildet: q = det dMats fikk (lokkene blir som kroppen), ig = tenningen (eyeIg; null = mørke), hb = treffet (gløden løftes litt). */
+  const eyeSet = (S, q, ig, hb) => { const E = S.eyN; S.eyG = 0; if (!E) return; const o = OEY(); for (const m of E.Lm) m.material = o ? E.old : E.nw; for (const m of E.B) m.visible = o; if (o) return;
+    const u = E.nw.uniforms, z = ig || { L: 0, B: 1, emb: 0, G: 0 }; u.uFlK.value = q.body || 0; u.uFlC.value.setRGB(...hx(q.bodyC || '#000000'));
+    u.uEyL.value = z.L; u.uEyB.value = z.B; u.uEyE2.value = z.emb; u.uEyRk.value = 0.8 * seg(z.L, 0.75, 1); S.eyG = z.G * (1 + 0.35 * (hb || 0)); };
+  /* Tenningen på t0: glo i øyet de siste 0,42 s (sterkest i midten), lyset fra kjernen og ut på fire bilder (0,13 s, lineært; det som ikke er tent ennå, gløder), et overskudd
+     på 30 % som dør på 0,3 s, randen på lokket når lyset når kanten, og gløden rundt etter. */
+  const eyeIg = (t, t0) => ({ emb: io(seg(t, t0 - 0.42, t0)), L: t < t0 ? 0 : seg(t, t0, t0 + 0.13), B: 1 + 0.3 * hit(t, t0 + 0.13, 0.3), G: io(seg(t, t0 + 0.04, t0 + 0.4)) });
+  /* Gløden (2D, oppå, i bildets fulle oppløsning): en ellipse langs øyet som går ut til 1,85 ganger halvaksene og faller mykt av, lagt til som lys. Plassen er åpningen gjennom
+     Head-benet i dette bildet (regnet i fx, etter kameraet), og den dempes når øyet vender bort fra kameraet. Langt unna (øyet under 6 piksler) er gløden litt sterkere og
+     aldri under 1,8 × 1,1 piksler, så øynene leses som to lyspunkter i det vide bildet. */
+  const eyeGlow = (g, S) => { const E = S.eyN, k = S.eyG || 0; if (!E || k <= 0.004) return; const cam = K.camPos(), V = E.V;
+    for (const e of E.L) { const q = e.m, sk = q.skeleton; e.M.multiplyMatrices(q.matrixWorld, q.bindMatrixInverse).multiply(sk.bones[e.bi].matrixWorld).multiply(sk.boneInverses[e.bi]).multiply(q.bindMatrix);
+      const W = e.p.map(p => V.copy(p).applyMatrix4(e.M).toArray()), c = W[0], n = [W[3][0] - c[0], W[3][1] - c[1], W[3][2] - c[2]], d = [cam.x - c[0], cam.y - c[1], cam.z - c[2]];
+      const kk = k * seg(dot3(n, d) / (Math.hypot(...n) * Math.hypot(...d) || 1), 0.08, 0.4); if (kk <= 0.004) continue;
+      const C0 = K.proj(...c); if (C0.z > 1) continue; const A = K.proj(...W[1]), Bq = K.proj(...W[2]); let ax = A.x - C0.x, ay = A.y - C0.y, bx = Bq.x - C0.x, by = Bq.y - C0.y;
+      const la = Math.hypot(ax, ay), lb = Math.hypot(bx, by), sm = 1 + 0.7 * (1 - seg(la, 2, 6)); if (la < 1.8) { ax *= 1.8 / max(la, 1e-3); ay *= 1.8 / max(la, 1e-3); } if (lb < 1.1) { bx *= 1.1 / max(lb, 1e-3); by *= 1.1 / max(lb, 1e-3); }
+      const R = 1.85; g.save(); g.globalCompositeOperation = 'lighter'; g.transform(ax, ay, bx, by, C0.x, C0.y); const gr = g.createRadialGradient(0, 0, 0, 0, 0, R);
+      const ka = min(1.25, kk * sm); gr.addColorStop(0, `rgba(255,196,120,${0.5 * ka})`); gr.addColorStop(0.42, `rgba(255,132,52,${0.3 * ka})`); gr.addColorStop(0.75, `rgba(255,92,28,${0.1 * ka})`); gr.addColorStop(1, 'rgba(255,80,20,0)');
+      g.fillStyle = gr; g.fillRect(-R, -R, 2 * R, 2 * R); g.restore(); } };
   const lerpHex = (a, b, k) => { const A = hx(a), B = hx(b); return [0, 1, 2].map(i => floor(255 * mix(A[i], B[i], k))); };
   const aura = (g, S, t) => { const a = 1 - seg(t, DIE, DIE + 1.1); if (a <= 0 || t >= SIL) return; const fr = t < T3.CU && !J2D(), p = S.M.at(fr ? 'spine_02' : 'head'), c = K.proj(p.x, p.y, p.z); if (c.z > 1) return;
     const r = fr ? 46 : 150; g.save(); g.globalCompositeOperation = 'lighter'; const gr = g.createRadialGradient(c.x, c.y, 0, c.x, c.y, r);
@@ -416,8 +482,8 @@ void main(){ float x = abs(vQ.x), v = vQ.y, a = vQ.z, st = .7 + .3 * vn(vec2(v *
       setMouth(D, t >= EXP5 + 0.1 ? 'attack_strong_' : 'normal_');
       const yk = k > 0 ? kneelY(D) : 0, ov = kf(t, [[UP6[0], 0], [UP6[1], 1, eo], [UP6[1] + 0.45, 0.82, io]]) || 0;
       D.root.position.set(0, mix(yk, D.fy + 0.35 + 0.04 * sin(t * 1.5) + 0.35 * (ov > 0.82 ? ov - 0.82 : 0) / 0.18, 1 - k), 0); D.root.rotation.set(0, 0, 0);
-      if (!ex) { dMats(S, { body: 0.16 * min(1, G), bodyC: '#ff7a2a', stone: min(1, G), eye: 1 }); D.eye(0, 0, 0); }
-      else { dMats(S, { body: 0.25 * (1 - seg(t, EXP5, EXP5 + 2)), bodyC: '#ff9a3c', stone: 0.85, eye: 1 }); D.eye(0, 0, 0); }
+      const q5 = !ex ? { body: 0.16 * min(1, G), bodyC: '#ff7a2a', stone: min(1, G), eye: 1 } : { body: 0.25 * (1 - seg(t, EXP5, EXP5 + 2)), bodyC: '#ff9a3c', stone: 0.85, eye: 1 };
+      dMats(S, q5); D.eye(0, 0, 0); eyeSet(S, q5, null);   /* ingen lys i øynene før 0:32,4 i fase 2 (låst) */
       S.rw = P.roar; S.G = G; S.eyes = null;
       if (k > 0.5) { D.apply(); const h = D.at('R_Middle3'); S.hand = [h.x, 0, h.z + 0.05]; }
       cosmos5(S, t);
@@ -519,7 +585,8 @@ void main(){ float x = abs(vQ.x), v = vQ.y, a = vQ.z, st = .7 + .3 * vn(vec2(v *
       poseKR(D, P, 0, r); setMouth(D, t >= HIT6 + 0.1 ? 'attack_strong_' : 'normal_');
       const jolt = kf(t, [[HIT6, 0], [HIT6 + 0.12, 1, eo], [HIT6 + 0.9, 0.55, io]]) || 0;
       D.root.position.set(0, D.fy + 0.35 + 0.04 * sin(t * 1.5) + 1.1 * io(seg(t, RUN6, HIT6)) + 0.3 * jolt, 0.25 * jolt); D.root.rotation.set(-0.12 * jolt, 0, 0);
-      const ey = seg(t, EYE6, EYE6 + 0.3); dMats(S, { body: 0.12 + 0.4 * hit(t, HIT6, 2.0), bodyC: '#ff9a3c', stone: 0.85 + 0.15 * hit(t, HIT6, 2), eye: ey > 0 ? 0 : 1 }); D.eye(0, 0, 1.8 * ey);
+      const ey = seg(t, EYE6, EYE6 + 0.3), q6 = { body: 0.12 + 0.4 * hit(t, HIT6, 2.0), bodyC: '#ff9a3c', stone: 0.85 + 0.15 * hit(t, HIT6, 2), eye: ey > 0 ? 0 : 1 }; dMats(S, q6); D.eye(0, 0, 1.8 * ey);
+      eyeSet(S, q6, eyeIg(t, EYE6), hit(t, HIT6, 1.5));   /* de nye øynene (sm4): tennes med vilje på 0:32,4; med G3D.alt[150] = 'goyne' som Fable laget dem */
       S.rw = P.roar; S.eyes = ey > 0 ? eyesW(S, D) : null; S.eyK = ey * (1 + 0.4 * hit(t, HIT6, 1.5));
       /* Flakene: løsner fra bakken etter tur, stiger sakte og vrir seg; på treffet slynges de utover og opp. */
       const ob = S.o3; FLK6.forEach((q, i) => { const u = io(seg(t, q.t0, q.t0 + 3.2)), b = max(0, t - HIT6), up = q.h * u + 0.08 * sin(t * 1.3 + i), out = b > 0 ? q.v * (1 - Math.exp(-b * 1.6)) : 0;
@@ -551,7 +618,7 @@ void main(){ float x = abs(vQ.x), v = vQ.y, a = vQ.z, st = .7 + .3 * vn(vec2(v *
       if (t < 1.6) { const a = 1 - seg(t, 1.2, 1.6); g.save(); g.globalAlpha = a; rr(g, 10, 306, 492, 66, 8); g.fillStyle = 'rgba(14,14,20,.9)'; g.fill(); font(g, 17, '600 '); g.fillStyle = '#fff'; g.textBaseline = 'middle'; g.textAlign = 'left';
         g.fillText('Something is happening…'.slice(0, max(0, floor(t * 34))), 28, 339); g.restore(); }
       if (t >= RUN6 && t < HIT6 + 2.6) cracksP6(g, S, t);
-      if (S.eyes) eyes2(g, S.eyes, S.eyK, t);
+      if (OEY()) { if (S.eyes) eyes2(g, S.eyes, S.eyK, t); } else eyeGlow(g, S);
       if (t >= HIT6 - 0.15 && t < HIT6 + 0.5) { const c = K.proj(...chestW(S)), k = seg(t, HIT6 - 0.15, HIT6) * (1 - seg(t, HIT6 + 0.1, HIT6 + 0.5)); g.save(); g.globalCompositeOperation = 'lighter'; const r = 40 + 200 * seg(t, HIT6 - 0.15, HIT6 + 0.3), gr = g.createRadialGradient(c.x, c.y, 0, c.x, c.y, r);
         gr.addColorStop(0, `rgba(255,240,220,${k})`); gr.addColorStop(0.3, `rgba(255,150,60,${0.7 * k})`); gr.addColorStop(1, 'rgba(255,90,20,0)'); g.fillStyle = gr; g.fillRect(c.x - r, c.y - r, 2 * r, 2 * r); g.restore(); }
       spikes6(g, S, t); boom(g, S, t - HIT6 + EXP);
