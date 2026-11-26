@@ -1287,7 +1287,7 @@ function carry(p) {
   const ge = (a, b) => (a || '') >= (b || ''), tr = (a, b) => !a ? b : !b ? a : a.d === b.d ? (a.n >= b.n ? a : b) : (a.d > b.d ? a : b);
   /* Et tap den andre lagringen ikke kjenner til, avslutter runden der også (ligaen: tap = runden over), og en runde som er vunnet i dag, er dagens runde. */
   if (p.lad) { S.lad.tries = tr(p.lad.tries, S.lad.tries) || null; if (ge(p.lad.lost, S.lad.lost)) { if (p.lad.lost && p.lad.lost !== S.lad.lost) { S.lad.n = 0; S.lad.c = 0; S.lad.seen = []; S.lad.next = null; S.lad.fell = p.lad.fell || 0; } S.lad.lost = p.lad.lost || ''; } if (ge(p.lad.fw, S.lad.fw) && p.lad.fw) S.lad.fw = p.lad.fw; if (p.lad.lapd && ge(p.lad.lapd, S.lad.lapd)) S.lad.lapd = p.lad.lapd; if (p.lad.lk && ge(p.lad.lk, S.lad.lk)) S.lad.lk = p.lad.lk; }
-  if (p.fac) { S.fac.tries = tr(p.fac.tries, S.fac.tries) || null; if (ge(p.fac.lost, S.fac.lost)) S.fac.lost = p.fac.lost || ''; }
+  if (p.fac) { S.fac.tries = tr(p.fac.tries, S.fac.tries) || null; if (ge(p.fac.sc, S.fac.sc) && p.fac.sc) S.fac.sc = p.fac.sc; if (ge(p.fac.lost, S.fac.lost)) S.fac.lost = p.fac.lost || ''; if (p.fac.far && (!S.fac.far || p.fac.far.d > S.fac.far.d || (p.fac.far.d === S.fac.far.d && p.fac.far.r > S.fac.far.r))) S.fac.far = p.fac.far; }
   if (p.pwt && p.pwt.day && (!S.pwt || ge(p.pwt.day, S.pwt.day))) { if (!S.pwt) S.pwt = { day: '', run: null, won: 0, cups: {} }; if (S.pwt.day !== p.pwt.day) { S.pwt.day = p.pwt.day; S.pwt.run = null; } }
   if (p.mode && p.mode.day && (!S.mode || ge(p.mode.day, S.mode.day))) S.mode = p.mode;
   if (p.evt && p.evt.day && (!S.evt || ge(p.evt.day, S.evt.day))) S.evt = p.evt;

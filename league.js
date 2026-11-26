@@ -304,7 +304,7 @@ function liveLoss() {
   if (L.m === 'league') {
     ladLose(d); what = 'League battle';
   } else if (L.m === 'fac') {
-    const R = S.fac.run, n = used(S.fac.tries); if (R) S.fac.best = Math.max(S.fac.best || 0, R.streak || 0); S.fac.tries = { d, n }; if (n >= facLives()) S.fac.lost = d; S.fac.run = null; what = 'Frontier run';
+    const R = S.fac.run, n = used(S.fac.tries); if (R) S.fac.best = Math.max(S.fac.best || 0, R.streak || 0); S.fac.tries = { d, n }; if (n >= facLives()) S.fac.lost = d; facSecond(d, R ? R.round : 1); S.fac.run = null; what = 'Frontier run';
   } else if (L.m === 'pwt') { pwt().run = null; what = 'cup';
   } else if (L.m === 'wk') { if (typeof wkEnd === 'function') wkEnd('lost'); what = 'expedition battle';
   } else if (L.m === 'raid') {
@@ -345,7 +345,14 @@ const evSm = () => Math.round(studyMult() * evCoin() * 10) / 10;
 /* Ekstra forsøk i Frontier til alle en bestemt kampdag (Jazz 16.11: «Ett forsøk til hos begge»). Går ut av seg selv dagen etter. */
 const FACGIFT = { '2026-11-16': 1 }, facGift = () => FACGIFT[S.lad.day || dayKey()] || 0;
 const facXb = () => { const x = S.fac && S.fac.xb, d = S.lad.day || dayKey(); return x && x.d === d ? Math.max(0, x.n | 0) : 0; };
-const ladLives = () => (diff().lives || LIVES) + (evIs('wind') ? 1 : 0), facLives = () => FACLIVES + (evIs('wind') ? 1 : 0) + facXb() + facGift();
+/* Ekstra sjanse (Jazz 26.11, fra 27.11): har alle dagens løp endt i runde 1, gis ett løp til, én gang per dag. S.fac.far = { d, r } er dagens lengste runde, S.fac.sc = dagen sjansen ble gitt. */
+const FACSC0 = '2026-11-27', facSc = () => { const d = S.lad.day || dayKey(); return S.fac && S.fac.sc === d ? 1 : 0; };
+function facSecond(d, r) {
+  const f = S.fac.far, far = Math.max(f && f.d === d ? f.r | 0 : 0, r | 0); S.fac.far = { d, r: far };
+  if (d < FACSC0 || S.fac.sc === d || far > 1 || facFails() < facLives()) return false;
+  S.fac.sc = d; if (S.fac.lost === d) S.fac.lost = ''; return true;
+}
+const ladLives = () => (diff().lives || LIVES) + (evIs('wind') ? 1 : 0), facLives = () => FACLIVES + (evIs('wind') ? 1 : 0) + facXb() + facGift() + facSc();
 /* Et tap i ligaen på kampdagen d. Er forsøkene brukt opp, er runden over: ligaen stenger for dagen, og neste ligadag starter du på kamp 1 igjen
    (S.lad.fell = hvor langt du kom). Har du et forsøk igjen (Easy, eller Second Wind), står den samme treneren der til omkamp. Gir forsøk igjen i dag. */
 function ladLose(d) {
@@ -1133,7 +1140,7 @@ function facBattle() {
    Er runde FACEND klar, er løpet vunnet (res.done) og Frontier ferdig for dagen. */
 function finishFactory(B) {
   const R = S.fac.run, win = B.over === 'win', res = { mode: 'fac', win, ups: [], items: [], encs: [], coins: 0, round: R.round, w: R.w, swap: null, roundDone: false, streak: R.streak, perks: [], note: '' };
-  if (!win) { const d = S.lad.day || dayKey(), n = facFails() + 1; S.fac.best = Math.max(S.fac.best || 0, R.streak); S.fac.tries = { d, n }; if (n >= facLives()) S.fac.lost = d; res.left = Math.max(0, facLives() - n); S.fac.run = null; raidUnhide(); save(); return res; }
+  if (!win) { const d = S.lad.day || dayKey(), n = facFails() + 1; S.fac.best = Math.max(S.fac.best || 0, R.streak); S.fac.tries = { d, n }; if (n >= facLives()) S.fac.lost = d; res.sc = facSecond(d, R.round); res.left = Math.max(0, facLives() - n); S.fac.run = null; raidUnhide(); save(); return res; }
   const sm = B.sm, bm = B.boost.mode === 'factory' ? B.boost.m : 1, r = R.round, roll = p => Math.random() < p * bm;
   const give = (it, n) => { if (it === 'candy') n = candyRoll(n); if (n > 0) { S.items[it] = (S.items[it] || 0) + n; res.items.push(`${n} × ${SHOP[it].n}`); } };
   R.w++; R.streak++; res.w = R.w; res.streak = R.streak; S.fac.best = Math.max(S.fac.best || 0, R.streak);
