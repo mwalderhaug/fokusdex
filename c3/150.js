@@ -479,7 +479,7 @@ void main(){ float x = abs(vQ.x), v = vQ.y, a = vQ.z, st = .7 + .3 * vn(vec2(v *
   const CRK6B = Array.from({ length: 16 }, (_, i) => { const a = (i / 16 + 0.06 * rnd(i, 541)) * TAU, L = 0.9 + 1.8 * rnd(i, 542), pts = [[0, 0]]; let x = 0, z = 0, d = a;
     for (let j = 1; j <= 5; j++) { d += (rnd(i * 9 + j, 543) - 0.5) * 0.8; x += cos(d) * L / 5; z += sin(d) * L / 5; pts.push([x, z]); } return pts; });
   const FLK6 = Array.from({ length: 20 }, (_, i) => { const a = rnd(i, 551) * TAU, r = 0.6 + 2.2 * rnd(i, 552); return { x: cos(a) * r, z: sin(a) * r + 0.2, s: 0.18 + 0.32 * rnd(i, 553), h: 0.3 + 1.6 * rnd(i, 554),
-    t0: RUN6 + 0.5 + 3.4 * rnd(i, 555), sp: (rnd(i, 556) - 0.5) * 0.8, a, v: 4 + 7 * rnd(i, 557) }; });
+    t0: RUN6 + 0.5 + 3.4 * rnd(i, 555), sp: (rnd(i, 556) - 0.5) * 0.8, a, v: 1.5 + 2.5 * rnd(i, 557) }; });   /* ikke helt fram til kameraet: et flak tett på linsa ble en gul klump */
   /* Glasspissene som i fase 2-skissen, men ikke de som står nærmere kameraet enn 4 m (de dekket hele bildet fra den nye vinkelen). */
   const spikes6 = (g, S, t) => { const s = t - HIT6; if (s < 0 || !S.camP) return; for (const q of SPK) { if (Math.hypot(q.x - S.camP[0], q.z - S.camP[2]) < 4) continue; const u = io(c01((s - q.d) / 0.18)); if (u <= 0) continue;
       const b0 = K.proj(q.x - q.w, 0, q.z), b1 = K.proj(q.x + q.w, 0, q.z), tp = K.proj(q.x + q.lean * q.h, q.h * u, q.z); if (b0.z > 1 || tp.z > 1) continue;
@@ -502,7 +502,7 @@ void main(){ float x = abs(vQ.x), v = vQ.y, a = vQ.z, st = .7 + .3 * vn(vec2(v *
       { const bk = io(seg(t, RUN6 + 0.6, EYE6 - 0.3)) * (1 - seg(t, HIT6, HIT6 + 0.25)), lc = lerpHex('#ffb070', '#4a2410', bk), ls = lerpHex('#2a1208', '#0c0503', bk), h2 = c => '#' + c.map(v => (v < 16 ? '0' : '') + v.toString(16)).join('');   /* lyset flytter seg bak ham når strålen nærmer seg: han blir en mørk skikkelse med lys kant, og øynene tennes i mørket */
         lightCave(U, { key: h2(lc), sh: h2(ls), fog: '#0a0402', fogK: 0.6, rim: 1.0 + 1.5 * qk + 1.6 * seg(t, EYE6 - 1.5, HIT6), rimc: '#ffd0a0', glowc: '#ff7a2a', glow: 0.45 * (1 - 0.6 * qk) }); }
       caveSet(S, t, { mode: 1, dark: 0.55 * qk, up: 1.3 * (1 - 0.5 * qk) + 1.5 * hit(t, HIT6, 1.2), upc: '#ff7a2a', gl: 0, col: 0, emb: 1, or: 1 });
-      const c = S.cv; c.wall.visible = c.roof.visible = c.st.visible = false; S.tw.visible = true;
+      const c = S.cv; c.wall.visible = c.roof.visible = c.st.visible = false; S.tw.visible = true; S.fk.material.uniforms.uUp.value = 0.45;   /* flakene holder seg mørke (de ble gule flater i lyset fra treffet) */
       fallM(S, 99, FALL); S.M.add(EYELID(1), 1); S.M.root.visible = true;
       /* Han står (som i kampen) og stiger sakte fra 0:28,4 med armene ut; strålen treffer ham i ryggen og kaster ham litt fram og opp; brølet. */
       const D = S.D, P = P0(t); D.root.visible = true; const r = io(seg(t, RUN6, RUN6 + 2.6));
