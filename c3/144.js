@@ -108,7 +108,7 @@
   BIRD.fly = { foldMax: 1, hold: { neck: 'Neck', head: 'Head', max: 0.22, g: 0.45 },   /* ar32: foldingen helt ut (før 0,85; Jazz 25.11: «ser ikke forskjell») */
     /* Nakkens form (ar32; X.fly.neck2 og nlim i raid3c.js): ryggleddet foran nakken og nakken fram, hodet i linje med kroppen og nebbet litt ned (i flukt), og nakken fram foran
        brystet med nebbet vannrett når den står oppreist; grensen: nakken aldri over 5° mot ryggen fra kroppens akse (myk fra −5°), hodet aldri over 80° bakover fra nakken. */
-    form: { fly: [23, 18, 15], up: [15, 30, 20], hi: 5, knee: 10, hb: 80, hbk: 20 },   /* nakken er kort (0,3 m), så hodet tar rundt halve gyngingen (hold.g) */
+    form: { fly: [23, 18, 15], up: [15, 30, 20], lin: [30, 14, 24], hi: 5, knee: 10, hb: 80, hbk: 20 },   /* nakken er kort (0,3 m), så hodet tar rundt halve gyngingen (hold.g); lin (ar36): når kroppen ligger langs farten, nakken fram og litt ned i linje med kroppen og hodet fram og litt ned (nebbet rundt 12° under banen) */
     /* Manøveren (ar33; st.man, trn, rol i X.fly): full bøy er Articunos egen M-form (BIRD.poses.tuck over glidet), så man = 1 er hele M-en, med håndleddet litt opp og hånda
        ned (en måkevinge, så bøyen leses også forfra); i en sving bøyes den indre vingen 0,38 mer og den ytre 0,38 mindre og 10° fram, og i rullen vris hendene 12° hver sin vei
        og bøyes 0,2 ulikt. */
@@ -118,7 +118,12 @@
        kroppens akse mot 0,84–0,91 i v3 og 0,82 i dag; kjernen alene 0,57); beina strukket bak under halen: lårene 4° opp og 12° inn mot midten (føttene 0,23 m fra
        hverandre mot 0,70, og beina 0,3 m høyere, inntil halen; 12° opp la føttene oppå halen sett litt ovenfra), føttene 20° (tærne rett bak, i linje med beinet) og tærne
        samlet 14° om aksen på tvers av tåplanet (de sprikte 16° hver vei). */
-    slank: { bryst: { ben: 'FeelerB1', rot: 12, dz: 0.2 }, ledd: [['Thigh', 4], ['Thigh', 12, [0, 0, -1]], ['Foot', 20], ['ToeA1', 14, [0, 0.75, -0.66]], ['ToeC1', -14, [0, 0.75, -0.66]]] } };
+    slank: { bryst: { ben: 'FeelerB1', rot: 12, dz: 0.2 }, ledd: [['Thigh', 4], ['Thigh', 12, [0, 0, -1]], ['Foot', 20], ['ToeA1', 14, [0, 0.75, -0.66]], ['ToeC1', -14, [0, 0.75, -0.66]]] },
+    /* Holdningen i flukt (ar36; X.fly.linje i raid3c.js; Jazz om magevideoen: «Sjekke her, altså Articunos posture … så ser også flyvningen og holdningen, men også hode mer
+       naturlig ut»): kroppens akse (hofta → ryggleddet, 16,6° mot buken i hvile) legges langs farten (0:12,5: kroppen −14° → +2°), og nakkens form for det (form.lin) holder
+       nakken fram og litt ned i linje med kroppen (−30° → −4 til −14° med slaget) og hodet fram og litt ned (nebbets linje −2° → −12°, rundt 12° under banen også i
+       stupet; 36° ga 25° og ansiktet rett ned i stupet), så det ikke er noen knekk mellom nakken og hodet. */
+    linje: { akse: ['Hips', 'Spine2'] } };
   const FSETS = X.fly.sets(BIRD.fly.sets);
   /* Styrken (0 glid, 1 svakt, 2 marsj, 3 kraft), lagt etter dagens utslag (AMP): det første slaget etter et glid er sterkest og avtar slag for slag (Berg og Biewener 2010). */
   const KK = X.fly.trk([[-3, 2.1], [-0.45, 2.15], [-0.15, 2.7], [0.45, 2.7], [1.0, 0], [3.9, 0], [4.5, 2.4], [5.6, 2.1], [9.9, 2.05], [10.9, 1.9], [11.45, 0.35], [12.6, 0.35], [13.3, 3.0], [14.15, 3.0],
@@ -144,7 +149,7 @@
      Bryteren: G3D.alt[144] = 'stiv' (eller 'gammel') gir den godkjente filmen, 'del1' gir del 1 (vingeslaget nytt, resten som i dag). Det nye kan slås av del for del
      (dagens utgave av den delen, resten nytt): 'ghale' (halen), 'gkam' (kameraenes liv), 'geff' (tåka, isnålene og ringen rundt sola), 'gblikk' (hodet ser jevnt inn i
      svingene, uten blikkskift), og bare på forsøk '60' (stupet mot kameraet i 60 bilder i sekundet). Live: &gammel=<ord>; gjennomgangssiden: &alt=<ord>; verktøyene:
-     PRE='G3D.alt={144:"<ord>"}' (flere ord: 'gkam ghale'). 'gmage' gir magen og beina fra v3 (ar34, uten slank i flukt). Reglene og kildene: work/RAIDS3D.md, Articuno
+     PRE='G3D.alt={144:"<ord>"}' (flere ord: 'gkam ghale'). 'gmage' gir magen og beina fra v3 (ar34, uten slank i flukt). 'gholdning' gir holdningen fra ar35 (kroppen lent fram med nesen ned, uten linje i flukt). Reglene og kildene: work/RAIDS3D.md, Articuno
      «Bevegelse etter Fable, del 2», og «Fugleflukt» (del 1). Det nye i korte trekk:
      · glid er glid: ingen småflaks (styrken 0), men sjeldne rettelser (vingene felles, et vindkast, ett rykk i én vinge; X.fly.gust med faste hendelser, 0,8 s: √størrelse)
      · svingen i rekkefølge: kroppen ruller 0,22 s før banen bøyer av (krengingen fra akselerasjonen litt fram i tid), og hodet ser inn i svingen før kroppen
@@ -359,7 +364,7 @@
     TD2 = { s, r: [D, TW] }; return TD2.r; };
   const pose = (g, bd, q, T, t) => { neckW(q.uf);
     if (q.nw) { const b = q.nw.b, lf = new T.Vector3().crossVectors(q.u, q.f), pk = q.p2 ? 1 - 0.2 * q.uf : 1 - 0.5 * q.uf, px = q.px || 0, nose = b.pt * pk + px;   /* ny: kroppen vipper litt i slaget, og hodet står (nakken tar gyngingen); del 2: mer vipp i svevingen, rekylen og vindkastene */
-      bd.begin().place(q.P, q.f.clone().applyAxisAngle(lf, -nose), q.u.clone().applyAxisAngle(lf, -nose), SC); bd.q0 = g.root.quaternion.clone();
+      bd.begin().place(q.P, q.f.clone().applyAxisAngle(lf, -nose), q.u.clone().applyAxisAngle(lf, -nose), SC); if (q.p2 && P2('holdning')) bd.linje(1 - q.uf); bd.q0 = g.root.quaternion.clone();   /* ar36: kroppens akse langs farten i flukt */
       /* Forvarselet og brølet (godkjent) er dagens: der slaget står stille (27,2 til F0E), står vingene som i dag, med dagens fold i den frosne fasen (rw tones inn og ut).
          Rettet etter kontrollen 25.11: blandingen går mot dagens faktiske vinger (med dagens siste slag som dør ut, og fasen som stanser mykt) og er ferdig før styrken faller
          (26,9–27,15): det nye slaget foldet seg ut når styrken falt (folden følger styrken), og hånda slo 11–13° fram og tilbake på 0,2 s (0:29,93–0:30,10; dagens ±1,5°). */

@@ -400,7 +400,8 @@ const G3C = (() => {
      litt fram; rol (−1…1, + = ruller mot høyre, som rulleakselerasjonen: X.fly.ail) vrir den ene hånda forkant opp og den andre ned og bøyer den som skal løfte minst. Glatte kurver inn og ut.
      o.fly = { sets: { w, c, p, h } (endringer i slagsettene, i grader), dist: { fordelingene langs vingen }, foldMax, hold: { neck, head, max, lim, g, lag },
        man: { t, r, f, q } (manøveren: den indre vingens ekstra bøy i en sving, bøyen i en rull, den ytre vingen fram i grader, rullens vridning i grader),
-       slank: { bryst: { ben, rot, dy, dz, s, c }, ledd: [[ben uten L/R, grader, akse]] } (kroppen slank i flukt: fjærene inntil og beina inne, bd.slank; ar35) }. */
+       slank: { bryst: { ben, rot, dy, dz, s, c }, ledd: [[ben uten L/R, grader, akse]] } (kroppen slank i flukt: fjærene inntil og beina inne, bd.slank; ar35),
+       linje: { akse, k, ving, bein } (kroppens akse langs farten i flukt, bd.linje; ar36) }. */
   X.fly = (f, o) => { const B = X.bird(f, o), n = B.n, R = B.rig, DG = PI / 180, F = o.fly || {}, PO = B.poses, L0 = B.L0;
     /* Fordelingen langs vingen (fra skulderen og ut): hvor mye av slaget, feiingen, vridningen, lasten, etterslepet og spalteåpningen hvert ledd tar, og foldingen (grader ved full fold). */
     const D = Object.assign({ el: [0.5, 1, 1, 1, 1, 1], sw: [0.5, 1, 1, 1, 1, 1], tw: [0.1, 0.3, 0.45, 0.6, 0.8, 1], cu: [0, 0, 0.1, 0.3, 0.65, 1], lg: [0, 0, 0.3, 0.55, 0.8, 1], sl: [0, 0, 0, 0.2, 0.6, 1], sx: [0, 0, 0.25, 0.55, 0.9, 1],
@@ -483,12 +484,12 @@ const G3C = (() => {
     /* Benene i W holder stillingen sin i verden: d' = P1⁻¹ · P0 · d ytterst (P0 = foreldrenes dreining før endringen, P1 etter). */
     const keepW = (W, P0) => W.forEach((nm, i) => { chainQ(PAR[nm], qP1); qQ.copy(qP1).invert().multiply(P0[i]); outer(nm, qQ); });
     B.form = FM;
-    B.neck2 = (pitch, roll, yaw, uf, kb) => { B.neck(pitch, roll, yaw); const fl = FM.fly, us = FM.up || fl; if (!fl || !R.B[NB]) return B;
+    B.neck2 = (pitch, roll, yaw, uf, kb) => { B.neck(pitch - (B.la || 0), roll, yaw); const lk = B.kv && FM.lin ? c01((B.la || 0) / B.kv) : 0, fl = lk ? FM.fly.map((v, i) => mix(v, FM.lin[i], lk)) : FM.fly, us = FM.up || fl; if (!fl || !R.B[NB]) return B;   /* ar36: linje (kroppen langs farten) trekkes fra hodets stigning, og nakkens form for den (form.lin) blandes inn */
       const k = c01(uf || 0), sp = mix(fl[0], us[0], k) * DG, nk = mix(fl[1], us[1], k) * DG, hd = mix(fl[2], us[2], k) * DG * (kb == null ? 1 : kb);
       const W = KIDS.concat(KEEP, R.B[HB] ? [HB] : []), P0 = W.map(nm => chainQ(PAR[nm], new TQ()));
       if (SPN && sp) R.rot(SPN, L0, sp); if (nk) R.rot(NB, L0, nk); keepW(W, P0); if (hd && R.B[HB]) R.rot(HB, L0, hd); return B; };
     B.nlim = () => { if (!SEGN) return B;
-      chainQ(NB, qP1); vN.copy(SEGN).applyQuaternion(qP1); const e = elv(vN), dn = soft(e, FM.hi * DG, FM.knee * DG) - e;
+      chainQ(NB, qP1); vN.copy(SEGN).applyQuaternion(qP1); const e = elv(vN) + (B.la || 0), dn = soft(e, FM.hi * DG, FM.knee * DG) - e;   /* ar36: fra kroppens akse (langs farten etter linje) */
       if (dn < -1e-7) { const W = KEEP.concat([HB]), P0 = W.map(nm => chainQ(PAR[nm], new TQ())), A = chainQ(SPN, new TQ());   /* nakken fram i kroppens ramme: A⁻¹ · R(L0, −dn) · A ytterst */
         qQ.copy(A).invert().multiply(qR.setFromAxisAngle(L0, -dn)).multiply(A); outer(NB, qQ); keepW(W, P0); B.nlimN = dn; } else B.nlimN = 0;
       B.nlimH = 0; if (SEGH) { chainQ(NB, qP1); vN.copy(SEGN).applyQuaternion(qP1); chainQ(HB, qQ); vH.copy(SEGH).applyQuaternion(qQ);
@@ -520,6 +521,27 @@ const G3C = (() => {
     const SLL = (SL && SL.ledd || []).map(([bn, dg, ax]) => { const a = ax ? new V3(ax[0], ax[1], ax[2]).normalize() : L0.clone(); return [bn, dg * DG, a, a.clone().addScaledVector(L0, -2 * a.dot(L0))]; });   /* høyre side: aksen speilet om kroppens midtplan og vinkelen snudd */
     B.slank = (k, kl) => { B.sk = SLB ? c01(k || 0) : 0; const w = kl == null ? c01(k || 0) : c01(kl);
       if (w > 0) for (const [bn, an, a, m] of SLL) { R.rot('L' + bn, a, an * w); R.rot('R' + bn, m, -an * w); } return B; };
+    /* Holdningen i flukt (ar36, Opus 26.11; Jazz om magevideoen: «Sjekke her, altså Articunos posture. Mulig å få en sånn justering? så ser også flyvningen og holdningen, men også
+       hode mer naturlig ut», med en havørn og en fugl i motlys som forbilder og en tegning: i dag en V, ny en lang, nesten vannrett strek med hodet fram og litt ned).
+       Modellene står oppreist i hvile med kroppen lent fram (Articuno: hofta → ryggleddet 16,6° mot buken fra o.fwd). Legges o.fwd langs farten, heller kroppen med nesen ned,
+       brystet blir lavest, halens rot sitter høyt på ryggen, og nakken går ned fra brystet før hodet vendes opp: en V sett fra siden (målt i verden med g3d/scripts/holdningsark.js;
+       Articuno 0:12,5: kroppen −14°, nakken −30°, halens rot 26° opp). Ekte fugler i marsj og glid har kroppen vannrett, nakken strukket fram i linje med kroppen, hodet fram og
+       litt ned med nebbet fram og litt ned, beina bak langs halen og halen som en forlengelse av kroppen (REGLER «Fugler og vinger»: «linja hel fra nesetipp til halespiss»).
+       o.fly.linje = { akse: [fra, til] (kroppens akse i hvile; standard ['Hips', 'Spine2']), k (andelen av helningen som rettes; standard 1), ving og bein (hvor mye vingene og
+       beina holder stillingen i verden; standard 1) }, og o.fly.form.lin = [ryggleddet, nakken, nebbet] (nakkens form når kroppen ligger langs farten; ellers form.fly).
+       bd.linje(k) rett etter place: hele figuren dreies k · helningen med nesen opp om midtpunktet, så kroppens akse ligger langs farten; vingene og beina dreies like mye tilbake
+       ytterst i skulderen og låret (de holder stillingen i verden og slår som før), neck2 trekker det samme fra hodets stigning (blikket står) og blander inn form.lin med k, og
+       nlim regner nakkens grense fra kroppens akse. k = 0 (oppreist: bremsen, svevingen, brølet) gir det samme som uten. */
+    const LN = F.linje || null, LNA = (LN && LN.akse) || ['Hips', 'Spine2'], qL = new TQ(), vL = new V3(), vM = new V3();
+    B.kv = 0; if (LN && R.B[LNA[0]] && R.B[LNA[1]]) { const v = R.seg(LNA[0], LNA[1]); B.kv = -Math.atan2(v.dot(B.U0), v.dot(B.F0)) * (LN.k == null ? 1 : LN.k); }   /* + = kroppen heller mot buken i hvile (nesen ned i flukt) */
+    B.la = 0; { const b1 = B.begin; B.begin = () => { B.la = 0; return b1(); }; }   /* gjelder bildet det er satt i */
+    const LW = LN ? [[o.wing[0], LN.ving == null ? 1 : LN.ving], [((o.leg || [])[0] || [])[0], LN.bein == null ? 1 : LN.bein]].filter(x => x[0] && x[1]) : [];
+    B.linje = k => { const a = c01(k || 0) * B.kv; B.la = a; if (!a) return B; const r = f.root, s = r.scale.x;
+      vM.copy(MID).multiplyScalar(s).applyQuaternion(r.quaternion).add(r.position);                          /* midtpunktet, der place satte det */
+      vL.copy(B.L0).applyQuaternion(r.quaternion); r.quaternion.premultiply(qL.setFromAxisAngle(vL, -a));    /* nesen opp om sideaksen */
+      r.position.copy(MID).multiplyScalar(s).applyQuaternion(r.quaternion).negate().add(vM);
+      for (const [bn, w] of LW) { R.rot('L' + bn, B.L0, a * w); R.rot('R' + bn, B.L0, a * w); }            /* ytterst (først i bildet): vingene og beina holder stillingen i verden */
+      return B; };
     return B; };
   /* Slagsettene (grader og meter, for en stor fugl på rundt 10 m): el = slagets halve utslag i skulderen, em = midten (pluss = over ryggen), sw/sp = feiingen fram–bak og hvor
      mye den leder (0 = en strek fram i bunnen, 0,25 = en ring der oppslaget går bak nedslaget), tw = vridningen i skulderen, fold = foldingen i oppslaget, curl/cb = lasten
