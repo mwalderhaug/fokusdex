@@ -570,7 +570,16 @@ void main(){
   const scale = rs => { rs = rs || 1; if (rs === rsNow) return; rsNow = rs; const w = Math.round(512 * rs), h = Math.round(384 * rs); R.setSize(w, h, false); rtE.setSize(w, h); post.uniforms.uRes.value.set(w, h); };
 
   /* ---------- Byggeklossene (K): materialer og former. Alt lages én gang per cutscene. ---------- */
-  const sm = (vs, fs, un, o) => new T.ShaderMaterial(Object.assign({ vertexShader: vs, fragmentShader: fs, uniforms: Object.assign(un, U) }, o || {}));
+  /* Disen fra null (REGLER del 4 «Disen», research/kjemper.md 26 og strid 5; bak G3D.alt.dis = 'ny', av som standard): lufta 1 − e^(−b·d) ganget med dagens bånd
+     (smoothstep fra uFog.x til uFog.y), altså to lag dis oppå hverandre: nær og fjern får luft mellom seg, og horisonten er som i dag. b = DISB / uFog.x, så lufta
+     alene gir 20 % der dagens dis starter (Groudon 60: 7 % ved 20 enheter, 27 % ved 86 enheter ≈ 150 m, som researchens 75 % kontrast på 150 m). En kurve per art og
+     klipp av seg selv, siden filmene setter uFog per bilde. Figuren beholder dagens dis i seks trinn (fogK0). Bryteren leses når materialene lages (når filmen bygges),
+     og uten den er skyggerne tegn for tegn som før (en annen kode i fogK, også en gren som aldri ble tatt, flyttet piksler i fire av filmene). */
+  const DISB = 0.223, FOGK = 'float fogK(vec3 w){ float f = clamp((length(cameraPosition - w) - uFog.x) / (uFog.y - uFog.x), 0., 1.); return f * f * (3. - 2. * f) * uFog.z; }';
+  const disFS = fs => !(G3D.alt && G3D.alt.dis === 'ny') || fs.indexOf(FOGK) < 0 ? fs : fs.replace(FOGK, FOGK.replace('float fogK(', 'float fogK0(') +
+    ' float fogK(vec3 w){ float d = length(cameraPosition - w), f = clamp((d - uFog.x) / (uFog.y - uFog.x), 0., 1.); return (1. - (1. - f * f * (3. - 2. * f)) * exp(-' + DISB.toFixed(3) + ' * d / max(uFog.x, 4.))) * uFog.z; }')
+    .replace('floor(fogK(vW) * 6.', 'floor(fogK0(vW) * 6.');
+  const sm = (vs, fs, un, o) => new T.ShaderMaterial(Object.assign({ vertexShader: vs, fragmentShader: disFS(fs), uniforms: Object.assign(un, U) }, o || {}));
   const addBlend = () => ({ transparent: true, depthWrite: false, blending: T.CustomBlending, blendEquation: T.AddEquation, blendSrc: T.OneFactor, blendDst: T.OneFactor, blendEquationAlpha: T.AddEquation, blendSrcAlpha: T.ZeroFactor, blendDstAlpha: T.OneFactor });
   const softBlend = () => ({ transparent: true, depthWrite: false, blending: T.CustomBlending, blendEquation: T.AddEquation, blendSrc: T.OneFactor, blendDst: T.OneMinusSrcAlphaFactor, blendEquationAlpha: T.AddEquation, blendSrcAlpha: T.OneFactor, blendDstAlpha: T.OneMinusSrcAlphaFactor });
   const K = { sin, cos, PI, TAU, abs, max, min, floor, c01, mix, seg, io, eo, ei, back, spring, ant, hit, rnd, hex };

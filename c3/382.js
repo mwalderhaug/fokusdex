@@ -79,7 +79,8 @@
      research «rask_bevegelse» 21), ganget med linsa (fov/45). rig: 'baat' = en båt som vugger sakte (krenging og stamp på 0,12–0,16 Hz, under kvalmebåndet 0,2–0,4 Hz) og
      et lite skjelv; 'heli' = helikopter eller drone som glir (svak drift på 0,1 Hz). tIn: støyen tones inn; tEnd: fra da står kameraet nøyaktig på banen. src(t) → K.cam-argumentene. */
   const camLive = (src, o) => { const lag = X.follow(t => src(t).slice(0, 6), { f: o.f || 2.0, z: o.z == null ? 0.8 : o.z, t0: o.t0 }), sd = o.seed || 1, baat = o.rig === 'baat', A = o.amp == null ? 1 : o.amp;
-    return t => { const v = src(t), c = G3D.dbgKey ? v.slice(0, 6) : lag(t), w = (o.tIn != null ? io(c01((t - o.tIn) / 0.6)) : 1) * (o.tEnd != null ? 1 - io(c01((t - (o.tEnd - (o.ut || 1))) / (o.ut || 1))) : 1);
+    const lagM = X.follow(t => src(t).slice(0, 6), { f: o.f || 2.0, z: o.z == null ? 0.8 : o.z, t0: o.t0, mf: 1 });   /* G3D.alt.kam = 'ny' (REGLER del 4, 26.11 morgen): fjæra med målfart; vinklene er alt i grader */
+    return t => { const v = src(t), c = G3D.dbgKey ? v.slice(0, 6) : (X.alt('kam') ? lagM : lag)(t), w = (o.tIn != null ? io(c01((t - o.tIn) / 0.6)) : 1) * (o.tEnd != null ? 1 - io(c01((t - (o.tEnd - (o.ut || 1))) / (o.ut || 1))) : 1);
       const dx = v[3] - v[0], dy = v[4] - v[1], dz = v[5] - v[2], d = Math.hypot(dx, dy, dz) || 1, fk = (v[6] || 40) / 45, D2R = PI / 180;
       const yaw = (baat ? 0.1 * X.noise(t, sd, 0.55) + 0.06 * X.noise(t, sd + 5, 0.13) : 0.05 * X.noise(t, sd, 0.1) + 0.025 * X.noise(t, sd + 5, 0.45)) * fk * A * w * D2R;
       const pit = (baat ? 0.32 * sin(TAU * 0.137 * t + sd) + 0.08 * X.noise(t, sd + 9, 0.55) : 0.04 * X.noise(t, sd + 9, 0.1) + 0.02 * X.noise(t, sd + 13, 0.45)) * fk * A * w * D2R;
@@ -769,7 +770,7 @@ void main(){ float x = vUv.x - .5, y = vUv.y, sd = vQ.y;
 
         /* Kyogre: forbi under båten (0:04,57–0:12,5), opp fra dypet under den (0:13,2–0:23), finnene først (0:23,03), ryggen som en øy, så ligger han høyt og rir på dønningene. */
         let x = 0, y = -40, z = 0, yaw = 0, pit = 0, sh = 0, fin = 0, gl = 0, mv = null;
-        const tf = ny ? X.freeze(t, [QI.SLAM], 3, 0.3) : t;   /* figurens tid: tre like bilder (to stille steg) når finnene treffer vannet i slaget (låta, kameraet og vannet går videre) */
+        const tf = ny ? X.freeze(t, [QI.SLAM], 3, 0.3, 1) : t;   /* 1: filmens største nedslag (G3D.alt.frys = 'ny': 7 bilder med restfart og vibrasjon) */   /* figurens tid: tre like bilder (to stille steg) når finnene treffer vannet i slaget (låta, kameraet og vannet går videre) */
         if (ny && tf !== t) setRH(su, tf);   /* ny: i de frosne bildene flyter han på havet slik det var i nedslaget (ringen fra slaget står), så ingenting av ham rører seg */
         if (t >= QI.PASS - 0.3 && t < QI.B6 - 0.02) {
           z = t < QI.PASS - 0.04 ? 2.9 - 8 * (t - QI.MID) : PASSZ(t);   /* jevn fart i bildet, han stopper aldri (Jazz 20.11 og 24.11): inn på 0:04,57, midt under båten i lynet 0:07,66, halen ute rundt 0:10,8 (PASSZ). Før klippet (bilde 1, der han synes svakt langt ute) som før */ x = BT[0] + 0.4; y = -7; yaw = PI; sh = 0.8; gl = 0.12; }

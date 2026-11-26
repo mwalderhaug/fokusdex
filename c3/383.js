@@ -237,10 +237,12 @@ void main(){ float y = vUv.y, x = vUv.x * 6.2832; vec2 c = vec2(cos(x), sin(x));
   /* Kameraet med liv: banen følges med en fjær (etterslep) og får svak støy (som X.handheld), tonet inn fra tIn; fra tEnd står det nøyaktig på banen (der bildet må stå:
      kampens bilde). Ett per klipp (t0 = klippets start, der banen står i ro). src(t) → [px, py, pz, tx, ty, tz, fov, roll]; gir det samme til K.cam.
      o.ut: hvor lenge (s) etterslepet tones ut før tEnd (1). Over en lang bue som bremser: 2 eller mer, ellers tar kameraet igjen banen synlig det siste sekundet (kontrollen 25.11). */
-  const camLive = (src, o) => { const lag = X.follow(t => src(t).slice(0, 6), { f: o.f || 1.6, z: o.z == null ? 0.8 : o.z, t0: o.t0 }), A = o.amp || [0.04, 0.025];
+  const camLive0 = (src, o) => { const lag = X.follow(t => src(t).slice(0, 6), { f: o.f || 1.6, z: o.z == null ? 0.8 : o.z, t0: o.t0 }), A = o.amp || [0.04, 0.025];
     return t => { const v = src(t), c = lag(t), w = o.tIn != null ? io(seg(t, o.tIn, o.tIn + 0.6)) : 1, e = o.tEnd != null ? 1 - io(seg(t, o.tEnd - (o.ut || 1), o.tEnd)) : 1;
       for (let i = 0; i < 6; i++) c[i] = v[i] + (c[i] - v[i]) * e + X.noise(t, (o.seed || 1) + i * 17, o.hz || 0.6) * A[i < 3 ? 0 : 1] * w * e;
       return c.concat([v[6], v[7] || 0]); }; };
+  /* G3D.alt.kam = 'ny' (REGLER del 4 «Kameraets liv», 26.11 morgen): samme baner, men livet i grader ganget med linsa og fjæra med målfart (X.camLiv). */
+  const camLive = (src, o) => X.kamVelg(camLive0(src, o), X.camLiv(src, o));
   const camV = v => K.cam(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7]);
   /* Lys og glød som skal stå mot kameraet (K.face), og ting som plasseres etter figuren (g.at), regnes i act, før stillingen og kameraet for bildet er satt: de fikk
      forrige bildes kamera og stilling, så bildet avhenget av hvilket bilde som ble tegnet før (funnet 25.11 med gjennomgangssidens løkskinn; også i den godkjente filmen,

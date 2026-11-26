@@ -424,7 +424,7 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
     const mane = X.chain({ bones: MANE, drive: t => [pitch(t), 0.6 * sYN(t) + 0.4 * sY(t), 0], f: 1.2, fo: 0.85, z: 0.6, lim: 0.3, t0: o.mane });
     const tail = X.chain({ bones: TAIL, drive: t => [o.jolt(t), 0, 0], pose: (t, i) => i ? null : o.tail(t), f: 0.9, fo: 0.85, z: 0.5, lim: 0.4, t0: o.tail0 });
     return { at(t) { if (G3D.dbgKey) { const q = Q(t), tp = o.tail(t); return { bB: q.b, nB: q.n, bT: q.b, nT: q.n, bH: q.bh, h: q.h, yH: q.y, yN: q.y, c: q.c, f: o.hoof(t), mane: ZZ, tail: [[tp[0], tp[1], 0], [0, 0, 0], [0, 0, 0]] }; }
-      const tf = o.hits ? X.freeze(t, o.hits, 3, 0.3) : t, b = sB(tf), u = sT(tf), h = sH(tf), tp = o.tail(tf);
+      const tf = o.hits ? X.freeze(t, o.hits, 3, 0.3, 1) : t,   /* 1: stampen er filmens største nedslag (G3D.alt.frys = 'ny': 7 bilder med restfart og vibrasjon) */ b = sB(tf), u = sT(tf), h = sH(tf), tp = o.tail(tf);
       return { bB: b[0], nB: b[1], bT: u[0], nT: u[1], bH: h[0], h: h[1], yH: sY(tf), yN: sYN(tf), c: sC(tf), f: o.hoof(tf), mane: mane.at(tf), tail: tail.at(tf).map((r, i) => i ? r : [r[0] + tp[0], r[1] + tp[1], 0]) }; } }; };
   /* Liv i holdeposene: et hode som aldri står helt stille (svak, langsom støy i blikket og nesa) og en pust som er litt ujevn (fasen glir med støyen). */
   const liveH = (t, s) => [0.016 * X.noise(t, s, 0.33), 0.03 * X.noise(t, s + 7, 0.27)];
@@ -501,7 +501,7 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
   const K5 = [[L4, -9, 6.5, 19, 0, 5.8, 0, 46], [SW[0], -6.05, 6.2, 16.55, 0, 5.8, 0, 44], [BANG, -4.4, 5.95, 12.0, 0, 5.7, 0, 58]];
   const K6 = [[BANG, 2.0, 1.5, 76, 0, 8, 0, 50], [BANG + 0.45, 2.2, 1.6, 78.5, 0, 8.5, 0, 52], [BANG + 1.5, 0.5, 1.7, 52, 0, 7, 0, 56], [BANG + 2.55, -4.2, 1.9, 17, 0, 5.6, 0, 44], [BOOM[1], -4.8, 2.1, 14.6, 0, 5.5, 0, 42],
     [BOOM[1] + 1.3, -1, 3.2, 15.5, 0, 5.4, 0, 41], [BOOM[2] - 0.4, 5.2, 4.6, 14.2, 0, 5.2, 0, 40], [BOOM[2], 6, 4.9, 13.6, 0, 5.2, 0, 40]];
-  const hh6 = X.handheld(t => pathAt(t, K6).slice(0, 6), { t0: BANG, f: 3, z: 0.9, amp: [0.04, 0.03], hz: 0.7, seed: 6 });
+  const hh6 = X.handheld(t => pathAt(t, K6).slice(0, 6), { t0: BANG, f: 3, z: 0.9, amp: [0.04, 0.03], hz: 0.7, seed: 6, fov: t => pathAt(t, K6)[6] });   /* fov: linsa til livet i grader (G3D.alt.kam = 'ny') */
   const endCam = (S, t) => {
     if (t < BANG) { const iq = Math.pow(seg(t, SW[0], BANG), 2); camK(t, K5); S.post.sub = S.sub; S.post.subf = 0.01; S.post.subc = '#ffffff'; S.post.sh = X.rk(S, 0.6 * iq, 2.2); return; }
     if (t < BOOM[2]) { const c = hh6(t), fv = pathAt(t, K6)[6], tb = t - BANG; cam(c[0], c[1], c[2], c[3], c[4], c[5], fv);
@@ -517,9 +517,11 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
   const K7 = [[HIT[3] - 0.7, -3.3, 0.5, 7.6, 0, 1.7, 0.8, 52], [HIT[3] + 0.5, -3.7, 0.75, 8.2, 0, 2.1, 0.7, 52], [HIT[4] + 0.5, -5.8, 3.3, 12.6, 0, 4.0, 0, 46], [HIT[5] + 0.5, -4.8, 5.7, 12.0, 0, 5.9, 1.2, 38], [HIT[6] + 0.75, -3.0, 7.25, 10.2, 0, 6.95, 1.9, 27], [DROP, -2.8, 7.25, 9.8, 0, 6.95, 1.9, 25]];
   /* Kameraet med litt liv (Bevegelse, Opus 25.11): banen følges med en fjær (etterslep) og får svak støy, som X.handheld, men støyen tones inn fra tIn og ut mot tEnd,
      der bildet må stå nøyaktig (kampens bilde: arenaen tar over der filmen slutter). Ett per klipp; src(t) gir [px, py, pz, tx, ty, tz, fov]. */
-  const camLive = (src, o) => { const lag = X.follow(t => src(t).slice(0, 6), { f: o.f || 2, z: o.z || 0.85, t0: o.t0 }), A = o.amp || [0.04, 0.025];
+  const camLive0 = (src, o) => { const lag = X.follow(t => src(t).slice(0, 6), { f: o.f || 2, z: o.z || 0.85, t0: o.t0 }), A = o.amp || [0.04, 0.025];
     return t => { const v = src(t), c = lag(t), w = (o.tIn != null ? io(seg(t, o.tIn, o.tIn + 0.6)) : 1) * (o.tEnd != null ? 1 - io(seg(t, o.tEnd - 1, o.tEnd)) : 1);
       for (let i = 0; i < 6; i++) c[i] += X.noise(t, (o.seed || 1) + i * 17, o.hz || 0.6) * A[i < 3 ? 0 : 1] * w; c.push(v[6]); return c; }; };
+  /* G3D.alt.kam = 'ny' (REGLER del 4 «Kameraets liv», 26.11 morgen): samme baner, men livet i grader ganget med linsa og fjæra med målfart (X.camLiv). */
+  const camLive = (src, o) => X.kamVelg(camLive0(src, o), X.camLiv(src, Object.assign({ f: 2, z: 0.85 }, o)));
   /* 7 med liv: banen K7 med etterslep og støy (tett på ansiktet til slutt: små utslag), og støtene på slagene som før. */
   const cam7 = camLive(t => pathAt(t, K7), { t0: HIT[3] - 0.7, f: 2.2, z: 0.85, amp: [0.03, 0.016], hz: 0.55, seed: 7 });
   const shot7n = (S, t) => { const v = cam7(t); let rc = 0; [3, 4, 5, 6].forEach((k, i) => { rc += kick(t, HIT[k], 11, 6) * (0.55 + 0.12 * i); });
@@ -532,7 +534,7 @@ void main(){ if (vW.y > 0.) discard; float wy = -vW.y; vec3 b = texture2D(map, v
      holdes av en hånd (X.handheld), og hvert utbrudd rister det etter avstanden. */
   const K4 = [[L2, 2.0, 1.7, 49, 0, 6, 0, 50], [L2 + 1.25, 2.6, 1.6, 53, 0, 9, 0, 52], [L2 + 1.87, 5.5, 1.6, 66, 0, 12, 0, 55], [L2 + 3.55, 7.0, 1.9, 120, 0, 15, 0, 56], [L2 + 4.5, 6.4, 2.1, 129, 0, 14, 0, 54], [L3, 6.0, 2.2, 130.5, 0, 16, 0, 54],
     [L3 + 1.9, 5.4, 2.0, 127, 0, 105, -10, 58], [L3 + 3.7, 5, 2.0, 118, 0, 60, -6, 56], [L4, 4.5, 2.2, 104, 0, 14, 0, 52]];
-  const hh4 = X.handheld(t => pathAt(t, K4).slice(0, 6), { t0: L2, f: 2.4, z: 0.9, amp: [0.05, 0.04], hz: 0.7, seed: 4 });
+  const hh4 = X.handheld(t => pathAt(t, K4).slice(0, 6), { t0: L2, f: 2.4, z: 0.9, amp: [0.05, 0.04], hz: 0.7, seed: 4, fov: t => pathAt(t, K4)[6] });
   const shot4 = (S, t) => { const c = hh4(t), fv = pathAt(t, K4)[6]; cam(c[0], c[1], c[2], c[3], c[4], c[5], fv);
     let sh = 0; PIL.forEach((q, i) => { const a = t - PT2[i][0]; if (a < 0 || a > 0.7) return; const w = 0.9 * min(1, 16 / hyp(q[0] - c[0], q[1] - c[2])); X.ev(S, 'f', a, w); sh += w * (1 - a / 0.7); });
     S.post.sh = X.tatt(S, min(1.9, sh)) + X.hk(S, t, L2 + 0.28, 0.4, 0.5); };   /* ingen blink: over den svarte himmelen ble det et grått slør, og utbruddene lyser selv */

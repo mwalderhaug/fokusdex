@@ -60,8 +60,12 @@ const G3C = (() => {
     return st; };
   const vec = (v, n) => typeof v === 'number' ? [v] : v || new Array(n).fill(0);
   X.follow = (src, o) => { o = o || {}; const t0 = o.t0 || 0, w = TAU * (o.f || 1.2), z = o.z == null ? 0.45 : o.z, one = typeof src(t0) === 'number', n = vec(src(t0)).length;
-    const st = springSim(n, s => { const v = vec(src(t0), n); for (let j = 0; j < n; j++) { s[j] = v[j]; s[n + j] = 0; } },
-      (s, t, dt) => { const v = vec(src(t), n); for (let j = 0; j < n; j++) { s[n + j] += (w * w * (v[j] - s[j]) - 2 * z * w * s[n + j]) * dt; s[j] += s[n + j] * dt; } }, o);
+    /* o.mf (målfart, REGLER del 4 «Kameraets liv»): fjæra får også målets fart (bakoverdifferanse over 1/240 s), så etterslepet ligger på endringene i farten,
+       ikke på den jevne farten (et mål i jevn fart følges uten etterslep; feilen drives av målets akselerasjon). Uten mf som før, tall for tall. */
+    const mf = !!o.mf, hv = 1 / 240, vel = (t, v) => { const u = vec(src(t - hv), n), d = []; for (let j = 0; j < n; j++) d.push((v[j] - u[j]) / hv); return d; };
+    const st = springSim(n, s => { const v = vec(src(t0), n), d = mf ? vel(t0, v) : null; for (let j = 0; j < n; j++) { s[j] = v[j]; s[n + j] = d ? d[j] : 0; } }, mf
+      ? (s, t, dt) => { const v = vec(src(t), n), d = vel(t, v); for (let j = 0; j < n; j++) { s[n + j] += (w * w * (v[j] - s[j]) + 2 * z * w * (d[j] - s[n + j])) * dt; s[j] += s[n + j] * dt; } }
+      : (s, t, dt) => { const v = vec(src(t), n); for (let j = 0; j < n; j++) { s[n + j] += (w * w * (v[j] - s[j]) - 2 * z * w * s[n + j]) * dt; s[j] += s[n + j] * dt; } }, o);
     return t => { if (t <= t0) { const v = src(t); return one ? v : Array.from(v); } const s = st(t); return one ? s[0] : Array.from(s.subarray(0, n)); }; };
   X.chain = o => {
     const B = o.bones || [], n = o.n || B.length, t0 = o.t0 || 0, f0 = o.f || 1.6, fo = o.fo == null ? 0.8 : o.fo, z = o.z == null ? 0.35 : o.z, lim = o.lim || 0;
@@ -77,13 +81,51 @@ const G3C = (() => {
         return out; },
       add(f, t, w) { const r = C.at(t); w = w == null ? 1 : w; for (let i = 0; i < n && i < B.length; i++) f.add({ [B[i]]: r[i] }, w); return r; } };
     return C; };
-  X.freeze = (t, list, n, cu) => { const d = (n == null ? 3 : n) / 30; cu = cu || 0.3;
+  X.freeze = (t, list, n, cu, big) => { if (big && X.alt('frys')) return X.frysStor(t, list, cu); const d = (n == null ? 3 : n) / 30; cu = cu || 0.3;
     for (const h of list || []) { if (t < h) continue; if (t < h + d) return h; if (t < h + d + cu) return t - d * (1 - io((t - h - d) / cu)); }
     return t; };
   const nz1 = (x, s) => { const i = floor(x), f = x - i, u = f * f * f * (f * (f * 6 - 15) + 10); return mix(rnd(i, s), rnd(i + 1, s), u) * 2 - 1; };
   X.noise = (t, seed, hz) => { const x = t * (hz || 0.6), s = seed || 0; return 0.72 * nz1(x, s) + 0.28 * nz1(x * 2.17 + 3.1, s + 11); };
   X.handheld = (src, o) => { o = o || {}; const lag = X.follow(src, { f: o.f || 1.6, z: o.z == null ? 0.8 : o.z, t0: o.t0, dt: o.dt }), A = o.amp || [0.04, 0.025], hz = o.hz || 0.6, sd = o.seed || 1;
-    return t => { const c = lag(t); for (let i = 0; i < 6; i++) c[i] += X.noise(t, sd + i * 17, hz) * A[i < 3 ? 0 : 1]; return c; }; };
+    const gml = t => { const c = lag(t); for (let i = 0; i < 6; i++) c[i] += X.noise(t, sd + i * 17, hz) * A[i < 3 ? 0 : 1]; return c; };
+    let ny = null; return t => { if (!X.alt('kam')) return gml(t); ny = ny || X.camLiv(src, { t0: o.t0, f: o.f, z: o.z, dt: o.dt, amp: o.amp, seed: o.seed, rig: o.rig, fov: o.fov }); return ny(t).slice(0, 6); }; };
+
+  /* ---------- De nye bryterne fra REGLER del 4 «Alle filmer» (26.11 morgen): AV som standard, til Jazz har sett dem side om side ----------
+     G3D.alt.kam = 'ny' (kameraets liv i grader), G3D.alt.frys = 'ny' (det største nedslaget), G3D.alt.dis = 'ny' (disen, i raid3d.js). Live og gjennomgangssiden: &kam=ny &frys=ny &dis=ny. */
+  X.alt = k => !!G3D.alt && G3D.alt[k] === 'ny';
+
+  /* ---------- Kameraets liv i grader (REGLER del 4 «Kameraets liv»; research/risting.md 1–6 og 21, rask_bevegelse.md 1–4, kjemper.md strid 3) ----------
+     Livet er dreining, ikke forflytning: tre lag i grader ganget med linsa (fov/45, så utslaget i bildet blir likt i en vid og en lang linse; i dag er skjelvet i enheter
+     og 13 × sterkere tett på enn langt unna), det største utslaget i det tregeste laget (0,1–0,15 Hz, høyst 0,3°: under kvalmebåndet 0,2–0,4 Hz), stampen større enn
+     giringen (0,7 ×), ingen rull og ingen flytting av kameraet. Fjæra har målfart (X.follow mf), så etterslepet ligger på endringene i farten og ikke spiser rommet foran.
+     X.LIV: lagene per tenkt rigg, [[grader, Hz], …]: hand (en operatør på bakken), kran, heli og drone (glir), stativ (nesten ingenting).
+     X.liv(c, t, o): dreier siktet i c = [px, py, pz, tx, ty, tz] om kameraets plass; o = { fov, rig (navn eller lagene), seed, w (0–1), amp (ganger) }.
+     X.camLiv(src, o): ett klipp med liv, som filmenes camLive: src(t) → [px, py, pz, tx, ty, tz, fov, (rull)] (uten fov: o.fov, tall eller funksjon av t);
+       o = { t0, f (1,6), z (0,8), tIn (livet tones inn over 0,6 s), tEnd og ut (etterslepet og livet tones ut, så kameraet står på banen fra tEnd), rig, seed,
+       amp (et tall, eller filmens gamle [plass, sikt] i enheter: forholdet til standarden 0,025 i siktet beholdes, så et rolig klipp er rolig også i grader) }.
+     X.kamVelg(gammel, ny): velger per bilde etter bryteren (kameraene lages når filmen lastes, før bryteren settes). */
+  X.LIV = { hand: [[0.3, 0.12], [0.12, 0.7], [0.04, 1.8]], kran: [[0.2, 0.1], [0.06, 0.6], [0.02, 1.6]], heli: [[0.25, 0.1], [0.08, 0.5], [0.02, 1.4]], drone: [[0.22, 0.1], [0.06, 0.45]], stativ: [[0.06, 0.1], [0.02, 0.8]] };
+  X.liv = (c, t, o) => { o = o || {}; const L = Array.isArray(o.rig) ? o.rig : X.LIV[o.rig || 'hand'] || X.LIV.hand, sd = o.seed || 1, k = (o.fov || 45) / 45 * PI / 180 * (o.w == null ? 1 : o.w) * (o.amp == null ? 1 : o.amp);
+    if (!(k > 0)) return c; let yw = 0, pt = 0; L.forEach(([a, hz], i) => { pt += a * X.noise(t, sd + 7 * i, hz); yw += 0.7 * a * X.noise(t, sd + 40 + 7 * i, 0.9 * hz); });
+    const dx = c[3] - c[0], dy = c[4] - c[1], dz = c[5] - c[2], d = Math.hypot(dx, dy, dz) || 1, hh = Math.hypot(dx, dz) || 1, sy = Math.tan(yw * k) * d;
+    c[3] -= dz / hh * sy; c[4] += Math.tan(pt * k) * d; c[5] += dx / hh * sy; return c; };
+  X.camLiv = (src, o) => { o = o || {}; const lag = X.follow(t => src(t).slice(0, 6), { f: o.f || 1.6, z: o.z == null ? 0.8 : o.z, t0: o.t0, dt: o.dt, mf: 1 }), ut = o.ut || 1;
+    const am = Array.isArray(o.amp) ? o.amp[1] / 0.025 : o.amp == null ? 1 : o.amp;
+    return t => { const v = src(t), c = G3D.dbgKey ? v.slice(0, 6) : lag(t), e = o.tEnd != null ? 1 - io(seg(t, o.tEnd - ut, o.tEnd)) : 1, w = (o.tIn != null ? io(seg(t, o.tIn, o.tIn + 0.6)) : 1) * e;
+      for (let i = 0; i < 6; i++) c[i] = v[i] + (c[i] - v[i]) * e;
+      X.liv(c, t, { fov: v.length > 6 ? v[6] : typeof o.fov === 'function' ? o.fov(t) : o.fov || 45, rig: o.rig, seed: o.seed, w, amp: am });
+      return v.length > 6 ? c.concat([v[6], v[7] || 0]) : c; }; };
+  X.kamVelg = (a, b) => t => X.alt('kam') ? b(t) : a(t);
+
+  /* ---------- Det største nedslaget (REGLER del 4; research/filmatiske_oyeblikk.md 20 og strid 1, kjemper.md strid 1; bak G3D.alt.frys = 'ny') ----------
+     Bare filmens største slag (big i X.freeze) står 7 bilder (0,23 s; Smash fryser 0,25–0,5 s på et tungt slag, og 3 bilder er det letteste), med litt restfart (6 %:
+     den som slår, rører seg nesten umerkelig) og en vibrasjon som avtar gjennom frysingen (7,5 Hz, fire bilder per sving i 30 bilder/s; ±0,02 s av figurens tid,
+     avtar som (1 − u)²). Så tar figuren igjen tiden på cu sekunder uten sprang. Låta, ristingen, kameraet og effektene går på t som før. */
+  X.frysStor = (t, list, cu) => { const d = 7 / 30, r = 0.06, A = 0.02, f = 7.5; cu = cu || 0.3;
+    for (const h of list || []) { if (t < h) continue; const a = t - h;
+      if (a < d) { const u = a / d; return h + r * a + A * sin(TAU * f * a) * (1 - u) * (1 - u); }
+      if (a < d + cu) return t - d * (1 - r) * (1 - io((a - d) / cu)); }
+    return t; };
 
   /* ---------- Ristingen som hendelser (oppdrag_risting.md, 26.11 natt) ----------
      Filmene skriver ristingen i S.post.sh som før (dagens tall, som bryteren G3D.alt.rist = 'gammel' bruker), men hvert ledd pakkes inn, så den nye ristingen
