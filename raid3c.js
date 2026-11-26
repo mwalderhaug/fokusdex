@@ -11,11 +11,11 @@
    Tyngden i bevegelsene: forvarsel (trekker seg sammen før den slår ut), overskudd (back: forbi målet og tilbake), en dempet fjær etter hvert nedslag (sq). */
 const G3C = (() => {
   /* ARTS: artene som har en fil i c3/. Legg til nummeret når fila finnes (og fila i FILES i sw.js). */
-  const X = { ARTS: [383, 382, 144, 493], snd: {}, sfx: [], base: 'c3/' }, jobs = {};
+  const X = { ARTS: [383, 382, 144, 493, 150], NOI: [150], snd: {}, sfx: [], base: 'c3/' }, jobs = {};   /* NOI: fila finnes, men arten selv har ingen intro i 3D ennå (150: bare Shadow Mewtwo, 'c3:dk150') */
   const ok = typeof G3D !== 'undefined' && typeof CINE !== 'undefined';
-  X.has = id => ok && X.ARTS.indexOf(+id) >= 0;
+  X.has = id => ok && X.ARTS.indexOf(+id) >= 0 && X.NOI.indexOf(+id) < 0; X.hasDk = () => ok && X.ARTS.indexOf(150) >= 0;
   /* Henter artens fil (én gang). Feiler den (ikke nett, ikke mellomlagret), kan den prøves igjen senere, og sprite-introen spilles i mellomtiden. */
-  X.load = id => { id = +id; if (!X.has(id)) return Promise.reject(new Error('no c3 ' + id));
+  X.load = id => { id = +id; if (!ok || X.ARTS.indexOf(id) < 0) return Promise.reject(new Error('no c3 ' + id));
     return jobs[id] || (jobs[id] = new Promise((res, rej) => { const s = document.createElement('script'); s.src = X.base + id + '.js'; s.onload = () => res(true); s.onerror = () => { jobs[id] = null; s.remove(); rej(new Error('c3 ' + id)); }; document.head.appendChild(s); })); };
   /* Til bakgrunnen (raidvarselet, raidkortet): artens fil, motoren og modellene til introen og kampen hentes, uten at noe bygges eller tegnes. */
   X.warm = id => X.load(id).then(() => G3D.warm('c3:' + id)).then(() => G3D.has('c3:' + id + 'b') ? G3D.warm('c3:' + id + 'b').catch(() => 0) : 0).then(() => true);
