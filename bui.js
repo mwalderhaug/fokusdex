@@ -655,7 +655,7 @@ async function legendIntro(B) {
   /* Ut av en film med egen låt, fra tidspunktet tb i filmen: låta og sengen tones ut, stillhet, kamplåta inn, og virvelen (0,85 s) ender i hvitt på kamplåtas første slag. */
   const leave = tb => { if (leaving || skipped) return; leaving = true; if (sk) sk.hidden = true; if (go) go.hidden = true;
     const d = (tb - now()) * 1000, fd = nx.fade == null ? 0.6 : nx.fade, gp = nx.gap == null ? 0.5 : nx.gap, lead = Math.max(0, (nx.hit || 0) - (nx.at || 0));
-    later(() => { PACK.music('', { out: fd }); PACK.stingOut(fd); }, d); later(() => battleMusic(B, { at: nx.at || 0 }), d + (fd + gp) * 1000);
+    later(() => { PACK.music('', { out: fd }); PACK.stingOut(fd); if (typeof filmLvl === 'function') filmLvl(id, 0, 0, fd + gp); }, d); later(() => battleMusic(B, { at: nx.at || 0 }), d + (fd + gp) * 1000);   /* lyden på mobil (bryteren): nivået ned i uttoningen og stillheten, så kamplåta starter på dagens nivå */
     later(() => { skipped = true; stop(); pl.skip(); }, d + (fd + gp + lead) * 1000 - 850); };
   const skip = () => { if (skipped || leaving) return; const held = go && !go.hidden; if (noskip && !held && now() < noskip) return;   /* hele fløyta spilles før en kan gå videre */
     if (ownOn && held) { sfx.tap(); const t = now() + 0.1, b = mus.bar; return leave(b ? b[0] + Math.ceil((t - b[0]) / b[1]) * b[1] : t); }   /* Continue: på neste taktstrek */

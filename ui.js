@@ -279,17 +279,22 @@ function cryMob(a, src, buf, g, at, norm) {
   sub.connect(s1); s1.connect(s2); s2.connect(sg); sg.connect(g); sub.start(at); g.gain.value *= 0.8;
 }
 /* Filmens nivå på mobil (lyd.md 24): introene lå på −18,6 til −21,6 LUFS mot −16 ±2. Låta bærer nivået og skal ikke endres, og sengene skal ligge under den, så hele
-   filmen (låta, sengen, lydene og brølet) løftes like mye i summen, med taket i den myke klipperen på −1,2 dBFS mens filmen går (sann topp høyst −1 dBTP, også etter AAC i en video). dB per film,
+   filmen (låta, sengen, lydene og brølet) løftes like mye i summen, med taket i den myke klipperen på −1,2 dBFS mens filmen går (sann topp høyst −1,2 dBTP i appen; etter AAC i en video kan den bli −0,4, så videoene legger lyden 1 dB ned). dB per film,
    målt med audio/mobil.py (tallene: NOTES 26.11 natt, «Lyden på mobil»). Filmer som ikke står her, er urørt. */
-const FILMDB = { 'c3:383': 2.2, 'c3:383p': 0, 'c3:382': 3.5, 'c3:382p': 0.8, 'c3:144': 4.6, 'c3:493': 4.6, 'c3:493p': 1.5 }, FILMTAK = 0.87;
-function filmLvl(id, on, now) {
+const FILMDB = { 'c3:383': 2.2, 'c3:383p': 0, 'c3:382': 3.5, 'c3:382p': 0.8, 'c3:144': 4.6, 'c3:493': 4.6, 'c3:493p': 1.5 }, FILMTAK = 0.87, FILMFALL = 0.2;
+/* Ned igjen etter filmen (kontrollen av «Lyden på mobil», lm3): kampen fortsetter ofte på filmens låt (Kyogre, Articuno, Arceus), og et fall på 3–5 dB over 2 s hørtes
+   midt i låta. Nå glir nivået ned lineært i dB med høyst FILMFALL dB/s (4,6 dB over 23 s), så langsomt at det ikke høres som et fall; eller over dur sekunder i stillheten
+   mellom to låter (Groudon: introlåta tones ut, stillhet, så kamplåta: legendIntro, leave), så kamplåta starter på dagens nivå. */
+function filmLvl(id, on, now, dur) {
   if (!lydMob() && !(BUS && BUS.fl)) return;   /* uten bryteren: ingenting (og ingen lydgraf lages her) */
   const b = bus(), a = ac(); if (!b || !b.post || !a) return;
   const db = on && lydMob() ? FILMDB[id] || 0 : 0, k = Math.pow(10, db / 20), c = db ? FILMTAK : 1, t = a.currentTime; b.fl = db;
   if (now) { b.pre.gain.setValueAtTime(k / c / SUMIN, t); b.post.gain.setValueAtTime(c, t); return; }
-  const tc = on ? 0.1 : 0.8;   /* opp på rundt 0,3 s når filmen starter, ned over rundt 2–3 s etter Continue (lydbildet setter seg, ikke et fall) */
-  b.pre.gain.cancelScheduledValues(t); b.post.gain.cancelScheduledValues(t); b.pre.gain.setValueAtTime(b.pre.gain.value, t); b.post.gain.setValueAtTime(b.post.gain.value, t);
-  b.pre.gain.setTargetAtTime(k / c / SUMIN, t, tc); b.post.gain.setTargetAtTime(c, t, tc);
+  const p0 = b.pre.gain.value, q0 = b.post.gain.value;
+  b.pre.gain.cancelScheduledValues(t); b.post.gain.cancelScheduledValues(t); b.pre.gain.setValueAtTime(p0, t); b.post.gain.setValueAtTime(q0, t);
+  if (on) { b.pre.gain.setTargetAtTime(k / c / SUMIN, t, 0.1); b.post.gain.setTargetAtTime(c, t, 0.1); return; }   /* opp på rundt 0,3 s når filmen starter */
+  const cur = Math.abs(20 * Math.log10(Math.max(1e-4, p0 * q0 * SUMIN))), T = dur != null ? Math.max(0.05, dur) : Math.max(1, cur / FILMFALL);   /* dB over dagens nivå nå, og tiden ned */
+  b.pre.gain.exponentialRampToValueAtTime(1 / SUMIN, t + T); b.post.gain.exponentialRampToValueAtTime(1, t + T);   /* begge lineært i dB, så summen også er det */
 }
 /* deep: brølet i cutscenene (Jazz 18.11): lagt ned i tonehøyde, med mer bass og et lag en oktav under. I kampen brukes det vanlige. */
 function cry(id, delay = 0, vol = 0.45, deep = 0) {

@@ -276,8 +276,9 @@ const PACK = (() => {
     return hit ? hit.f : '';
   };
   /* at (valgfritt): hvor i lyden den starter (sekunder, eller en funksjon som spørres idet lyden er klar: lydsengen til en cutscene følger låtas klokke). */
-  P.sting = async (path, loop, at) => { const my = job, pm = typeof lydMob === 'function' && lydMob() && /^sfx\/natur\/[^/]+\.mp3$/.test(path || '') ? path.replace(/\.mp3$/, '_m.mp3') : '';   /* lyden på mobil (ui.js, bak bryteren): sengen med lavpass etter avstanden, når den finnes */
-    const d = (pm && await decode(pm)) || await decode(path); if (!d || my !== job) return false; P.stingOut(0.05); sting = startBuf(d, { loop: !!loop, tg: tgain(path), path, at: Math.max(0, (typeof at === 'function' ? at() : at) || 0) }); return !!sting; };
+  const NOM = new Set();   /* lyden på mobil: senger uten <navn>_m.mp3 (de spørres etter én gang per økt) */
+  P.sting = async (path, loop, at) => { const my = job, pm0 = typeof lydMob === 'function' && lydMob() && /^sfx\/natur\/[^/]+\.mp3$/.test(path || '') ? path.replace(/\.mp3$/, '_m.mp3') : '', pm = NOM.has(pm0) ? '' : pm0;   /* lyden på mobil (ui.js, bak bryteren): sengen med lavpass etter avstanden, når den finnes */
+    const d = (pm && (await decode(pm) || (NOM.add(pm), null))) || await decode(path); if (!d || my !== job) return false; P.stingOut(0.05); sting = startBuf(d, { loop: !!loop, tg: tgain(path), path, at: Math.max(0, (typeof at === 'function' ? at() : at) || 0) }); return !!sting; };
   P.stinging = () => !!sting;
   /* FLERE LÅTER I ÉN FILM (Arceus, 3.1): låter fra «special» lagt på filmens klokke foran kamplåta. list = [{ f: sti, at: sekunder ut i filmen, out: [fra, til] uttoning }],
      og kamplåta (path) kommer inn o.at sekunder ut (negativ at: en kald start). Alt står på samme lydklokke (kamplåtas t0), så P.clock() er filmens tid hele veien, og
