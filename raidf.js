@@ -429,7 +429,7 @@
         aura(cx, y, s, '#7ae0ff', 4 + bt * 4, 0.45 + bt * 0.3); spr(cx, y, s); dust('spark', { n: 60, seed: 4, cols: ['#4ad0ff', '#fff'], a: 1, spd: 3, size: 2 });
         wave(ZR, cx, cy, { col: '#eaffff', r: 560, d: 0.8, w: 18 }); wave(ZR + 0.3, cx, cy, { col: '#4ad0ff', r: 560, d: 0.9 }); wave(7.84, cx, cy, { col: '#7ae0ff', r: 560, d: 0.9 }); card(7.84, { col: '#4ad0ff' }); }
       vig(0.55, '#01030a');
-      P.sh = (fin ? 0 : lit * (1 + ch * 5)) + hit(t, ZR, 1.1) * 16 + bt * 3; P.fl = max(hit(t, ZR, 0.45), hit(t, 7.84, 0.2) * 0.5, seg(t, 10.25, 10.5)); P.fc = '#eaf8ff'; P.rgb = hit(t, ZR, 0.7) * 9; P.z = 1 + ch * 0.14 * (fin ? 0 : 1) + hit(t, ZR, 0.4) * 0.14; P.zy = cy;
+      P.sh = (fin ? 0 : (typeof G3D !== 'undefined' && G3D.alt && G3D.alt.rist === 'alle' ? 0.6 : lit) * (1 + ch * 5)) + hit(t, ZR, 1.1) * 16 + bt * 3;   /* den nye ristingen ('alle'): ladningen, ikke lyset bilde for bilde */ P.fl = max(hit(t, ZR, 0.45), hit(t, 7.84, 0.2) * 0.5, seg(t, 10.25, 10.5)); P.fc = '#eaf8ff'; P.rgb = hit(t, ZR, 0.7) * 9; P.z = 1 + ch * 0.14 * (fin ? 0 : 1) + hit(t, ZR, 0.4) * 0.14; P.zy = cy;
     },
     air(t, k) {
       fill('#030a1c', 0.24 * k); const q = floor(t * 2.4), ph = (t * 2.4) % 1;

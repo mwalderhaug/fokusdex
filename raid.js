@@ -226,15 +226,20 @@ const CINE = (() => {
      svakt er lavt og rolig (1,8 Hz), sterkt raskere (4,4 Hz), og en fast grunnristing blir nesten borte (traume²). Typene: s slag og treff (spark 3,5–7 Hz og støy
      4,4 Hz), e eksplosjon (spark 2,2–6 Hz med to dempede svingninger, lengden ∝ E^(1/3)), f fotsteg og søyler (ett lavt bump), b brøl (rumling 2,3 Hz som tones inn
      og ut, og et lite rykk), p et tog av små støt eller en lang rumling (2,2 Hz, ingen spark). Nivåene: hz = 'v' er fart (et lag på 1 Hz og et lite på 3,6 Hz).
-     Retningen er hvor bildet sparkes (0 = høyre, 90 = ned); uten den nesten loddrett, litt ulik for hvert slag. Kildene: work/raids3d/research/risting.md. */
+     Retningen er hvor bildet sparkes (0 = høyre, 90 = ned): uten den nesten loddrett ned (kameraet opp), litt ulik for hvert slag, og fotsteg rett opp (kameraet
+     dupper ned, 270°, uten rull); med kildens plass i verden (dir = [x, y, z], X.skDir i raid3c.js) mot kilden, for kameraet dyttes bort fra den. Brølet tones inn
+     over 0,25 s. Den nye gjelder 3D-filmene; 2D-filmene, bossfilmene og arenaene har dagens til Jazz har sett dem (ristOld). Kildene: work/raids3d/research/risting.md. */
   const nz1 = (x, s) => { const i = floor(x), f = x - i, u = f * f * f * (f * (f * 6 - 15) + 10); return mix(rnd(i, s), rnd(i + 1, s), u) * 2 - 1; };
   const nzs = (t, s, hz) => { const x = t * hz; return 0.72 * nz1(x, s) + 0.28 * nz1(x * 2.17 + 3.1, s + 11); };   /* som X.noise: laget på 2,17 × er under 10 Hz når hz ≤ 4,6 */
+  const sst = x => { x = c01(x); return x * x * (3 - 2 * x); };
   const fjr = (u, f, z) => Math.exp(-z * TAU * f * u) * cos(TAU * f * Math.sqrt(1 - z * z) * u);   /* fullt i første bilde, så tilbake som en dempet fjær */
   /* Per type: [sparket: Hz, demping, del; støyen: Hz, del; lengden (s, til 1 %); toppen (s); slingringen etterpå (del)] */
   const SKT = { s: [5.5, 0.45, 1.0, 4.4, 0.7, 0.8, 0.2, 0.22], e: [4.5, 0.22, 1.15, 3.2, 0.65, 1.2, 0.15, 0.3], f: [3.0, 0.65, 1.0, 0, 0, 0.5, 0, 0],
     b: [4.0, 0.5, 0.55, 2.3, 0.9, 1.0, 0.4, 0.15], p: [0, 0, 0, 2.2, 0.8, 0.4, 0, 0] };
   const RR = 0.00074;   /* rull i radianer per piksel: 46° på 384 px, og rullen rundt 0,35 × dreiningen (den er mest kvalmende) */
-  const ristOld = () => typeof G3D !== 'undefined' && !!G3D.alt && G3D.alt.rist === 'gammel';
+  /* Hvilken risting bildet får (kontrollen 26.11): den nye i 3D-filmene (P.tq), dagens i 2D-filmene, bossfilmene og arenaene, for Jazz har bare sett 3D-filmene
+     side om side. G3D.alt.rist = 'gammel': dagens overalt · 'alle': den nye også i 2D-filmene og arenaene (vises side om side før den kan bli standard der). */
+  const ristOld = () => { const a = typeof G3D !== 'undefined' && G3D.alt ? G3D.alt.rist : null; return a === 'gammel' || (a !== 'alle' && !(P && P.tq != null)); };
   const shkNew = () => {
     const t = P.tq != null ? P.tq : T; let x = 0, y = 0, r = 0;
     const nz = (A, hz, sd, kx) => { x += A * kx * nzs(t, sd, hz); y += A * nzs(t, sd + 1, hz * 0.93); r += A * RR * 0.45 * nzs(t, sd + 2, hz * 0.7); };
@@ -244,8 +249,8 @@ const CINE = (() => {
       const A = 2 * a, S = min(2, max(0.5, Math.sqrt(a / 2))), E3 = min(1.6, max(0.6, Math.cbrt(a / 2))), sd = 7 + floor(rnd(floor((t - u) * 30 + 0.5), 3) * 90), d = e[3] || 0.5;
       const L = ty === 'b' ? max(0.8, d) : ty === 'p' ? max(0.4, 0.7 * d) : ty === 'f' ? k[5] : k[5] * (ty === 'e' ? E3 : S), h = ty === 'b' ? 0.4 * d : ty === 'p' ? 0.25 * d : k[6] * (ty === 'e' ? E3 : S);
       if (k[2]) { const f = ty === 'f' ? k[0] : ty === 'e' ? min(6, max(2.2, k[0] / E3)) : min(7, max(3.5, k[0] / Math.sqrt(S))), q = A * k[2] * fjr(u, f, k[1]);
-        const dg = (e[4] == null ? 90 + 50 * (rnd(sd, 9) - 0.5) : e[4]) * PI / 180; x += q * cos(dg); y += q * sin(dg); r += q * RR * 0.35 * (rnd(sd, 5) < 0.5 ? -1 : 1); }
-      if (k[4]) { const env = (u < h ? 1 : Math.exp(-4.6 * (u - h) / L)) * (ty === 'b' ? c01(u / 0.06) : ty === 'p' ? c01(u / 0.1) : 1); if (env > 0.004) nz(A * k[4] * env, k[3], sd, 0.75); }
+        const dg = (e[4] != null ? e[4] : ty === 'f' ? 270 : 90 + 50 * (rnd(sd, 9) - 0.5)) * PI / 180; x += q * cos(dg); y += q * sin(dg); if (ty !== 'f') r += q * RR * 0.35 * (rnd(sd, 5) < 0.5 ? -1 : 1); }
+      if (k[4]) { const env = (u < h ? 1 : Math.exp(-4.6 * (u - h) / L)) * (ty === 'b' ? sst(u / 0.25) : ty === 'p' ? c01(u / 0.1) : 1); if (env > 0.004) nz(A * k[4] * env, k[3], sd, 0.75); }
       if (k[7]) { const w = k[7] * Math.exp(-u / (0.35 * max(1, S))); if (w > 0.004) nz(A * w, 1.1, sd + 50, 0.8); } }
     const res = (P.sh || 0) - 2 * (P.skv || 0);
     if (res > 0.02) { const am = res * res / (res + 2), w = c01((am - 1) / 5); if (w < 1) nz(1.4 * am * (1 - w), 1.8, 23, 0.75); if (w > 0) nz(1.4 * am * w, 4.4, 29, 0.75); }

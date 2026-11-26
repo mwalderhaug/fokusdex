@@ -92,8 +92,13 @@ const G3C = (() => {
        X.hks(S, t, [t0, …], d, a, ty, dir) = a · (hit(t, t0, d) + …) · X.rk(S, v, hz) = v: et nivå som varer (rumling på hz, standard 1,8; 'v' = fart).
        X.ev(S, ty, alder, a, dir, d) og X.rv(S, v, hz): en hendelse og et nivå uten tall i dag · X.tatt(S, v) = v: et tall i dag som hendelsene står for.
      ty: 's' slag (standard), 'e' eksplosjon, 'f' fotsteg eller søyle, 'b' brøl, 'p' et tog av små støt eller en lang rumling. dir: hvor bildet sparkes, i grader
-     (0 = høyre, 90 = ned); uten den nesten loddrett. Det som ikke er pakket inn, rister som en jevn rumling etter tallet. */
+     (0 = høyre, 90 = ned), eller kildens plass i verden [x, y, z] (X.skDir); uten den nesten loddrett ned, og fotsteg rett opp (kameraet dupper ned). Det som ikke
+     er pakket inn, rister som en jevn rumling etter tallet. */
   const skA = (S, e) => { const p = S.post; (p.sk || (p.sk = [])).push(e); }, skV = (S, v) => { S.post.skv = (S.post.skv || 0) + v; return v; };
+  /* Kildens plass i verden → retningen bildet sparkes (gjøres om i X.reg når kameraet for bildet er satt): kameraet dyttes bort fra kilden, så bildet sparkes mot
+     den, fra midten av bildet mot der kilden er (kontrollen 26.11; risting.md 8–9). Nær midten (under 30 px) og bak kameraet loddrett ned som uten kilde; 30–120 px glir over. */
+  X.skDir = p => { const q = K.proj(p[0], p[1], p[2]); if (!(q.z < 1)) return 90; const dx = q.x - 256, dy = q.y - 192, r = Math.hypot(dx, dy) || 1, w = c01((r - 30) / 90);
+    return Math.atan2(w * dy / r + (1 - w), w * dx / r) * 180 / PI; };
   X.hk = (S, t, t0, d, a, ty, dir) => { skA(S, [ty || 's', t - t0, a, d, dir]); return skV(S, a * hit(t, t0, d)); };
   X.hks = (S, t, L, d, a, ty, dir) => { let s = 0; for (const t0 of L) { s += hit(t, t0, d); skA(S, [ty || 's', t - t0, a, d, dir]); } return skV(S, a * s); };
   X.rk = (S, v, hz) => { skA(S, ['r', v, hz]); return skV(S, v); };
@@ -152,7 +157,7 @@ const G3C = (() => {
       const S = G3D.S(id), q = G3D.post(id), sn = d.back ? d.back(S, t) : null;
       g.imageSmoothingEnabled = true; g.drawImage(c, 0, 0, 512, 384);
       if (d.over && !(G3D.out > 0.3)) { g.imageSmoothingEnabled = false; g.drawImage(G3D.text(x => d.over(x, t, cur), inf.fig, ink), 0, 0, 512, 384); g.imageSmoothingEnabled = true; }
-      P.sh = q.sh * 2; P.fl = q.fl; P.fc = q.flc; P.fade = q.fade; P.fadec = q.fadec; P.sk = q.sk || null; P.skv = q.skv || 0; P.tq = q.tq;   /* ristingen: hendelsene og filmbildets tid */
+      P.sh = q.sh * 2; P.fl = q.fl; P.fc = q.flc; P.fade = q.fade; P.fadec = q.fadec; P.sk = q.sk || null; if (P.sk) for (const e of P.sk) if (e[0] !== 'r' && Array.isArray(e[4])) e[4] = X.skDir(e[4]); P.skv = q.skv || 0; P.tq = q.tq;   /* ristingen: hendelsene og filmbildets tid */
       if (d.look) d.look(S, t, P, q, sn);
       if (d.roar) X.roarFx(S, t, P, d.roar(t));
       if (d.fx) d.fx(S, t, P, q, sn); } }); };

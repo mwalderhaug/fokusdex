@@ -487,7 +487,7 @@ void main(){ float y = vUv.y, x = vUv.x * 6.2832; vec2 c = vec2(cos(x), sin(x));
       [PT.W, (S, u, a, t) => { const e = io(u), k = seg(t, PT.R + 0.1, PT.R + 2.9), e2 = k * k * k * (k * (k * 6 - 15) + 10), w = 0.04 * sin(t * 0.5);
         if (STIV()) K.cam(10 + 0.1 * e + 0.4 * e2 + w * 3, 1.45 + 0.15 * e, 19.3 + 0.5 * e + 3 * e2, 1.7 + 0.3 * e + 0.9 * e2, 5.35 - 0.15 * e2, 0.2, 58 + 3 * e + 9 * e2, -0.045); else camV(CAMP[4](t));   /* alt går samme vei hele bildet (ut og litt til høyre), så farten aldri snur */
         S.post.fl = max(0.5 * hit(t, PT.R, 0.16), seg(t, PT.F, PT.WH)); S.post.flc = '#fff6dc';
-        S.post.sh = X.hk(S, t, PT.R, 1.2, 7, 'b') + X.hk(S, t, PT.B2, 1, 5, 'e') + X.hk(S, t, PT.R + 0.3, 2.4, 2.2, 'p') + X.rk(S, 0.8 * S.rw, 2.3) + X.rk(S, 1.6 * (S.chg || 0) * (S.chg || 0), 2.3) + X.hk(S, t, PT.FN, 0.7, 3.2, 'e') + PBOMB.reduce((q, b) => q + X.hk(S, t, PT.R + b[0] + b[1], 0.4, 1.8 * b[4], 'e'), 0);
+        S.post.sh = X.hk(S, t, PT.R, 1.2, 7, 'b') + X.hk(S, t, PT.B2, 1, 5, 'e') + X.hk(S, t, PT.R + 0.3, 2.4, 2.2, 'p') + X.rk(S, 0.8 * S.rw, 2.3) + X.rk(S, 1.6 * (S.chg || 0) * (S.chg || 0), 2.3) + X.hk(S, t, PT.FN, 0.7, 3.2, 'e') + PBOMB.reduce((q, b) => q + X.hk(S, t, PT.R + b[0] + b[1], 0.4, 1.8 * b[4], 'e', [b[2], 0, b[3]]), 0);
         X.mouth(S, S.pg, PT.R, t, 2.6); S.post.heat = 0.8 + 0.6 * S.rw;  pdbg(S); }],
     ],
   }, S => { K.face(S.aura); K.face(S.burst); for (const f of S.fnt) K.face(f.lt); K.face(S.vflash); }));
