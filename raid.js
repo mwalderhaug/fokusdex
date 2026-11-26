@@ -270,7 +270,7 @@ const CINE = (() => {
     const f = filmOf(id); o = o || {}; const sps = {};
     /* o.team = laget som møter (bossfilmene viser det som skygger): bildene hentes sammen med filmens egne. */
     for (const s of (f.sps || []).concat(o.team || [])) if (!(s in sps)) sps[s] = await Promise.race([loadSprite(s), new Promise(r => setTimeout(() => r(null), 30))]);
-    cur = { id, f, sp: await Promise.race([loadSprite(f.spid || id), new Promise(r => setTimeout(() => r(null), 30))]), sps, cc: o.cc || '#ffffff', name: o.name || '', cap: o.cap || 'Legendary Pokémon', lv: o.lv || 0, team: o.team || null, pose: o.pose || null };
+    cur = { id, f, sp: await Promise.race([loadSprite(f.spid || id), new Promise(r => setTimeout(() => r(null), 30))]), sps, cc: o.cc || '#ffffff', name: o.name || '', cap: o.cap || 'Legendary Pokémon', lv: o.lv || 0, team: o.team || null, pose: o.pose || null, x: o.x || null };   /* x: det filmen ellers trenger fra kampen (Shadow Mewtwo: nivået, XP og mynter) */
     if (!B) { B = document.createElement('canvas'); B.width = W; B.height = H; }
   }
   /* Tegner ett bilde av filmen på lerretet out. */
@@ -303,13 +303,13 @@ const CINE = (() => {
      Gir { done (løftet holder når filmen er over eller hoppet over), skip() }. */
   C.play = (out, id, o) => {
     o = o || {}; let raf = 0, over = false, skipAt = -1, held = false, fin; const done = new Promise(r => { fin = r; });
-    const f = filmOf(id), t0 = performance.now(), cues = (f.cues || [[f.R, 'cry']]).map(q => ({ t: q[0], n: q[1], v: q[2], on: false }));
+    const f = filmOf(id), t0 = performance.now(), fr = o.from || 0, cues = (f.cues || [[f.R, 'cry']]).map(q => ({ t: q[0], n: q[1], v: q[2], on: q[0] < fr }));   /* o.from: filmen starter så langt inne */
     const end = () => { if (over) return; over = true; cancelAnimationFrame(raf); fin(); };
     if (f.c3 && typeof G3D !== 'undefined') G3D.out = 0;
-    setCur(id, o).then(() => {
+    setCur(id, o).then(() => { const mine = cur;   /* lufta i kampen (C.air) og arenaene (C._.set) setter samme cur: filmen tar sin egen tilbake før hvert bilde (Shadow Mewtwo, fase 2) */
       const step = () => {
-        if (over) return; if (!out.isConnected) return end();
-        let t = (performance.now() - t0) / 1000; const ck = o.clock ? o.clock() : -1; if (ck >= 0 && abs(ck - t) < 1.5) t = ck;
+        if (over) return; if (!out.isConnected) return end(); cur = mine;
+        let t = fr + (performance.now() - t0) / 1000; const ck = o.clock ? o.clock() : -1; if (ck >= 0 && abs(ck - t) < 1.5) t = ck;
         /* o.warp: fra sekunder i låta til sekunder i filmen, når filmen spilles til en annen låt enn den er lagt på. */
         if (o.warp) t = o.warp(t);
         /* Cutscenene i 3D går ut med sin egen overgang (virvel og hvitt blink, G3D.out), mens handlingen fortsetter. */
@@ -328,10 +328,10 @@ const CINE = (() => {
   };
   /* Lufta i kampen: filmens egen stemning (tåke, lyn, glør, regn) tegnet gjennomsiktig over banen, i sløyfe. k = styrken. */
   C.air = (out, id, o) => {
-    const f = filmOf(id); if (!f || !f.air || !out) return () => {}; o = o || {}; let raf = 0, last = 0, on = true, n = 0; const t0 = performance.now(), bgc = f.bg && o.bg ? o.bg : null;
+    const f = filmOf(id); if (!f || !f.air || !out) return () => {}; o = o || {}; let raf = 0, last = 0, on = true, n = 0, t0 = performance.now(), pz = 0; const bgc = f.bg && o.bg ? o.bg : null;
     need(f.use || []);
     const step = ts => {
-      if (!on || !out.isConnected) return; raf = requestAnimationFrame(step); if (ts - last < 30) return; last = ts;
+      if (!on || pz || !out.isConnected) return; raf = requestAnimationFrame(step); if (ts - last < 30) return; last = ts;
       T = (ts - t0) / 1000 + 100; frameNo = floor(T * 60); P = newP(); cur = { id, f, sp: null, sps: {}, cc: o.cc || '#fff', o };
       /* Stedet bak (ugjennomsiktig, bak plattformene) tegnes annenhver gang: det beveger seg sakte. */
       if (bgc && n++ % 2 === 0) { g = bgc.getContext('2d'); g.setTransform(bgc.width / W, 0, 0, bgc.height / H, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.imageSmoothingEnabled = true; try { f.bg(T, o.k == null ? 1 : o.k, cur.cc); } catch (e) { C.err = String(e && e.stack || e); } }
@@ -339,7 +339,10 @@ const CINE = (() => {
       try { f.air(T, o.k == null ? 1 : o.k, cur.cc); } catch (e) { C.err = String(e && e.stack || e); }
     };
     raf = requestAnimationFrame(step);
-    return () => { on = false; cancelAnimationFrame(raf); };
+    const stop = () => { on = false; cancelAnimationFrame(raf); };
+    /* pause(1) fryser lufta (en cutscene spilles over kampen: dkCut), pause(0) fortsetter fra samme bilde. */
+    stop.pause = v => { if (!on) return; if (v && !pz) { pz = performance.now(); cancelAnimationFrame(raf); } else if (!v && pz) { t0 += performance.now() - pz; pz = 0; raf = requestAnimationFrame(step); } };
+    return stop;
   };
   /* Til testing: stedet bak (bg) på ett tidspunkt. */
   C.bgStill = async (out, id, t, o) => { const f = filmOf(id); if (!f || !f.bg) return 'no bg'; await need(f.use || []); T = t; frameNo = floor(T * 60); P = newP(); cur = { id, f, sp: null, sps: {}, cc: (o && o.cc) || '#fff' }; g = out.getContext('2d'); g.setTransform(out.width / W, 0, 0, out.height / H, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, W, H); C.err = ''; try { f.bg(T, (o && o.k) || 1, cur.cc); } catch (e) { C.err = String(e && e.stack || e); } return C.err; };

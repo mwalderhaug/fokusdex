@@ -420,6 +420,7 @@ async function dkCut(B, started) {
   const root = document.createElement('div'); root.className = 'lgi c3 pcut'; root.id = 'pcut'; root.style.zIndex = 80; root.style.setProperty('--cc', B.tr.cc || '#fff');
   root.innerHTML = '<div class="lgi-s"><canvas class="lgi-cv" id="pcutcv" width="512" height="384"></canvas></div><button type="button" class="lgi-skip" id="pcutskip" hidden>Skip</button>';
   host.appendChild(root); const cv = root.querySelector('canvas'), sk = root.querySelector('button'), gone = () => BT.B !== B || !root.isConnected;
+  const air = BT.air && BT.air.pause ? BT.air : null; if (air) air.pause(1);   /* lufta ('dk150') står stille under cutscenen, som arenaen i primalCut */
   c3warm(); buzz([30, 50, 30, 50]);
   const base = fxCue(B), cue = (n, v) => { if (gone()) return; if (n === 'cry') { cry(150, 0, 0.8, 1); buzz([80, 40, 260]); } else if (c3snd(n)) buzz(c3snd(n)(v) || 30); else base(n, v); };
   const pinf = CINE.info(id), bedF = started && pinf && pinf.mus && pinf.mus.bed ? pinf.mus.bed : ''; if (bedF) PACK.sting(bedF, false, () => Math.max(0, PACK.clock()));
@@ -430,6 +431,7 @@ async function dkCut(B, started) {
   const watch = setInterval(() => { if (gone()) pl.stop(); }, 300);
   await pl.done; clearInterval(watch); clearTimeout(tm); document.removeEventListener('keydown', key); G3D.out = 0;
   if (bedF) PACK.stingOut(0.3);
+  if (air) air.pause(0);
   if (BT.B !== B) { root.remove(); return true; }
   shake(520, 4); root.classList.add('d'); await T(440); root.remove();
   return true;
@@ -441,8 +443,9 @@ async function dkShift(B) {
   /* Reglene først, så de står om appen lukkes midt i bildene. HP-streken og meldingene vises etter utbruddet. */
   darkShift(B, ev); liveSave(B);
   PACK.music('', { out: 1.6 }); music('', { out: 1.6 });
-  /* I 3D (steg 3.2): 'c3:dk150p' over kampskjermen på Where Is Your God Now fra 0:20,4 (filmen har selv «Something is happening…»). */
-  const c3p = !calm() && typeof G3C !== 'undefined' && G3D.can() && G3C.hasDk() && await Promise.race([G3C.load(150).then(() => G3D.ready('c3:dk150p')).then(() => true, () => false), T(G3D.isReady('c3:dk150p') ? 300 : 6000).then(() => false)]); if (!ok()) return;
+  /* I 3D (steg 3.2): 'c3:dk150p' over kampskjermen på Where Is Your God Now fra 0:20,4 (filmen har selv «Something is happening…»). Bare når introen også var i 3D
+     (B.dk3: rett etter Mewtwo-kampen; B.show: Sandbox og showcase): et nytt forsøk dagen etter har 2D-introen, og da er fase 2 også som før. */
+  const c3p = !calm() && typeof G3C !== 'undefined' && G3D.can() && (B.dk3 || B.show) && G3C.hasDk() && await Promise.race([G3C.load(150).then(() => G3D.ready('c3:dk150p')).then(() => true, () => false), T(G3D.isReady('c3:dk150p') ? 300 : 6000).then(() => false)]); if (!ok()) return;
   if (c3p) { const G3 = PACK.special(/God Now/), st3 = G3 ? await PACK.music(G3, { at: 20.4, fade: 0.1 }) : false; if (!ok()) return; if (st3) music(''); textAway();
     await dkCut(B, st3); if (!ok()) return; dkLook(B); if (!st3) { PACK.music(''); music('evil'); } typeOut(`${f.name} feels provoked!`);
     await bwait(400); for (const e of ev) { if (!ok()) return; await playOne(B, e); } if (!ok()) return; liveSave(B); BT.busy = false; if (B.over) return endBattle(); return turnIdle(B); }
@@ -584,9 +587,13 @@ async function legendIntro(B) {
      Kamplåta kommer etter filmen: Continue venter til neste taktstrek (bar: [første, lengde]), introlåta tones ut (fade), det er stille (gap), kamplåta starter et
      stykke inn (at), og virvelen ender i hvitt på dens første slag (hit). Har ikke spilleren trykket innen auto, går det videre av seg selv. */
   const mus = c3 && info.mus ? info.mus : null, own = mus && mus.song ? PACK.special(new RegExp(mus.song)) : '', nx = (mus && mus.next) || {};
+  /* SHADOW MEWTWO FRA KAMPEN I 2D (darkRise: B.dk3.j2d): kampen har alt vist fallet og teksten, så filmen starter på mus.j2d (kortet, i nærbildet), og alt på filmens
+     klokke (bitene av låta, sengen, klokka og now) flyttes like mye (t0f). o.x: nivået, XP-en og myntene fra kampen (kortet i filmen). */
+  const t0f = c3 && tr.dk && B.dk3 && B.dk3.j2d && mus && mus.j2d ? mus.j2d : 0;
+  if (c3 && tr.dk && B.dk3 && typeof B.dk3 === 'object') o.x = Object.assign({}, B.dk3, { j2d: t0f > 0 });
   /* FLERE LÅTER I FILMEN (def.mus.seq, Arceus): låter fra «special» på filmens klokke foran kamplåta (PACK.seq). noskip: ingen Skip før så mange sekunder (hele fløyta). */
   const cold = V && mus && mus.cold ? mus.cold : null;   /* Shadow Mewtwo i 3D: Villain's Ascent på filmens klokke, med biter av seg selv foran (pre: [filmens tid, hvor i låta, slutt]) */
-  const seq = cold ? (mus.pre || []).map(q => ({ f: V, at: q[0], o: q[1], end: q[2] })) : mus && mus.seq && tk && !V ? mus.seq.map(q => ({ f: PACK.special(new RegExp(q[0])), at: q[1], out: q[2] || null })) : null;
+  const seq = cold ? (mus.pre || []).map((q, i) => ({ f: V, at: q[0] - t0f, o: q[1], end: q[2] - t0f, xin: i ? mus.xf || 0 : 0, xout: mus.xf || 0 })) : mus && mus.seq && tk && !V ? mus.seq.map(q => ({ f: PACK.special(new RegExp(q[0])), at: q[1], out: q[2] || null })) : null;
   if (calm()) { await ready; if (gone()) return; root.classList.add('on'); await CINE.still(cv, id, Math.min(info.len - 0.6, info.R + 2), o); if (V) PACK.music(V, { loop: false, at: 0, fade: 1.2, from: 0.1 }).then(k => { if (k) music(''); }); else battleMusic(B, { fade: 1.2, from: 0.1 }); cry(f.id, 300, 0.5); await T(2600); if (gone()) return; root.classList.add('d'); await T(260); return; }
   /* Låta og filmen starter samtidig. Uten låt i pakken spilles den innebygde oppbyggingen, med drønnet i det den viser seg. */
   await ready; if (gone()) return;
@@ -596,16 +603,16 @@ async function legendIntro(B) {
     await CINE.fx(cv, 'omen', { cc: tr.cc, warn: tr.dk ? 'WARNING' : '', txt: tr.dk ? 'A power that could end\nthe galaxy is awakening' : tr.leg === 493 ? 'The one who shaped\nthe world draws near' : tr.leg === 150 ? 'It was made to be\nthe strongest of all' : 'Something from beyond\nthe sky draws near', cue: n => { if (gone()) return; if (n === 'beat') { BSFX.beat(); buzz([70, 90, 110]); } else if (n === 'boom') { BSFX.mv('boom', 3); buzz([90, 60, 240]); } } });
     if (gone()) return;
   }
-  const started = own ? await PACK.music(own, { at: info.at, loop: false, out: 0.3 }) : tk ? await (seq ? PACK.seq(tk, seq, cold ? { at: -cold[0], skip: cold[1], loop: false, out: 0.3 } : { at: info.at }) : PACK.music(tk, V ? { at: 0, loop: false, out: 0.3 } : { at: info.at })) : false; if (gone()) { PACK.seqStop(0.1); return; }
+  const started = own ? await PACK.music(own, { at: info.at, loop: false, out: 0.3 }) : tk ? await (seq ? PACK.seq(tk, seq, cold ? { at: -(cold[0] - t0f), skip: cold[1], xin: mus.xf || 0, loop: false, out: 0.3 } : { at: info.at }) : PACK.music(tk, V ? { at: 0, loop: false, out: 0.3 } : { at: info.at })) : false; if (gone()) { PACK.seqStop(0.1); return; }
   const seqOn = !!seq && started, noskip = started && mus && mus.noskip ? mus.noskip : 0;
-  const ownOn = !!own && started, bedOn = !!(started && mus && mus.bed && (ownOn || !mus.song)); if (bedOn) PACK.sting(mus.bed, false, () => PACK.clock());   /* sengen følger låta: filmens egen introlåt, eller kamplåta når filmen går på den (Kyogre) */
+  const ownOn = !!own && started, bedOn = !!(started && mus && mus.bed && (ownOn || !mus.song)); if (bedOn) PACK.sting(mus.bed, false, () => Math.max(0, PACK.clock()) + t0f);   /* sengen følger låta: filmens egen introlåt, eller kamplåta når filmen går på den (Kyogre) */
   const hs = bedOn && mus.hold ? mus.hold : null; if (hs) PACK.loopWarm(hs[0]);   /* Hold-sløyfa (def.mus.hold: [fil, styrke, fra]): hører til sengen */
   let stop = () => {};
   if (started) music(''); else { PACK.music(''); stop = epicIntro('ultra', info.R); }
   root.classList.add('on'); sfx.appear(); buzz([40, 60, 40]);
   const cue = (n, v) => { if (gone()) return; if (n === 'cry') { cry(f.id, 0, c3 ? 0.8 : 0.6, c3 ? 1 : 0); buzz([80, 40, 260]); if (!started) battleMusic(B); } else if (c3snd(n)) buzz(c3snd(n)(v) || 30); else if (n === 'slam') { BSFX.slam(); buzz([90, 60, 240]); } else if (n === 'rise') { BSFX.rise(v || 1); buzz([20, 60, 20, 60, 20]); } else if (n === 'boom') buzz([90, 60, 90, 60, 240]); else if (n === 'thud') buzz(45); else buzz(18); };
-  const tp0 = performance.now(), now = () => { const c = started ? PACK.clock() : -1, w = (performance.now() - tp0) / 1000; return c >= 0 && Math.abs(c - w) < 1.5 ? c : w; };   /* filmens tid nå */
-  const go = $('#lgigo'), pl = CINE.play(cv, id, Object.assign({ clock: () => started ? PACK.clock() : -1, cue, warp: V && started && !c3 ? dkWarp : null, onhold: () => { if (gone() || skipped || leaving) return; if (sk) sk.hidden = true; if (go) go.hidden = false; if (ownOn && tk) PACK.cue(tk); } }, o)), sk = $('#lgiskip');
+  const tp0 = performance.now(), now = () => { const c0 = started ? PACK.clock() : -1, c = c0 < 0 ? -1 : c0 + t0f, w = t0f + (performance.now() - tp0) / 1000; return c >= 0 && Math.abs(c - w) < 1.5 ? c : w; };   /* filmens tid nå */
+  const go = $('#lgigo'), pl = CINE.play(cv, id, Object.assign({ clock: () => { const c = started ? PACK.clock() : -1; return c < 0 ? -1 : c + t0f; }, from: t0f, cue, warp: V && started && !c3 ? dkWarp : null, onhold: () => { if (gone() || skipped || leaving) return; if (sk) sk.hidden = true; if (go) go.hidden = false; if (ownOn && tk) PACK.cue(tk); } }, o)), sk = $('#lgiskip');
   let skipped = false, leaving = false; const tms = [], later = (fn, ms) => tms.push(setTimeout(() => { if (!gone()) fn(); }, Math.max(0, ms)));
   /* Ut av en film med egen låt, fra tidspunktet tb i filmen: låta og sengen tones ut, stillhet, kamplåta inn, og virvelen (0,85 s) ender i hvitt på kamplåtas første slag. */
   const leave = tb => { if (leaving || skipped) return; leaving = true; if (sk) sk.hidden = true; if (go) go.hidden = true;
@@ -1780,7 +1787,7 @@ async function startBattle(B) {
   await prep; await Promise.race([pre, new Promise(r => setTimeout(r, 2000))]);
   if (BT.B !== B) return;
   drawBattle(); drawMenu(); packHint(); dkStart(B); kyArm(B);
-  try { if (B.raid && B.tr.leg === 150 && !B.tr.dk && !calm() && typeof G3C !== 'undefined' && G3D.can() && G3C.hasDk()) dk3Warm(); } catch (_) {}   /* Shadow Mewtwos film hentes mens kampen mot Mewtwo går */
+  try { if (B.raid && B.tr.leg === 150 && !B.tr.dk && !calm() && typeof G3C !== 'undefined' && G3D.can() && G3C.hasDk() && (B.mode === 'lab' || !hasDark())) G3C.load(150).then(() => G3D.warm('c3:dk150')).catch(() => {}); } catch (_) {}   /* Shadow Mewtwos filer hentes mens kampen mot Mewtwo går (bygges i darkRise) */
   if (BT.arena && B.tr.wild) paintSprite('foe', 'ace pre');
   await bwait(350);
   await say(B.tr.wild ? (/^The /.test(B.tr.title) ? `${B.tr.n}, ${B.tr.title.replace(/^The /, 'the ')}, appeared!` : `The ${B.tr.title.replace(' Pokémon', '').toLowerCase()} ${B.tr.n} appeared!`) : `${who(B.tr)} wants to battle!`);
@@ -1878,7 +1885,9 @@ async function darkRise(B) {
   BT.busy = true;
   /* I 3D (steg 3.2): én sammenhengende film fra Mewtwo faller til kampen, uten tekstbokser imellom. Filmen hentes mens kampen mot Mewtwo går (dk3Warm). */
   if (!calm() && typeof G3C !== 'undefined' && G3D.can() && G3C.hasDk()) { await Promise.race([dk3Warm(), new Promise(r => setTimeout(r, G3D.isReady('c3:dk150') ? 50 : 9000))]); if (!ok()) return;
-    if (G3D.isReady('c3:dk150')) { BT.busy = false; const nb = raidBattle(BT.lead, B.mode === 'lab' ? 'dk' : undefined); nb.dk3 = 1; return startBattle(nb); } }
+    if (G3D.isReady('c3:dk150')) { BT.busy = false; const nb = raidBattle(BT.lead, B.mode === 'lab' ? 'dk' : undefined), f0 = B.foe[0], r = BT.res || {};
+      /* j2d: kampen mot Mewtwo var i 2D (til 4.6), så filmen starter på kortet. Nivået er Mewtwos, XP og mynter det raidet ga (Sandbox gir ingen: filmens egne tall). rise: hodetelefonkortet er alt vist. */
+      nb.dk3 = Object.assign({ j2d: 1, mlv: f0 && f0.lv }, B.mode === 'raid' ? { xp: (r.ups || []).reduce((s, u) => s + (u.xp || 0), 0), coins: r.coins || 0 } : {}); nb.rise = 1; return startBattle(nb); } }
   await bwait(600); if (!ok()) return;
   await say(BT.res && BT.res.mew ? 'Mewtwo is beaten, and it is yours…' : 'Mewtwo is beaten…'); if (!ok()) return;
   BSFX.dread(); buzz([40, 60, 40, 60, 200]); shake(1100, 3); ar.classList.add('dkrise');

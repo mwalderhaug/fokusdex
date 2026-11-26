@@ -221,17 +221,23 @@ const PACK = (() => {
   /* Til testene: sløyfepunktene som brukes, og den dekodede lyden. */
   P.loopOf = path => { const d = dec.get(path); return d && d._lp ? d._lp : null; };
   P.bufOf = path => dec.get(path) || null;
+  /* Krysstoning med lik styrke (sin/cos over k = 0…1) på en egen GainNode, så volumet og uttoningen (g) ikke kolliderer med kurven. */
+  const xcv = up => { const n = 64, c = new Float32Array(n); for (let i = 0; i < n; i++) { const k = i / (n - 1); c[i] = up ? Math.sin(k * Math.PI / 2) : Math.cos(k * Math.PI / 2); } return c; };
   function startBuf(d, o) {
     try {
       const a = ac(); if (!a) return false;
       const s = a.createBufferSource(), g2 = a.createGain(), v = Math.min(1, mvol() * (o.tg || 1)), t = a.currentTime;
       if (o.loop !== false) { let lp = null; try { lp = loopPrep(o.path || '', d); } catch (_) {} s.buffer = d; s.loop = true; if (lp && lp.le > lp.ls) { s.loopStart = lp.ls; s.loopEnd = lp.le; } }
       else s.buffer = d;
-      s.connect(g2); g2.connect((typeof master === 'function' && master()) || a.destination);
+      const lead = o.at < 0 ? -o.at : 0, at = Math.max(0, Math.min(d.duration - 0.2, o.at || 0)), sk = lead && o.skip > 0 ? Math.min(d.duration - 0.2, o.skip) : 0;
+      /* xin: en kald start med skip krysstones inn (halvparten før og etter lead), mens biten foran den tones ut like lenge (PACK.seq, xout): ingen knepp i skjøten. */
+      const xi = lead && sk && o.xin > 0 ? Math.min(o.xin, sk, lead) : 0;
+      if (xi) { const xg = a.createGain(); s.connect(xg); xg.connect(g2); xg.gain.setValueAtTime(0, t); xg.gain.setValueCurveAtTime(xcv(1), t + lead - xi / 2, xi); } else s.connect(g2);
+      g2.connect((typeof master === 'function' && master()) || a.destination);
       if (o.fade) { g2.gain.setValueAtTime(Math.max(0.0001, v * (o.from || 0)), t); g2.gain.linearRampToValueAtTime(v, t + o.fade); } else g2.gain.setValueAtTime(v, t);
       /* Negativ at = en kald start: så mange sekunder stillhet før lyden starter fra 0 (Articunos intro). Klokka går fra nå, og pos er negativ til lyden er i gang. */
-      const lead = o.at < 0 ? -o.at : 0, at = Math.max(0, Math.min(d.duration - 0.2, o.at || 0)), sk = lead && o.skip > 0 ? Math.min(d.duration - 0.2, o.skip) : 0; s.start(lead ? t + lead : 0, lead ? sk : at);   /* skip: en kald start som begynner så langt inne i lyden (Shadow Mewtwo: låta kommer inn midt i seg selv) */
-      return { s, g: g2, t0: t, at: lead ? -lead : at, d, v, off: sk ? lead - sk : 0 };
+      s.start(lead ? t + lead - xi / 2 : 0, lead ? sk - xi / 2 : at);   /* skip: en kald start som begynner så langt inne i lyden (Shadow Mewtwo: låta kommer inn midt i seg selv) */
+      return { s, g: g2, t0: t, at: lead ? -lead : at, d, v, off: sk ? lead - sk : 0, sk };
     } catch (_) { return null; }
   }
   /* En lang uttoning (etter en kamp) dukker først raskt, så seierslyden slipper til, og klinger så ut. */
@@ -280,10 +286,13 @@ const PACK = (() => {
   P.seq = async (path, list, o = {}) => {
     const ds = await Promise.all(list.map(q => q.f ? decode(q.f) : null)), ok = await P.music(path, o); P.seqStop(0.05); if (!ok || mode !== 'wa' || !node) return ok;
     try { const a = AC, t0 = node.t0, out = (typeof master === 'function' && master()) || a.destination;
-      list.forEach((q, i) => { const d = ds[i]; if (!d) return; const s = a.createBufferSource(), g = a.createGain(), v = Math.min(1, mvol() * tgain(q.f)), w = t0 + q.at; s.buffer = d; s.connect(g); g.connect(out);
-        g.gain.setValueAtTime(v, a.currentTime); if (q.out) { g.gain.setValueAtTime(v, t0 + q.out[0]); g.gain.linearRampToValueAtTime(0.0001, t0 + q.out[1]); }
-        if (q.end) { g.gain.setValueAtTime(v, t0 + q.end - 0.008); g.gain.linearRampToValueAtTime(0.0001, t0 + q.end); }   /* o: hvor i lyden biten starter, end: når den slutter (filmens tid) */
-        s.start(Math.max(w, 0), (q.o || 0) + Math.max(0, a.currentTime - w)); if (q.out) s.stop(t0 + q.out[1] + 0.05); else if (q.end) s.stop(t0 + q.end + 0.01); seqH.push({ s, g }); }); } catch (_) {}
+      list.forEach((q, i) => { const d = ds[i]; if (!d) return; const s = a.createBufferSource(), g = a.createGain(), v = Math.min(1, mvol() * tgain(q.f));
+        /* xin/xout (Shadow Mewtwo): biten krysstones inn og ut med lik styrke over så mange sekunder, midt på skjøten (halvparten før og etter at og end). */
+        const xi = q.xin > 0 ? Math.min(q.xin, q.o || 0) : 0, xo = q.end && q.xout > 0 ? q.xout : 0, w = t0 + q.at - xi / 2; s.buffer = d;
+        if (xi || xo) { const xg = a.createGain(); s.connect(xg); xg.connect(g); xg.gain.setValueAtTime(xi ? 0 : 1, a.currentTime); if (xi) xg.gain.setValueCurveAtTime(xcv(1), Math.max(a.currentTime + 0.005, w), xi); if (xo) xg.gain.setValueCurveAtTime(xcv(0), t0 + q.end - xo / 2, xo); } else s.connect(g);
+        g.connect(out); g.gain.setValueAtTime(v, a.currentTime); if (q.out) { g.gain.setValueAtTime(v, t0 + q.out[0]); g.gain.linearRampToValueAtTime(0.0001, t0 + q.out[1]); }
+        if (q.end && !xo) { g.gain.setValueAtTime(v, t0 + q.end - 0.008); g.gain.linearRampToValueAtTime(0.0001, t0 + q.end); }   /* o: hvor i lyden biten starter, end: når den slutter (filmens tid) */
+        s.start(Math.max(w, 0), Math.max(0, (q.o || 0) - xi / 2) + Math.max(0, a.currentTime - w)); if (q.out) s.stop(t0 + q.out[1] + 0.05); else if (q.end) s.stop(t0 + q.end + xo / 2 + 0.01); seqH.push({ s, g }); }); } catch (_) {}
     return ok; };
   P.stingOut = sec => { if (sting) { fadeOut(sting, sec == null ? 1.2 : sec); sting = null; } };
   /* EN SLØYFE VED SIDEN AV SENGEN (Arceus, 3.1: Hold, mens fingeren holdes mot lyset): spilles på musikkens nivå, som sengen, til den stoppes. P.loopWarm henter den på
@@ -308,7 +317,7 @@ const PACK = (() => {
   P.clock = () => { try { return node && mode === 'wa' && AC.state === 'running' ? AC.currentTime - node.t0 - (AC.outputLatency || AC.baseLatency || 0) : -1; } catch (_) { return -1; } };
   /* LÅTA STYRER (Kyogre, Jazz 19.11). pos = hvor i låta vi er (sekunder i fila), med sløyfa regnet inn. Uten raw er forsinkelsen ut til høyttaleren trukket fra
      (det man hører nå: til bildene); med raw er det lydklokka (til å planlegge hopp). −1 hvis ingen låt spiller gjennom WebAudio. */
-  P.pos = raw => { try { if (!node || mode !== 'wa' || AC.state !== 'running' || node.at == null) return -1; const s = node.s, d = node.d; let p = node.at + AC.currentTime - node.t0 - (raw ? 0 : (AC.outputLatency || AC.baseLatency || 0));
+  P.pos = raw => { try { if (!node || mode !== 'wa' || AC.state !== 'running' || node.at == null) return -1; const s = node.s, d = node.d; let p = node.at + AC.currentTime - node.t0 - (raw ? 0 : (AC.outputLatency || AC.baseLatency || 0)); if (node.sk && p >= 0) p += node.sk;   /* en kald start med skip: lyden startet så langt inne */
     if (s.loop && d) { const le = s.loopEnd > s.loopStart ? s.loopEnd : d.duration, ls = s.loopEnd > s.loopStart ? s.loopStart : 0; if (le - ls > 0.5) while (p >= le) p -= le - ls; } return p; } catch (_) { return -1; } };
   /* Hopper i låta som spiller: en ny kilde fra samme lyd starter på sec, og den gamle tones ut over x sekunder mens den nye tones inn (samme sløyfe og styrke).
      o.when = lydklokka hoppet skal skje på (et slag), ellers nå. Gir false når ingen låt spiller gjennom WebAudio. */

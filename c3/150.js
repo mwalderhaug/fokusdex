@@ -11,6 +11,10 @@
 (() => {
   const K = G3D.K, C = CINE.kit, X = G3C, { sin, cos, PI, TAU, abs, max, min, floor, c01, mix, seg, io, eo, hit, rnd } = K, kf = C.kf;
   const FALL = 0.25, TXT = 0.7, WIN = 2.35, DIE = 3.45, SIL = 4.6, S0 = 15.0, VA = x => S0 + x;
+  /* FRA KAMPEN I 2D (darkRise, rettet etter kontrollen 26.11): kampen har vist fallet og «The wild Mewtwo fainted!», så filmen starter på kortet (WIN, def.mus.j2d) i
+     nærbildet, uten kampkameraet (Mewtwo-kampen er ikke i 3D før 4.6), HUD-en og teksten. C.cur.x = { j2d, mlv, xp, coins } fra legendIntro; uten (Sandbox → Films, live)
+     er filmen som før, fra 0 med kampkameraet og skissens tall. */
+  const XC = () => { const c = C.cur; return (c && c.x) || {}; }, J2D = () => !!XC().j2d, NUM = (v, d) => (v == null ? d : v).toLocaleString('en-US');
   const P1 = VA(4.81), P2 = VA(6.61), P3 = VA(8.41), DRUM = VA(9.61), NAME = DRUM + 1.3, LEN = NAME + 3.0;
   const HM = 2.5, LD = (() => { const v = [0.4, -1, -0.7], l = Math.hypot(...v); return v.map(x => x / l); })();
   const SKIN = { bg: '#0b0706', top: '#ff9a3c', bot: '#4a200c', cap: '#ffc890', grad: ['#fff0dc', '#ff9a3c', '#a8401a'], lv: '#ffe2c4', ink: [12, 6, 4] };
@@ -119,10 +123,10 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float f
   /* ---------- 2D oppå filmen: kampens HUD, teksten, resultatkortet, sprekkene, skårene, øynene, glitchen ---------- */
   const rr = (g, x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
   const font = (g, px, w) => { const f = C.fontN(); g.font = `${w || f[1]}${px}px ${f[0]}`; };
-  const hud = (g, t) => { const a = 1 - seg(t, WIN - 0.2, WIN + 0.2); if (a <= 0) return; g.save(); g.globalAlpha = a; rr(g, 14, 16, 196, 48, 8); g.fillStyle = 'rgba(14,14,20,.84)'; g.fill();
-    font(g, 15, '600 '); g.fillStyle = '#fff'; g.textBaseline = 'top'; g.textAlign = 'left'; g.fillText('Mewtwo', 26, 24); g.textAlign = 'right'; g.fillText('Lv70', 198, 24);
+  const hud = (g, t) => { const a = 1 - seg(t, WIN - 0.2, WIN + 0.2); if (a <= 0 || J2D()) return; g.save(); g.globalAlpha = a; rr(g, 14, 16, 196, 48, 8); g.fillStyle = 'rgba(14,14,20,.84)'; g.fill();
+    font(g, 15, '600 '); g.fillStyle = '#fff'; g.textBaseline = 'top'; g.textAlign = 'left'; g.fillText('Mewtwo', 26, 24); g.textAlign = 'right'; g.fillText('Lv' + (XC().mlv || 70), 198, 24);
     const hp = 0.16 * (1 - seg(t, 0, FALL)); g.fillStyle = '#333'; g.fillRect(26, 46, 172, 7); g.fillStyle = hp > 0.2 ? '#5cd46a' : '#f04b3c'; g.fillRect(26, 46, 172 * hp, 7); g.restore(); };
-  const textBox = (g, t) => { if (t < TXT) return; const a = 1 - seg(t, WIN + 0.1, WIN + 0.5); if (a <= 0) return; const s = 'The wild Mewtwo fainted!', n = min(s.length, floor((t - TXT) * 30));
+  const textBox = (g, t) => { if (t < TXT || J2D()) return; const a = 1 - seg(t, WIN + 0.1, WIN + 0.5); if (a <= 0) return; const s = 'The wild Mewtwo fainted!', n = min(s.length, floor((t - TXT) * 30));
     g.save(); g.globalAlpha = a; rr(g, 10, 306, 492, 66, 8); g.fillStyle = 'rgba(14,14,20,.9)'; g.fill(); g.strokeStyle = 'rgba(255,255,255,.22)'; g.stroke();
     font(g, 17, '600 '); g.fillStyle = '#fff'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(s.slice(0, n), 28, 339); g.restore(); };
   /* Kortet: glir inn fra 2,35 og fryser på vei inn (3,45), som platen som dør. */
@@ -130,7 +134,7 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float f
   const card = (g, cx, cy, gl, t) => { g.save(); g.translate(cx, cy); rr(g, -150, -82, 300, 164, 12); g.fillStyle = 'rgba(18,16,22,.95)'; g.fill(); g.strokeStyle = 'rgba(255,214,120,.55)'; g.lineWidth = 1.5; g.stroke();
     const j = (k, s) => gl > 0 ? (rnd(floor(t * 24) + k, s) - 0.5) * 10 * gl : 0;
     font(g, 24, '700 '); g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ffd25a'; g.fillText('VICTORY!', j(1, 1), -50 + j(2, 1) * 0.3);
-    font(g, 14, '600 '); g.fillStyle = '#e8e2d6'; g.fillText('Mewtwo fainted · Lv 70', j(3, 2), -18); g.fillStyle = '#b8b2a6'; g.fillText('+1,240 XP   ·   +380 coins', j(4, 3), 8);
+    font(g, 14, '600 '); g.fillStyle = '#e8e2d6'; const x = XC(); g.fillText('Mewtwo fainted · Lv ' + (x.mlv || 70), j(3, 2), -18); g.fillStyle = '#b8b2a6'; g.fillText('+' + NUM(x.xp, 1240) + ' XP   ·   +' + NUM(x.coins, 380) + ' coins', j(4, 3), 8);
     rr(g, -60, 34, 120, 30, 15); g.fillStyle = 'rgba(255,214,120,.18)'; g.fill(); g.fillStyle = '#ffe2a0'; g.fillText('Continue', 0, 49); g.restore(); };
   const eyes2 = (g, pts, k, t) => { if (k <= 0) return; for (const p of pts) { const q = K.proj(...p); if (q.z > 1) continue; const r = 2.6 + 1.4 * k + 0.5 * sin(t * 17 + p[0]);
     const gr = g.createRadialGradient(q.x, q.y, 0, q.x, q.y, r * 2.4); gr.addColorStop(0, `rgba(255,236,200,${k})`); gr.addColorStop(0.25, `rgba(255,150,50,${0.9 * k})`); gr.addColorStop(1, 'rgba(255,90,20,0)');
@@ -151,6 +155,7 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float f
     g.strokeStyle = edge || 'rgba(255,255,255,.75)'; g.lineWidth = 1.4; g.stroke(); g.restore(); };
   const lightCave = (U, q) => { U.uKeyC.value.setRGB(...hx(q.key || '#d8ecff')); U.uShC.value.setRGB(...hx(q.sh || '#16243a')); U.uRimK.value = q.rim == null ? 0.7 : q.rim; U.uGlow.value = q.glow == null ? 0.35 : q.glow;
     U.uFog.value.set(40, 110, q.fogK == null ? 0.75 : q.fogK); U.uFogC.value.setRGB(...hx(q.fog || '#030710')); if (q.rimc) U.uRimC.value.setRGB(...hx(q.rimc)); if (q.glowc) U.uLavaC.value.setRGB(...hx(q.glowc)); };
+  const CU5 = (S, u) => { const p = S.M.at('head'); K.cam(p.x - 0.05, p.y + 0.75, p.z + mix(1.6, 1.35, u), p.x - 0.18, p.y + 0.05, p.z + 0.12, 28); };   /* nærbildet av hodet */
   const BCAM = (S, u, a, t) => { K.cam(-3.4, 3.5, 10.2, -1.9, 0.45, 0, 38); };   /* kampkameraet: Mewtwo oppe til høyre, som fienden i en Gen 5-kamp (bakken og skyggen over kortet) */
   const T3 = { CU: DIE - 0.05, EYC: [DIE, DIE + 1.1], C2: 5.2, MOVE: 6.0, PEEL: [7.0, 8.4], C3: 8.4, ARM: [8.5, 9.2], DR: [8.6, 10.6], DIM: [10.3, 10.9],
     C4: 10.95, SP: [11.05, 12.3], C5: 12.4, RISE: [12.5, 13.4], SN: [13.55, 13.9, 14.25], EY: 14.5, WAVE: [14.6, 15.0] };
@@ -168,9 +173,9 @@ void main(){ vec3 N = normalize(vN), V = normalize(cameraPosition - vW); float f
     if (/stone/.test(n)) { u.uFlK.value = min(1, q.stoneC ? 1 : q.stone || 0); u.uFlC.value.setRGB(...hx(q.stoneC || '#ff9a3c')); u.uEmis.value = q.stoneC ? 0 : min(1, q.stone || 0); }
     else if (/eye|expression/.test(n)) { u.uFlK.value = q.eye || 0; u.uFlC.value.setRGB(0, 0, 0); } else { u.uFlK.value = q.body || 0; u.uFlC.value.setRGB(...hx(q.bodyC || '#000000')); } } };
   const lerpHex = (a, b, k) => { const A = hx(a), B = hx(b); return [0, 1, 2].map(i => floor(255 * mix(A[i], B[i], k))); };
-  const aura = (g, S, t) => { const a = 1 - seg(t, DIE, DIE + 1.1); if (a <= 0 || t >= SIL) return; const p = S.M.at(t < T3.CU ? 'spine_02' : 'head'), c = K.proj(p.x, p.y, p.z); if (c.z > 1) return;
-    const r = t < T3.CU ? 46 : 150; g.save(); g.globalCompositeOperation = 'lighter'; const gr = g.createRadialGradient(c.x, c.y, 0, c.x, c.y, r);
-    gr.addColorStop(0, `rgba(190,120,255,${(t < T3.CU ? 0.2 : 0.3) * a})`); gr.addColorStop(1, 'rgba(120,60,220,0)'); g.fillStyle = gr; g.fillRect(c.x - r, c.y - r, 2 * r, 2 * r); g.restore(); };
+  const aura = (g, S, t) => { const a = 1 - seg(t, DIE, DIE + 1.1); if (a <= 0 || t >= SIL) return; const fr = t < T3.CU && !J2D(), p = S.M.at(fr ? 'spine_02' : 'head'), c = K.proj(p.x, p.y, p.z); if (c.z > 1) return;
+    const r = fr ? 46 : 150; g.save(); g.globalCompositeOperation = 'lighter'; const gr = g.createRadialGradient(c.x, c.y, 0, c.x, c.y, r);
+    gr.addColorStop(0, `rgba(190,120,255,${(fr ? 0.2 : 0.3) * a})`); gr.addColorStop(1, 'rgba(120,60,220,0)'); g.fillStyle = gr; g.fillRect(c.x - r, c.y - r, 2 * r, 2 * r); g.restore(); };
   /* Sprekkene er lynet (valgt i melding 6): oransje kjerne, lilla kant. */
   const chestW = S => { const a = S.D.at('Spine2'), b = S.D.at('L_Shoulder'); return [mix(a.x, b.x, 0.55), mix(a.y, b.y, 0.55) + 0.05, mix(a.z, b.z, 0.55) + 0.12]; };
   const BOOM = Array.from({ length: 16 }, (_, i) => ({ a: rnd(i, 130) * TAU, v: 90 + 220 * rnd(i, 131), r: 14 + 26 * rnd(i, 132), d: 0.05 * rnd(i, 133) }));
@@ -386,12 +391,14 @@ void main(){ float x = abs(vQ.x), v = vQ.y, a = vQ.z, st = .7 + .3 * vn(vec2(v *
     len: LEN5, hold: 1, R: EXP5 + 0.1, at: 0,
     /* Villain's Ascent på filmens klokke (bui.js, legendIntro): låta fra knuset, takten 0:07,22–0:09,62 to ganger ekstra (pre: [filmens tid, hvor i låta, slutt]),
        og låta selv kaldt inn 22,02 s ut, 9,62 s inn i seg selv (cold). Lydsengen (bed) følger samme klokke. */
-    mus: { cold: [S5 + 14.42, 9.62], pre: [[S5, 0, S5 + 9.62], [S5 + 9.62, 7.22, S5 + 12.02], [S5 + 12.02, 7.22, S5 + 14.42]], bed: 'sfx/natur/smewtwo_intro.mp3' }, fig: 2, models: ['mewtwo', 'mewtwo_dark'], edge: null, env: { rim: '#9ad8ff', glow: '#3a8fd8', fog: '#030710', glowH: 6 },
+    /* Rettet etter kontrollen 26.11: den andre gjentakelsen av takten ER låta selv (kaldt inn 19,62 s ut, 7,22 s inn: samme lyd som før, én skjøt mindre og uten hullet
+       ved 22,02), og skjøtene krysstones med lik styrke over 20 ms (xf). j2d: der filmen starter når kampen foran var i 2D (darkRise). */
+    mus: { cold: [S5 + 12.02, 7.22], pre: [[S5, 0, S5 + 9.62], [S5 + 9.62, 7.22, S5 + 12.02]], xf: 0.02, j2d: WIN, bed: 'sfx/natur/smewtwo_intro.mp3' }, fig: 2, models: ['mewtwo', 'mewtwo_dark'], edge: null, env: { rim: '#9ad8ff', glow: '#3a8fd8', fog: '#030710', glowH: 6 },
     make(K, T) { const S = { scene: new T.Scene(), figs: [] }; S.T = T; cave(T, S); makeFigs(T, S); cosmosMake(T, S, 0); burst(S, EXP5, 1.5);
       const tw = new T.Mesh(new T.CylinderGeometry(42, 46, 40, 48, 4, true, PI + PI / 3, PI * 4 / 3), S.cv.wall.material); tw.position.y = 14; tw.visible = false; S.scene.add(tw); S.tw = tw;
       const aI = S.cv.cr.geometry.attributes.aI; CRY.forEach((q, i) => { aI.array[i * 4 + 1] = S5 + 1.1; aI.array[i * 4 + 2] = EXP5 + 0.07 * q.ring + q.s * 0.06; }); aI.needsUpdate = true;
       return S; },
-    act(S, t, o) { const U = K.U(), cosm = t >= COS5, ex = t >= EXP5, G = cosm && !ex ? glow5(t) : 0, cu = t >= T5.CU && t < T5.WIDE;
+    act(S, t, o) { const U = K.U(), cosm = t >= COS5, ex = t >= EXP5, G = cosm && !ex ? glow5(t) : 0, cu = (t >= T5.CU || J2D()) && t < T5.WIDE;
       const BLACK = { key: '#000000', sh: '#000000', fog: '#000000', fogK: 0.9, rim: 0, glow: 0 };
       if (!cosm) lightCave(U, cu ? { key: '#9fb4cc', sh: '#1c2a40', rim: 0.5, glow: 0.15 } : {});
       else if (!ex) lightCave(U, Object.assign({}, BLACK, { rim: 2.0 * min(1, G), rimc: '#ff8a3a' }));
@@ -415,8 +422,9 @@ void main(){ float x = abs(vQ.x), v = vQ.y, a = vQ.z, st = .7 + .3 * vn(vec2(v *
       cosmos5(S, t);
     },
     shots: late(late5)([
-      [0, BCAM],
-      [T5.CU, (S, u, a, t) => { const p = S.M.at('head'); K.cam(p.x - 0.05, p.y + 0.75, p.z + mix(1.6, 1.35, u), p.x - 0.18, p.y + 0.05, p.z + 0.12, 28); }],
+      /* 1 Kampkameraet; fra kampen i 2D er det nærbildet fra kortet (WIN), og skyvet inn går over hele 2,35–5,6. 2 Nærbildet: øynene lukkes. */
+      [0, (S, u, a, t) => J2D() ? CU5(S, c01((t - WIN) / (T5.WIDE - WIN))) : BCAM(S, u, a, t)],
+      [T5.CU, (S, u, a, t) => CU5(S, J2D() ? c01((t - WIN) / (T5.WIDE - WIN)) : u)],
       [T5.WIDE, (S, u, a, t) => { const k = io(c01((t - T5.WIDE) / (S5 - T5.WIDE))); K.cam(mix(-8.5, -7.2, k), mix(5.8, 4.9, k), mix(13.5, 11.2, k), -0.9, 0.3, 0, 40);
         S.post.sh = 2.2 * hit(t, S5, 0.9); S.post.fl = 0.5 * hit(t, S5, 0.1); S.post.flc = '#ffb070'; }],
       /* 4 Rommet bak ham: svart, teksten, stjernene, hullet; han kneler og synes bare i ladningene (målet litt lavere enn i skisse 5: han er lavere). */
