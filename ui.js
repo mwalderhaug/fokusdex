@@ -425,6 +425,8 @@ const VIEW = {};
 /* DAGEN HAR TO DELER. Før du har trykket «Done for today», viser appen bare det som har med studiet å gjøre: fag, lengde, Start, dagens framdrift og
    fangsten etter en økt. Laget, kampene, butikken og resten kommer fram når du er ferdig (S.dn = dagen det ble trykket). En kampdag som alt er åpnet
    i dag, og Sandbox, teller som ferdig. */
+/* En gammel kampdag som ikke er spilt ferdig, står åpen til neste økt (startTimer). Den vises på forsiden også før «Done for today». */
+const oldOpen = () => typeof dayOld === 'function' && has('battles') && S.party.length > 0 && dayOld() && (!!simPending() || !dayDone());
 const dayOpenQ = () => !S.started || !!SBX || admOn() || S.dn === dayKey() || (S.lad && S.lad.day === dayKey());
 /* ADMIN VIEW: eieren (isAdmin) ser det samme som alle andre, til bryteren «Admin view» slås på. Da er alt framme uansett om dagen er ferdig, og
    Sandbox står der. Valget huskes på denne enheten. */
@@ -784,7 +786,7 @@ VIEW.fokus = () => {
   /* En vanlig dag ligger kampene nederst. På en eventdag står eventet og kampene øverst, og det som har med studeringen å gjøre, under. */
   const CL = clockLock(); if (CL) top += clockCard(CL);
   const fpk = S.fpk && Object.keys(S.fpk).length ? `<button type="button" class="btn wide gold" data-a="fpk">${icn('gift')}Open your free packs</button>` : '';
-  if (!open) return top + hero + praidCards() + (S.raid && S.raid.ev && S.party.length ? raidCard() : '') + fpk + ses + today + wkStrip() + studyFoot() + admRow();
+  if (!open) return top + hero + (oldOpen() ? `<div id="oldbt">${ladderCard()}</div>` : '') + praidCards() + (S.raid && S.raid.ev && S.party.length ? raidCard() : '') + fpk + ses + today + wkStrip() + studyFoot() + admRow();
   /* Etter «Done for today»: økta er foldet sammen til én rad («Study more») til den åpnes. */
   const sesRow = U.sopen ? ses : `<button type="button" class="card sesrow" data-a="sopen" aria-expanded="false">${icn('clock')}<span class="sp"><b>Study more</b><span class="sm tn">${esc(F(fag).n)}<i class="sep"></i>${min} min</span></span>${icn('chev')}</button>`;
   const battles = S.party.length ? (has('battles') ? raidCard() + ladderCard() : lockCard('battles')) : '';
@@ -2080,7 +2082,8 @@ const A = {
   fag: el => { U.fag = el.dataset.k; render(); },
   min: el => { U.min = +el.dataset.k; render(); },
   reg: el => { const r = +el.dataset.k, was = S.routes.includes(r); toggleRoute(r); if (was && S.routes.includes(r)) toast('At least one route has to stay on.'); render(); },
-  start: el => { if (fairGate()) return; if (typeof SBX !== 'undefined' && SBX) return toast('Leave the sandbox before you start a session: nothing in here is saved.'); if (workClash()) return; if (!(el && el.dataset.ok) && typeof dayOld === 'function' && dayOld() && (simPending() || !dayDone())) return openSheet(`<h2 class="h" style="margin-top:0">Yesterday's battles are still open</h2><p class="sm">${simPending() ? 'A simulated result is waiting for your answer. ' : ''}Starting a focus session closes the battles from your last battle day, and what you have not played or accepted is lost.</p><div class="acts"><button type="button" class="btn gold" data-a="close">Back to the battles</button><button type="button" class="btn nf" data-a="start" data-ok="1">Start the session anyway</button></div>`); closeSheet(); const why = honestWhy(); if (why) return honestAsk(why); startTimer(FAGS[U.fag] ? U.fag : curFag(), U.min || S.last.min); sfx.start(); showTimer(); },
+  oldbt: () => { closeSheet(); if (!dayOpenQ()) render(); setTimeout(() => { const e = $('#oldbt') || $('.oldday'); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60); },
+  start: el => { if (fairGate()) return; if (typeof SBX !== 'undefined' && SBX) return toast('Leave the sandbox before you start a session: nothing in here is saved.'); if (workClash()) return; if (!(el && el.dataset.ok) && typeof dayOld === 'function' && dayOld() && (simPending() || !dayDone())) return openSheet(`<h2 class="h" style="margin-top:0">Yesterday's battles are still open</h2><p class="sm">${simPending() ? 'A simulated result is waiting for your answer. ' : ''}Starting a focus session closes the battles from your last battle day, and what you have not played or accepted is lost.</p><div class="acts"><button type="button" class="btn gold" data-a="oldbt">Back to the battles</button><button type="button" class="btn nf" data-a="start" data-ok="1">Start the session anyway</button></div>`); closeSheet(); const why = honestWhy(); if (why) return honestAsk(why); startTimer(FAGS[U.fag] ? U.fag : curFag(), U.min || S.last.min); sfx.start(); showTimer(); },
   honyes: el => { honestOk(el.dataset.k); closeOv(); startTimer(FAGS[U.fag] ? U.fag : curFag(), U.min || S.last.min); sfx.start(); showTimer(); },
   clkagain: async el => { el.disabled = true; el.textContent = 'Checking…'; await netTime(); closeSheet(); render(); const L = clockCheck(); if (L) clockSheet(L); else { sfx.ok(); toast('The clock is fine.'); } },
   pause: () => { togglePause(); paintTimer(); },

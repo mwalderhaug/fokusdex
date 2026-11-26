@@ -832,6 +832,7 @@ const LNO = {
   'Some adjustments to packs.': 'Noen justeringer av pakkene.',
   'New and improved intros for some legendary raids.': 'Nye og bedre introer for noen legendariske raid.',
   'Smoother camera shake in the 3D intros.': 'Jevnere kameraristing i 3D-introene.',
+  'Unfinished battles from your last battle day are now on the Focus page until you start a session.': 'Uferdige kamper fra forrige kampdag ligger nå på Fokus-siden til du starter en økt.',
   'Raid battles now always run at normal speed.': 'Raidkamper går nå alltid i vanlig fart.',
   'Bug fixes and some adjustments to raids.': 'Feilrettinger og noen justeringer av raid.',
   'The game now asks before you let a Pokémon go.': 'Spillet spør nå før du lar en Pokémon gå.',
@@ -1037,7 +1038,7 @@ function jFriend() {
 const has = k => !!(S.ulk && S.ulk[k]);
 /* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
    Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
-const WNV = 89, WN = ['New and improved intros for some legendary raids.', 'Smoother camera shake in the 3D intros.', 'Raid battles now always run at normal speed.', 'Bug fixes and some adjustments to raids.'];
+const WNV = 90, WN = ['Unfinished battles from your last battle day are now on the Focus page until you start a session.', 'Bug fixes.'];
 /* Første linje for dem som går reisen (whatsNew i ui.js). */
 const WNJ = 'Your journey: new things now open one study day at a time. See the card on the Focus page.';
 function featCheck() { S.ulk = S.ulk || {}; if (!jOn()) return 0; let ch = 0; for (const [k, d] of JOURNEY) if (!S.ulk[k] && (S.jd || 0) >= d) { S.ulk[k] = 1; ch = 1; } return ch; }
