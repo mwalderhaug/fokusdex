@@ -620,7 +620,7 @@ function chainCaught(e, mon) {
 const KEY = 'fokusdex.v1';
 function fresh() {
   return {
-    v: 1, mig: 18, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
+    v: 1, mig: 19, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
     items: { poke: 20, great: 0, ultra: 0, dusk: 0, master: 0, gberry: 0, candy: 0, stone: 0, mstone: 0, incense: 0, potion: 0, super: 0, hyper: 0, maxp: 0, heal: 0, revive: 0, maxrev: 0, ash: 0 }, charm: 0, ring: 0, lst: {},
     lure: 0, slure: 0, prism: 0, shb: null,
     mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, routes: [1], eggs: [], pend: [], praid: [], pity: {}, incOn: 0,
@@ -635,7 +635,10 @@ function fresh() {
     /* sndc: lyden er avgjort (v95, Jazz 25.11: «Lyden skal være på som standard for nye spillere etter sync er skrudd på»). 0 = ikke ennå: lyden står som den
        er (av for en ny spiller), og første gang Sync kobles til, slås den på (ghLink). 1 = spilleren har slått den av eller på selv (Settings, eller knappen
        på hodetelefonkortet), 2 = slått på da Sync ble koblet til. */
-    sndc: 0
+    sndc: 0,
+    /* r3d: Kyogre, Groudon eller Articuno som et av de neste raidene (v98, migrate19, r3dPick i league.js): arten mens det venter, −arten når det er brukt,
+       0 = ingen (nye spillere fra v98, og en lagring som ikke var startet). */
+    r3d: 0
   };
 }
 let S = fresh();
@@ -1082,6 +1085,13 @@ function migrate18() {
   for (const e of S.pend || []) if (e && e.id && e.t != null) e.t = tierOf(e.id);
   S.mig = 18;
 }
+/* v98: Kyogre, Groudon eller Articuno som et av de neste raidene (R3D og r3dPick i league.js). Valget gjøres her, første gang appen lastes etter v98, og står
+   fast: S.r3d = arten (raidSpawn bruker det én gang, så −arten). Venter et av de tre alt som raid, ser spilleren den introen der, og ingen ekstra kommer. */
+function migrate19() {
+  const R = S.raid, w = R && !R.dk && !R.ev && typeof R3D !== 'undefined' && R3D.includes(R.id);
+  S.r3d = w ? -R.id : typeof r3dPick === 'function' ? r3dPick() : 0;
+  S.mig = 19;
+}
 function adopt(o) {
   S = Object.assign(fresh(), o);
   S.lad = Object.assign(fresh().lad, o.lad || {}); S.fac = Object.assign(fresh().fac, o.fac || {});
@@ -1106,6 +1116,7 @@ function adopt(o) {
   if (!o.mig || o.mig < 16) migrate16();
   if (!o.mig || o.mig < 17) migrate17();
   if (!o.mig || o.mig < 18) migrate18();
+  if (!o.mig || o.mig < 19) migrate19();
   /* Et forsøk kan ikke være eldre enn raidet selv (S.raid.at = dagen det kom). Et slikt merke kommer fra en eldre appversjon som flettet inn
      forsøkene fra et tidligere raid av samme art: de gjelder ikke dette. */
   if (S.raid && S.raid.at && S.raid.day && S.raid.day < S.raid.at) { S.raid.tries = 0; S.raid.day = ''; }
@@ -1279,6 +1290,8 @@ function carry(p) {
   if (p.tmax > (S.tmax || 0)) S.tmax = p.tmax;
   if (p.fair && (!S.fair || p.fair.n > S.fair.n)) S.fair = p.fair;
   if (p.hon && (!S.hon || ge(p.hon.d, S.hon.d))) S.hon = p.hon;
+  /* v98: raidet fra R3D er alt brukt i den andre lagringen: det gjelder her også (ellers kunne en eldre lagring gitt det én gang til). */
+  if (p.r3d < 0 && S.r3d > 0) S.r3d = p.r3d;
 }
 
 /* ---------- Hjelpere ---------- */
