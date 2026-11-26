@@ -556,7 +556,7 @@ void main(){
     cam = new T.PerspectiveCamera(40, G.W / G.H, 0.5, 900);
     /* Felles lys for alle materialene: én verdi, delt av alle. */
     U = { uTime: uv(0), uPs: uv(1), uFs: uv(1), uLavaY: uv(0), uGlow: uv(1), uGlowH: uv(14), uRimK: uv(1), uKey: uv(new T.Vector3(0.4, 0.8, 0.45).normalize()), uKeyC: uv(u3('#fff2e0')), uShC: uv(u3('#3a1a22')),
-      uRim: uv(new T.Vector3(0, 0.3, -1).normalize()), uRimC: uv(u3('#ffb040')), uLavaC: uv(u3('#ff6a14')), uFogC: uv(u3('#6a1c08')), uFog: uv(new T.Vector3(60, 300, 0.8)) };
+      uRim: uv(new T.Vector3(0, 0.3, -1).normalize()), uRimC: uv(u3('#ffb040')), uLavaC: uv(u3('#ff6a14')), uFogC: uv(u3('#6a1c08')), uFog: uv(new T.Vector3(60, 300, 0.8)), uDisB: uv(1) };   /* uDisB: lufta i disen fra null (bare med G3D.alt.dis = 'ny'); 0 i rommet */
     post = new T.ShaderMaterial({ depthTest: false, depthWrite: false, vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0., 1.); }', fragmentShader: FS_POST,
       uniforms: { tE: uv(rtE.texture), tED: uv(de), tF: uv(rtF.texture), tFD: uv(dt), uRes: uv(new T.Vector2(512, 384)), uLo: uv(new T.Vector2(G.W, G.H)), uNF: uv(new T.Vector2(0.5, 900)), uInk: uv(u3('#1c0a0c')), uInkK: uv(1), uInkO: uv(0), uSub: uv(new T.Vector4()), uSubC: uv(u3('#3a6a9a')), uSpdC: uv(new T.Vector3(1, 0.5, 0.16)), uInkD: uv(new T.Vector4(0.05, 0.004, 0.5, 0.03)), uSpd: uv(new T.Vector4()), uSwirl: uv(0), uFrame: uv(0), uFig: uv(1), uInkW: uv(new T.Vector2(G.W, G.H)) } });
     postScene = new T.Scene(); const tri = new T.Mesh(new T.BufferGeometry().setAttribute('position', new T.BufferAttribute(new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]), 3)), post); tri.frustumCulled = false; postScene.add(tri);
@@ -574,10 +574,11 @@ void main(){
      (smoothstep fra uFog.x til uFog.y), altså to lag dis oppå hverandre: nær og fjern får luft mellom seg, og horisonten er som i dag. b = DISB / uFog.x, så lufta
      alene gir 20 % der dagens dis starter (Groudon 60: 7 % ved 20 enheter, 27 % ved 86 enheter ≈ 150 m, som researchens 75 % kontrast på 150 m). En kurve per art og
      klipp av seg selv, siden filmene setter uFog per bilde. Figuren beholder dagens dis i seks trinn (fogK0). Bryteren leses når materialene lages (når filmen bygges),
-     og uten den er skyggerne tegn for tegn som før (en annen kode i fogK, også en gren som aldri ble tatt, flyttet piksler i fire av filmene). */
+     og uten den er skyggerne tegn for tegn som før (en annen kode i fogK, også en gren som aldri ble tatt, flyttet piksler i fire av filmene).
+     Ikke i rommet (kontrollen 26.11): lufta ganges med uDisB, som poseAt setter til 1 for hvert bilde, og en film i vakuum setter 0 i act (Shadow Mewtwo i rommet). */
   const DISB = 0.223, FOGK = 'float fogK(vec3 w){ float f = clamp((length(cameraPosition - w) - uFog.x) / (uFog.y - uFog.x), 0., 1.); return f * f * (3. - 2. * f) * uFog.z; }';
   const disFS = fs => !(G3D.alt && G3D.alt.dis === 'ny') || fs.indexOf(FOGK) < 0 ? fs : fs.replace(FOGK, FOGK.replace('float fogK(', 'float fogK0(') +
-    ' float fogK(vec3 w){ float d = length(cameraPosition - w), f = clamp((d - uFog.x) / (uFog.y - uFog.x), 0., 1.); return (1. - (1. - f * f * (3. - 2. * f)) * exp(-' + DISB.toFixed(3) + ' * d / max(uFog.x, 4.))) * uFog.z; }')
+    ' uniform float uDisB; float fogK(vec3 w){ float d = length(cameraPosition - w), f = clamp((d - uFog.x) / (uFog.y - uFog.x), 0., 1.); return (1. - (1. - f * f * (3. - 2. * f)) * exp(-' + DISB.toFixed(3) + ' * uDisB * d / max(uFog.x, 4.))) * uFog.z; }')
     .replace('floor(fogK(vW) * 6.', 'floor(fogK0(vW) * 6.');
   const sm = (vs, fs, un, o) => new T.ShaderMaterial(Object.assign({ vertexShader: vs, fragmentShader: disFS(fs), uniforms: Object.assign(un, U) }, o || {}));
   const addBlend = () => ({ transparent: true, depthWrite: false, blending: T.CustomBlending, blendEquation: T.AddEquation, blendSrc: T.OneFactor, blendDst: T.OneFactor, blendEquationAlpha: T.AddEquation, blendSrcAlpha: T.ZeroFactor, blendDstAlpha: T.OneFactor });
@@ -792,7 +793,7 @@ void main(){ float x = 1. - abs(vQ.x * 2. - 1.), a = x * x * (1. - vQ.y) * (1. -
   /* Stillingen på tidspunktet t: skuespillet (act), benene, og kameraet i bildet (shots) som gjelder. Gir P (det kameraet ber om). */
   const poseAt = (D, S, t, o) => {
     const P = S.post = P0(); P.tq = t; U.uTime.value = t; envSet(D.env); K.far();   /* tq: filmbildets tid (ristingen i raid.js går i filmbildets takt) */
-    for (const f of S.figs || []) f.clear(); U.uFog.value.set(60, 300, 0.8); U.uKey.value.set(0.4, 0.8, 0.45).normalize(); U.uRim.value.set(0, 0.3, -1).normalize();   /* lysets retning settes tilbake for hvert bilde: en art som flytter det (Articuno), gjør det i act */
+    for (const f of S.figs || []) f.clear(); U.uFog.value.set(60, 300, 0.8); U.uDisB.value = 1; U.uKey.value.set(0.4, 0.8, 0.45).normalize(); U.uRim.value.set(0, 0.3, -1).normalize();   /* lysets retning settes tilbake for hvert bilde: en art som flytter det (Articuno), gjør det i act */
     D.act(S, t, o); for (const f of S.figs || []) f.apply();
     let si = 0; for (let i = 0; i < D.shots.length; i++) if (t >= D.shots[i][0] - 1e-6) si = i;
     const s0 = D.shots[si][0], s1 = si + 1 < D.shots.length ? D.shots[si + 1][0] : D.len; S.shot = si;

@@ -119,11 +119,12 @@ const G3C = (() => {
 
   /* ---------- Det største nedslaget (REGLER del 4; research/filmatiske_oyeblikk.md 20 og strid 1, kjemper.md strid 1; bak G3D.alt.frys = 'ny') ----------
      Bare filmens største slag (big i X.freeze) står 7 bilder (0,23 s; Smash fryser 0,25–0,5 s på et tungt slag, og 3 bilder er det letteste), med litt restfart (6 %:
-     den som slår, rører seg nesten umerkelig) og en vibrasjon som avtar gjennom frysingen (7,5 Hz, fire bilder per sving i 30 bilder/s; ±0,02 s av figurens tid,
-     avtar som (1 − u)²). Så tar figuren igjen tiden på cu sekunder uten sprang. Låta, ristingen, kameraet og effektene går på t som før. */
+     den som slår, rører seg nesten umerkelig) og en vibrasjon som avtar gjennom frysingen (7,5 Hz, fire bilder per sving i 30 bilder/s; 0–0,02 s av figurens tid,
+     aldri før slaget, avtar som (1 − u)²; rettet etter kontrollen 26.11: med ±0,02 s sto figurens tid 1–1,3 ms før slaget i tredje bilde, og det som slår inn på slaget,
+     ville blinke der). Vibrasjonen synes nesten ikke, for figuren står nesten stille i slaget: et synlig skjelv må ligge i plassen, ikke i tiden. Så tar figuren igjen tiden på cu sekunder uten sprang. Låta, ristingen, kameraet og effektene går på t som før. */
   X.frysStor = (t, list, cu) => { const d = 7 / 30, r = 0.06, A = 0.02, f = 7.5; cu = cu || 0.3;
     for (const h of list || []) { if (t < h) continue; const a = t - h;
-      if (a < d) { const u = a / d; return h + r * a + A * sin(TAU * f * a) * (1 - u) * (1 - u); }
+      if (a < d) { const u = a / d, s = sin(TAU * f * a / 2); return h + r * a + A * s * s * (1 - u) * (1 - u); }
       if (a < d + cu) return t - d * (1 - r) * (1 - io((a - d) / cu)); }
     return t; };
 

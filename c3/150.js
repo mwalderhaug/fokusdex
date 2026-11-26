@@ -403,6 +403,7 @@ void main(){ float x = abs(vQ.x), v = vQ.y, a = vQ.z, st = .7 + .3 * vn(vec2(v *
       if (!cosm) lightCave(U, cu ? { key: '#9fb4cc', sh: '#1c2a40', rim: 0.5, glow: 0.15 } : {});
       else if (!ex) lightCave(U, Object.assign({}, BLACK, { rim: 2.0 * min(1, G), rimc: '#ff8a3a' }));
       else lightCave(U, { key: '#ffb070', sh: '#2a1208', fog: '#0a0402', fogK: 0.6, rim: 1.0, rimc: '#ffd0a0', glowc: '#ff7a2a', glow: 0.45 });
+      if (cosm && U.uDisB) U.uDisB.value = 0;   /* rommet: ingen luft, så ingen luftdis med G3D.alt.dis = 'ny' (REGLER «ALLE i rommet: … ingen dis»); hula før har luft */
       caveSet(S, t, !cosm ? { mode: 1, dark: 0, up: 1, upc: '#3a9ad8', gl: 1, col: cu ? 0.02 : 0.12, emb: 0 }
         : !ex ? { mode: 1, dark: 1, up: 0, gl: 0, col: 0 } : { mode: 1, dark: 0, up: 1.3, upc: '#ff7a2a', gl: 0, col: 0, emb: 1, or: 1 });
       const c = S.cv; c.wall.visible = c.roof.visible = c.st.visible = !cosm; S.tw.visible = cosm;
@@ -508,7 +509,7 @@ void main(){ float x = abs(vQ.x), v = vQ.y, a = vQ.z, st = .7 + .3 * vn(vec2(v *
       S.o3 = new T.Object3D(); return S; },
     act(S, t, o) { const U = K.U(), qk = seg(t, QU[0], QU[0] + 1.5) * (1 - seg(t, HIT6, HIT6 + 0.4)), br = t >= HIT6;
       { const bk = io(seg(t, RUN6 + 0.6, EYE6 - 0.3)) * (1 - seg(t, HIT6, HIT6 + 0.25)), lc = lerpHex('#ffb070', '#4a2410', bk), ls = lerpHex('#2a1208', '#0c0503', bk), h2 = c => '#' + c.map(v => (v < 16 ? '0' : '') + v.toString(16)).join('');   /* lyset flytter seg bak ham når strålen nærmer seg: han blir en mørk skikkelse med lys kant, og øynene tennes i mørket */
-        lightCave(U, { key: h2(lc), sh: h2(ls), fog: '#0a0402', fogK: 0.6, rim: 1.0 + 1.5 * qk + 1.6 * seg(t, EYE6 - 1.5, HIT6), rimc: '#ffd0a0', glowc: '#ff7a2a', glow: 0.45 * (1 - 0.6 * qk) }); }
+        lightCave(U, { key: h2(lc), sh: h2(ls), fog: '#0a0402', fogK: 0.6, rim: 1.0 + 1.5 * qk + 1.6 * seg(t, EYE6 - 1.5, HIT6), rimc: '#ffd0a0', glowc: '#ff7a2a', glow: 0.45 * (1 - 0.6 * qk) }); if (U.uDisB) U.uDisB.value = 0; }   /* fase 2 er i rommet: ingen luftdis (G3D.alt.dis = 'ny') */
       caveSet(S, t, { mode: 1, dark: 0.55 * qk, up: 1.3 * (1 - 0.5 * qk) + 1.5 * hit(t, HIT6, 1.2), upc: '#ff7a2a', gl: 0, col: 0, emb: 1, or: 1 });
       const c = S.cv; c.wall.visible = c.roof.visible = c.st.visible = false; S.tw.visible = true; S.fk.material.uniforms.uUp.value = 0.45;   /* flakene holder seg mørke (de ble gule flater i lyset fra treffet) */
       fallM(S, 99, FALL); S.M.add(EYELID(1), 1); S.M.root.visible = true;
