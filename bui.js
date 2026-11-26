@@ -7,9 +7,12 @@ const BT = { B: null, busy: false, v: null, menu: 'main', res: null, ty: 0, tap:
    FXSLOW er bare til testing: et tall under 1 spiller alt i sakte film. */
 /* Farten i kamp. FAST er godt over det dobbelte. Lydene følger med: de innebygde krympes (SFXT), og pakkens spilles litt raskere og kuttes
    når animasjonen er over, så ingen lyd henger igjen inn i neste trekk. */
-/* B.pace = en kamp med sin egen fart, uansett hva spilleren har valgt (klippet i traileren, show.js). B.quick = meldingene går som med FAST. */
-const bPace = () => (BT.B && BT.B.pace) || 0, bFast = () => (bPace() ? !!BT.B.quick : !!S.bfast);
-const spdF = () => (bPace() || (S.bfast ? 2.6 : 1.25)) * (window.FXSLOW || 1);
+/* B.pace = en kamp med sin egen fart, uansett hva spilleren har valgt (klippet i traileren, show.js). B.quick = meldingene går som med FAST.
+   RAID I VANLIG FART (rf1, Jazz 26.11): alle kamper mot legendariske (B.raid fra raidBattle: dagens raid, pakke-raidene, Dark/Shadow Mewtwo i begge fasene og
+   raidene etter Cynthia og Ghetsis, også i Sandbox og når kampen hentes fram igjen) går i vanlig fart (PACEN), uansett FAST. Lydene følger (bFast, sfxTrim i pack.js). */
+const PACEN = 1.25, raidPace = () => !!(BT.B && BT.B.raid && !BT.B.pace);
+const bPace = () => (BT.B && (BT.B.pace || (BT.B.raid ? PACEN : 0))) || 0, bFast = () => (bPace() ? !!BT.B.quick : !!S.bfast);
+const spdF = () => (bPace() || (S.bfast ? 2.6 : PACEN)) * (window.FXSLOW || 1);
 const sfxFast = () => (bFast() && BT.B && document.getElementById('arena') ? { rate: 1.22, max: 0.9 } : null);
 const bwait = ms => new Promise(r => setTimeout(r, ms / spdF()));
 /* Hvor mye pynt en klasse får i kort og lister: vanlig trener, boss, toppboss, og de tre sjeldne som har hver sin stil:
@@ -1386,7 +1389,7 @@ function drawMenu() {
   }
   if (BT.menu === 'pause') {
     const tt = PACK.title(), row = (a, l, v, x) => `<button type="button" class="bw-row${x || ''}" data-a="${a}"${a === 'bmusic' && !S.sound ? ' disabled' : ''}>${MFR}<span>${l}</span><b>${v}</b></button>`;
-    el.innerHTML = `<div class="bw bw-list bsw${PACK.ebx ? ' r4' : ''}">${MVBG2}${row('bfast', 'SPEED', S.bfast ? 'FAST' : 'NORMAL')}${row('bmusic', 'MUSIC', S.music === 0 ? 'OFF' : 'ON')}${PACK.ebx ? row('bdx', 'MOVES', S.dx === 0 ? 'CLASSIC' : 'DX') : ''}${row('bforfeit', 'FORFEIT', 'give up', ' red')}${tt ? `<p class="bw-tip">♪ ${esc(tt)}</p>` : ''}${cancel('bback', 'Back')}</div>`;
+    el.innerHTML = `<div class="bw bw-list bsw${PACK.ebx ? ' r4' : ''}">${MVBG2}${row('bfast', 'SPEED', S.bfast && !raidPace() ? 'FAST' : 'NORMAL')}${row('bmusic', 'MUSIC', S.music === 0 ? 'OFF' : 'ON')}${PACK.ebx ? row('bdx', 'MOVES', S.dx === 0 ? 'CLASSIC' : 'DX') : ''}${row('bforfeit', 'FORFEIT', 'give up', ' red')}${tt ? `<p class="bw-tip">♪ ${esc(tt)}</p>` : ''}${cancel('bback', 'Back')}</div>`;
     return;
   }
   /* Veska: velg gjenstand, og så hvem den brukes på. Den koster turen din. I demoen er alt gratis, så det kan prøves. */
@@ -2392,7 +2395,7 @@ const BA = {
   bpause: () => { BT.menu = 'pause'; drawMenu(); },
   bback: () => { BT.menu = 'main'; drawMenu(); },
   dkskip: () => { const B = BT.B; if (!B || BT.busy || B.over || B.mode !== 'lab' || !(B.tr && B.tr.leg === 150 && !B.tr.dk)) return; const b = $('#dkskip'); if (b) b.remove(); B.foe.forEach(f => { f.hp = 0; }); B.over = 'win'; BT.busy = true; paintBox('foe'); endBattle(); },
-  bfast: () => { S.bfast = S.bfast ? 0 : 1; save(true); FX.speed = spdF(); drawMenu(); },
+  bfast: () => { if (raidPace()) return toast(tl('Raids always run at normal speed.')); S.bfast = S.bfast ? 0 : 1; save(true); FX.speed = spdF(); drawMenu(); },   /* et raid er låst (rf1) */
   /* Angrepsanimasjonene: de store fra Elite Battle DX, eller de enklere arkene og kodetegnede effektene (for den som vil ha det raskere, eller hvis noe ser rart ut). */
   bdx: () => { S.dx = S.dx === 0 ? 1 : 0; save(true); drawMenu(); },
   bmusic: () => { S.music = S.music === 0 ? 1 : 0; save(true); if (S.music === 0) stopMusic(); else battleMusic(BT.B); drawMenu(); },

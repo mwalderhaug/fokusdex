@@ -804,6 +804,7 @@ const LNO = {
   'Battle rewards grow with today\'s focus and peak when you reach your goal: a higher goal has a higher peak. Past the goal your team is tired (half XP, no encounters).': 'Belønningene i kampene vokser med dagens fokus og topper når du når målet: et høyere mål har en høyere topp. Etter målet er laget slitent (halv XP, ingen møter).',
   'Move hints put 4×, 2×, ½, ¼ or 0× on each move. Type tags show the types by the HP boxes: tap a box to see what hits it hard. The i in the move menu tells what each move does.': 'Move hints setter 4×, 2×, ½, ¼ eller 0× på hvert angrep. Type tags viser typene ved HP-boksene: trykk på en boks for å se hva som treffer den hardt. i-en i angrepsmenyen forteller hva hvert angrep gjør.',
   'Battle speed, music and forfeit are in the Pause menu during a battle.': 'Kampfart, musikk og å gi opp ligger i pausemenyen under en kamp.',
+  'Raids always run at normal speed.': 'Raid går alltid i vanlig fart.',
   'How hard each type of move hits it': 'Hvor hardt hver angrepstype treffer den',
   'How hard each type of move hits your Pokémon': 'Hvor hardt hver angrepstype treffer din Pokémon',
   'Tap the foe\'s HP box to see its weaknesses': 'Trykk på motstanderens HP-boks: se svakhetene',

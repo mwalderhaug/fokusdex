@@ -344,7 +344,7 @@ const PACK = (() => {
   /* Den siste lyden som ble startet, så angrepslyden kan klippes når animasjonen er over (sfxTrim). */
   let last = null;
   const sfxCut = (h, sec, f) => { try { const t = h.t0 + Math.max(f ? 0.03 : 0.15, sec), q = f || 0.16; h.g.gain.cancelScheduledValues(t); h.g.gain.setValueAtTime(h.v, t); h.g.gain.linearRampToValueAtTime(0.0001, t + q); h.s.stop(t + q + 0.04); } catch (_) {} };   /* f: egen uttoning (korte smell) */
-  P.sfxTrim = sec => { const h = last; if (!h || !S.bfast || typeof AC === 'undefined' || !AC || AC.currentTime - h.t0 > 0.12 || h.len <= sec + 0.2) return; sfxCut(h, sec); };
+  P.sfxTrim = sec => { const h = last; if (!h || !S.bfast || (typeof raidPace === 'function' && raidPace()) || typeof AC === 'undefined' || !AC || AC.currentTime - h.t0 > 0.12 || h.len <= sec + 0.2) return; sfxCut(h, sec); };
   /* ANGREPSLYDEN FØLGER ANIMASJONEN (i begge hastigheter). Klippene i pakken er 2–4,7 s lange, og animasjonene 1–2 s: før spilte hvert klipp ut, så
      lyden fra forrige angrep (og det før) lå under det neste og under musikken, som en maskin som går. Nå er det én angrepslyd om gangen: en ny demper
      den forrige (mvSfx), og når animasjonen er over, tones lyden ut (mvEnd). Treff, status og andre korte lyder går som før. */

@@ -91,7 +91,7 @@ const HELP = [
     ${hNote(`One of the three pays bonus coins each day (×${DAYCOIN}). It is shown when you choose.`)}
     ${hH('In a battle')}
     ${hRow(hSym('⚔', 'var(--red)'), 'Fight, Bag, Pokémon', 'Pick a move, use an item from the Shop, or switch to another Pokémon. The move menu shows the type and how well it will hit.')}
-    ${hRow(hSym('⏸', 'var(--ink2)'), 'Pause menu', 'Battle speed, music, and giving up are in the Pause menu. FAST runs the battle at more than double speed, sounds included.')}
+    ${hRow(hSym('⏸', 'var(--ink2)'), 'Pause menu', 'Battle speed, music, and giving up are in the Pause menu. FAST runs the battle at more than double speed, sounds included. Raids always run at normal speed.')}
     ${hRow(hSym('⟲', 'var(--sage)'), 'A battle you leave', 'Is saved after every turn and goes on where it was. Giving up counts as a loss.')}
     ${hH('No time today?')}
     ${hRow(hSym('–', 'var(--ink2)'), 'Not today', 'Closes the day without battles. Nothing is lost but the battles themselves.')}
