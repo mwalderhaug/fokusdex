@@ -181,14 +181,34 @@ function packDraw(k, demo) {
   const P = PACKS[k], sls = Math.random() < (P.god || 0) ? pkGoldSlots(P) : P.slots;
   return sls.map(sl => { const r = Math.random(), lg = r < (sl.leg || 0) ? legEnc(P.shm) : null, ep = !lg && r < (sl.leg || 0) + (sl.ep || 0), e = packCard(lg || genEnc({ min: ep ? 3 : sl.min || 0, luck: sl.luck || 0, shm: P.shm, evo: P.evo || 0 })); if (demo) { delete e.myst; if (lg) e.lg = 1; if (PKPS.includes(lineRoot(e.id))) e.ps = 1; } return e; });
 }
-/* PAKKEKORTENE ER DINE (v92, Jazz 24.11: «Valg B»): de vanlige kortene går rett i samlingen når pakken åpnes, uten kast og uten baller. Bare de
-   store må fanges (pkCatch: epic eller shiny), og de venter i gresset som før. Et kort som går rett inn, gir det en fangst ville gitt av arten:
-   mynter for en ny art (NEWCOIN, én gang per art), men det teller ikke i rekka (S.cst) og starter ingen kjede. En LEGENDARISK fra en pakke er fra pa1
-   et pakke-raid (praidAdd), ikke et møte i gresset. Pakken er urolig i åpningen for alle tre (pkHot i ui.js). */
-const pkCatch = e => !e.myst && (e.t >= 3 || !!e.sh);
-/* Kjøp og åpne n pakker på én gang (ønske 13). Gratispakker brukes først. Ti eller flere har alltid minst én rare eller bedre. Alt avgjøres og lagres
-   med en gang, så ingenting går tapt om appen lukkes midt i åpningen: de vanlige kortene går rett i samlingen (e.u = Pokémonen kortet ble), de store
-   (pkCatch) i gresset, og en legendarisk blir et pakke-raid (praidAdd). Svaret er pakkene (en liste med tre til seks kort per pakke), eller null. På lista: cw = artene du hadde fanget før pakkene ble åpnet
+/* PAKKEKORTENE ER DINE (v92, Jazz 24.11: «Valg B»; ALLE fra pk4, Jazz 25.11: «så slipper man å fange hver eneste episke encounter, un[ntatt]
+   legendaries»): kortene går rett i samlingen når pakken åpnes, uten kast og uten baller, også epic og shiny (fra v92 til pk4 ventet de i gresset).
+   Et kort som går rett inn, gir det en fangst ville gitt av arten: mynter for en ny art (NEWCOIN, én gang per art), men det teller ikke i rekka
+   (S.cst) og starter ingen kjede. En LEGENDARISK fra en pakke er et pakke-raid (praidAdd, pa1); bare hvis arten ikke har noe raid, venter den i
+   gresset (pkCatch = kortet må fanges). Pakken er urolig i åpningen når den holder noe stort (pkHot i ui.js). */
+const pkCatch = e => !!(e && e.myst && !e.pr);
+/* VERN MOT UFLAKS (pk4, forslag_balanse.md S6; som Hearthstone, der en legendary kommer senest i den 40. pakken): i en Master Pack kommer en
+   legendarisk senest i den PKPITY.master.leg-te pakken uten, og en shiny senest i den .sh-te uten. Tellerne (S.pity[k] = { leg, sh }: pakker uten
+   siden sist) teller over alle kjøp, også gratispakker og ti om gangen, og nullstilles av en pakke som har en. Den legendariske tar plassen til
+   pakkens svakeste kort, og shiny blir et tilfeldig av de andre, så vernet tar aldri noe fra deg. Oddsene i Shop (packOdds) er uten vernet; hvor
+   mange pakker det er igjen (pityOf), står på arket (packSheet i ui.js). */
+const PKPITY = { master: { leg: 40, sh: 30 } };
+const pityOf = k => { const c = PKPITY[k]; if (!c) return null; const s = (S.pity && S.pity[k]) || {}; return { leg: Math.max(1, c.leg - (s.leg || 0)), sh: Math.max(1, c.sh - (s.sh || 0)) }; };
+function pkPity(k, out) {
+  const c = PKPITY[k]; if (!c) return;
+  if (!S.pity || typeof S.pity !== 'object' || Array.isArray(S.pity)) S.pity = {};
+  const s = S.pity[k] = Object.assign({ leg: 0, sh: 0 }, S.pity[k]), lo = e => e.t * 10 + (e.sh ? 25 : 0);
+  for (const p of out) {
+    s.leg++; s.sh++;
+    if (p.some(e => e.myst)) s.leg = 0;
+    else if (s.leg >= c.leg) { let w = 0; p.forEach((e, i) => { if (lo(e) < lo(p[w])) w = i; }); p[w] = packCard(legEnc(PACKS[k].shm)); s.leg = 0; }
+    if (p.some(e => e.sh)) s.sh = 0;
+    else if (s.sh >= c.sh) { const ok = p.filter(e => !e.myst); if (ok.length) { const e = ok[rnd(ok.length)]; e.sh = 1; e.iv = [31, 31, 31, 31, 31, 31]; } s.sh = 0; }
+  }
+}
+/* Kjøp og åpne n pakker på én gang (ønske 13). Gratispakker brukes først, og ti koster ti ganger prisen (ingen rabatt: pk4). Ti eller flere har alltid
+   minst én rare eller bedre, og Master Pack har vernet mot uflaks (pkPity). Alt avgjøres og lagres med en gang, så ingenting går tapt om appen lukkes
+   midt i åpningen: kortene går rett i samlingen (e.u = Pokémonen kortet ble; fra pk4 også epic og shiny), og en legendarisk blir et pakke-raid (praidAdd). Svaret er pakkene (en liste med tre til seks kort per pakke), eller null. På lista: cw = artene du hadde fanget før pakkene ble åpnet
    («NEW» på kortene), nc = myntene for nye arter. */
 function openPacks(k, n) {
   const P = PACKS[k]; n = Math.max(1, Math.floor(n || 1)); if (!P) return null;
@@ -196,6 +216,7 @@ function openPacks(k, n) {
   if (S.pend.length > PACKMAX || (pay > 0 && (S.coins < P.p * pay || (P.lv && tlv() < P.lv)))) return null;
   const out = Array.from({ length: n }, () => packDraw(k));
   if (n >= 10 && !out.some(p => p.some(e => e.t >= 2))) { const p = out[n - 1], sl = P.slots[P.slots.length - 1]; p[p.length - 1] = packCard(genEnc({ min: 2, luck: sl.luck || 0, shm: P.shm, evo: P.evo || 0 })); }
+  pkPity(k, out);
   if (free) { S.fpk[k] -= free; if (S.fpk[k] <= 0) delete S.fpk[k]; }
   S.coins -= P.p * pay; out.cw = Object.assign({}, S.caught); out.nc = 0;
   for (const p of out) for (const e of p) { if (e.myst && praidAdd(e, k)) continue; if (e.myst || pkCatch(e)) { S.pend.push(e); continue; } const nw = !S.caught[e.id]; e.u = encMon(e).u; if (nw) out.nc += NEWCOIN[e.t] || 0; }
@@ -209,12 +230,14 @@ function openPack(k) { const o = openPacks(k, 1); if (!o) return null; o[0].cw =
    raid (raidBattle med R0), og nivået settes etter laget når pakken åpnes, som når et raid viser seg (raidLvFor, gulvet raidFloor, raidHx; Jazz: «Som
    et vanlig raid»), så trening før kampen hjelper. ETT FORSØK (Jazz 24.11): det brukes i det kampen starter (praidUse), og taper laget, er den borte.
    Vinner det, er den din (finishPraid), med XP til laget, men uten myntene og gjenstandene fra et vanlig raid: pakken var prisen. Hvem det er, er
-   hemmelig til introen. e.pr = nøkkelen, så åpningen vet hvilket raid kortet ble. false = arten har ikke noe raid (da venter den i gresset som før). */
-function praidAdd(e, pk) {
+   hemmelig til introen. e.pr = nøkkelen, så åpningen vet hvilket raid kortet ble. false = arten har ikke noe raid (da venter den i gresset som før).
+   by = navnet på bossen når raidet er premien for å slå Cynthia eller Ghetsis (cg1, Jazz 25.11; legPrize i league.js): det samme raidet med ett forsøk,
+   men det heter «Legendary raid» og sier hvem det kom fra. Uten by er det et pakke-raid (pk = pakken). */
+function praidAdd(e, pk, by) {
   if (typeof LEG === 'undefined' || !LEG[e.id] || typeof raidLvFor !== 'function') return false;
   const t = LEG[e.id].t, k = S.uid++;
   if (!Array.isArray(S.praid)) S.praid = [];
-  S.praid.push({ k, id: e.id, sh: e.sh ? 1 : 0, lv: raidLvFor(t), fl: raidFloor(), hx: +raidHx(t).toFixed(2), at: dayKey(), pk: pk || '' });
+  S.praid.push(Object.assign({ k, id: e.id, sh: e.sh ? 1 : 0, lv: raidLvFor(t), fl: raidFloor(), hx: +raidHx(t).toFixed(2), at: dayKey(), pk: pk || '' }, by ? { by } : {}));
   e.pr = k; return true;
 }
 const praidBy = k => (Array.isArray(S.praid) ? S.praid : []).find(r => r.k === k) || null;
@@ -253,8 +276,8 @@ function releaseEncs(list) {
   if (n) save();
   return { v, n };
 }
-/* Vanlige pakkekort hører ikke hjemme i gresset (v92). Ventet noen der fra en eldre versjon av appen, går de inn i samlingen (ved lasting, adopt),
-   med myntene for en ny art som en fangst ville gitt. De store blir der, også en legendarisk som kom i gresset før pakke-raidene (pa1): den møtes der som før.
+/* Pakkekort hører ikke hjemme i gresset (v92; fra pk4 heller ikke epic og shiny). Ventet noen der fra en eldre versjon av appen, går de inn i samlingen
+   (ved lasting, adopt), med myntene for en ny art som en fangst ville gitt. En legendarisk som kom i gresset før pakke-raidene (pa1), blir der og møtes som før.
    Kort for kort, og et kort som feiler, blir liggende: lasting av lagringen (load) skal aldri stoppe her. */
 function pkSweep() {
   let n = 0;
@@ -600,13 +623,19 @@ function fresh() {
     v: 1, mig: 18, rev: 0, at: '', xp: 0, coins: 0, uid: 1, started: 0,
     items: { poke: 20, great: 0, ultra: 0, dusk: 0, master: 0, gberry: 0, candy: 0, stone: 0, mstone: 0, incense: 0, potion: 0, super: 0, hyper: 0, maxp: 0, heal: 0, revive: 0, maxrev: 0, ash: 0 }, charm: 0, ring: 0, lst: {},
     lure: 0, slure: 0, prism: 0, shb: null,
-    mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, routes: [1], eggs: [], pend: [], praid: [], incOn: 0,
+    mons: [], party: [], seen: {}, caught: {}, regions: [1], region: 1, routes: [1], eggs: [], pend: [], praid: [], pity: {}, incOn: 0,
     log: {}, fm: {},
     fag: {}, extra: ['annet'],
     last: { fag: 'annet', min: 60 }, cap: 360, sound: 0, cries: 1, vol: 70, cvol: 70, mvol: 70, timer: null,
     lad: { n: 0, lap: 0, best: 0, day: '', lost: '', next: null, seen: [] }, fac: { run: null, best: 0, lost: '' }, raid: null, boost: null, bfast: 0, music: 1, av: '',
     /* diff: vanskelighetsgrad (0 Easy, 1 Normal, 2 Hard). hfx/hty: vis effektivitet på angrepene og typer i kamp. */
-    diff: 1, hfx: 1, hty: 1
+    diff: 1, hfx: 1, hty: 1,
+    /* isn: introene spilleren har sett helt ut, per art ({ 493: 1 }): en intro med noskip (Arceus) kan hoppes over hele veien fra andre gang (legendIntro i bui.js). */
+    isn: {},
+    /* sndc: lyden er avgjort (v95, Jazz 25.11: «Lyden skal være på som standard for nye spillere etter sync er skrudd på»). 0 = ikke ennå: lyden står som den
+       er (av for en ny spiller), og første gang Sync kobles til, slås den på (ghLink). 1 = spilleren har slått den av eller på selv (Settings, eller knappen
+       på hodetelefonkortet), 2 = slått på da Sync ble koblet til. */
+    sndc: 0
   };
 }
 let S = fresh();
@@ -637,6 +666,13 @@ function migrate11() {
 /* SPRÅK: forklaringer og introduksjoner kan leses på norsk (S.lang = 'no'). Navn, typer, angrep, knapper og faner står alltid på engelsk.
    tl(tekst, verdier): den engelske teksten er nøkkelen, LNO[tekst] den norske; {navn} byttes med verdier.navn. Mangler en oversettelse, står den engelske. */
 const LNO = {
+  // Hodetelefonkortet før introen i et raid (hpCard i bui.js)
+  'Headphones recommended': 'Hodetelefoner anbefales',
+  'A lot of time and planning has gone into developing and designing the intros. Headphones give the best experience.': 'Det er brukt mye tid og planlegging på å utvikle og designe introene. Hodetelefoner gir den beste opplevelsen.',
+  'Take your time. The intro starts when you tap Continue.': 'Ta den tiden du trenger. Introen starter når du trykker på Continue.',
+  'Sound is off.': 'Lyden er av.',
+  'Turn on sound': 'Slå på lyden',
+  'Sound is on.': 'Lyden er på.',
   // v86: Electivire som kom tilbake (backSheet i ui.js)
   'Your Electivire is back': 'Electivire-en din er tilbake',
   'A trade took your shiny Electivire by mistake. Here it is again: shiny, Lv {lv}, with full IVs like every shiny.': 'Et bytte tok den shiny Electivire-en din ved et uhell. Her er den igjen: shiny, nivå {lv}, med full IV som alle shiny.',
@@ -786,6 +822,11 @@ const LNO = {
   'Battles point out where to tap to see what the foe is weak to.': 'Kampene viser hvor du trykker for å se hva motstanderen er svak mot.',
   'Size and training are easier to read on a Pokémon\'s card.': 'Størrelse og trening er lettere å lese på kortet til en Pokémon.',
   'Bug fixes.': 'Feilrettinger.',
+  'Packs now open one card at a time, like a real pack.': 'Pakker åpnes nå ett kort om gangen, som en ekte pakke.',
+  'Pokémon from packs go straight to your collection.': 'Pokémon fra pakker går rett i samlingen.',
+  'Some adjustments to packs.': 'Noen justeringer av pakkene.',
+  'The game now asks before you let a Pokémon go.': 'Spillet spør nå før du lar en Pokémon gå.',
+  'A small tip before legendary encounters.': 'Et lite tips før du møter legendariske Pokémon.',
   'A legendary Pokémon has a new intro.': 'En legendarisk Pokémon har fått en ny intro.',
   'Some adjustments to raids and bosses.': 'Noen justeringer av raid og bosser.',
   'Opening packs is more exciting, and the dearer packs hold more Pokémon.': 'Å åpne pakker er mer spennende, og de dyreste pakkene har flere Pokémon.',
@@ -830,7 +871,10 @@ const LNO = {
   // Steg 1.7: pakkene
   'Three to six Pokémon in every pack, more in the dearer ones. Tap a pack to see your odds, and open one or ten.': 'Tre til seks Pokémon i hver pakke, flere i de dyreste. Trykk på en pakke for å se sjansene dine, og åpne én eller ti.',
   'Your odds in one pack right now': 'Sjansene dine i én pakke akkurat nå',
-  'What is inside follows your routes and the level of your team. Ten at once always hold at least one rare or better, and now and then a pack shines gold: every card in it is rare or better. Pokémon from packs sell for less than wild ones. A legendary from a pack is a raid of its own, with one attempt, and the greatest legendaries are rare in packs: they are mostly met in raids.': 'Innholdet følger rutene dine og nivået på laget. Ti om gangen har alltid minst én rare eller bedre, og av og til skinner en pakke i gull: alle kortene i den er rare eller bedre. Pokémon fra pakker selges for mindre enn ville. En legendarisk fra en pakke er et eget raid med ett forsøk, og de største legendariske er sjeldne i pakker: de møtes mest i raid.',
+  'The cards lie in a pile, from the most common to the rarest: tap or swipe for the next one, or open them all at once. Every Pokémon goes straight into your collection, and a legendary is a raid of its own, with one attempt. Ten at once always hold at least one rare or better, and now and then a pack is golden: every card in it is rare or better. Pokémon from packs sell for less than wild ones, and the greatest legendaries are rare in packs: they are mostly met in raids.': 'Kortene ligger i en bunke, fra det vanligste til det sjeldneste: trykk eller sveip for det neste, eller åpne alle på én gang. Hver Pokémon går rett i samlingen, og en legendarisk er et eget raid med ett forsøk. Ti om gangen har alltid minst én rare eller bedre, og av og til er en pakke av gull: alle kortene i den er rare eller bedre. Pokémon fra pakker selges for mindre enn ville, og de største legendariske er sjeldne i pakker: de møtes mest i raid.',
+  'Bad luck has a limit': 'Uflaksen har en grense',
+  'packs at most to a legendary': 'pakker på det meste til en legendarisk',
+  'packs at most to a shiny': 'pakker på det meste til en shiny',
   'The dimmed ones are duplicates no better than what you have. Tap a card to change it.': 'De dempede er duplikater som ikke er bedre enn det du har. Trykk på et kort for å endre det.',
   'Tap a card to let it go for coins instead of keeping it.': 'Trykk på et kort for å slippe det for mynter i stedet for å beholde det.',
   // Steg 1 (Dusk): flere
@@ -984,7 +1028,7 @@ function jFriend() {
 const has = k => !!(S.ulk && S.ulk[k]);
 /* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
    Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
-const WNV = 86, WN = ['A legendary Pokémon has a new intro.', 'Some adjustments to raids and bosses.', 'Bug fixes.'];
+const WNV = 88, WN = ['Packs now open one card at a time, like a real pack.', 'Pokémon from packs go straight to your collection.', 'Some adjustments to packs.'];
 /* Første linje for dem som går reisen (whatsNew i ui.js). */
 const WNJ = 'Your journey: new things now open one study day at a time. See the card on the Focus page.';
 function featCheck() { S.ulk = S.ulk || {}; if (!jOn()) return 0; let ch = 0; for (const [k, d] of JOURNEY) if (!S.ulk[k] && (S.jd || 0) >= d) { S.ulk[k] = 1; ch = 1; } return ch; }
@@ -1068,6 +1112,7 @@ function adopt(o) {
   if (S.raid && S.raid.at && S.raid.hx == null) raidRelevel(S.raid);
   S.routes = (S.routes || []).filter(r => S.regions.includes(r)); if (!S.routes.length) S.routes = [S.regions.includes(S.region) ? S.region : S.regions[0]];
   if (!Array.isArray(S.praid)) S.praid = [];
+  if (!S.pity || typeof S.pity !== 'object' || Array.isArray(S.pity)) S.pity = {};
   try { pkSweep(); } catch (_) {}
   S.mons.forEach(ensure);
   unlockRegions();
@@ -1869,6 +1914,9 @@ async function ghLink(use, o) {
   if (use === 'remote' && o) { const p = S; try { localStorage.setItem(KEY + '.bak', JSON.stringify(S)); } catch (_) {} adopt(o); carry(p); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (_) {} }
   else if (o) S.rev = Math.max(S.rev, o.rev || 0) + 1;
   GH.ok = 1; ghStore(); ghState = 'ok';
+  /* LYDEN PÅ VED FØRSTE SYNK (v95, Jazz 25.11): første gang denne lagringen kobles til, og spilleren ikke selv har valgt lyd av eller på (S.sndc), slås lyden
+     på. En lagring som hentes fra GitHub (remote), har vært synket før og står som den er. */
+  if (use !== 'remote' && !S.sndc) { S.sndc = 2; S.sound = 1; save(true); }
   if (use !== 'remote') await ghPush();
 }
 async function ghPull() {

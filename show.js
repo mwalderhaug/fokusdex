@@ -32,7 +32,7 @@ function raidArrive() {
 /* ---------- Raidet er vunnet ---------- */
 function raidCaught(B, res) {
   const m = monBy(res.cau.u); if (!m) return overview();
-  ov(`<div class="row" style="justify-content:space-between"><span></span><span class="pill tn">${res.pkr ? 'Pack raid' : 'Legendary raid'}</span></div>
+  ov(`<div class="row" style="justify-content:space-between"><span></span><span class="pill tn">${res.pkr && !res.pkb ? 'Pack raid' : 'Legendary raid'}</span></div>
     <div class="mid r4${m.sh ? ' shy' : ''}"><div class="stage" id="rc-stage">${spr(m.id, { ani: 1, sh: m.sh, mega: m.mega })}<span class="tball">${ballEl('ultra', '54px')}</span><span class="stars" id="rc-stars"></span></div>
       <div><div class="ename">${m.sh === 2 ? 'Dark ' : m.sh ? 'Shiny ' : ''}${esc(D(m.id)[0])}</div><div id="rc-info"><p class="sm" style="margin-top:8px">${res.cau.took ? 'It has no fight left in it. The shadow sinks into the ball where your Mewtwo rests.' : 'It has no fight left in it. The ball closes around it.'}</p></div></div></div>
     <div class="acts" id="rc-act" style="visibility:hidden"><button type="button" class="btn gold" data-a="rcdone">Continue</button></div>`, 'tint', 'var(--gold)');

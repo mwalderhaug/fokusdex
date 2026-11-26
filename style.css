@@ -1654,8 +1654,9 @@ button.pill{font:inherit;font-size:11.5px;font-weight:600;color:var(--ink2)}butt
 .pk-ic.big{width:120px;height:160px;border-radius:16px}
 .pk-ic.big i{width:44px;height:44px;box-shadow:0 0 0 4px #1b1b1f}
 /* ---------- PAKKEÅPNINGEN (steg 1.7, ønske 13) ----------
-   Rekkefølgen i spenningen: pakken (en som holder noe stort, er urolig) · baksidene (gløden har klassens farge, shiny glitrer) · kortet snus
-   (store treff snur saktere og får lyset og ordet) · raden øverst fylles pakke for pakke · sammendraget. */
+   Rekkefølgen i spenningen: pakken (lik uansett hva den holder, pk7; .pk-pack.hot og .gold under brukes ikke lenger) · bunken med forsiden opp, fra det vanligste til det sjeldneste (pk6; ingenting
+   varsler før et kort er framme) · et stort kort bygger seg opp når det kommer fram og får lyset og ordet · raden øverst fylles kort for kort ·
+   sammendraget. Vifta, baksidene og det siste kortet for seg (.pk-fan, .pk-back, .pk-hitw) er fra v93 og brukes ikke i bunken. */
 .ov.packov .ovin{display:flex;flex-direction:column;justify-content:center;min-height:100%}
 .pko{position:relative;display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;padding:10px 0}
 .pko>*{position:relative;z-index:1}
@@ -1808,6 +1809,46 @@ button.pkm{cursor:pointer}
 @keyframes pkPop{0%{opacity:1;transform:scale(.96)}100%{opacity:0;transform:scale(1.16)}}
 @keyframes pkSpark{0%{opacity:1;transform:translate(0,0) scale(var(--z,1))}70%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.2)}}
 @keyframes pkQuake{0%,100%{transform:translate(0,0)}10%{transform:translate(-6px,3px)}20%{transform:translate(5px,-4px)}30%{transform:translate(-4px,-2px)}40%{transform:translate(4px,3px)}55%{transform:translate(-3px,1px)}70%{transform:translate(2px,-2px)}85%{transform:translate(-1px,1px)}}
+/* EN BUNKE I HÅNDA (pk6): kortene ligger stablet med forsiden opp. Det øverste (top) synes; kantene under (pk-under) er like for alle og røper ingenting.
+   Kortene er tette (--panel under fargen), så ingenting synes gjennom, og bildene tar ikke imot pekeren (ellers drar nettleseren bildet i stedet for kortet).
+   Et kort som går (out.l/out.r), følger fingeren mens det dras (drag). Et stort kort bygger seg opp i det det kommer fram (rise, med lyset bak bunken når
+   pko.chg), og så smellet (burst). Kantene av skjermen mørkner litt mens det bygger seg opp (på .ov med :has, så ristingen ikke flytter flaten). */
+.pk-pile{position:relative;width:min(58vw,224px);aspect-ratio:5/7;margin:6px auto 10px;touch-action:pan-y;-webkit-user-select:none;user-select:none}
+.pk-pile::before{content:"";position:absolute;left:50%;top:50%;width:150%;aspect-ratio:1;translate:-50% -50%;z-index:-1;pointer-events:none;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--hc,var(--pc)) 55%,transparent) 0,transparent 62%);opacity:0;scale:.7;transition:opacity .35s ease,scale .35s ease}
+.pko.chg .pk-pile::before{opacity:1;scale:1.05}
+.pk-under{position:absolute;inset:0;border-radius:12px;background:linear-gradient(170deg,var(--card2),var(--card) 80%),var(--panel);box-shadow:inset 0 0 0 1.5px var(--line),0 2px 8px rgba(0,0,0,.22);translate:calc(var(--k)*3px) calc(var(--k)*4px);rotate:calc(var(--k)*1.1deg)}
+.pk-pile.gold .pk-under{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--gold) 55%,transparent),0 2px 8px rgba(0,0,0,.22)}
+.pk-pile .pk-card{position:absolute;inset:0;max-width:none;animation:none;cursor:grab;transition:translate .36s cubic-bezier(.3,.7,.3,1),rotate .36s cubic-bezier(.3,.7,.3,1),opacity .36s ease}
+.pk-pile .pk-card.drag{transition:none;cursor:grabbing}
+.pk-pile .pk-card.out{pointer-events:none;opacity:0}
+.pk-pile .pk-card.out.l{translate:-135% 8%;rotate:-18deg}
+.pk-pile .pk-card.out.r{translate:135% 8%;rotate:18deg}
+.pk-pile .pk-card.dl,.pk-under.dl{animation:pkIn .5s cubic-bezier(.2,.9,.3,1.2) backwards}
+.pk-under.dl{animation-delay:calc(var(--k)*.05s)}
+.pk-pile .pk-card .pk-front{animation:none;background:linear-gradient(170deg,color-mix(in srgb,var(--rc) 30%,var(--card2)),var(--card) 75%),var(--panel)}
+.pk-pile .pk-card .pk-front.pkq{background:radial-gradient(120% 80% at 50% 20%,color-mix(in srgb,var(--r4) 46%,var(--card2)),var(--card) 78%),var(--panel)}
+.pk-pile .pk-card *{pointer-events:none}.pk-pile img{-webkit-user-drag:none}
+.pk-pile .pk-card.burst .pk-front{animation:pkGlow 1.1s ease-out}
+.pk-pile .pk-card.rise{animation:pkRise var(--up,500ms) ease-in forwards}
+.pk-pile .pk-card.on.hero{animation:pkHeroP 1.7s cubic-bezier(.2,.8,.3,1)}
+.pk-pile .pk-hw{top:-30px}
+.pk-pile .pk-front{gap:6px;padding:12px 8px}
+.pk-pile .pk-front .sprb{--s:104px}
+.pk-pile .pk-front b{font-size:17px}
+.pk-pile .pk-front .tier{font-size:13px}
+.pk-pile .pk-m{font-size:12px}.pk-pile .pk-m .strs i{width:10px;height:10px}
+.pk-pile .pk-front .szt{height:18px;font-size:11px;padding:0 8px}
+.pk-pile .pk-new{font-size:10px;left:9px;top:9px;padding:3px 7px}
+.pk-pile .pkq-o{width:84px;height:84px}.pk-pile .pkq-o i{font-size:44px}
+.pk-pile .pk-front.pkq .sm{font-size:12px;padding:0 10px}
+.ov.packov .ovin{z-index:1}
+.ov.packov::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(circle at 50% 46%,transparent 22%,var(--scrim) 80%);opacity:0;transition:opacity .45s ease}
+.ov.packov:has(.pko.chg)::after{opacity:1}
+.pkpity{display:flex;flex-direction:column;gap:6px;padding-top:9px;border-top:1px solid var(--line)}
+.pkod-r.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+@keyframes pkRise{0%{scale:1;filter:brightness(1)}100%{scale:1.07;filter:brightness(1.45)}}
+@keyframes pkHeroP{0%{transform:scale(1)}22%{transform:scale(1.1) translateY(-4px)}75%{transform:scale(1.07) translateY(-3px)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.pk-pile .pk-card,.pk-pile .pk-card.rise,.pk-pile .pk-card.dl,.pk-under.dl,.pk-pile .pk-card.on.hero{animation:none;transition:none}}
 @media (prefers-reduced-motion:reduce){.pk-pack .pk-foil,.pk-pack.t3::before,.pk-pack.gold::before,.pk-hitw .pk-card.hit.charge:not(.on),.pk-hitw .pk-card.hit.ready:not(.on),.pk-hitw .pk-card.pop .pk-back::before,.pko.quake,.pko.quake2{animation:none}.pko>.pk-flash,.pko>.pk-spk{display:none}}
 @media (prefers-reduced-motion:reduce){.pk-pack,.pk-pack.hot,.pk-pack.hot .pk-ic,.pk-card.a3 .pk-back,.pk-card.a4 .pk-back,.pk-card.a3:not(.on),.pk-card.a4:not(.on),.pk-card.shy:not(.on) .pk-back::after,.pk-card.on.shy .pk-front::after,.pk-card.on.hero{animation:none}.pko.bigr::before{display:none}}
 
@@ -2055,6 +2096,21 @@ button.pkm{cursor:pointer}
 .rarr-c .raid-sp.qm{animation:rarrP 2.2s ease-in-out infinite}
 .rarr-c .acts{width:100%;margin-top:8px}
 @keyframes rarrP{50%{box-shadow:0 0 0 9px color-mix(in srgb,var(--gold) 22%,transparent),0 0 44px color-mix(in srgb,var(--gold) 70%,transparent)}}
+/* HODETELEFONKORTET (bui.js, hpCard): rett før introen i et raid. Rolig og midt på, i appens eget utseende (lys eller mørk og fargesettet), ikke i den mørke
+   sonen. Bildet er en strektegning i currentColor (gull), og lydbølgene puster sakte. */
+.hpc{gap:14px}
+.hpc-ic{display:block;width:min(40vw,152px);aspect-ratio:4/3;color:var(--gold);margin-bottom:4px}
+.hpc-ic svg{display:block;width:100%;height:100%;overflow:visible}
+.hpc-h{font-size:28px}
+.hpc-p,.hpc-s{max-width:32ch;margin:0 auto;text-wrap:balance}
+.hpc-ic .w1,.hpc-ic .w2{animation:hpw 3s ease-in-out infinite}
+.hpc-ic .w2{animation-delay:.45s}
+@keyframes hpw{0%,100%{opacity:.18}50%{opacity:.8}}
+@media (prefers-reduced-motion:reduce){.hpc-ic .w1,.hpc-ic .w2{animation:none;opacity:.55}}
+/* Lyden av (v95): en rolig linje med en liten knapp under teksten, og bølgene står stille og svake til lyden slås på (samme styrke som pustens bunn, så de
+   glir rett inn i den). Linja holder høyden når knappen forsvinner, så ingenting hopper. */
+.hpc-snd{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px 12px;min-height:36px;margin-top:2px;font-size:13.5px;color:var(--ink2)}
+.hpc.off .hpc-ic .w1,.hpc.off .hpc-ic .w2{animation:none;opacity:.18}
 /* Demoen: hvem vil du møte. */
 .labtr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:4px}
 .labtr button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 6px;border-radius:16px;background:var(--card);box-shadow:0 0 0 1px var(--line);min-width:0;text-align:center}

@@ -226,20 +226,21 @@ function raidCard() {
   return `<div class="card k-ultra raidc" style="--cc:${L.cc}"><div class="pre-foe"><span class="raid-sp">${spr(R.id, { ani: 1, sh: V.sh, mega: defForm(R.id) })}</span><div class="sp"><div class="sm">Legendary raid · attempt ${n} of ${raidTries(R)}</div><b class="bossn">${esc(V.n)}</b><div class="sm tn">${TYN[D(R.id)[1]]}${D(R.id)[2] >= 0 ? ' / ' + TYN[D(R.id)[2]] : ''} · your own team of six</div></div></div>${btn}</div>`;
 }
 /* PAKKE-RAIDENE (pa2): en legendarisk fra en pakke venter her til du tar den. Ett forsøk, og hvem det er, er hemmelig til introen. Nivået ble satt da
-   pakken ble åpnet, så trening før kampen hjelper. Artens filer i 3D hentes i bakgrunnen alt nå (som for raidkortet), så introen er klar. */
+   pakken ble åpnet, så trening før kampen hjelper. Artens filer i 3D hentes i bakgrunnen alt nå (som for raidkortet), så introen er klar.
+   Et raid fra Cynthia eller Ghetsis (R.by, cg1) står her på samme måte, som «Legendary raid» med navnet på bossen i stedet for pakken. */
 function praidCards() {
   const L = Array.isArray(S.praid) ? S.praid.filter(R => LEG[R.id]) : []; if (!L.length || !S.party.length) return '';
   try { if (typeof G3C !== 'undefined' && !calm() && G3D.can()) L.forEach(R => { if (G3C.has(R.id)) G3C.warm(R.id).catch(() => {}); }); } catch (_) {}
-  return L.map(R => `<div class="card k-ultra raidc myst prc"><div class="pre-foe"><span class="raid-sp qm" aria-hidden="true"><i>?</i></span><div class="sp"><div class="sm">Pack raid · ${PACKS[R.pk] ? PACKS[R.pk].n : 'a pack'} · one attempt</div><b class="bossn">A legendary Pokémon</b><div class="sm tn">Who it is, you see when you face it</div></div></div><button type="button" class="btn gold wide" data-a="praid" data-k="${R.k}" style="margin-top:10px">Face it</button></div>`).join('');
+  return L.map(R => `<div class="card k-ultra raidc myst prc"><div class="pre-foe"><span class="raid-sp qm" aria-hidden="true"><i>?</i></span><div class="sp"><div class="sm">${R.by ? `Legendary raid · from ${esc(R.by)} · one&nbsp;attempt` : `Pack raid · ${PACKS[R.pk] ? PACKS[R.pk].n : 'a pack'} · one attempt`}</div><b class="bossn">A legendary Pokémon</b><div class="sm tn">Who it is, you see when you face it</div></div></div><button type="button" class="btn gold wide" data-a="praid" data-k="${R.k}" style="margin-top:10px">Face it</button></div>`).join('');
 }
 function praidScreen(k) {
   const R = praidBy(k); if (!R || !LEG[R.id]) { closeOv(); return render(); }
   const P = PACKS[R.pk], party = S.party.map(monBy).filter(Boolean), lead = BT.lead && party.some(m => m.u === BT.lead) ? BT.lead : party[0] && party[0].u;
   /* Som et åpent raid: artens cutscene i 3D bygges nå, så den er klar når kampen starter. */
   try { if (typeof G3C !== 'undefined' && !calm() && G3D.can() && G3C.has(R.id)) G3C.load(R.id).then(() => G3D.ready('c3:' + R.id)).then(() => { const a = () => G3D.has('c3:' + R.id + 'a') && G3D.ready('c3:' + R.id + 'a'); return G3D.has('c3:' + R.id + 'b') ? G3D.ready('c3:' + R.id + 'b').catch(a) : a(); }).catch(() => {}); } catch (_) {}
-  ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">Pack raid</span></div>
-    <div class="card k-ultra raidc myst"><div class="pre-foe"><span class="raid-sp qm" aria-hidden="true"><i>?</i></span><div class="sp"><div class="sm">From ${P ? 'a ' + P.n : 'a pack'} · you find out who when you face it</div><b class="bossn" style="font-size:21px">A legendary Pokémon</b><div class="sm tn" style="margin-top:4px">${RAIDHP[0]} to ${RAIDHP[3]}× the HP of a normal Pokémon</div></div></div>
-      <p class="sm" style="margin-top:10px">A raid of its own, apart from the legendary raids that show up after your battles. One Pokémon against your whole team, with the Bag. Its level was set by your team when you opened the pack, so training first helps.</p>
+  ov(`<div class="row" style="justify-content:space-between"><button type="button" class="btn sm2" data-a="home">Back</button><span class="pill tn">${R.by ? 'Legendary raid' : 'Pack raid'}</span></div>
+    <div class="card k-ultra raidc myst"><div class="pre-foe"><span class="raid-sp qm" aria-hidden="true"><i>?</i></span><div class="sp"><div class="sm">${R.by ? 'From beating ' + esc(R.by) : `From ${P ? 'a ' + P.n : 'a pack'}`} · you find out who when you face it</div><b class="bossn" style="font-size:21px">A legendary Pokémon</b><div class="sm tn" style="margin-top:4px">${RAIDHP[0]} to ${RAIDHP[3]}× the HP of a normal Pokémon</div></div></div>
+      <p class="sm" style="margin-top:10px">A raid of its own, apart from the legendary raids that show up after your battles. One Pokémon against your whole team, with the Bag. Its level was set by your team when ${R.by ? 'you beat ' + esc(R.by) : 'you opened the pack'}, so training first helps.</p>
       <p class="sm" style="margin-top:6px">Its place fights with it: every third turn something happens on the field, and when it is hurt badly enough, it becomes enraged and grows stronger.</p>
       <p class="sm" style="margin-top:6px"><b>One attempt.</b> Win: it is yours, and your team gets XP. Lose: it is gone.</p></div>
     <div><div class="lab">Your team · tap the one that leads</div><div class="lineup">${party.map(m => `<button type="button" data-a="prlead" data-k="${k}" data-u="${m.u}" class="${m.u === lead ? 'lead' : ''}">${spr(m.id, { it: m.item, sh: m.sh, mega: m.mega })}<span class="sp"><b>${esc(mName(m))}</b><br><span class="sm tn">Lv ${m.lv}</span> ${evTag(m)}</span>${m.u === lead ? '<span class="pill">Leads</span>' : ''}</button>`).join('')}</div></div>
@@ -561,6 +562,42 @@ async function bossFilm(B) {
   root.classList.add('d'); await T(240);
   return true;
 }
+/* HODETELEFONKORTET (Jazz 25.11): rett før introen til en legendarisk, så spilleren rekker å finne AirPods eller headset: et raid og et pakke-raid
+   (startBattle, etter raidvarselet) og en mystisk legendarisk i gresset (mystIntro i ui.js; v95: «Ja på hver legendary»). Ingen tidsfrist: Continue starter
+   introen. Fra v96 bare når introen som spilles, er en av de nye cutscenene i 3D (Jazz 25.11: «Kun varsel om hodetelefoner på de som har ny intro tenker
+   jeg, så de ikke blir skuffa»): samme sjekk som legendIntro (c3Can), så en ny art i G3C.ARTS får kortet av seg selv. De andre artene, Dark Mewtwo, spillere
+   uten pakken med 3D (eller uten WebGL 2) og redusert bevegelse (calm: bare et stillbilde) får ingen kort. Er lyden av, vises kortet likevel, med en rolig
+   linje og en knapp som slår den på (v95: «Veldig gjerne hint om å skru på lyden»). Ikke i sandkassa, Films, showcase eller traileren (de kaller legendIntro
+   selv, med mode 'lab'), og ikke når Dark Mewtwo reiser seg midt i raidet (B.rise, darkRise). Bildet er en egen strektegning i currentColor; kortet følger
+   utseendet (lys eller mørk, fargesettet). Lydbølgene i bildet står stille og svake mens lyden er av. */
+/* Spilles introen som cutscene i 3D? Arten har en fil i c3/ (G3C.ARTS), pakken har 3D-filene og nettleseren WebGL 2 (G3D.can), og det er ikke redusert
+   bevegelse. Shadow Mewtwo ('c3:dk150', steg 3.2) bare rett etter Mewtwo-kampen (B.dk3, der B.rise holder hodetelefonkortet borte) og i Sandbox/showcase (B.show). legendIntro venter så på artens fil og modellene; lar de seg ikke hente i tide, går sprite-filmen som før. */
+const c3Can = (tr, B) => !calm() && typeof G3C !== 'undefined' && G3D.can() && (tr.dk ? !!B && !!(B.dk3 || B.show) && tr.leg === 150 && G3C.hasDk() : G3C.has(tr.leg));
+const hpOn = B => (B.mode === 'raid' || B.mode === 'myst') && !B.rise && typeof CINE !== 'undefined' && !!CINE.info(B.tr.dk ? 'dk' + B.tr.leg : B.tr.leg) && c3Can(B.tr, B);
+const HPSVG = '<svg viewBox="0 0 96 72" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M27 41v-1a21 21 0 0 1 42 0v1"/><rect x="20" y="41" width="14" height="24" rx="7"/><rect x="62" y="41" width="14" height="24" rx="7"/><path class="w1" d="M13.5 47q-3.2 6 0 12M82.5 47q3.2 6 0 12"/><path class="w2" d="M7.5 43q-5.5 10 0 20M88.5 43q5.5 10 0 20"/></svg>';
+function hpCard(B) {
+  const off = !S.sound;
+  ov(`<div class="mid hpc${off ? ' off' : ''}"><span class="hpc-ic" aria-hidden="true">${HPSVG}</span><h1 class="big hpc-h">${tl('Headphones recommended')}</h1>
+      <p class="mut hpc-p">${tl('A lot of time and planning has gone into developing and designing the intros. Headphones give the best experience.')}</p>
+      <p class="sm hpc-s">${tl('Take your time. The intro starts when you tap Continue.')}</p>${off ? `
+      <div class="hpc-snd" id="hpsnd" role="status"><span>${tl('Sound is off.')}</span><button type="button" class="btn sm2" id="hpson">${tl('Turn on sound')}</button></div>` : ''}</div>
+    <div class="acts"><button type="button" class="btn gold" id="hpgo">Continue</button></div>`, 'tint hpov', 'var(--gold)');
+  const go = $('#hpgo'), on = $('#hpson'); try { go.focus({ preventScroll: true }); } catch (_) {}
+  /* LYDEN AV: knappen slår den på. Det er spillerens eget valg (S.sndc = 1, som i Settings, så Sync ikke rører den senere). Trykket låser opp lyden i selve
+     trykket og henter kamplåta mens kortet står; linja sier at lyden er på, og bølgene i bildet begynner å puste. Continue går videre uansett. */
+  if (on) on.addEventListener('click', () => { if (S.sound || !on.isConnected) return; PACK.unlock(); S.sound = 1; S.sndc = 1; save(); sfx.chip();
+    try { const tk = PACK.trackFor(B); if (tk) PACK.cue(tk); } catch (_) {}
+    const c = on.closest('.hpc'), s = $('#hpsnd'); if (c) c.classList.remove('off'); if (s) s.innerHTML = `<span>${tl('Sound is on.')}</span>`; try { go.focus({ preventScroll: true }); } catch (_) {} });
+  return new Promise(res => {
+    let done = false; const fin = () => { if (done) return; done = true; clearInterval(w); res(); };
+    const w = setInterval(() => { if (BT.B !== B || !go.isConnected) fin(); }, 300);
+    /* Trykket er det iPhone krever for å starte lyd: den låses opp her, i selve trykket, før introen starter (spilleren kan ha vært ute av appen og koblet til). */
+    go.addEventListener('click', () => { if (done) return; PACK.unlock(); sfx.tap(); go.disabled = true; fin(); });
+  });
+}
+/* INTROENE SPILLEREN HAR SETT (S.isn, per art; Jazz 25.11): en film med noskip (Arceus: fløyta) kan hoppes over hele veien fra andre gang. */
+const introSeen = id => !!(S.isn && S.isn[id]);
+function introSaw(id) { if (!S.isn || typeof S.isn !== 'object') S.isn = {}; if (S.isn[id]) return; S.isn[id] = 1; save(true); }
 /* Kampvinkelen (--cz, som camFit) og størrelsen den legendariske får (som sprK) når kampen starter: filmene som ender i arenaen, bruker dem. */
 const foePose = B => { const f = B.foe[0], m = B.me[0], h = Math.max(htOf(f.id, f.mega), m ? htOf(m.id, m.mega) : 0); return { cz: h <= 1.6 ? 1.1 : h >= 4 ? 1 : 1.1 - 0.1 * (h - 1.6) / 2.4, k: hK(htOf(f.id, f.mega)) }; };
 /* Filmen når en legendarisk Pokémon viser seg (raid.js og raidf.js). Hver av de store har sin egen, lagt på slagene i låta si, og trioene og de mindre har
@@ -571,8 +608,9 @@ async function legendIntro(B) {
   ov(`<div class="lgi" id="lgi" style="--cc:${tr.cc}"><div class="lgi-s"><canvas class="lgi-cv" id="lgicv" width="512" height="384"></canvas></div><i class="lgi-wait"></i><button type="button" class="lgi-skip" id="lgiskip" hidden>Skip</button><button type="button" class="lgi-go" id="lgigo" hidden>Continue</button></div>`, 'battle vsov');
   const root = $('#lgi'), cv = $('#lgicv'), gone = () => BT.B !== B || !root.isConnected, o = { name: tr.n, cap: tr.title, lv: 0, cc: tr.cc, pose: foePose(B) };
   /* Cutscenen i 3D (raid3d.js, raid3c.js og artens fil i c3/): finnes den for arten, og har pakken 3D-filene, spilles den i stedet for sprite-filmen. Den ender i
-     brølet med navnet og nivået og venter på Continue; så virvel og hvitt blink, og rett inn i kampen. Lar den seg ikke hente i tide, går sprite-filmen som før. */
-  const id3 = (tr.dk ? 'c3:dk' : 'c3:') + tr.leg, c3 = !calm() && typeof G3C !== 'undefined' && G3D.can() && (tr.dk ? (B.dk3 || B.show) && tr.leg === 150 && G3C.hasDk() : G3C.has(tr.leg)) && await Promise.race([G3C.load(tr.leg).then(() => G3D.ready(id3)).then(() => true, () => false), T(G3D.isReady(id3) ? 300 : 12000).then(() => false)]);
+     brølet med navnet og nivået og venter på Continue; så virvel og hvitt blink, og rett inn i kampen. Lar den seg ikke hente i tide, går sprite-filmen som før.
+     Sjekken (c3Can) avgjør også hodetelefonkortet (hpOn): bare introene i 3D har det. Shadow Mewtwo ('c3:dk150', steg 3.2): bare rett etter Mewtwo-kampen (B.dk3) og i Sandbox/showcase (B.show). */
+  const id3 = (tr.dk ? 'c3:dk' : 'c3:') + tr.leg, c3 = c3Can(tr, B) && await Promise.race([G3C.load(tr.leg).then(() => G3D.ready(id3)).then(() => true, () => false), T(G3D.isReady(id3) ? 300 : 12000).then(() => false)]);
   if (gone()) return;
   if (c3) { id = id3; info = CINE.info(id); o.lv = f.lv; root.classList.add('c3'); c3warm();   /* også Primal-lydene: de trengs senere i kampen */
     /* Arenaen i 3D (samme sted som cutscenen) må stå klar når kampen starter. Primal-cutscenen hentes når kampen er i gang (ikke mens introen spiller). */
@@ -591,7 +629,7 @@ async function legendIntro(B) {
      klokke (bitene av låta, sengen, klokka og now) flyttes like mye (t0f). o.x: nivået, XP-en og myntene fra kampen (kortet i filmen). */
   const t0f = c3 && tr.dk && B.dk3 && B.dk3.j2d && mus && mus.j2d ? mus.j2d : 0;
   if (c3 && tr.dk && B.dk3 && typeof B.dk3 === 'object') o.x = Object.assign({}, B.dk3, { j2d: t0f > 0 });
-  /* FLERE LÅTER I FILMEN (def.mus.seq, Arceus): låter fra «special» på filmens klokke foran kamplåta (PACK.seq). noskip: ingen Skip før så mange sekunder (hele fløyta). */
+  /* FLERE LÅTER I FILMEN (def.mus.seq, Arceus): låter fra «special» på filmens klokke foran kamplåta (PACK.seq). noskip: ingen Skip før filmens klokke har passert så mange sekunder (hele fløyta), og bare første gang (S.isn). */
   const cold = V && mus && mus.cold ? mus.cold : null;   /* Shadow Mewtwo i 3D: Villain's Ascent på filmens klokke, med biter av seg selv foran (pre: [filmens tid, hvor i låta, slutt]) */
   const seq = cold ? (mus.pre || []).map((q, i) => ({ f: V, at: q[0] - t0f, o: q[1], end: q[2] - t0f, xin: i ? mus.xf || 0 : 0, xout: mus.xf || 0 })) : mus && mus.seq && tk && !V ? mus.seq.map(q => ({ f: PACK.special(new RegExp(q[0])), at: q[1], out: q[2] || null })) : null;
   if (calm()) { await ready; if (gone()) return; root.classList.add('on'); await CINE.still(cv, id, Math.min(info.len - 0.6, info.R + 2), o); if (V) PACK.music(V, { loop: false, at: 0, fade: 1.2, from: 0.1 }).then(k => { if (k) music(''); }); else battleMusic(B, { fade: 1.2, from: 0.1 }); cry(f.id, 300, 0.5); await T(2600); if (gone()) return; root.classList.add('d'); await T(260); return; }
@@ -604,7 +642,7 @@ async function legendIntro(B) {
     if (gone()) return;
   }
   const started = own ? await PACK.music(own, { at: info.at, loop: false, out: 0.3 }) : tk ? await (seq ? PACK.seq(tk, seq, cold ? { at: -(cold[0] - t0f), skip: cold[1], xin: mus.xf || 0, loop: false, out: 0.3 } : { at: info.at }) : PACK.music(tk, V ? { at: 0, loop: false, out: 0.3 } : { at: info.at })) : false; if (gone()) { PACK.seqStop(0.1); return; }
-  const seqOn = !!seq && started, noskip = started && mus && mus.noskip ? mus.noskip : 0;
+  const seqOn = !!seq && started, noskip = started && mus && mus.noskip && !introSeen(tr.leg) ? mus.noskip : 0;
   const ownOn = !!own && started, bedOn = !!(started && mus && mus.bed && (ownOn || !mus.song)); if (bedOn) PACK.sting(mus.bed, false, () => Math.max(0, PACK.clock()) + t0f);   /* sengen følger låta: filmens egen introlåt, eller kamplåta når filmen går på den (Kyogre) */
   const hs = bedOn && mus.hold ? mus.hold : null; if (hs) PACK.loopWarm(hs[0]);   /* Hold-sløyfa (def.mus.hold: [fil, styrke, fra]): hører til sengen */
   let stop = () => {};
@@ -624,14 +662,17 @@ async function legendIntro(B) {
     skipped = true; sfx.tap(); stop(); if (c3) { if (sk) sk.hidden = true; if (go) go.hidden = true; if (!held) { cry(f.id, 0, 0.7, 1); buzz([80, 40, 260]); } } pl.skip();   /* Continue: brølet er over, ikke et nytt inn i kampen. Skip midt i filmen: brølet han ellers ville gitt */
     if (ownOn) { PACK.music('', { out: 0.3 }); PACK.stingOut(0.3); later(() => battleMusic(B, { at: nx.at || 0 }), 350); } else if (bedOn) PACK.stingOut(0.5);
     if (seqOn) { const early = now() < (cold ? cold[0] : -info.at) - 0.05; PACK.seqStop(0.3); if (early) { PACK.music('', { out: 0.3 }); if (!cold) later(() => battleMusic(B, { at: 0 }), 350); } } };   /* Shadow Mewtwo: kampen starter låta selv (dkStart) */   /* hoppet over før kamplåta kom: den starter fra 0 */
-  setTimeout(() => { if (!gone() && sk && !skipped && (!go || go.hidden)) sk.hidden = false; }, Math.max(1200, noskip * 1000)); if (sk) sk.addEventListener('click', skip); if (go) go.addEventListener('click', skip);
+  /* Skip etter 1,2 s. Med noskip: når filmens klokke er forbi (watch under), samme klokke som skip() sjekker, så det første trykket alltid virker. */
+  const skOn = () => { if (!gone() && sk && sk.hidden && !skipped && !leaving && (!go || go.hidden) && !(noskip && now() < noskip)) sk.hidden = false; };
+  setTimeout(skOn, 1200); if (sk) sk.addEventListener('click', skip); if (go) go.addEventListener('click', skip);
   const key = e => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') skip(); }; document.addEventListener('keydown', key);
   /* HOLD (Arceus): fingeren mot skjermen mens lyset regner. Filmen leser G3D.hold og gjør resten selv (valgfritt, bare for følelsen: filmen er den samme uten). */
   let hh = null; const holdT = hs ? setInterval(() => { const on = !gone() && !skipped && !leaving && !!G3D.hold && now() >= hs[2]; if (on && !hh) hh = PACK.loop(hs[0], hs[1]); else if (!on && hh) { hh.stop(0.5); hh = null; } }, 50) : 0;   /* sløyfa spilles mens fingeren holdes fra droppet, og tones ut når den slipper */
   const hold = v => { if (c3) { if (v && !G3D.hold) buzz(14); G3D.hold = v; } }; root.addEventListener('pointerdown', e => { if (!(e.target && e.target.closest && e.target.closest('button'))) hold(1); }); for (const n of ['pointerup', 'pointercancel', 'pointerleave']) root.addEventListener(n, () => hold(0));
-  const watch = setInterval(() => { if (gone()) return pl.stop(); if (ownOn && mus.auto && !leaving && !skipped && now() >= mus.auto - 0.5) leave(mus.auto); }, 200);
+  const watch = setInterval(() => { if (gone()) return pl.stop(); if (noskip) skOn(); if (ownOn && mus.auto && !leaving && !skipped && now() >= mus.auto - 0.5) leave(mus.auto); }, 200);
   await pl.done; clearInterval(watch); document.removeEventListener('keydown', key); hold(0); if (holdT) clearInterval(holdT); if (hh) { hh.stop(0.3); hh = null; }
   if (gone()) { tms.forEach(clearTimeout); if (ownOn || bedOn) PACK.stingOut(0.2); PACK.seqStop(0.2); return stop(); }
+  if (noskip && now() >= noskip) introSaw(tr.leg);   /* spilt helt ut, eller hoppet over etter fløyta: neste gang virker Skip hele veien */
   if (ownOn || bedOn) PACK.stingOut(0.3);
   if (!started && !PACK.playing() && !MUSIC.playing()) battleMusic(B);
   /* Filmen til en arena slutter i hvilestillingen. Bildet males på nytt, så animasjonen i kampen starter fra samme bilde. */
@@ -1215,7 +1256,7 @@ function fxPos(side) {
 /* Spritene forstørres etter bredden på arenaen (spillskjermen er 256 piksler bred). */
 function fitArena() { const a = $('#arena'), m = $('#bmenu'); if (a) { const u = (a.clientWidth / 256).toFixed(3) + 'px'; a.style.setProperty('--z', (a.clientWidth / 256 * 0.8).toFixed(2)); a.style.setProperty('--u', u); a.parentNode.style.setProperty('--u', u); if (m) m.style.setProperty('--u', u); } }
 window.addEventListener('resize', fitArena);
-function battleTag(B) { return B.tag ? B.tag : B.raid && raidDom(B.tr) ? `${B.mode === 'raid' ? (B.pkr ? 'Pack raid' : 'Raid') : 'Sandbox'} · ${raidDom(B.tr).n}` : B.mode === 'raid' ? (B.pkr ? 'Pack raid' : 'Legendary raid') : B.mode === 'pwt' ? `${B.cup} · ${ROUNDN[B.r]}` : B.mode === 'fac' ? `Frontier · Round ${B.round} · ${B.w + 1}/${FACN}` : B.mode === 'lab' ? `${B.exh ? 'Showcase' : 'Sandbox'} · ${B.tr.cn}` : `${B.lap ? 'Lap ' + (B.lap + 1) + ' · ' : ''}${B.n + 1}/${LAPN} · ${B.tr.cn}`; }
+function battleTag(B) { return B.tag ? B.tag : B.raid && raidDom(B.tr) ? `${B.mode === 'raid' ? (B.pkr && !B.pkb ? 'Pack raid' : 'Raid') : 'Sandbox'} · ${raidDom(B.tr).n}` : B.mode === 'raid' ? (B.pkr && !B.pkb ? 'Pack raid' : 'Legendary raid') : B.mode === 'pwt' ? `${B.cup} · ${ROUNDN[B.r]}` : B.mode === 'fac' ? `Frontier · Round ${B.round} · ${B.w + 1}/${FACN}` : B.mode === 'lab' ? `${B.exh ? 'Showcase' : 'Sandbox'} · ${B.tr.cn}` : `${B.lap ? 'Lap ' + (B.lap + 1) + ' · ' : ''}${B.n + 1}/${LAPN} · ${B.tr.cn}`; }
 const calm = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; } };
 function drawBattle() {
   const B = BT.B, tr = B.tr, tier = TIER(tr.kind);
@@ -1777,7 +1818,8 @@ async function startBattle(B) {
   /* Bildene til begge lagene hentes mens introen går. De to første ventes det på (litt), resten kommer i bakgrunnen. */
   const pre = Promise.all([preSpr(B.me[0].id, { ani: 1, back: 1, sh: B.me[0].sh, mega: B.me[0].mega }), preSpr(B.foe[0].id, { ani: 1, sh: B.foe[0].sh, mega: B.foe[0].mega })]);
   B.me.slice(1).forEach(b => preSpr(b.id, { ani: 1, back: 1, sh: b.sh, mega: b.mega })); B.foe.slice(1).forEach(b => preSpr(b.id, { ani: 1, sh: b.sh, mega: b.mega }));
-  if (B.tr.wild) { await Promise.race([prep, new Promise(r => setTimeout(r, 2500))]); if (BT.B !== B) return; await legendIntro(B); }
+  /* Et raid: hodetelefonkortet først (hpCard; bare når introen er i 3D, hpOn), mens kampen gjøres klar bak det, og så introen. */
+  if (B.tr.wild) { const pw = Promise.race([prep, new Promise(r => setTimeout(r, 2500))]); if (hpOn(B)) { await hpCard(B); if (BT.B !== B) return; } await pw; if (BT.B !== B) return; await legendIntro(B); }
   else {
     await PACK.introPrep(B); if (BT.B !== B) return;
     /* De to helt spesielle har sin egen film før oppstillingen. */
@@ -1893,7 +1935,8 @@ async function darkRise(B) {
   BSFX.dread(); buzz([40, 60, 40, 60, 200]); shake(1100, 3); ar.classList.add('dkrise');
   await Promise.all([say('…but its shadow stays behind, and it is rising!'), new Promise(r => setTimeout(r, 1400))]); if (!ok()) return;
   await say('Your team is restored. This is not over.'); if (!ok()) return;
-  BT.busy = false; startBattle(raidBattle(BT.lead, B.mode === 'lab' ? 'dk' : undefined));
+  const B2 = raidBattle(BT.lead, B.mode === 'lab' ? 'dk' : undefined); B2.rise = 1;   /* midt i raidet: hodetelefonkortet er alt vist (hpOn) */
+  BT.busy = false; startBattle(B2);
 }
 
 /* ---------- Etter kampen ---------- */
@@ -1956,7 +1999,7 @@ function resItem(x, names) {
   return `<span class="rs-it" title="${esc(x)}" aria-label="${esc(x)}"><span class="rs-ic">${pic}</span>${n > 1 ? `<b class="tn">×${n}</b>` : ''}${names ? `<span class="rs-nm">${esc(nm)}</span>` : ''}</span>`;
 }
 /* Premiene som er verdt en egen linje i sammendraget (resten av res.perks forklarer bare hvorfor tallet ble som det ble). */
-const resHi = res => (res.perks || []).filter(x => /^(A rare prize|You found|Champion of|You earned|You beat the challenger|You unmasked)/.test(x));
+const resHi = res => (res.perks || []).filter(x => /^(A rare prize|You found|Champion of|You earned|You beat the challenger|You unmasked|A legendary raid)/.test(x));
 function overview() {
   const B = BT.B, res = BT.res, tr = B.tr, fac = res.mode === 'fac', lab = res.mode === 'lab', raid = res.mode === 'raid', cup = res.mode === 'pwt', first = !res.shown, nm = esc(tr.wild ? tr.n : who(tr));
   if (first) BT.rdet = 0;
@@ -1976,11 +2019,11 @@ function overview() {
   const want = (lab ? [] : S.party.map(monBy).filter(m => m && (m.nm || []).length && (rows.some(b => b.src.u === m.u) || res.ups.some(x => x.u === m.u))));
   const learn = want.length ? `<div class="card stack rs-learn">${want.map(m => `<button type="button" class="newmv" data-a="blearn" data-u="${m.u}">${spr(m.id, { sh: m.sh, mega: m.mega, s: '34px' })}<span class="sm sp" style="color:var(--ink)"><b>${esc(mName(m))}</b> wants to learn <b>${esc(MOVES[m.nm[0]][0])}</b>${m.nm.length > 1 ? ' +' + (m.nm.length - 1) : ''}</span><span class="bang">!</span></button>`).join('')}</div>` : '';
   const learned = rows.map(b => { const u = res.ups.find(x => x.u === b.src.u); return u && (u.learned || []).length ? `${esc(b.name)} learned ${esc(u.learned.join(', '))}` : ''; }).filter(Boolean);
-  /* Cynthia og Ghetsis: det de gir, i et eget kort over resten (res.sp, se finishLeague). */
+  /* Cynthia og Ghetsis: det de gir, i et eget kort over resten (res.sp, se finishLeague). Det legendariske er raid med ett forsøk (P.lr = hvor mange, cg1). */
   const P = res.sp, spRow = (pic, b, s) => `<div class="spw-r"><span class="spw-i">${pic}</span><span class="sp"><b>${b}</b>${s ? `<span class="sm tn">${s}</span>` : ''}</span></div>`;
   const spc = P ? `<div class="card spw" style="--cc:${P.cc || 'var(--gold)'}"><div class="sm">${esc(P.cn || 'The greatest')}</div><b class="spw-h">${esc(P.n)} is beaten</b>
       ${spRow('<span class="coin"><i></i></span>', 'Double coins', '+' + nb(P.extra) + ' on top of the win')}${P.sig ? spRow(spr(P.sig, { sh: 1, s: '40px' }), 'A shiny ' + esc(D(P.sig)[0]), 'waiting in your encounters · shinies are stronger') : ''}
-      ${spRow('<span class="raid-sp qm"><i>?</i></span>', 'A legendary encounter', 'who it is shows when you meet it')}${spRow(itPic('candy'), P.candy + ' Rare Candy', '')}${spRow(itPic('mstone'), 'A Mega Stone', '')}
+      ${P.lr ? spRow('<span class="raid-sp qm"><i>?</i></span>', P.lr === 1 ? 'A legendary raid' : P.lr === 2 ? 'Two legendary raids' : P.lr + ' legendary raids', (P.lr === 1 ? 'one attempt' : 'one attempt each') + ' · who it is shows when you face it') : spRow('<span class="raid-sp qm"><i>?</i></span>', 'A legendary encounter', 'who it is shows when you meet it')}${spRow(itPic('candy'), P.candy + ' Rare Candy', '')}${spRow(itPic('mstone'), 'A Mega Stone', '')}
       ${P.first ? spRow(itPic('master'), 'A Master Ball', 'the first time you beat ' + esc(P.n)) : ''}</div>` : '';
   const bonus = `×${B.sm} study bonus${B.boost.mode === (fac ? 'factory' : 'league') ? ' · today\'s bonus' : ''}`;
   /* Sammendraget av premien: myntene store, så ikonene. */
@@ -2109,11 +2152,11 @@ function rulesSheet() {
     <div class="card stack"><b>No time to battle</b><p class="sm">Playing the battles yourself always pays best, but a day is never lost. <b>Not today</b> closes the day without battles. <b>Simulate</b> lets the game play the day's battles with your team: you see what it won before you accept, and you can undo it once (then there is no more simulating that day). You can also leave the battles until the next day: they are marked as yesterday's, pay yesterday's bonus, and stay open until you start a new session.</p>
       ${row('A simulated day', `${Math.round(SIMPAY * 100)} % of the coins and the XP`)}${row('Not included', 'Rare Candy, items, encounters and trades<br>medals, lap wins and the extra raid draw')}${row('Either way', 'a raid that was waiting shows itself')}</div>
     <div class="card stack"><b>Trainer League</b><p class="sm">Your own team, ${LAPN} battles a lap. The first is always a trainer. From there the class usually rises one step for every battle, sometimes two, and sometimes it stays, so no two laps are the same. Who is waiting, you find out in the intro. The whole team gets XP after every battle, and bosses give Rare Candy and items. <b>One loss ends the lap</b>: the League closes for the day, and your next lap starts from battle 1. On Easy you can lose once and try again against the same trainer. A lap you win is the lap for that day, so the Mega Ring and the later laps are earned one clean run at a time.</p>
-      ${row('Battle ' + LAPN, 'always a Champion')}${row('Or one of the greatest', `${Math.round(SUPP(0) * 100)} % in the first lap, up to ${Math.round(SUPP(99) * 100)} %`)}${row('Cynthia or Ghetsis beaten', `double coins · ${SPCANDY} Rare Candy · a Mega Stone<br>a shiny Gible or Deino · a legendary encounter<br>the first time: a Master Ball`)}
+      ${row('Battle ' + LAPN, 'always a Champion')}${row('Or one of the greatest', `${Math.round(SUPP(0) * 100)} % in the first lap, up to ${Math.round(SUPP(99) * 100)} %`)}${row('Cynthia or Ghetsis beaten', `double coins · ${SPCANDY} Rare Candy · a Mega Stone<br>a shiny Gible or Deino · a legendary raid<br>the first time: a Master Ball`)}
       ${row('Rare prizes', `Champion ${Math.round(RAREP[0] * 100)} % · Supreme Boss ${Math.round(RAREP[1] * 100)} %, in all three modes<br>a purse: your next battle day pays ${Math.round((PURSEM - 1) * 100)} % more coins<br>a bag of coins: ${RAREGOLD} times what the battle paid<br>gear for a Pokémon to hold · a Prism Lure<br>a shiny Pokémon in the grass`)}
       ${row('Their teams', 'the ace and the signature Pokémon are fixed<br>the rest change a little from time to time')}
       ${row('Coins per win', `${TCL.trainer.coin} for a trainer up to ${TCL.champ.coin} for a Champion<br>${TCL.supreme.coin} for one of the greatest`)}
-      <p class="sm"><b>Cynthia</b> and <b>Ghetsis, Champions Edition</b> are the rarest finals. Each has a film of their own and a team to match, and pays half again as many coins, with one more legendary encounter, Rare Candy and a Mega Stone on top.</p></div>
+      <p class="sm"><b>Cynthia</b> and <b>Ghetsis, Champions Edition</b> are the rarest finals. Each has a film of their own and a team to match, and pays half again as many coins, with one more legendary, Rare Candy and a Mega Stone on top. A legendary from them is a raid of its own, with one attempt.</p></div>
     <div class="card stack"><b>Battle Frontier</b><p class="sm">Rental Pokémon at Lv ${FACLV}: you open seven balls and pick four. Each one is rated with one to five marks: how well it does against the Pokémon you meet here, worked out from its stats, moves, Ability and types. ${FACN - 1} trainers and then a boss a round. After a win you may swap one of theirs for one of yours. You win coins, items and encounters, and your own team gets XP for every win. A loss ends the run, and you can start ${FACLIVES} runs a day.</p>
       <p class="sm">Every trainer is stronger than the one before, round after round, and the rentals get better with every round too. A run is ${FACEND} rounds: clear the last one and the Frontier is conquered for the day.</p>
       ${row('The bosses', 'round 2: the Bronze Symbol<br>round 3: a Frontier Brain, the Silver Symbol<br>round 4: the same Brain, stronger, the Gold Symbol<br>round 6: the Brain at full strength, the Diamond Symbol')}${row('Symbols', 'kept under Profile, Achievements, with a prize the first time')}

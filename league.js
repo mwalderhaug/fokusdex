@@ -142,8 +142,9 @@ TCL.brain = { i: 5, n: 'Frontier Brain', mons: 4, rel: 1, sk: 1, iv: 22, ev: 24,
    oftest Cynthia eller Ghetsis i Champions Edition (SPW), som har egen film, eget lag og ekstra belønning. Hvem som venter, vises ikke før introen.
    S.lad.c = klassen til den du sist slo i runden (0 ved rundestart). Så starter en ny runde med høyere nivå, større lag og bedre belønninger. */
 /* De to spesielle (sp: Cynthia og Ghetsis i Champions Edition) gir i tillegg til klassens belønning: dobbelt så mange mynter, SPCANDY Rare Candy
-   (rett i veska, ikke skåret ned som ligaens ellers), en Mega Stone, en shiny av sin egen signatur-Pokémon (SPSIG, i første form), et legendarisk
-   møte, og første gang hver av dem er slått, en Master Ball. res.sp beskriver det for resultatskjermen. */
+   (rett i veska, ikke skåret ned som ligaens ellers), en Mega Stone, en shiny av sin egen signatur-Pokémon (SPSIG, i første form), en legendarisk
+   til, og første gang hver av dem er slått, en Master Ball. res.sp beskriver det for resultatskjermen. Fra cg1 (Jazz 25.11) er det legendariske de gir,
+   både klassens egen (rareLoot 9) og den ekstra, et raid med ett forsøk (legPrize), ikke et møte i gresset: res.sp.lr = hvor mange raid seieren ga. */
 const SPSIG = { Cynthia: 443, Ghetsis: 633 }, SPCANDY = 6;
 const LAPN = 8, CLIMBUP = 0.7, CLIMBJUMP = 0.12, CLIMBTOP = 7, SPW = 3;
 /* Mynter og Rare Candy i ligaen målt mot klassetabellen (stilt inn sammen med Battle Frontier og cupen, så en dag i hver modus er omtrent like mye verdt
@@ -744,16 +745,28 @@ const pushEnc = (res, e) => { S.pend.push(e); trimPend(30); res.encs.push(e); };
 /* De pseudo-legendariske (første form): Dratini, Larvitar, Bagon, Beldum, Gible og Deino. */
 const PSEUDO = [147, 246, 371, 374, 443, 633];
 const giveCharm = res => { S.charm = (S.charm || 0) + CHARM.n; res.perks.push(`Shiny Charm: ${CHARM.m}× shiny odds in your next ${S.charm} focus sessions.`); };
+/* CYNTHIA OG GHETSIS (cg1, Jazz 25.11: «det å slå cynthia eller Ghetsis skal gi vanlig raid (1 forsøk) ikke gress»): en legendarisk fra dem (tr.sp, i
+   ligaen og som toppboss i Battle Frontier) venter som et raid med ETT forsøk, ikke i gresset. Det er pakke-raidet (praidAdd, S.praid) med navnet på
+   bossen (by): intro, arena og nivå som et raid (nivået settes etter laget nå), og det vanlige raidet (S.raid) røres ikke. Står det alt et pakke-raid
+   eller et slikt raid og venter, kommer det nye i tillegg: hvert har sitt eget kort og sitt ene forsøk. Hvem det er, trekkes med legEnc, samme lodd som
+   møtet i gresset ga (faste odds blant de legendariske i områdene dine, også en du har), så bare formen er ny. res.lr = nøklene til raidene. Har arten
+   ikke noe raid, venter den i gresset som før. Alle andre gir møtet i gresset (pushEnc). */
+function legPrize(res, tr) {
+  const e = legEnc();
+  if (tr && tr.sp && praidAdd(e, '', tr.n)) { (res.lr = res.lr || []).push(e.pr); return; }
+  pushEnc(res, e);
+}
 /* Det de sjeldne bossene gir i tillegg, likt i ligaen og i Battle Frontier. Belønningen følger sjeldenheten:
    klasse 7 gir sjeldne møter og av og til et pseudo-legendarisk, klasse 8 alltid et pseudo-legendarisk, klasse 9 et legendarisk, et pseudo-legendarisk og en Shiny Charm.
    De gir også det som trengs for å fange de aller sjeldneste: Dusk Balls, og fra klasse 8 av og til en Golden Razz Berry. De aller største kan gi Sacred Ash
-   (aldri flere enn du kan bære). På Easy er det legendariske møtet fra klasse 9 en sjanse (diff().lg), ikke en selvfølge. */
-function rareLoot(ci, res, give, ty) {
+   (aldri flere enn du kan bære). På Easy er det legendariske møtet fra klasse 9 en sjanse (diff().lg), ikke en selvfølge.
+   tr = treneren (B.tr): fra Cynthia og Ghetsis er den legendariske et raid (legPrize), fra de andre et møte i gresset som før. */
+function rareLoot(ci, res, give, ty, tr) {
   const hit = p => Math.random() < p, enc = o => pushEnc(res, genEnc(o));
   if (hit(MSTONE[ci - 7] || 0)) give('mstone', 1);
   if (ci === 7) { if (hit(0.3)) give('dusk', 2); give('candy', 3); give('ultra', 2); give('stone', 1); give('maxp', 1); give('revive', 1); enc({ ty, min: 3, luck: 2 }); enc({ min: 3, luck: 2 }); enc({ min: 2, luck: 1.5 }); if (hit(0.35)) enc({ ids: PSEUDO }); }
   if (ci === 8) { give('dusk', 2); if (hit(0.35)) give('gberry', 1); give('candy', 4); give('ultra', 3); give('stone', 1); give('maxrev', 1); enc({ ty, min: 3, luck: 2 }); enc({ min: 3, luck: 2 }); enc({ min: 2, luck: 1.5 }); enc({ ids: PSEUDO }); if (hit(0.25)) giveCharm(res); }
-  if (ci === 9) { give('dusk', 3); give('gberry', 1); if (hit(0.5) && (S.items.ash || 0) < SHOP.ash.max) give('ash', 1); give('candy', 6); give('ultra', 5); give('stone', 2); give('maxrev', 2); if (hit(diff().lg == null ? 1 : diff().lg)) pushEnc(res, legEnc()); else enc({ ids: PSEUDO }); enc({ ids: PSEUDO }); enc({ ty, min: 3, luck: 2 }); enc({ min: 3, luck: 2 }); giveCharm(res); }
+  if (ci === 9) { give('dusk', 3); give('gberry', 1); if (hit(0.5) && (S.items.ash || 0) < SHOP.ash.max) give('ash', 1); give('candy', 6); give('ultra', 5); give('stone', 2); give('maxrev', 2); if (hit(diff().lg == null ? 1 : diff().lg)) legPrize(res, tr); else enc({ ids: PSEUDO }); enc({ ids: PSEUDO }); enc({ ty, min: 3, luck: 2 }); enc({ min: 3, luck: 2 }); giveCharm(res); }
 }
 /* Hva hver klasse gir ved seier (i tillegg til mynter og XP). Hver klasse har sin egen type belønning, alle bossene gir møter, og jo sjeldnere bossen er, jo mer. */
 function classLoot(B, res, give) {
@@ -767,7 +780,7 @@ function classLoot(B, res, give) {
     rival: () => { give('candy', 2); give('revive', 1); if (S.eggs.length < 3) { S.eggs.push({ need: 120, got: 0 }); res.items.push('1 × Egg'); } else enc({ min: 3, luck: 1.5 }); enc({ min: 2, luck: 1.5 }); enc({ min: 2, luck: 1.5 }); },
     evilboss: () => { rareLoot(7, res, give, ty); boost(2, 1.5); },
     champ: () => { rareLoot(8, res, give, ty); boost(3, 1.5); },
-    supreme: () => { rareLoot(9, res, give, ty); boost(5, 2); }
+    supreme: () => { rareLoot(9, res, give, ty, B.tr); boost(5, 2); }
   })[B.k]();
 }
 /* Ligakampen er over: XP til laget (også ved tap), og ved seier mynter, klassens belønning og noen ganger et byttetilbud. */
@@ -794,10 +807,10 @@ function finishLeague(B) {
       const spw = S.spw || (S.spw = {}), first = !spw[B.tr.n], extra = res.coins, sig = SPSIG[B.tr.n];
       res.coins += extra; S.coins += extra; S.items.candy = (S.items.candy || 0) + SPCANDY; S.items.mstone = (S.items.mstone || 0) + 1;
       let se = null; if (sig) { se = genEnc({ ids: [sig] }); se.sh = 1; pushEnc(res, se); }
-      pushEnc(res, legEnc());
+      legPrize(res, B.tr);
       if (first) S.items.master = (S.items.master || 0) + 1;
       spw[B.tr.n] = (spw[B.tr.n] || 0) + 1;
-      res.sp = { n: B.tr.n, cn: (POOL[k][B.ti][6] || {}).cn || POOL[k][B.ti][2] || '', cc: B.tr.cc || '', extra, candy: SPCANDY, sig: se ? se.id : 0, first };
+      res.sp = { n: B.tr.n, cn: (POOL[k][B.ti][6] || {}).cn || POOL[k][B.ti][2] || '', cc: B.tr.cc || '', extra, candy: SPCANDY, sig: se ? se.id : 0, first, lr: (res.lr || []).length };
     }
     L.best = (L.best || 0) + 1; (L.seen = L.seen || []).push(k + B.ti); L.next = null; L.fork = null; if (!B.ch) L.c = Math.min(CLIMBTOP, clsI(k)); L.won = (L.won || 0) + 1;
     if (clsI(k) >= 8) achInit().ch++;
@@ -1138,7 +1151,7 @@ function finishFactory(B) {
     if (r >= 3 && roll(0.12)) pushEnc(res, legEnc());
     /* Sjelden boss: klassens egen belønning på toppen, som i ligaen. */
     { const bonus = Math.round(FACROUND(r) * sm * (B.dc || 1)); res.coins += bonus; S.coins += bonus; res.perks.push(`Round ${r} cleared: ${bonus.toLocaleString('en-US')} coins on top.`); }
-    if (B.tr.ultra) { const c = B.tr.ci, extra = Math.round([600, 1000, 2000][c - 7] * sm * (B.dc || 1)); res.coins += extra; S.coins += extra; rareLoot(c, res, give, [B.tr.ty]); ringAward(c, res); rarePrize(c, res); res.note = `${B.tr.cn}: extra rewards.`; }
+    if (B.tr.ultra) { const c = B.tr.ci, extra = Math.round([600, 1000, 2000][c - 7] * sm * (B.dc || 1)); res.coins += extra; S.coins += extra; rareLoot(c, res, give, [B.tr.ty], B.tr); if (res.lr) res.perks.push('A legendary raid waits for you: one attempt.'); ringAward(c, res); rarePrize(c, res); res.note = `${B.tr.cn}: extra rewards.`; }
     { const sy = facBossOf(r).sym || 0; if (sy > (S.fac.sym || 0)) { S.fac.sym = sy; res.sym = sy; res.perks.push(`You earned the ${FACSYM[sy]} Symbol. Its prize waits under Profile, Achievements.`); } }
     res.roundDone = true; raidRoll(RAIDWIN); raidUnhide(); S.fac.keep = R.team.filter(x => x.rr !== 'leg').map(x => ({ id: x.id, sh: x.sh || 0, iv: (x.iv || []).slice(), nat: x.nat || 0 })); res.keep = S.fac.keep.length ? 1 : 0; if (!res.keep) S.fac.keep = null;
     if (r >= FACEND) { const d = S.lad.day || dayKey(); res.done = 1; res.note = 'Frontier conquered.'; S.fac.tries = { d, n: Math.max(facFails(), facLives()) }; S.fac.lost = d; S.fac.run = null; save(); return res; }
@@ -1864,7 +1877,7 @@ function legLevelMoves(id, lv) {
 /* Angrepene i et raid: settet til arten (LEGSET). Mew velger dekningen etter laget ditt (party). */
 function raidMoves(id, lv, dk, party) { return (id === 151 && !dk && party && party.length ? mewSet(party) : null) || legSet(id, dk) || legLevelMoves(id, lv); }
 /* demo = arten som skal prøves i demoen (gir ingenting), eller 'dk' for Dark Mewtwo. Ellers den som har vist seg. R0 = et pakke-raid (pa1, S.praid):
-   kampen er den samme som i et raid, men B.pkr sier hvilket, og finishPraid gjør den ferdig. */
+   kampen er den samme som i et raid, men B.pkr sier hvilket, og finishPraid gjør den ferdig. B.pkb = bossen raidet kom fra (cg1: Cynthia eller Ghetsis). */
 function raidBattle(lead, demo, R0) {
   const R = R0 ? R0 : demo === 'dk' ? { id: 150, dk: 1, lv: raidLvFor(5), hx: raidHx(5) } : demo ? { id: demo, lv: raidLvFor(LEG[demo].t), hx: raidHx(LEG[demo].t) } : S.raid, L = raidInfo(R), party = S.party.map(monBy).filter(Boolean);
   party.sort((a, b) => (b.u === lead) - (a.u === lead));
@@ -1874,7 +1887,7 @@ function raidBattle(lead, demo, R0) {
   const dd = diff(), lv = raidFoeLv(R), e = Math.round((R.dk ? 85 : 60) * dd.ev), foe = { id: R.id, lv, sh: R.dk ? 2 : R.sh ? 1 : 0, g: rollG(R.id), mega: R.id === DEOXYS ? DEOXA : defForm(R.id), ms: raidMega(R), iv: [31, 31, 31, 31, 31, 31].map(v => Math.round(v * (0.5 + dd.iv / 2))), ev: [e, e, e, e, e, e], nat: 0, mv: demo === 150 ? legLevelMoves(150, lv) : raidMoves(R.id, lv, R.dk, party), drive: R.id === 649 ? driveFor(party) : null };
   const B = mkBattle(demo ? party : party.map(evSrc), [foe], legTr(R.id, R.dk), { mode: demo ? 'lab' : 'raid', raid: 1, st: TCL.supreme, k: 'legend', rd: 0, n: 0, lap: 0, ti: 0, bag: bagN(), xm: 3 * dd.xp, sm: 1, dc: dd.coin, boost: { mode: '', m: 1, xp: 1 } });
   B.tr.skill = dd.sk; if (demo) labMega(B); else evApply(B);
-  if (R0) B.pkr = R0.k;
+  if (R0) { B.pkr = R0.k; if (R0.by) B.pkb = R0.by; }
   /* I demoen har Mewtwo vanlig HP (ikke raid-HP), så en kommer fram til forvandlingen: det er den demoen er til for. */
   const f = B.foe[0], big = demo === 150 ? 1 : RAIDHP[L.t - 1] * (R.ev ? 1 : dd.rhp) * (R.dk ? 1 : (R.hx || 1) * raidX(R.id)[0]); f.max = f.hp = Math.round(f.max * big); f.big = big; if (R.dk) f.short = 'D.Mewtwo';
   return B;
@@ -1933,12 +1946,13 @@ function praidUse(B) {
   save();
 }
 /* Pakke-raidet er over. Seier: den legendariske er din (raidCatch, med mynter for en ny art som i et raid), og laget får XP. Tap: den er borte (ett
-   forsøk). Ingen mynter eller gjenstander som i et vanlig raid, ingen skygge etter Mewtwo, og det vanlige raidet (S.raid) røres ikke. */
+   forsøk). Ingen mynter eller gjenstander som i et vanlig raid, ingen skygge etter Mewtwo, og det vanlige raidet (S.raid) røres ikke.
+   Et raid fra Cynthia eller Ghetsis (by, cg1) gjøres ferdig likt: res.pkb = navnet, så skjermene kaller det «Legendary raid». */
 function finishPraid(B) {
-  const win = B.over === 'win', id = B.tr.leg, P = B.pkd || praidBy(B.pkr) || {}, nm = B.tr.n, res = { mode: 'raid', pkr: 1, win, ups: [], items: [], encs: [], coins: 0, trade: null, perks: [], note: '', kind: 'legend', leg: id };
+  const win = B.over === 'win', id = B.tr.leg, P = B.pkd || praidBy(B.pkr) || {}, nm = B.tr.n, by = P.by || B.pkb || '', res = { mode: 'raid', pkr: 1, pkb: by, win, ups: [], items: [], encs: [], coins: 0, trade: null, perks: [], note: '', kind: 'legend', leg: id };
   const i = (S.praid || []).findIndex(r => r.k === B.pkr); if (i >= 0) S.praid.splice(i, 1);
   if (win) { grantXp(B, res); raidCatch(id, 0, res, P.sh != null ? P.sh : B.foe[0] && B.foe[0].sh === 1 ? 1 : 0); res.note = `${nm} is yours.`; }
-  else res.note = `${nm} is gone. A legendary from a pack gives you one chance.`;
+  else res.note = by ? `${nm} is gone. A legendary from beating ${by} gives you one chance.` : `${nm} is gone. A legendary from a pack gives you one chance.`;
   save(); return res;
 }
 /* I demoen er Mewtwo hele historien: slår du den, reiser den seg som Dark Mewtwo (dark), akkurat som i et ekte raid. */
