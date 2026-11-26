@@ -85,13 +85,13 @@ function softCurve() {
   return c;
 }
 function busFor(a) {
-  const pre = a.createGain(), sum = a.createWaveShaper(); pre.gain.value = 1 / SUMIN; sum.curve = softCurve(); sum.oversample = '2x'; pre.connect(sum); sum.connect(a.destination);
+  const pre = a.createGain(), sum = a.createWaveShaper(), post = a.createGain(); pre.gain.value = 1 / SUMIN; sum.curve = softCurve(); sum.oversample = '2x'; pre.connect(sum); sum.connect(post); post.connect(a.destination);   /* post: taket i filmene (filmLvl); 1 ellers */
   const mus = a.createGain(); mus.gain.value = MUSTRIM; mus.connect(pre);
   /* Begrenseren legger selv på forsterkning etter terskelen og forholdet (full styrke inn gir T·(1 − 1/R) dB ut, og noden løfter alt med
      den inverse opphøyd i 0,6). Den tas bort igjen her, så en lyd under terskelen går gjennom akkurat som den er. */
   const fx = a.createDynamicsCompressor(), fg = a.createGain(), mk = Math.pow(1 / Math.pow(10, FXDB * (1 - 1 / FXRATIO) / 20), 0.6);
   fx.threshold.value = FXDB; fx.knee.value = 0; fx.ratio.value = FXRATIO; fx.attack.value = 0.002; fx.release.value = 0.1; fg.gain.value = FXTRIM / mk; fx.connect(fg); fg.connect(pre);
-  return { mus, fx, sum, pre };
+  return { mus, fx, sum, pre, post };
 }
 function bus() { const a = ac(); if (!a) return null; if (!BUS) { try { BUS = busFor(a); } catch (_) { BUS = { mus: a.destination, fx: a.destination }; } } return BUS; }
 /* Musikken (music.js og pack.js) kobler seg til master(). Effektene går til out(), og skrikene rett til fxBus(). */
@@ -257,6 +257,40 @@ function cryBuf(id) {
 }
 window.cryCount = 0;
 const CRYDEEP = 0.78;   /* hvor langt ned brølet legges i cutscenene (1 = uendret) */
+/* LYDEN PÅ MOBIL (oppdrag_lyd_mobil.md, 26.11 natt): bak bryteren G3D.alt.lyd = 'mob' til Jazz har hørt den (live: &lyd=mob). */
+const lydMob = () => typeof G3D !== 'undefined' && !!G3D.alt && G3D.alt.lyd === 'mob';
+/* Brølet på telefonen (lyd.md 9, 12–14): høyttaleren spiller nesten ingenting under 300 Hz, så bass-laget (en oktav under med lavpass 300 Hz) og hylla på +8 dB under
+   240 Hz fylte begrenseren uten å høres der. Her: hylla +4 dB under 200 Hz, lavpass 7 kHz og +4 dB rundt 2,5 kHz (skriket bærer i 1–5 kHz); bass-laget mettet (myk
+   metning av det under 300 Hz, så høypass 150 Hz og lavpass 1,8 kHz: overtonene ligger der telefonen spiller); sub-laget under 60 Hz bare i slaget (inn på 20 ms, ut med
+   τ 0,15 s). Dybden på telefonen kommer av formantene: CRYDEEP flytter dem 22 %. Målt med brølet alene (lydspor.js): på telefonen (høypass 450 Hz) 0,9–2,5 dB sterkere,
+   på hodetelefoner −0,4 til +1,5 dB. */
+let SATC = null;
+function cryMob(a, src, buf, g, at, norm) {
+  const f = (t, fr, gn) => { const b = a.createBiquadFilter(); b.type = t; b.frequency.value = fr; if (gn != null) b.gain.value = gn; return b; };
+  const lo = f('lowshelf', 200, 4), hi = f('lowpass', 7000), pk = f('peaking', 2500, 4); pk.Q.value = 0.7;
+  src.playbackRate.value = CRYDEEP; src.connect(lo); lo.connect(hi); hi.connect(pk); pk.connect(g);
+  const sub = a.createBufferSource(); sub.buffer = buf; sub.playbackRate.value = CRYDEEP / 2;
+  if (!SATC) { const n = 2049, b0 = Math.tanh(0.3); SATC = new Float32Array(n); for (let i = 0; i < n; i++) SATC[i] = Math.tanh(4 * (i / (n - 1) * 2 - 1) + 0.3) - b0; }   /* tanh, litt skjev (også jevne overtoner) */
+  const lp = f('lowpass', 300), pg = a.createGain(), ws = a.createWaveShaper(), h1 = f('highpass', 150), h2 = f('highpass', 150), l2 = f('lowpass', 1800), bg = a.createGain();
+  pg.gain.value = 3 * norm / 4; ws.curve = SATC; ws.oversample = '4x'; bg.gain.value = 1 / (3 * norm);
+  sub.connect(lp); lp.connect(pg); pg.connect(ws); ws.connect(h1); h1.connect(h2); h2.connect(l2); l2.connect(bg); bg.connect(g);
+  const s1 = f('lowpass', 60), s2 = f('lowpass', 60), sg = a.createGain();
+  sg.gain.setValueAtTime(0, at); sg.gain.linearRampToValueAtTime(1, at + 0.02); sg.gain.setTargetAtTime(0, at + 0.07, 0.15);
+  sub.connect(s1); s1.connect(s2); s2.connect(sg); sg.connect(g); sub.start(at); g.gain.value *= 0.8;
+}
+/* Filmens nivå på mobil (lyd.md 24): introene lå på −18,6 til −21,6 LUFS mot −16 ±2. Låta bærer nivået og skal ikke endres, og sengene skal ligge under den, så hele
+   filmen (låta, sengen, lydene og brølet) løftes like mye i summen, med taket i den myke klipperen på −1,2 dBFS mens filmen går (sann topp høyst −1 dBTP, også etter AAC i en video). dB per film,
+   målt med audio/mobil.py (tallene: NOTES 26.11 natt, «Lyden på mobil»). Filmer som ikke står her, er urørt. */
+const FILMDB = { 'c3:383': 2.2, 'c3:383p': 0, 'c3:382': 3.5, 'c3:382p': 0.8, 'c3:144': 4.6, 'c3:493': 4.6, 'c3:493p': 1.5 }, FILMTAK = 0.87;
+function filmLvl(id, on, now) {
+  if (!lydMob() && !(BUS && BUS.fl)) return;   /* uten bryteren: ingenting (og ingen lydgraf lages her) */
+  const b = bus(), a = ac(); if (!b || !b.post || !a) return;
+  const db = on && lydMob() ? FILMDB[id] || 0 : 0, k = Math.pow(10, db / 20), c = db ? FILMTAK : 1, t = a.currentTime; b.fl = db;
+  if (now) { b.pre.gain.setValueAtTime(k / c / SUMIN, t); b.post.gain.setValueAtTime(c, t); return; }
+  const tc = on ? 0.1 : 0.8;   /* opp på rundt 0,3 s når filmen starter, ned over rundt 2–3 s etter Continue (lydbildet setter seg, ikke et fall) */
+  b.pre.gain.cancelScheduledValues(t); b.post.gain.cancelScheduledValues(t); b.pre.gain.setValueAtTime(b.pre.gain.value, t); b.post.gain.setValueAtTime(b.post.gain.value, t);
+  b.pre.gain.setTargetAtTime(k / c / SUMIN, t, tc); b.post.gain.setTargetAtTime(c, t, tc);
+}
 /* deep: brølet i cutscenene (Jazz 18.11): lagt ned i tonehøyde, med mer bass og et lag en oktav under. I kampen brukes det vanlige. */
 function cry(id, delay = 0, vol = 0.45, deep = 0) {
   if (!S.sound || !S.cries || !id || !ac()) return;
@@ -267,7 +301,8 @@ function cry(id, delay = 0, vol = 0.45, deep = 0) {
     const L = loudOf(buf), norm = L > -90 ? Math.max(0.12, Math.min(2, Math.pow(10, (-18 - L) / 20))) : 0.4;
     src.buffer = buf; g.gain.value = Math.min(1.6, vol * norm * Math.pow((S.cvol == null ? 70 : S.cvol) / 100, 1.6) * 4.27); g.connect(fxBus() || a.destination);
     const at = a.currentTime + Math.max(0, delay - (performance.now() - t0)) / 1000;
-    if (deep) { const lo = a.createBiquadFilter(), hi = a.createBiquadFilter(), sub = a.createBufferSource(), lp = a.createBiquadFilter(), sg = a.createGain();
+    if (deep && lydMob()) cryMob(a, src, buf, g, at, norm);   /* lyden på mobil (bryteren) */
+    else if (deep) { const lo = a.createBiquadFilter(), hi = a.createBiquadFilter(), sub = a.createBufferSource(), lp = a.createBiquadFilter(), sg = a.createGain();
       lo.type = 'lowshelf'; lo.frequency.value = 240; lo.gain.value = 8; hi.type = 'lowpass'; hi.frequency.value = 5200; src.playbackRate.value = CRYDEEP; src.connect(lo); lo.connect(hi); hi.connect(g);
       sub.buffer = buf; sub.playbackRate.value = CRYDEEP / 2; lp.type = 'lowpass'; lp.frequency.value = 300; sg.gain.value = 1.2; sub.connect(lp); lp.connect(sg); sg.connect(g); sub.start(at); g.gain.value *= 0.85; }
     else src.connect(g);

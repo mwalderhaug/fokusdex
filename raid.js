@@ -304,8 +304,9 @@ const CINE = (() => {
   C.play = (out, id, o) => {
     o = o || {}; let raf = 0, over = false, skipAt = -1, held = false, fin; const done = new Promise(r => { fin = r; });
     const f = filmOf(id), t0 = performance.now(), fr = o.from || 0, cues = (f.cues || [[f.R, 'cry']]).map(q => ({ t: q[0], n: q[1], v: q[2], on: q[0] < fr }));   /* o.from: filmen starter så langt inne */
-    const end = () => { if (over) return; over = true; cancelAnimationFrame(raf); fin(); };
+    const end = () => { if (over) return; over = true; cancelAnimationFrame(raf); if (typeof filmLvl === 'function') filmLvl(id, 0); fin(); };
     if (f.c3 && typeof G3D !== 'undefined') G3D.out = 0;
+    if (typeof filmLvl === 'function') filmLvl(id, 1);   /* lyden på mobil (ui.js, bak bryteren): filmens nivå mens den går */
     setCur(id, o).then(() => { const mine = cur;   /* lufta i kampen (C.air) og arenaene (C._.set) setter samme cur: filmen tar sin egen tilbake før hvert bilde (Shadow Mewtwo, fase 2) */
       const step = () => {
         if (over) return; if (!out.isConnected) return end(); cur = mine;
