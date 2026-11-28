@@ -1025,7 +1025,7 @@ function monSheet(m, re) {
       <button type="button" class="mc-pw" data-a="mstat" data-u="${m.u}" aria-label="Power ${pwOf(m)}. See the numbers"><span class="pw tn"><b>${nb(pwOf(m))}</b><small>power</small></span><span class="sp">${potOn() ? `${starRow(m, 'lg')}<small>${now > born ? `Born ${JT[born - 1].toLowerCase()} · trained to ${now} stars` : `Born ${JT[born - 1].toLowerCase()}`}</small>` : ''}
         <span class="mtrs"><span class="mtr" role="img" aria-label="Level ${m.lv} of 100"><small>Level</small><i><b style="width:${m.lv}%"></b></i></span>${has('train') ? `<span class="mtr" role="img" aria-label="Training: ${evSum(m)} of ${EVTOT} EVs"><small>Training</small><i><b style="width:${Math.round(evSum(m) / EVTOT * 100)}%"></b></i></span>` : ''}</span></span>${icn('chev')}</button>
       ${hexEl(m)}
-      ${potOn() ? `<div class="mc-n"><b>${NAT[m.nat]}</b>${up !== dn ? `<span class="up">${icn('up')}${SN[up]}</span><span class="dn">${icn('dn')}${SN[dn]}</span>` : '<span>no stat up or down</span>'}</div>` : ''}${szLine(m)}${wkCardX(m)}
+      ${potOn() ? `<div class="mc-n"><b>${NAT[m.nat]}</b>${up !== dn ? `<span class="up">${icn('up')}${SN[up]}</span><span class="dn">${icn('dn')}${SN[dn]}</span>` : '<span>no stat up or down</span>'}</div>` : ''}${szLine(m)}${wkCardX(m)}${evStLine(evStats(m), 1)}
       ${sg ? `<div class="mc-x au">${icn('spark')}<span><b>Shiny</b> · ${nb(sg.sum)} more power than a regular ${esc(d[0])}</span></div>` : ''}
       ${ab ? `<div class="mc-x"><span><b>${ab.n}</b> · ${ab.d}${ab.live ? '' : ' <i class="nyet">Not in battles yet.</i>'}</span></div>` : ''}
       ${S.mons.length > 1 ? `<button type="button" class="btn sm2 wide mc-c" data-a="cmpw" data-u="${m.u}">${icn('scale')}Compare with another</button>` : ''}</div>
@@ -1047,10 +1047,10 @@ function monSheet(m, re) {
 }
 /* TALLENE BAK STYRKEN (ønske 15 og 18): hver verdi med det den er bygget av. Født og nå, størrelsen og det en shiny har over en vanlig. */
 function statSheet(m) {
-  const st = statsOf(m), bs = m.mega ? MEGA[m.mega - 1][4] : BST[m.id - 1], up = natUp(m.nat), dn = natDn(m.nat), sg = shinyGain(m), born = bornStars(m), now = nowStars(m), sz = szOf(m), mx = Math.max(...st, 1);
+  const st = statsOf(m), bs = m.mega ? MEGA[m.mega - 1][4] : BST[m.id - 1], up = natUp(m.nat), dn = natDn(m.nat), sg = shinyGain(m), born = bornStars(m), now = nowStars(m), sz = szOf(m), mx = Math.max(...st, 1), E = evStats(m);
   const row = i => { const ht = m.ht && m.ht[i], nat = up !== dn && i === up ? ' up' : up !== dn && i === dn ? ' dn' : '';
     return `<div class="st-r"><span class="st-n${nat}">${SN[i]}${nat ? (i === up ? ' +' : ' −') : ''}</span><b class="tn">${st[i]}</b><span class="st-b"><i style="width:${Math.round(st[i] / mx * 100)}%"></i></span>
-      <small class="tn">base ${bs[i]} · IV ${m.iv[i]}${ht ? ' → 31' : ''} · EV ${m.ev[i]}${sg && sg.d[i] ? ` · <b class="au">+${sg.d[i]} shiny</b>` : ''}${i === 0 && sz !== 1 && szOn() && m.id !== 292 ? ` · ${SZN[sz]} ${sz > 1 ? '+' : '−'}${Math.round(Math.abs(SZHP[sz] - 1) * 100)} %` : ''}</small></div>`; };
+      <small class="tn">base ${bs[i]} · IV ${m.iv[i]}${ht ? ' → 31' : ''} · EV ${m.ev[i]}${sg && sg.d[i] ? ` · <b class="au">+${sg.d[i]} shiny</b>` : ''}${i === 0 && sz !== 1 && szOn() && m.id !== 292 ? ` · ${SZN[sz]} ${sz > 1 ? '+' : '−'}${Math.round(Math.abs(SZHP[sz] - 1) * 100)} %` : ''}${E.m > 1 ? ` · <b class="au">${E.st[i]} in battle today</b>` : ''}</small></div>`; };
   openSheet(`<div class="row" style="justify-content:space-between"><h2 class="h" style="margin:0">${esc(mName(m))} in numbers</h2><button type="button" class="xb" data-a="mback" data-u="${m.u}" aria-label="Back">${icn('x')}</button></div>
     <div class="st-top"><span class="pw tn"><b>${nb(pwOf(m))}</b><small>power · the six added up</small></span>${potOn() ? `<span class="sp">${starRow(m, 'lg')}<small>${JT[born - 1]} at birth${now > born ? ` · ${now} stars with training` : ''}</small></span>` : ''}</div>
     <div class="stl" style="--tc:var(--t${mTypes(m)[0]})">${SN.map((_, i) => row(i)).join('')}</div>

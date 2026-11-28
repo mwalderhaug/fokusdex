@@ -827,6 +827,7 @@ const LNO = {
   'Battles point out where to tap to see what the foe is weak to.': 'Kampene viser hvor du trykker for å se hva motstanderen er svak mot.',
   'Size and training are easier to read on a Pokémon\'s card.': 'Størrelse og trening er lettere å lese på kortet til en Pokémon.',
   'Bug fixes.': 'Feilrettinger.',
+  'Special events now show what they do to your stats, on the rental cards in the Battle Frontier and on your own Pokémon.': 'Special events viser nå hva de gjør med verdiene, på leie-kortene i Battle Frontier og på dine egne Pokémon.',
   'Packs now open one card at a time, like a real pack.': 'Pakker åpnes nå ett kort om gangen, som en ekte pakke.',
   'Pokémon from packs go straight to your collection.': 'Pokémon fra pakker går rett i samlingen.',
   'Some adjustments to packs.': 'Noen justeringer av pakkene.',
@@ -1038,7 +1039,7 @@ function jFriend() {
 const has = k => !!(S.ulk && S.ulk[k]);
 /* WHAT'S NEW: vises én gang, første gang appen åpnes etter en oppdatering (S.wn < WNV). Hold det til noen få korte linjer, uten å røpe noe.
    Øk WNV og bytt linjene når en utgivelse har noe spillerne merker. Nye spillere ser det ikke (S.wn settes når spillet starter). */
-const WNV = 90, WN = ['Unfinished battles from your last battle day are now on the Focus page until you start a session.', 'Bug fixes.'];
+const WNV = 91, WN = ['Special events now show what they do to your stats, on the rental cards in the Battle Frontier and on your own Pokémon.', 'Bug fixes.'];
 /* Første linje for dem som går reisen (whatsNew i ui.js). */
 const WNJ = 'Your journey: new things now open one study day at a time. See the card on the Focus page.';
 function featCheck() { S.ulk = S.ulk || {}; if (!jOn()) return 0; let ch = 0; for (const [k, d] of JOURNEY) if (!S.ulk[k] && (S.jd || 0) >= d) { S.ulk[k] = 1; ch = 1; } return ch; }

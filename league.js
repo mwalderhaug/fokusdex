@@ -408,9 +408,15 @@ function evApply(B) {
     /* Høyst SURGEN starter som Mega: dine egne er valgt på forhånd (surgeList), leide telles i rekkefølgen de står. */
     if (o.mega && !b.mega && mg >= SURGEN) o.mega = 0;
     if (o.mega && !b.mega) { mg++; const st = statsOf(Object.assign({}, b.src, { mega: o.mega })), g = MEGA[o.mega - 1]; b.st = [b.st[0]].concat(st.slice(1)); b.ty = [g[2], g[3]]; b.mega = o.mega; b.mg = 0; b.name = b.src.nn || megaName(o.mega); b.evb = 'surge'; }
-    if (o.m > 1) { b.st = b.st.map(v => Math.max(1, Math.round(v * o.m))); b.max = b.hp = b.st[0]; b.evb = e.k; }
+    if (o.m > 1) { b.st = b.st.map(v => Math.max(1, Math.round(v * o.m))); b.max = b.hp = b.st[0]; b.evb = e.k; b.evm = o.m; }
   }
   return B;
+}
+/* Verdiene slik de blir i kamp i dag: dagens event (nivået i rampelyset og ganger i alle verdier) lagt på, med samme regning som evSrc og evApply.
+   { st, base, m, lv }: st = i kamp, base = uten eventet, m = gangeren (1 = ingen), lv = nivået i rampelyset (0 = som før). Mega Surge endrer formen, ikke tallene her. */
+function evStats(m, e) {
+  const b = evBoost(m, e), base = statsOf(m), st = b.lv ? statsOf(Object.assign({}, m, { lv: b.lv })) : base;
+  return { st: b.m > 1 ? st.map(v => Math.max(1, Math.round(v * b.m))) : st, base, m: b.m, lv: b.lv };
 }
 /* En linje i oppsummeringen når dagens event ga noe ekstra i denne kampen. */
 const evPerk = res => { if (evIs('gold') && res.coins > 0) res.perks.push('Gold Rush: one and a half times the coins.'); };

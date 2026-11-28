@@ -1570,6 +1570,11 @@ button.pill{font:inherit;font-size:11.5px;font-weight:600;color:var(--ink2)}butt
 .fs-st i{height:7px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}
 .fs-st b{display:block;height:100%;border-radius:4px}
 .fs-st em{font-style:normal;text-align:right;font-weight:700}
+.fs-st.ev div{grid-template-columns:64px 1fr auto}.fs-st.ev em{color:var(--gold)}.fs-st.ev em small{color:var(--ink3);font-weight:500;font-size:11px}
+.fs-ev{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--ink2)}
+.ft-ev{position:absolute;right:4px;top:4px;padding:1px 5px;border-radius:8px;font-size:9.5px;font-weight:800;background:var(--gold);color:#2a2109;line-height:1.4;z-index:1}
+.ft.rr-sh .ft-ev,.ft.rr-ace .ft-ev,.ft.rr-leg .ft-ev{top:17px}
+.mc-x.evx{background:color-mix(in srgb,var(--ec,var(--gold)) 16%,var(--soft))}
 .rent button.mega{box-shadow:0 0 0 2px var(--gold)}
 .bw-p .nm u{text-decoration:none;font-size:.8em;color:#f8c830}
 /* ---------- Legendariske kamper ---------- */

@@ -164,7 +164,7 @@ const canMega = (B, s) => { const b = act(B, s); return !!b && !!b.mg && !b.mega
 function megaEvolve(B, s, ev, how) {
   if (!canMega(B, s)) return false;
   const b = act(B, s), k = b.mg, g = MEGA[k - 1], src2 = Object.assign({}, b.src, { mega: k }), st = statsOf(src2), N = how === 'rage' ? b.name : nmOf(s, b), to = megaName(k), primal = g[1] === 'Primal';
-  const put = o => { o.st = [o.st[0]].concat(st.slice(1)); o.ty = [g[2], g[3]]; };
+  const put = o => { o.st = [o.st[0]].concat(evKeep(b, st.slice(1))); o.ty = [g[2], g[3]]; };
   put(b); if (b.orig) put(b.orig);
   b.mega = k; b.name = b.src.nn || to; (B.megaUsed || (B.megaUsed = {}))[s] = 1;
   ev.push({ t: 'mega', side: s, id: b.id, mega: k, sh: b.sh, primal, txt: primal ? `${N}'s Primal Reversion!` : how === 'rage' ? `${N} is surrounded by a blinding light!` : s === 'me' ? `${N} is reacting to your Mega Ring!` : `${N} is reacting to ${B.tr.n}'s Mega Ring!` },
@@ -307,9 +307,11 @@ function abPow(B, u, m, ua) {
 /* Typetreffet slik det blir i kampen: med Scrappy hos den som slår, og i de sterke vindene. */
 const effX = (B, u, t, ty) => typeEff(ty, t, { scrappy: !!u && ab(u) === 'scrappy', wind: !!B && !!B.wx && B.wx.k === 'wind' });
 /* Bytter form midt i kampen (Meloetta med Relic Song, og når den blir rasende i et raid). k = plassen i MEGA + 1, eller 0 for grunnformen. */
+/* Dagens event (evApply ga b.evm, gangeren i alle verdier) følger med når formen skifter midt i kampen: Mega, Primal og formene. */
+const evKeep = (b, st) => b.evm > 1 ? st.map(v => Math.max(1, Math.round(v * b.evm))) : st;
 function formTo(B, s, b, k, ev) {
   if (!b || b.hp <= 0 || b.tf || (b.mega || 0) === k) return false;
-  const src2 = Object.assign({}, b.src, { mega: k }), st = statsOf(src2), ty = mTypes(src2), put = o => { o.st = [o.st[0]].concat(st.slice(1)); o.ty = ty.slice(); };
+  const src2 = Object.assign({}, b.src, { mega: k }), st = statsOf(src2), ty = mTypes(src2), put = o => { o.st = [o.st[0]].concat(evKeep(b, st.slice(1))); o.ty = ty.slice(); };
   put(b); if (b.orig) put(b.orig); b.mega = k;
   if (ev) ev.push({ t: 'mega', side: s, id: b.id, mega: k, sh: b.sh, forme: 1, txt: `${nmOf(s, b)} is changing its shape!` }, { t: 'msg', s: `${nmOf(s, b)} changed to its ${k ? MEGA[k - 1][1] : 'Aria'} Forme!` });
   return true;

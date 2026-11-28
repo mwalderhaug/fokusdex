@@ -2246,7 +2246,7 @@ function facSwapScreen() {
   const W = BT.sw || (BT.sw = { a: null, b: null, view: null }), theirs = res.swap, mine = R.team, done = W.a != null && W.b != null;
   const myRow = mine.map((m, i) => done && i === W.b ? theirs[W.a] : m), thRow = theirs.map((m, i) => done && i === W.a ? mine[W.b] : m);
   const card = (m, side, i) => { const sel = side === 'th' ? W.a === i : W.b === i, on = W.view && W.view[0] === side && W.view[1] === i;
-    return `<button type="button" class="swc${sel ? ' sel' : ''}${done && sel ? ' moved' : ''}${on ? ' on' : ''}${m.mega ? ' mega' : ''}" data-a="swtap" data-s="${side}" data-k="${i}" id="sw-${side}-${i}" style="--tc:var(--t${mTypes(m)[0]})" aria-pressed="${sel}">${spr(m.id, { it: m.item, mega: m.mega, sh: m.sh, s: '52px' })}<b>${esc(mName(m))}</b>${rateEl(m, { sm: 1 })}${sel ? `<span class="swt">${done ? (side === 'my' ? 'NEW' : 'GIVEN') : side === 'my' ? 'OUT' : 'IN'}</span>` : ''}</button>`; };
+    return `<button type="button" class="swc${sel ? ' sel' : ''}${done && sel ? ' moved' : ''}${on ? ' on' : ''}${m.mega ? ' mega' : ''}" data-a="swtap" data-s="${side}" data-k="${i}" id="sw-${side}-${i}" style="--tc:var(--t${mTypes(m)[0]})" aria-pressed="${sel}">${spr(m.id, { it: m.item, mega: m.mega, sh: m.sh, s: '52px' })}<b>${esc(mName(m))}</b>${rateEl(m, { sm: 1 })}${evPct(m)}${sel ? `<span class="swt">${done ? (side === 'my' ? 'NEW' : 'GIVEN') : side === 'my' ? 'OUT' : 'IN'}</span>` : ''}</button>`; };
   const v = W.view, vm = v ? (v[0] === 'th' ? thRow : myRow)[v[1]] : null;
   /* Pilene på kortet: mot den fra det andre laget som er valgt, ellers mot laget ditt. */
   const other = !vm || done ? null : v[0] === 'th' ? (W.b != null ? mine[W.b] : null) : (W.a != null ? theirs[W.a] : null), vref = other ? [other] : myRow, vcap = other ? 'against ' + mName(other) : 'against your team';
@@ -2268,10 +2268,18 @@ function facSwapScreen() {
                o.ref = hvem pilene måles mot, o.cap = teksten under strekene, o.pick = { i, on, full } gir velg-knappen på kortet. */
 const STN6 = ['HP', 'Attack', 'Defense', 'Sp. Atk', 'Sp. Def', 'Speed'];
 const rateEl = (m, o = {}) => { const r = facRate(m); return `<span class="frt${o.sm ? ' sm' : ''}" role="img" aria-label="Rated ${r.n} of 5">${[1, 2, 3, 4, 5].map(i => `<i${i <= r.n ? ' class="on"' : ''}></i>`).join('')}${o.num ? `<b class="tn">${r.p}</b>` : ''}</span>`; };
-const statMini = m => { const st = statsOf(m), top = Math.max(...st.slice(1)); return `<span class="fmb" aria-hidden="true">${st.map((v, i) => `<i style="height:${Math.max(10, Math.min(100, v / 1.9)).toFixed(0)}%"${i && v === top ? ' class="hi"' : ''}></i>`).join('')}</span>`; };
+const statMini = m => { const st = evStats(m).st, top = Math.max(...st.slice(1)); return `<span class="fmb" aria-hidden="true">${st.map((v, i) => `<i style="height:${Math.max(10, Math.min(100, v / 1.9)).toFixed(0)}%"${i && v === top ? ' class="hi"' : ''}></i>`).join('')}</span>`; };
 function facCmp(m, ref) {
   const l = (ref || []).filter(x => x && x !== m); if (!l.length) return [0, 0, 0, 0, 0, 0];
-  const st = statsOf(m), all = l.map(statsOf); return st.map((v, i) => { const av = all.reduce((a, s) => a + s[i], 0) / all.length; return v >= av * 1.12 ? 1 : v <= av * 0.88 ? -1 : 0; });
+  const st = evStats(m).st, all = l.map(x => evStats(x).st); return st.map((v, i) => { const av = all.reduce((a, s) => a + s[i], 0) / all.length; return v >= av * 1.12 ? 1 : v <= av * 0.88 ? -1 : 0; });
+}
+/* Dagens event på kortene: +15 % på flisen, og linja over verdiene på kortet (tallene under er med eventet). */
+const evPct = m => { const x = evStats(m).m; return x > 1 ? `<span class="ft-ev tn">+${Math.round((x - 1) * 100)} %</span>` : ''; };
+function evStLine(E, own) {
+  const e = evNow(); if (!e || E.m <= 1) return '';
+  const I = evInfo(e), p = Math.round((E.m - 1) * 100), lv = E.lv ? `, at Lv ${E.lv}` : '';
+  return own ? `<div class="mc-x evx" style="--ec:${I.c}"><span><b>${esc(I.n)}</b> · +${p} % in every stat in battle today${lv}: ${SN.map((n, i) => `${n} <b class="tn">${E.st[i]}</b>`).join(' · ')}</span></div>`
+    : `<div class="fs-ev sm"><span class="pill evp" style="--ec:${I.c}">${esc(I.n)}</span><span>+${p} % in every stat today${lv}, shown below.</span></div>`;
 }
 const FACCALL = { mega: 'Mega!', sh: 'Shiny!', ace: 'An ace!', leg: 'A legend on loan!' };
 const rarePill = m => m.rr === 'leg' ? '<span class="pill frp leg">LEGEND ON LOAN</span>' : m.rr === 'ace' ? '<span class="pill frp ace">ACE</span>' : m.sh ? '<span class="pill frp sh">SHINY</span>' : '';
@@ -2281,7 +2289,7 @@ function facMvEl(x, m) {
   return `<div class="fs-m" style="--c:var(--t${mi.ty})"><div class="fs-mh"><b>${esc(mi.n)}</b><span class="tn">${head}</span></div><p>${own ? '<em>Its own type: half again as strong.</em> ' : ''}${esc(mi.txt)}${fit ? ' <em>Fits its attacks.</em>' : ''}</p></div>`;
 }
 function sumCard(m, fresh, o = {}) {
-  const g = megaOf(m), st = statsOf(m), ty = mTypes(m), top = Math.max(...st.slice(1)), r = facRate(m), up = natUp(m.nat), dn = natDn(m.nat), ab = abShow(m.id, m.mega), cmp = facCmp(m, o.ref), kind = facRare(m);
+  const g = megaOf(m), E = evStats(m), st = E.st, ty = mTypes(m), top = Math.max(...st.slice(1)), r = facRate(m), up = natUp(m.nat), dn = natDn(m.nat), ab = abShow(m.id, m.mega), cmp = facCmp(m, o.ref), kind = facRare(m);
   const pk = o.pick ? `<button type="button" class="btn ${o.pick.on ? 'nf' : 'gold'} wide fs-pk" data-a="fsel" data-k="${o.pick.i}"${!o.pick.on && o.pick.full ? ' disabled' : ''}>${o.pick.on ? `Picked · tap to take ${esc(mName(m))} out` : o.pick.full ? 'Four are picked' : `Pick ${esc(mName(m))}`}</button>` : '';
   return `<div class="fsum${g ? ' mega' : ''}${kind ? ' rr-' + kind : ''}${fresh ? ' pop' : ''}" style="--tc:var(--t${ty[0]})">
     <div class="fs-top">${spr(m.id, { it: m.item, ani: 1, mega: m.mega, sh: m.sh })}<div class="sp"><b class="fs-n">${esc(mName(m))}</b>
@@ -2289,7 +2297,7 @@ function sumCard(m, fresh, o = {}) {
       ${r.why.length ? `<div class="fs-why">${r.why.map(w => `<span class="${w[1] > 0 ? 'p' : 'n'}">${esc(w[0])}</span>`).join('')}</div>` : ''}
       <div class="row" style="gap:4px;margin-top:6px;flex-wrap:wrap">${tyEl(m)}${g ? '<span class="pill megap">MEGA</span>' : ''}${rarePill(m)}</div></div></div>
     <div class="sm tn fs-sub">Lv ${m.lv} · ${NAT[m.nat]}${up !== dn ? ` (+${STN6[up]}, −${STN6[dn]})` : ''}${ab ? ` · <b>${esc(ab.n)}</b>: ${esc(ab.d)}` : ''}</div>
-    <div class="fs-st">${STN6.map((n, i) => `<div><span>${n}${cmp[i] ? `<u class="far ${cmp[i] > 0 ? 'u' : 'd'}" aria-label="${cmp[i] > 0 ? 'higher' : 'lower'}">${cmp[i] > 0 ? '▲' : '▼'}</u>` : ''}</span><i><b style="width:${Math.min(100, st[i] / 220 * 100).toFixed(0)}%;background:${i && st[i] === top ? 'var(--gold)' : 'var(--tc)'}"></b></i><em class="tn">${st[i]}</em></div>`).join('')}</div>
+    ${evStLine(E)}<div class="fs-st${E.m > 1 ? ' ev' : ''}">${STN6.map((n, i) => `<div><span>${n}${cmp[i] ? `<u class="far ${cmp[i] > 0 ? 'u' : 'd'}" aria-label="${cmp[i] > 0 ? 'higher' : 'lower'}">${cmp[i] > 0 ? '▲' : '▼'}</u>` : ''}</span><i><b style="width:${Math.min(100, st[i] / 220 * 100).toFixed(0)}%;background:${i && st[i] === top ? 'var(--gold)' : 'var(--tc)'}"></b></i><em class="tn">${E.m > 1 ? `<small>${E.base[i]} →</small> ` : ''}${st[i]}</em></div>`).join('')}</div>
     ${o.cap && cmp.some(Boolean) ? `<div class="fs-cap sm"><u class="far u">▲</u><u class="far d">▼</u> ${esc(o.cap)}</div>` : ''}
     <div class="fs-ml">${m.mv.map(x => facMvEl(x, m)).join('')}</div>${m.rr === 'leg' ? '<p class="sm fs-loan">On loan for this round: it cannot be kept.</p>' : m.sh ? '<p class="sm fs-loan">Clear the round with it and you can keep it, shiny.</p>' : ''}${pk}</div>`;
 }
@@ -2307,7 +2315,7 @@ function facDraw(R) {
   const vi = BT.fview != null && BT.fview < n ? BT.fview : n - 1, cur = vi >= 0 ? R.offer[vi] : null, fresh = !!BT.fnew && vi === n - 1, opened = R.offer.slice(0, n), nx = n < 7 ? R.offer[n] : null, lk = facLuckShow(R, rev ? n - 1 : n);
   BT.fnew = false;
   const tile = (m, i) => i < n && !(rev && rev.i === i)
-    ? `<button type="button" class="ft open${m.mega ? ' mega' : ''}${facRare(m) ? ' rr-' + facRare(m) : ''}${i === vi && !rev ? ' on' : ''}${sel.includes(i) ? ' sel' : ''}" data-a="fview" data-k="${i}" style="--tc:var(--t${mTypes(m)[0]})" aria-label="${esc(mName(m))}, rated ${facRate(m).n} of 5${sel.includes(i) ? ', picked' : ''}">${sel.includes(i) ? `<span class="ord">${sel.indexOf(i) + 1}</span>` : ''}${spr(m.id, { mega: m.mega, sh: m.sh })}<b>${esc(mName(m))}</b>${rateEl(m, { sm: 1 })}${statMini(m)}</button>`
+    ? `<button type="button" class="ft open${m.mega ? ' mega' : ''}${facRare(m) ? ' rr-' + facRare(m) : ''}${i === vi && !rev ? ' on' : ''}${sel.includes(i) ? ' sel' : ''}" data-a="fview" data-k="${i}" style="--tc:var(--t${mTypes(m)[0]})" aria-label="${esc(mName(m))}, rated ${facRate(m).n} of 5${sel.includes(i) ? ', picked' : ''}">${sel.includes(i) ? `<span class="ord">${sel.indexOf(i) + 1}</span>` : ''}${spr(m.id, { mega: m.mega, sh: m.sh })}<b>${esc(mName(m))}</b>${rateEl(m, { sm: 1 })}${statMini(m)}${evPct(m)}</button>`
     : `<span class="ft shut b-${facBallK(m)}${i === n && !rev ? ' next' : ''}${n === 0 ? ' drop' : ''}${rev && rev.i === i ? ' gone' : ''}" style="--i:${i}">${ballEl(facBallImg(m))}</span>`;
   const head = n === 0 ? ['Seven Poké Balls.', 'Open them one at a time. The ball tells you a little: a Great Ball holds a better Pokémon than a Poké Ball, and an Ultra Ball the best. A ball that looks different holds something rare.']
     : !all ? [`Pokémon ${rev ? rev.i + 1 : Math.min(n, vi + 1)} of 7`, n >= 7 ? 'The last one.' : 'Look it over, then open the next ball.'] : ['Pick 4 of 7.', 'Tap one to look at it, and tap it again to pick it. The first one you pick leads.'];
